@@ -6,6 +6,11 @@
 //! look looked frozen. XInput2 *raw* motion is fed by XWayland from the compositor's relative-pointer
 //! events (what Wine/SDL games use), so we read that on our own X connection and let the page poll
 //! it while it holds pointer lock. WebKit's lock still hides and confines the cursor.
+//!
+//! Only *relative* pointer devices count. XWayland exposes the real mouse twice:
+//! `xwayland-pointer` (absolute: raw values are screen positions, summing them spun the camera
+//! ~19 turns in a few seconds) and `xwayland-relative-pointer` (true deltas). Touchpad gesture
+//! devices are skipped as well.
 
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Mutex;
@@ -76,6 +81,36 @@ fn run() -> Result<(), String> {
         ACTIVE.store(true, Ordering::Relaxed);
         eprintln!("[bunker-busters] raw mouse input: XInput2 {major}.{minor}");
 
+        // slave devices whose X/Y axes are relative (and aren't gesture devices)
+        let relative_devices = |dpy| {
+            let mut ids = std::collections::HashSet::new();
+            let mut n = 0;
+            let info = (xi.XIQueryDevice)(dpy, xinput2::XIAllDevices, &mut n);
+            if !info.is_null() {
+                for dev in std::slice::from_raw_parts(info, n as usize) {
+                    let name = std::ffi::CStr::from_ptr(dev.name).to_string_lossy().to_lowercase();
+                    if dev._use != xinput2::XISlavePointer || name.contains("gesture") {
+                        continue;
+                    }
+                    let classes = std::slice::from_raw_parts(dev.classes, dev.num_classes as usize);
+                    let relative = classes.iter().any(|&c| {
+                        (*c)._type == xinput2::XIValuatorClass && {
+                            let v = &*(c as *const xinput2::XIValuatorClassInfo);
+                            v.number == 0 && v.mode == xinput2::XIModeRelative
+                        }
+                    });
+                    if relative {
+                        eprintln!("[bunker-busters] raw mouse device: {} ({})", dev.deviceid, name);
+                        ids.insert(dev.deviceid);
+                    }
+                }
+                (xi.XIFreeDeviceInfo)(info);
+            }
+            ids
+        };
+        let mut rel = relative_devices(dpy);
+        let mut seen = std::collections::HashSet::new();
+
         let mut event: xlib::XEvent = std::mem::zeroed();
         loop {
             (xl.XNextEvent)(dpy, &mut event);
@@ -85,6 +120,14 @@ fn run() -> Result<(), String> {
             }
             if cookie.evtype == xinput2::XI_RawMotion {
                 let raw = &*(cookie.data as *const xinput2::XIRawEvent);
+                // a device we haven't classified yet (hotplug): look again, once per device
+                if !rel.contains(&raw.sourceid) && seen.insert(raw.sourceid) {
+                    rel = relative_devices(dpy);
+                }
+                if !rel.contains(&raw.sourceid) {
+                    (xl.XFreeEventData)(dpy, cookie);
+                    continue;
+                }
                 let v = raw.valuators;
                 let bits = std::slice::from_raw_parts(v.mask as *const c_uchar, v.mask_len as usize);
                 let (mut dx, mut dy, mut k) = (0.0, 0.0, 0usize);
@@ -99,9 +142,12 @@ fn run() -> Result<(), String> {
                         }
                     }
                 }
-                let mut d = DELTA.lock().unwrap();
-                d.0 += dx;
-                d.1 += dy;
+                // no mouse moves 500 px in one event: anything bigger isn't a delta
+                if dx.abs() < 500.0 && dy.abs() < 500.0 {
+                    let mut d = DELTA.lock().unwrap();
+                    d.0 += dx;
+                    d.1 += dy;
+                }
             }
             (xl.XFreeEventData)(dpy, cookie);
         }

@@ -60,7 +60,8 @@ export class Input {
       this.rawPending = false;
       if (!d) { this.rawUnavailable = true; return; }
       if (this.rawFlush) { this.rawFlush = false; return; }
-      const [dx, dy] = d;
+      // a frame's worth of real mouse motion is never thousands of px; drop garbage instead of spinning
+      const [dx, dy] = Math.abs(d[0]) > 1500 || Math.abs(d[1]) > 1500 ? [0, 0] : d;
       if (dx || dy) this.rawLive = true;
       if (this.locked && this.rawLive) { this.mouseDX += dx; this.mouseDY += dy; }
     }, () => { this.rawPending = false; this.rawUnavailable = true; });
