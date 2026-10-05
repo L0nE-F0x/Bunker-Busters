@@ -40,6 +40,8 @@ export class GarageBuilder {
   points: Record<string, THREE.Vector3> = {};
   dronePath: THREE.Vector3[] = [];
   floodBulbs: { value: number }[] = [];
+  /** rotating alarm beacons (pivot + sweeping light cone), shown only while the alarm runs */
+  beacons: THREE.Object3D[] = [];
   gateLockMesh!: THREE.Object3D;
   /** glow halos around every small light (one draw call); channels driven by Garage.updateLights */
   halos = new GlowSprites(24);
@@ -794,6 +796,21 @@ export class GarageBuilder {
     this.tubeColor = tube.color as unknown as { value: THREE.Color };
     dressWorkshop(this.D, HOUSE, tube);
     dressVault(this.D, HOUSE);
+    // rotating red beacons: one in the workshop by the vault door, one in the Runway Room
+    for (const [bx, bz] of [[-2.2, -5.6], [0, -8.2]] as const) {
+      if (bz > -6) {
+        b.add(plainStandard('#202326', 0.4, 0.6), cyl(0.12, 0.14, 0.08, bx, HOUSE.h - 0.17, bz, 12));
+        this.halos.add(new THREE.Vector3(bx, HOUSE.h - 0.32, bz), '#ff2a1a', 1.6, CH.ALARM, 2.5);
+      }
+      const pivot = new THREE.Group();
+      pivot.position.set(bx, HOUSE.h - 0.3, bz);
+      const cone = lightCone(7, 1.8, '#ff2a14', 1.8);
+      cone.mesh.rotation.z = Math.PI / 2 - 0.3;
+      pivot.add(cone.mesh);
+      pivot.visible = false;
+      this.group.add(pivot);
+      this.beacons.push(pivot);
+    }
     this.points.interior = this.w(0, 1, -3);
     this.points.vaultCenter = this.w(0, 1, -9.5);
     void neon;
