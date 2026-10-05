@@ -149,7 +149,7 @@ The webview's `console.log` goes to stdout.
   - Keep meshes merged: `MeshBatch` per material, and material factories are **memoized**, so equal calls return one instance.
   - **Never mutate a factory material.** Use `rustyMetalUnique`/`fabricUnique`.
   - No GTAO pass on WebGL.
-  - Avoid always-on CSS filters/backdrop-blur in the HUD, and throttle per-frame canvas/DOM updates.
+  - **No CSS `filter`, `backdrop-filter` or `mix-blend-mode` in WebKitGTK**: they're redrawn on the CPU over the canvas every frame and took menus to ~13 fps. `html.lowfx` (auto in the Linux app, `?lowfx=1` to test) must neutralise any new ones. Throttle per-frame canvas/DOM updates.
 - **TSL shaders:**
   - Put tweakable values in `uniform()`, not literals, so instances share one program. Unique literals mean one compile per material, which made loading take 73 s once.
   - Sample the baked noise atlas (`noise()`/`fbm2()` in `src/engine/noiseTex.ts`) instead of per-pixel `mx_*` noise.

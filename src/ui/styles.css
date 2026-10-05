@@ -316,3 +316,18 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #000; color:
   .minimap { width: 130px; height: 130px; }
   .clock { top: 166px; width: 130px; }
 }
+
+/* ---------- lowfx: Linux desktop app (WebKitGTK) ----------
+   Filters, backdrop blur and blend modes over the WebGL canvas are re-rasterised on the CPU every
+   frame there. Same layout, flat equivalents. (Set on <html> by src/main.ts.) */
+.lowfx .panel { backdrop-filter: none; -webkit-backdrop-filter: none; background: linear-gradient(180deg, rgba(28, 20, 14, 0.95), rgba(12, 9, 7, 0.97)); box-shadow: none; }
+.lowfx .scan { display: none; }
+.lowfx .logo .l1, .lowfx .logo .l2 { filter: none; }
+.lowfx .logo .glitch { display: none; }
+.lowfx .banner .big { filter: none; }
+.lowfx .detect svg { filter: none; }
+.lowfx .btn.primary:hover:not(:disabled) { filter: none; background: linear-gradient(90deg, #ff9a3a, #ff6e2a); }
+.lowfx .press { animation: none; }
+.lowfx .overlay { animation: none; }
+@keyframes lowfxBannerIn { from { transform: translate(-50%, -20px) scale(1.15); opacity: 0; } }
+.lowfx .banner { animation-name: lowfxBannerIn; }

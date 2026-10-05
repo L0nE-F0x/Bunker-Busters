@@ -26,6 +26,16 @@ if (TRACE !== null) {
   }
 }
 
+// Linux desktop app (WebKitGTK): blur/backdrop filters and blend modes over the live WebGL canvas are
+// re-rasterised every frame on the CPU, which took menus down to a few fps. Cheap look there.
+// Override with ?lowfx=0|1.
+{
+  const q = new URLSearchParams(location.search).get('lowfx');
+  const ua = navigator.userAgent;
+  const webkitGtk = /Linux/.test(ua) && /AppleWebKit/.test(ua) && !/Chrome|Chromium|Android/.test(ua);
+  if (q === '1' || (q === null && webkitGtk)) document.documentElement.classList.add('lowfx');
+}
+
 async function boot() {
   const canvas = document.getElementById('game') as HTMLCanvasElement;
   const { renderer, isWebGPU, backendLabel } = await createRenderer(canvas);

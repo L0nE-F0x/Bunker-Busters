@@ -373,6 +373,9 @@ export class Game {
       setTimeout(() => this.startGame(GameState.fresh('infiltrator', SPAWN)), 50);
       return;
     }
+    // debug: ?open=controls|settings opens a menu over the title (desktop perf testing)
+    const open = new URLSearchParams(location.search).get('open');
+    if (open) setTimeout(() => (open === 'settings' ? this.ui.openSettings(this.settings, (s) => this.applySettings(s)) : this.ui.showControls()), 1500);
     this.ui.showTitle({
       canContinue: !!save,
       backend: this.backendLabel,
