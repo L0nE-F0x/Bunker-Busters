@@ -225,7 +225,7 @@ export class Atmosphere {
       const streak = vec2(cuv.x.mul(0.9).add(drift.x), cuv.y.mul(2.6).add(drift.y));
       const n1 = noise(streak.mul(0.12)).r.sub(0.5);
       const n2 = noise(cuv.mul(0.45).add(drift.mul(1.7))).g.sub(0.5);
-      const cloud = smoothstep(0.02, 0.3, n1.add(n2.mul(0.45))).mul(smoothstep(0.0, 0.18, h)).toVar();
+      const cloud = smoothstep(-0.06, 0.28, n1.add(n2.mul(0.45))).mul(smoothstep(0.0, 0.18, h)).toVar();
       const lit = pow(max(mu, 0), 3);
       const cloudCol = mix(
         mix(this.uZenith.mul(0.6), this.uHorizon, 0.55).mul(float(1).sub(this.uNight.mul(0.7))),
