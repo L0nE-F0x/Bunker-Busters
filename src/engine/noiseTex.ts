@@ -1,5 +1,5 @@
 import * as THREE from 'three/webgpu';
-import { texture, vec2, float } from 'three/tsl';
+import { texture, vec2, float, nodeObject } from 'three/tsl';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 type N = any;
@@ -80,8 +80,21 @@ export function noiseTexture() {
   return tex;
 }
 
+/**
+ * The atlas never needs a Y flip (a DataTexture: flipY resolves to false on every backend), but
+ * on WebGL every texture node carries a flipY uniform that three refreshes per object per frame.
+ * With dozens of noise taps per material that was ~0.2 ms of JS per frame; this node skips it.
+ */
+class AtlasNode extends THREE.TextureNode {
+  setupUV(_builder: unknown, uvNode: N) {
+    return uvNode;
+  }
+}
+
 /** Sample the atlas (returns vec4 in 0..1). `uvNode` in "tiles" (1 = one atlas repeat). */
-export const noise = (uvNode: N): N => texture(noiseTexture(), uvNode);
+export const noise = (uvNode: N): N => (NOISE_PLAIN ? texture(noiseTexture(), uvNode) : nodeObject(new AtlasNode(noiseTexture(), uvNode)));
+/** Debug: ?nofam also restores plain texture nodes for the atlas (A/B). */
+const NOISE_PLAIN = typeof location !== 'undefined' && new URLSearchParams(location.search).has('nofam');
 
 /** Signed fBm-ish value in roughly [-0.5, 0.5]. */
 export const fbm2 = (uvNode: N): N => noise(uvNode).r.sub(0.5);
