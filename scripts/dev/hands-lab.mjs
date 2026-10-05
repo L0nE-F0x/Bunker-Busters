@@ -1,10 +1,11 @@
 // Contact sheet of first-person hand poses (needs the dev server). Iterate on Hands.ts with this.
-//   node scripts/dev/hands-lab.mjs sheet.png "pose=idle" "pose=lockpick&look=engineer" "pose=idle&torch"
-// Poses: see POSES in src/game/player/Hands.ts (plus "flat" = neutral rig check).
+//   node scripts/dev/hands-lab.mjs sheet.png "pose=reach" "pose=lockpick&look=engineer" "pose=idle&torch" "pose=flat&view=palm"
+// Poses: see POSES in src/game/player/Hands.ts ("flat"/"fist"/"relaxed" = rig checks; "idle" is off-screen by design).
+// More: &view=side|palm|top&hand=r|l (orbit camera), &frame={"sprint":true,"speed":6.4} (movement state), &t=secs.
 import { launch } from './browser.mjs';
 
 const [out = 'hands.png', ...poses] = process.argv.slice(2);
-if (!poses.length) poses.push('pose=idle', 'pose=lockpick', 'pose=empHold', 'pose=idle&torch');
+if (!poses.length) poses.push('pose=reach', 'pose=lockpick', 'pose=empHold', 'pose=idle&torch');
 const b = await launch();
 const p = await b.newPage({ viewport: { width: 640, height: 400 } });
 p.on('pageerror', (e) => console.log('[pageerror]', e.message));

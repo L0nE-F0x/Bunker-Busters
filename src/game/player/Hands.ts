@@ -7,7 +7,6 @@ import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.j
 import { noise } from '@/engine/noiseTex';
 import { bumpFromHeight } from '../world/Terrain';
 import { rimColor, rimStrength, glow } from '../world/materials';
-import { damp } from '@/engine/noise';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 type N = any;
@@ -24,58 +23,61 @@ export interface HandLook {
 }
 
 export const HAND_LOOKS: Record<string, HandLook> = {
-  infiltrator: { glove: '#17191b', gloveWear: '#3a3d40', pad: '#262a2e', sleeve: '#2b3a3c', cuff: '#1b2324', accent: '#3ff2e0', heavy: false },
+  infiltrator: { glove: '#1d1f21', gloveWear: '#45484b', pad: '#2a2e32', sleeve: '#2b3a3c', cuff: '#1b2324', accent: '#3ff2e0', heavy: false },
   engineer: { glove: '#6e5236', gloveWear: '#a88760', pad: '#3a3532', sleeve: '#6a4a2c', cuff: '#d9792a', accent: '#ff9d2e', heavy: true },
 };
 
 // ------------------------------------------------------------------ materials
+// The hands live right in front of the lens, so a strong fresnel rim reads as a glowing outline.
+// Keep only a faint lift so they don't go pure black at night.
 const rim = (k: number): N => {
   const v = normalize(cameraPosition.sub(positionWorld));
-  return rimColor.mul(pow(float(1).sub(max(dot(normalWorld, v), 0)), 2.5)).mul(rimStrength).mul(k);
+  return rimColor.mul(pow(float(1).sub(max(dot(normalWorld, v), 0)), 3)).mul(rimStrength).mul(k);
 };
 
-/** Glove leather: fine grain, darker creases at segment ends, worn lighter on the back. */
+/** Glove leather: fine pebbled grain, darker creases at segment ends, scuffed lighter on the back. */
 function gloveMaterial(base: string, wear: string, segLen = 0) {
-  const m = new THREE.MeshStandardNodeMaterial({ roughness: 0.62, metalness: 0 });
+  const m = new THREE.MeshStandardNodeMaterial({ roughness: 0.6, metalness: 0 });
   const b = uniform(new THREE.Color(base));
   const w = uniform(new THREE.Color(wear));
-  const g = noise(positionLocal.xz.add(positionLocal.y).mul(2.2)).r; // broad tone variation
-  const grain = noise(positionLocal.xy.sub(positionLocal.z).mul(14)).g; // bump only
-  // gentle wear on the back of the hand / tops of knuckles (local +Y faces up for palm-down segments)
-  const back = smoothstep(0.35, 0.95, normalLocal.y);
-  let col: N = mix(b, w, back.mul(smoothstep(0.35, 0.75, g)).mul(0.28));
-  let rough: N = float(0.6).sub(back.mul(0.12));
+  const g = noise(positionLocal.xz.add(positionLocal.y).mul(9)).r; // broad tone variation (local units are metres)
+  const grain = noise(positionLocal.xy.sub(positionLocal.z).mul(60)).g; // pebble grain, bump only
+  // scuffs on the back of the hand / tops of knuckles (local +Y faces up for palm-down segments)
+  const back = smoothstep(0.3, 0.95, normalLocal.y);
+  let col: N = mix(b, w, back.mul(smoothstep(0.4, 0.8, g)).mul(0.3));
+  let rough: N = float(0.62).sub(back.mul(0.14));
   if (segLen > 0) {
     // segment runs along local -Z from 0 to -segLen: creases at both ends
     const t = positionLocal.z.negate().div(uniform(segLen));
-    const crease = smoothstep(0.18, 0.0, t).add(smoothstep(0.82, 1.0, t)).clamp(0, 1);
-    col = col.mul(float(1).sub(crease.mul(0.35)));
-    rough = rough.add(crease.mul(0.15));
+    const crease = smoothstep(0.16, 0.0, t).add(smoothstep(0.84, 1.0, t)).clamp(0, 1);
+    col = col.mul(float(1).sub(crease.mul(0.3)));
+    rough = rough.add(crease.mul(0.12));
   }
   m.colorNode = col.mul(float(0.94).add(g.mul(0.1)));
   m.roughnessNode = rough;
-  m.normalNode = bumpFromHeight(grain.mul(0.35).add(g.mul(0.2)), float(0.004));
-  m.emissiveNode = rim(0.35);
+  m.normalNode = bumpFromHeight(grain.mul(0.25).add(g.mul(0.15)), float(0.0012));
+  m.emissiveNode = rim(0.08);
   return m;
 }
 
 function fabricMat(c: string, rough = 0.95) {
   const m = new THREE.MeshStandardNodeMaterial({ roughness: rough });
   const base = uniform(new THREE.Color(c));
-  const n = noise(positionLocal.xy.add(positionLocal.z).mul(3)).r;
-  const fold = noise(vec3(positionLocal.z.mul(9), positionLocal.x.mul(2), 0).xy).g; // sleeve creases
-  m.colorNode = base.mul(float(0.8).add(n.mul(0.25)).sub(fold.mul(0.12)));
-  m.normalNode = bumpFromHeight(n.mul(0.3).add(fold.mul(0.6)), float(0.01));
-  m.emissiveNode = rim(0.35);
+  const n = noise(positionLocal.xy.add(positionLocal.z).mul(14)).r;
+  const weave = noise(positionLocal.xz.mul(vec3(260, 90, 1).xy)).g;
+  const fold = noise(vec3(positionLocal.z.mul(16), positionLocal.x.mul(5), 0).xy).g; // soft sleeve creases
+  m.colorNode = base.mul(float(0.82).add(n.mul(0.2)).sub(fold.mul(0.1)).add(weave.mul(0.06)));
+  m.normalNode = bumpFromHeight(n.mul(0.2).add(fold.mul(0.5)).add(weave.mul(0.08)), float(0.004));
+  m.emissiveNode = rim(0.08);
   return m;
 }
 
 function hardMat(c: string, rough = 0.45, metal = 0.1) {
   const m = new THREE.MeshStandardNodeMaterial({ roughness: rough, metalness: metal });
   const base = uniform(new THREE.Color(c));
-  const n = noise(positionLocal.xy.mul(14)).r;
+  const n = noise(positionLocal.xy.mul(40)).r;
   m.colorNode = base.mul(float(0.85).add(n.mul(0.25)));
-  m.emissiveNode = rim(0.35);
+  m.emissiveNode = rim(0.08);
   return m;
 }
 
@@ -89,48 +91,101 @@ function steelMat(c = '#b9bec4', rough = 0.25) {
 }
 
 // ------------------------------------------------------------------ geometry helpers
-/** Rounded, tapered segment along -Z from z=0 to z=-len (lathe profile), slightly flattened. */
-function segmentGeo(len: number, r0: number, r1: number, tipRound = false) {
+/**
+ * Finger/thumb phalanx along -Z from z=0 to z=-len. Both ends are full hemispheres centred on the
+ * joint pivots, so a bent joint stays a smooth knuckle instead of opening a gap. The profile is
+ * slightly waisted between the joints and the cross-section is wider than it is thick.
+ */
+function segmentGeo(len: number, r0: number, r1: number, tip = false) {
   const pts: THREE.Vector2[] = [];
-  const n = 10;
-  // base cap (overlaps the previous segment)
-  for (let i = 0; i <= 4; i++) {
-    const a = (-Math.PI / 2) + (i / 4) * (Math.PI / 2);
-    pts.push(new THREE.Vector2(Math.cos(a) * r0, Math.sin(a) * r0 * 0.6));
+  const cap = 6;
+  for (let i = 0; i <= cap; i++) {
+    const a = -Math.PI / 2 + (i / cap) * (Math.PI / 2);
+    pts.push(new THREE.Vector2(Math.cos(a) * r0 + 1e-5, Math.sin(a) * r0));
   }
+  const n = 8;
   for (let i = 1; i < n; i++) {
     const t = i / n;
-    const bulge = Math.sin(t * Math.PI) * 0.06 * r0;
-    pts.push(new THREE.Vector2(r0 + (r1 - r0) * t + bulge, t * len));
+    const waist = -Math.sin(t * Math.PI) * 0.05 * r0;
+    pts.push(new THREE.Vector2(r0 + (r1 - r0) * t + waist, t * len));
   }
-  const capR = r1;
-  const caps = tipRound ? 6 : 4;
-  for (let i = 0; i <= caps; i++) {
-    const a = (i / caps) * (Math.PI / 2);
-    pts.push(new THREE.Vector2(Math.cos(a) * capR, len + Math.sin(a) * capR * (tipRound ? 0.9 : 0.6)));
+  const tipLen = tip ? 1.25 : 1; // fingertips are a little longer than a hemisphere
+  for (let i = 0; i <= cap; i++) {
+    const a = (i / cap) * (Math.PI / 2);
+    pts.push(new THREE.Vector2(Math.cos(a) * r1 + 1e-5, len + Math.sin(a) * r1 * tipLen));
   }
-  const g = new THREE.LatheGeometry(pts, 16);
+  const g = new THREE.LatheGeometry(pts, 14);
   g.rotateX(-Math.PI / 2); // +Y → -Z
-  g.scale(1, 0.86, 1); // fingers are wider than they are thick
+  const p = g.attributes.position as THREE.BufferAttribute;
+  for (let i = 0; i < p.count; i++) {
+    const y = p.getY(i);
+    // flatter on the back, a soft pad on the palm side
+    p.setY(i, y < 0 ? y * 0.92 : y * 0.8);
+  }
   g.computeVertexNormals();
   return g;
 }
 
 function cylAlong(len: number, r0: number, r1: number, seg = 18) {
-  const g = new THREE.CylinderGeometry(r1, r0, len, seg, 3, false);
+  const g = new THREE.CylinderGeometry(r1, r0, len, seg, 4, false);
   g.translate(0, len / 2, 0);
   g.rotateX(-Math.PI / 2);
   return g;
 }
 
+/**
+ * Palm: a subdivided rounded box remapped into a hand shape: tapers to the wrist, the front edge
+ * follows the knuckle arc (middle finger furthest forward, little finger set back), the back is
+ * arched, and the palm side bulges at the thenar (thumb) and hypothenar pads with a hollow between.
+ * `s` = anatomical side: thumb on +s·x.
+ */
+function palmGeo(s: number) {
+  const g = new RoundedBoxGeometry(1, 1, 1, 5, 0.32);
+  const p = g.attributes.position as THREE.BufferAttribute;
+  const gauss = (dx: number, dy: number, r: number) => Math.exp(-(dx * dx + dy * dy) / (r * r));
+  for (let i = 0; i < p.count; i++) {
+    const u = p.getX(i) * 2; // -1..1 across
+    const w = p.getY(i) * 2; // -1 palm .. +1 back
+    const v = p.getZ(i) + 0.5; // 0 knuckles .. 1 wrist
+    const ua = u * s; // +1 = thumb side
+    const half = THREE.MathUtils.lerp(0.045, 0.031, THREE.MathUtils.smoothstep(v, 0.25, 1));
+    const x = u * half + s * v * 0.003;
+    const d = (ua - 0.2) / 1.2;
+    const zFront = -0.097 + 0.013 * d * d;
+    const z = THREE.MathUtils.lerp(zFront, 0.006, v);
+    const top = 0.012 + 0.005 * (1 - ua * ua) - v * 0.002;
+    const bot = 0.012 + 0.008 * gauss(ua - 0.75, v - 0.72, 0.45) + 0.005 * gauss(ua + 0.8, v - 0.55, 0.5) - 0.003 * gauss(ua, v - 0.35, 0.4) + v * 0.002;
+    p.setXYZ(i, x, w >= 0 ? w * top : w * bot, z);
+  }
+  g.computeVertexNormals();
+  return g;
+}
+
+/** Thin plate bent to follow the knuckle arc and the back-of-hand arch. */
+function knuckleGuardGeo(s: number) {
+  const g = new RoundedBoxGeometry(1, 1, 1, 3, 0.3);
+  const p = g.attributes.position as THREE.BufferAttribute;
+  for (let i = 0; i < p.count; i++) {
+    const u = p.getX(i) * 2, w = p.getY(i) * 2, v = p.getZ(i) + 0.5;
+    const ua = u * s;
+    const d = (ua - 0.2) / 1.2;
+    const x = u * 0.04;
+    const z = -0.094 + 0.012 * d * d + (v - 0.5) * 0.02;
+    const y = 0.0148 + 0.004 * (1 - ua * ua) + w * 0.0026;
+    p.setXYZ(i, x, y, z);
+  }
+  g.computeVertexNormals();
+  return g;
+}
+
 interface Finger { base: THREE.Group; joints: THREE.Group[]; }
 
+// metacarpal-head (knuckle) positions sit on an arc; radii include the glove
 const FINGERS = [
-  // x offset, y, z (from wrist), lengths, base radius, spread
-  { name: 'index', x: 0.03, z: -0.092, lens: [0.046, 0.027, 0.022], r: 0.0098, spread: 0.06 },
-  { name: 'middle', x: 0.01, z: -0.096, lens: [0.05, 0.031, 0.024], r: 0.0102, spread: 0 },
-  { name: 'ring', x: -0.01, z: -0.093, lens: [0.047, 0.029, 0.023], r: 0.0096, spread: -0.05 },
-  { name: 'pinky', x: -0.029, z: -0.086, lens: [0.037, 0.022, 0.02], r: 0.0084, spread: -0.12 },
+  { name: 'index', x: 0.028, y: 0.0005, z: -0.093, lens: [0.045, 0.026, 0.021], r: 0.0114, spread: 0.07 },
+  { name: 'middle', x: 0.009, y: 0.002, z: -0.098, lens: [0.05, 0.03, 0.022], r: 0.0118, spread: 0 },
+  { name: 'ring', x: -0.0105, y: 0.0005, z: -0.094, lens: [0.047, 0.029, 0.022], r: 0.0112, spread: -0.07 },
+  { name: 'pinky', x: -0.028, y: -0.003, z: -0.084, lens: [0.037, 0.021, 0.019], r: 0.0099, spread: -0.15 },
 ];
 
 // ------------------------------------------------------------------ pose model
@@ -143,57 +198,91 @@ export interface HandPose {
   spread: number;
 }
 
+/**
+ * A single curl value becomes a natural cascade: in a relaxed or loosely closed hand the index is
+ * the straightest finger and each finger toward the little one curls a bit more.
+ */
 const P = (x: number, y: number, z: number, rx: number, ry: number, rz: number, curl: number | [number, number, number, number], thumb: number, oppose: number, spread = 0): HandPose => ({
   pos: new THREE.Vector3(x, y, z),
   rot: new THREE.Euler(rx, ry, rz, 'YXZ'),
-  curl: typeof curl === 'number' ? [curl, curl, curl, curl] : curl,
+  curl: typeof curl === 'number' ? [curl * 0.82, curl, Math.min(1, curl * 1.1 + 0.03), Math.min(1, curl * 1.2 + 0.06)] : curl,
   thumb,
   oppose,
   spread,
 });
 
+// Resting off-screen: arms hang at your sides, so empty hands aren't in view (like real life).
+const DOWN = P(0.24, -0.62, -0.3, -0.9, 0.2, -1.3, 0.3, 0.3, 0.2);
+// Off-hand while the other one works: just below the frame, ready.
+const READY = P(0.22, -0.46, -0.36, -0.4, 0.2, -1.2, 0.35, 0.35, 0.25);
+
 /** Right-hand poses; the left hand mirrors x / yaw / roll. */
 export const POSES: Record<string, { r: HandPose; l: HandPose; items?: { r?: string; l?: string } }> = {
   flat: { r: P(0.14, -0.14, -0.4, 0, 0, 0, 0, 0, 0), l: P(0.14, -0.14, -0.4, 0, 0, 0, 0, 0, 0) },
-  idle: { r: P(0.17, -0.2, -0.42, 0.15, 0.3, -0.55, 0.42, 0.6, 0.45), l: P(0.18, -0.215, -0.41, 0.1, 0.3, -0.6, 0.45, 0.6, 0.45) },
-  run: { r: P(0.2, -0.28, -0.38, 0.5, 0.2, -0.9, 0.75, 0.6, 0.4), l: P(0.2, -0.29, -0.38, 0.5, 0.2, -0.9, 0.75, 0.6, 0.4) },
-  crouch: { r: P(0.15, -0.16, -0.4, 0.1, 0.35, -0.45, 0.55, 0.65, 0.5), l: P(0.16, -0.18, -0.39, 0.05, 0.3, -0.55, 0.6, 0.65, 0.5) },
+  fist: { r: P(0.14, -0.14, -0.4, 0, 0, 0, 1, 0.8, 0.6), l: P(0.14, -0.14, -0.4, 0, 0, 0, 1, 0.8, 0.6) },
+  // relaxed, slightly cupped, palms turned in: what a hand looks like when you're not using it
+  relaxed: { r: P(0.15, -0.17, -0.4, 0.1, 0.25, -0.95, 0.32, 0.25, 0.15), l: P(0.15, -0.17, -0.4, 0.1, 0.25, -0.95, 0.32, 0.25, 0.15) },
+  idle: { r: DOWN, l: DOWN },
+  crouch: { r: DOWN, l: DOWN },
+  run: { r: DOWN, l: DOWN }, // sprinting arm pump is layered procedurally (see Hands.update)
+  // airborne / falling: arms come up and out for balance
+  air: { r: P(0.26, -0.33, -0.4, 0.1, 0.05, -1.0, 0.14, 0.15, 0.1, 0.3), l: P(0.27, -0.35, -0.38, 0.1, 0.05, -1.05, 0.16, 0.15, 0.1, 0.3) },
   lockpick: {
-    r: P(0.1, -0.11, -0.36, 0.05, 0.45, -0.35, [0.25, 0.7, 0.85, 0.9], 0.55, 0.75),
-    l: P(0.12, -0.13, -0.37, 0.05, 0.5, -0.5, [0.3, 0.75, 0.85, 0.9], 0.5, 0.75),
+    r: P(0.075, -0.135, -0.37, 0.1, 0.4, -1.15, [0.4, 0.72, 0.82, 0.9], 0.45, 0.75),
+    l: P(0.09, -0.15, -0.38, 0.05, 0.45, -1.0, [0.45, 0.75, 0.85, 0.9], 0.5, 0.7),
     items: { r: 'pick', l: 'wrench' },
   },
-  keypad: { r: P(0.12, -0.11, -0.43, 0.05, 0.25, -0.35, [0.0, 0.9, 0.95, 0.95], 0.7, 0.6), l: P(0.24, -0.33, -0.38, 0.1, 0.25, -0.6, 0.45, 0.6, 0.45) },
-  reach: { r: P(0.11, -0.12, -0.43, -0.15, 0.15, -0.25, 0.08, 0.15, 0.1, 0.1), l: P(0.23, -0.33, -0.38, 0.1, 0.25, -0.6, 0.45, 0.6, 0.45) },
-  grab: { r: P(0.11, -0.13, -0.41, -0.05, 0.15, -0.3, 0.85, 0.7, 0.6), l: P(0.23, -0.33, -0.38, 0.1, 0.25, -0.6, 0.45, 0.6, 0.45) },
-  empHold: { r: P(0.17, -0.15, -0.36, 0.25, 0.35, -0.3, 0.72, 0.6, 0.55), l: P(0.22, -0.31, -0.38, 0.1, 0.25, -0.6, 0.45, 0.6, 0.45), items: { r: 'emp' } },
-  empWind: { r: P(0.24, -0.06, -0.2, 0.9, -0.6, -0.4, 0.72, 0.6, 0.55), l: P(0.15, -0.2, -0.42, -0.1, 0.1, -0.3, 0.2, 0.2, 0.1, 0.1), items: { r: 'emp' } },
-  empThrow: { r: P(0.08, -0.12, -0.55, -0.45, 0.1, -0.1, 0.12, 0.2, 0.1, 0.15), l: P(0.2, -0.3, -0.38, 0.1, 0.25, -0.6, 0.45, 0.6, 0.45) },
-  eat: { r: P(0.04, -0.15, -0.25, 0.55, 0.8, -0.25, 0.75, 0.55, 0.5), l: P(0.22, -0.32, -0.38, 0.1, 0.25, -0.6, 0.45, 0.6, 0.45), items: { r: 'ration' } },
+  keypad: { r: P(0.11, -0.13, -0.46, 0.12, 0.18, -0.55, [0.02, 0.88, 0.95, 1.0], 0.7, 0.75), l: READY },
+  reach: { r: P(0.12, -0.14, -0.46, 0.0, 0.2, -0.85, 0.12, 0.15, 0.1, 0.15), l: READY },
+  grab: { r: P(0.11, -0.14, -0.47, 0.0, 0.2, -0.85, 0.85, 0.7, 0.6), l: READY },
+  empHold: { r: P(0.17, -0.18, -0.38, 0.2, 0.2, -1.15, 0.78, 0.65, 0.6), l: READY, items: { r: 'emp' } },
+  empWind: { r: P(0.23, -0.09, -0.27, 0.85, -0.35, -1.45, 0.78, 0.65, 0.6), l: P(0.16, -0.2, -0.44, 0.0, 0.1, -0.6, 0.15, 0.15, 0.1, 0.15), items: { r: 'emp' } },
+  empThrow: { r: P(0.08, -0.1, -0.58, -0.35, 0.1, -0.6, 0.12, 0.15, 0.1, 0.25), l: READY },
+  eat: { r: P(0.03, -0.14, -0.26, 0.6, 0.75, -1.25, 0.75, 0.55, 0.5), l: READY, items: { r: 'ration' } },
+  // character select: kneeling at the fire. One hand shows the gear, the other warms at the flames.
   showcaseEmp: {
-    r: P(0.11, -0.14, -0.36, 0.1, 0.45, -1.2, 0.72, 0.6, 0.55),
-    l: P(0.13, -0.18, -0.38, 0.35, 0.4, 0.4, 0.25, 0.25, 0.15, 0.05),
+    r: P(0.11, -0.115, -0.38, 0.15, 0.4, -1.3, 0.78, 0.65, 0.6),
+    l: P(0.15, -0.12, -0.46, 0.3, 0.25, 0.3, 0.18, 0.12, 0.05, 0.2),
     items: { r: 'emp' },
   },
   showcase: {
-    r: P(0.1, -0.12, -0.36, -0.2, 0.35, -0.9, [0.3, 0.7, 0.85, 0.9], 0.55, 0.75),
-    l: P(0.12, -0.16, -0.38, 0.35, 0.4, 0.4, 0.25, 0.25, 0.15, 0.05),
+    r: P(0.1, -0.1, -0.38, -0.05, 0.35, -1.1, [0.4, 0.72, 0.82, 0.9], 0.45, 0.75),
+    l: P(0.15, -0.12, -0.46, 0.3, 0.25, 0.3, 0.18, 0.12, 0.05, 0.2),
     items: { r: 'pick' },
   },
 };
 
-/** Left hand holding the torch overhand: fingers wrap over it, lens pokes out past the fingertips. */
-const TORCH_L = P(0.14, -0.15, -0.4, 0.1, 0.18, -0.25, 0.86, 0.7, 0.6);
+/** Left hand holding the torch in a fist, lens forward, beam roughly along the view. */
+const TORCH_L = P(0.165, -0.2, -0.42, 0.12, 0.22, -1.2, 0.9, 0.75, 0.55);
+
+// arm IK (right side, view metres at viewmodel scale; mirrored for the left)
+const SHOULDER = new THREE.Vector3(0.2, -0.32, 0.1);
+const UPPER = 0.39, FORE = 0.36;
+const POLE = new THREE.Vector3(0.5, -1, 0.3).normalize(); // elbows hang down, out and back
+
+/** Two-bone IK: the elbow for a wrist at `w` (right-side coords). */
+function solveElbow(w: THREE.Vector3, out: THREE.Vector3) {
+  const d = _ik.copy(w).sub(SHOULDER);
+  const c = Math.min(d.length(), UPPER + FORE - 1e-3);
+  d.normalize();
+  const cosA = THREE.MathUtils.clamp((UPPER * UPPER + c * c - FORE * FORE) / (2 * UPPER * c), -1, 1);
+  const p = _ik2.copy(POLE).addScaledVector(d, -POLE.dot(d)).normalize();
+  return out.copy(SHOULDER).addScaledVector(d, UPPER * cosA).addScaledVector(p, UPPER * Math.sqrt(1 - cosA * cosA));
+}
+const _ik = new THREE.Vector3(), _ik2 = new THREE.Vector3();
 
 // ------------------------------------------------------------------ hand rig
-class HandRig {
+export class HandRig {
   root = new THREE.Group(); // wrist
   fingers: Finger[] = [];
   thumbBase = new THREE.Group();
   thumbJoints: THREE.Group[] = [];
   grip = new THREE.Group(); // item anchor in the palm
   pinch = new THREE.Group(); // item anchor between thumb and index
+  arm = new THREE.Group(); // forearm, aimed at the elbow every frame
+  upper: THREE.Mesh; // upper arm (lives beside the hand in viewmodel space)
   cur: HandPose;
+  vel = new Float32Array(13); // spring velocities for the 13 pose channels
 
   private a: number;
 
@@ -203,7 +292,7 @@ class HandRig {
     const s = -side;
     this.a = s;
     const glove = gloveMaterial(look.glove, look.gloveWear);
-    const pad = hardMat(look.pad, 0.4, 0.05);
+    const pad = hardMat(look.pad, 0.5, 0.05);
     const add = (parent: THREE.Object3D, geo: THREE.BufferGeometry, mat: THREE.Material, x = 0, y = 0, z = 0, rx = 0, ry = 0, rz = 0) => {
       const m = new THREE.Mesh(geo, mat);
       m.position.set(x, y, z);
@@ -214,43 +303,30 @@ class HandRig {
       return m;
     };
 
-    // palm: rounded box tapering toward the wrist
-    const palmGeo = new RoundedBoxGeometry(0.09, 0.036, 0.098, 4, 0.015);
-    const pp = palmGeo.attributes.position as THREE.BufferAttribute;
-    for (let i = 0; i < pp.count; i++) {
-      const z = pp.getZ(i); // -0.0475 (fingers) … +0.0475 (wrist)
-      const t = (z + 0.0475) / 0.095;
-      pp.setX(i, pp.getX(i) * (1 - t * 0.18) + s * t * 0.004);
-      pp.setY(i, pp.getY(i) * (1 - t * 0.12) + (pp.getY(i) < 0 ? -Math.sin(t * Math.PI) * 0.003 : 0));
-    }
-    palmGeo.computeVertexNormals();
-    add(this.root, palmGeo, glove, 0, 0, -0.047);
-    // back-of-hand armour plate + knuckle ridge
-    const plate = new RoundedBoxGeometry(0.06, 0.008, 0.05, 3, 0.004);
-    add(this.root, plate, pad, s * 0.002, 0.017, -0.05, 0.08, 0, 0);
-    const ridge = new RoundedBoxGeometry(0.08, 0.012, 0.016, 3, 0.005);
-    add(this.root, ridge, pad, 0, 0.014, -0.088, 0.1, 0, 0);
-    // wrist strap: flat velcro band hugging the glove cuff, with a buckle
-    const strap = cylAlong(0.02, 0.041, 0.04, 24);
-    strap.scale(1, 0.8, 1);
-    add(this.root, strap, hardMat('#1c1c1c', 0.75), 0, 0, 0.018);
-    add(this.root, new RoundedBoxGeometry(0.022, 0.006, 0.016, 2, 0.002), hardMat('#4a4a4a', 0.35, 0.7), 0, 0.033, 0.008);
+    add(this.root, palmGeo(s), glove);
+    // thenar pad: the muscle mass at the base of the thumb
+    add(this.root, new THREE.SphereGeometry(0.02, 16, 12).scale(0.85, 0.7, 1.5), glove, s * 0.023, -0.007, -0.03, 0, s * 0.25, 0);
+    // wrist: a soft ellipsoid so the hand can bend against the forearm without a seam
+    add(this.root, new THREE.SphereGeometry(0.026, 18, 12).scale(1.12, 0.68, 1.1), glove, s * 0.002, -0.0015, 0.014);
+    // knuckle guard (infiltrator) / leather back patch (engineer)
+    add(this.root, knuckleGuardGeo(s), pad);
+    if (!look.heavy) add(this.root, new RoundedBoxGeometry(0.05, 0.006, 0.042, 3, 0.0028), pad, s * 0.003, 0.0165, -0.047, 0.05, 0, 0);
+    else add(this.root, new RoundedBoxGeometry(0.066, 0.004, 0.06, 3, 0.002), gloveMaterial('#4f3a28', look.gloveWear), s * 0.001, 0.0158, -0.05, 0.02, 0, 0);
 
     // fingers
-    for (const f of FINGERS) {
+    FINGERS.forEach((f, fi) => {
       const base = new THREE.Group();
-      base.position.set(s * f.x, 0.002, f.z);
-      base.rotation.y = -s * f.spread;
+      base.position.set(s * f.x, f.y, f.z);
       this.root.add(base);
       const joints: THREE.Group[] = [];
       let parent: THREE.Object3D = base;
       f.lens.forEach((len, i) => {
         const j = new THREE.Group();
         parent.add(j);
-        const fr = f.r * 1.22; // gloved fingers are chunkier than bare ones
-        const r0 = fr * (1 - i * 0.08), r1 = fr * (1 - (i + 1) * 0.08);
+        const r0 = f.r * (1 - i * 0.085), r1 = f.r * (1 - (i + 1) * 0.085);
         add(j, segmentGeo(len, r0, r1, i === 2), gloveMaterial(look.glove, look.gloveWear, len));
-        if (i === 0) add(j, new RoundedBoxGeometry(fr * 1.6, 0.006, len * 0.55, 2, 0.0025), pad, 0, fr * 0.8, -len * 0.45);
+        // padded strip on the back of the first phalanx (infiltrator) / stitched seam (engineer)
+        if (i === 0 && !look.heavy && fi < 3) add(j, new RoundedBoxGeometry(f.r * 1.3, 0.004, len * 0.5, 2, 0.0018), pad, 0, f.r * 0.78, -len * 0.5);
         const next = new THREE.Group();
         next.position.z = -len;
         j.add(next);
@@ -258,18 +334,17 @@ class HandRig {
         parent = next;
       });
       this.fingers.push({ base, joints });
-    }
+    });
 
-    // thumb
-    this.thumbBase.position.set(s * 0.033, -0.009, -0.024);
+    // thumb: metacarpal (mostly buried in the thenar pad), proximal and distal phalanges
+    this.thumbBase.position.set(s * 0.022, -0.011, -0.014);
     this.root.add(this.thumbBase);
     let tp: THREE.Object3D = this.thumbBase;
-    // thenar pad: soft bulge where the thumb meets the palm
-    add(this.root, new THREE.SphereGeometry(0.022, 16, 12).scale(0.9, 0.7, 1.4), glove, s * 0.026, -0.008, -0.035);
-    [0.034, 0.028, 0.025].forEach((len, i) => {
+    [0.04, 0.031, 0.027].forEach((len, i) => {
       const j = new THREE.Group();
       tp.add(j);
-      add(j, segmentGeo(len, 0.0158 - i * 0.0016, 0.0142 - i * 0.0018, i === 2), gloveMaterial(look.glove, look.gloveWear, len));
+      const r0 = [0.0155, 0.0135, 0.0126][i], r1 = [0.0135, 0.0126, 0.0114][i];
+      add(j, segmentGeo(len, r0, r1, i === 2), gloveMaterial(look.glove, look.gloveWear, len));
       const next = new THREE.Group();
       next.position.z = -len;
       j.add(next);
@@ -277,75 +352,110 @@ class HandRig {
       tp = next;
     });
 
-    // forearm sleeve heading back & down out of frame
-    const arm = new THREE.Group();
-    arm.rotation.x = 0.62;
-    this.root.add(arm);
-    add(arm, cylAlong(0.24, 0.031, 0.039), fabricMat(look.sleeve), 0, 0, 0.26);
-    // rolled sleeve cuff (open band, slightly proud of the sleeve)
-    add(arm, cylAlong(0.032, 0.035, 0.034, 24), fabricMat(look.cuff, 0.9), 0, 0, 0.062);
-    // glove gauntlet overlapping the sleeve
-    add(arm, cylAlong(0.05, 0.033, 0.031, 24), glove, 0, 0, 0.05);
+    // forearm: glove gauntlet → sleeve cuff → sleeve, heading off to the elbow (+Z in arm space)
+    this.root.add(this.arm);
+    const sleeve = fabricMat(look.sleeve);
+    const armLen = FORE / 1.3 - 0.03;
+    add(this.arm, cylAlong(armLen + 0.03, 0.034, 0.047, 20), sleeve, 0, 0, 0.055 + armLen + 0.03);
+    add(this.arm, cylAlong(0.034, 0.041, 0.04, 24), fabricMat(look.cuff, 0.9), 0, 0, 0.07);
+    add(this.arm, cylAlong(0.055, 0.033, 0.03, 24).scale(1, 0.86, 1), glove, 0, 0, 0.057);
+    // wrist strap with a buckle
+    add(this.arm, cylAlong(0.016, 0.0335, 0.0335, 24).scale(1, 0.87, 1), hardMat('#1c1c1c', 0.75), 0, 0, 0.03);
+    add(this.arm, new RoundedBoxGeometry(0.02, 0.005, 0.014, 2, 0.002), hardMat('#4a4a4a', 0.35, 0.7), 0, 0.03, 0.022);
     // wrist gadget on the left arm (display glows in the accent colour)
     if (this.side === -1) {
-      add(arm, new RoundedBoxGeometry(0.028, 0.012, 0.034, 3, 0.003), hardMat(look.heavy ? '#4a3a2a' : '#202326', 0.4, 0.4), 0, 0.036, 0.085);
+      add(this.arm, new RoundedBoxGeometry(0.03, 0.011, 0.036, 3, 0.003), hardMat(look.heavy ? '#4a3a2a' : '#202326', 0.4, 0.4), 0, 0.033, 0.105);
       const screen = glow(look.accent, 3);
       (screen.intensity as any).onFrameUpdate?.(() => this.accentU.value);
-      const disp = new THREE.Mesh(new THREE.PlaneGeometry(0.02, 0.024), screen.material);
+      const disp = new THREE.Mesh(new THREE.PlaneGeometry(0.021, 0.025), screen.material);
       disp.rotation.x = -Math.PI / 2;
-      disp.position.set(0, 0.0425, 0.085);
-      arm.add(disp);
-      if (look.heavy) add(arm, new THREE.CylinderGeometry(0.005, 0.005, 0.038, 8), steelMat('#8a8f94', 0.4), 0.019, 0.034, 0.085, Math.PI / 2);
+      disp.position.set(0, 0.0388, 0.105);
+      this.arm.add(disp);
+      if (look.heavy) add(this.arm, new THREE.CylinderGeometry(0.005, 0.005, 0.04, 8), steelMat('#8a8f94', 0.4), 0.02, 0.031, 0.105, Math.PI / 2);
     }
 
+    const ug = new THREE.CylinderGeometry(0.06, 0.064, UPPER + 0.08, 18, 3, true);
+    ug.translate(0, (UPPER + 0.08) / 2 - 0.04, 0);
+    ug.rotateX(Math.PI / 2); // +Y → +Z
+    this.upper = new THREE.Mesh(ug, sleeve);
+
     // item anchors
-    this.grip.position.set(-s * 0.002, -0.028, -0.06);
+    this.grip.position.set(s * 0.004, -0.03, -0.062);
     this.root.add(this.grip);
-    this.pinch.position.set(s * 0.028, -0.022, -0.115);
+    this.pinch.position.set(s * 0.03, -0.026, -0.118);
     this.root.add(this.pinch);
 
     // FP convention: hands read ~30% larger than life
     this.root.scale.setScalar(1.3);
-    this.cur = { ...clonePose(POSES.idle.r) };
+    this.cur = clonePose(DOWN);
   }
 
   apply(p: HandPose) {
     const side = this.side;
+    const elbow = solveElbow(_w.set(p.pos.x, p.pos.y, p.pos.z), _elb);
     const s = this.a;
     this.root.position.set(p.pos.x * side, p.pos.y, p.pos.z);
     this.root.rotation.set(p.rot.x, p.rot.y * side, p.rot.z * side, 'YXZ');
-    // fingers: distribute curl across the three joints
+    // fingers: MCP / PIP / DIP share the curl the way tendons couple them (DIP ≈ ⅔ PIP)
     this.fingers.forEach((f, i) => {
-      const c = p.curl[i];
-      f.joints[0].rotation.x = -c * 1.35;
-      f.joints[1].rotation.x = -c * 1.6;
-      f.joints[2].rotation.x = -c * 1.05;
-      f.base.rotation.y = -s * FINGERS[i].spread * (1 + p.spread * 3);
+      const c = THREE.MathUtils.clamp(p.curl[i], -0.1, 1.05);
+      f.joints[0].rotation.x = -c * 1.5;
+      f.joints[1].rotation.x = -Math.max(0, c) * 1.72;
+      f.joints[2].rotation.x = -Math.max(0, c) * 1.15;
+      // fingers fan out when open and converge toward the thumb as they close
+      const fan = FINGERS[i].spread * (1 + p.spread * 2.5) * (1 - Math.max(0, c) * 0.75);
+      f.base.rotation.set(0, -s * fan, -s * FINGERS[i].spread * Math.max(0, c) * 0.5, 'YXZ');
     });
-    // thumb: splayed sideways & forward, curls and opposes across the palm
-    // relaxed thumb: ~35° off the index, angled down; opposing swings it under the fingers
-    this.thumbBase.rotation.set(-0.5 - p.oppose * 0.45, -s * (0.42 - p.oppose * 0.75), s * (0.6 + p.oppose * 0.5), 'YXZ');
-    this.thumbJoints[0].rotation.x = -p.thumb * 0.35;
-    this.thumbJoints[1].rotation.x = -p.thumb * 0.8;
-    this.thumbJoints[2].rotation.x = -p.thumb * 0.9;
+    // thumb: relaxed it lies forward along the index, angled down; opposing swings it under the fingers
+    const o = p.oppose;
+    this.thumbBase.rotation.set(-0.22 - o * 0.45, -s * (0.55 - o * 0.6), -s * (0.85 + o * 0.6), 'YXZ');
+    this.thumbJoints[0].rotation.x = -p.thumb * 0.25;
+    this.thumbJoints[1].rotation.x = -p.thumb * 0.75;
+    this.thumbJoints[2].rotation.x = -p.thumb * 0.95;
+
+    // forearm: point +Z at the elbow, keeping its top roughly with the back of the hand
+    const e = _v1.set(elbow.x * side, elbow.y, elbow.z).sub(this.root.position);
+    _q.setFromEuler(this.root.rotation).invert();
+    e.applyQuaternion(_q).normalize();
+    const x = _v2.set(0, 1, 0).cross(e);
+    if (x.lengthSq() < 1e-6) x.set(1, 0, 0);
+    x.normalize();
+    const y = _v3.copy(e).cross(x);
+    this.arm.quaternion.setFromRotationMatrix(_m.makeBasis(x, y, e));
+    // upper arm: elbow → shoulder, in the viewmodel's space (it only shows on big reaches)
+    const sh = _v1.set(SHOULDER.x * side, SHOULDER.y, SHOULDER.z);
+    const el = _v2.set(elbow.x * side, elbow.y, elbow.z);
+    this.upper.position.copy(el);
+    this.upper.quaternion.setFromUnitVectors(_z, sh.sub(el).normalize());
   }
 }
+
+const _v1 = new THREE.Vector3(), _v2 = new THREE.Vector3(), _v3 = new THREE.Vector3(), _w = new THREE.Vector3(), _elb = new THREE.Vector3();
+const _q = new THREE.Quaternion();
+const _z = new THREE.Vector3(0, 0, 1);
+const _m = new THREE.Matrix4();
 
 function clonePose(p: HandPose): HandPose {
   return { pos: p.pos.clone(), rot: p.rot.clone(), curl: [...p.curl] as HandPose['curl'], thumb: p.thumb, oppose: p.oppose, spread: p.spread };
 }
 
-function blendPose(cur: HandPose, target: HandPose, k: number) {
-  cur.pos.lerp(target.pos, k);
-  cur.rot.set(
-    cur.rot.x + (target.rot.x - cur.rot.x) * k,
-    cur.rot.y + (target.rot.y - cur.rot.y) * k,
-    cur.rot.z + (target.rot.z - cur.rot.z) * k,
-  );
-  for (let i = 0; i < 4; i++) cur.curl[i] += (target.curl[i] - cur.curl[i]) * k;
-  cur.thumb += (target.thumb - cur.thumb) * k;
-  cur.oppose += (target.oppose - cur.oppose) * k;
-  cur.spread += (target.spread - cur.spread) * k;
+/**
+ * Critically damped spring on every pose channel. Unlike an exponential lerp the hand accelerates
+ * out of the old pose and settles into the new one, which is what makes motion read as a real limb.
+ */
+function springPose(cur: HandPose, target: HandPose, vel: Float32Array, w: number, dt: number) {
+  const step = (i: number, x: number, t: number) => {
+    const v = vel[i];
+    const a = w * w * (t - x) - 2 * w * v;
+    vel[i] = v + a * dt;
+    return x + vel[i] * dt;
+  };
+  cur.pos.set(step(0, cur.pos.x, target.pos.x), step(1, cur.pos.y, target.pos.y), step(2, cur.pos.z, target.pos.z));
+  cur.rot.set(step(3, cur.rot.x, target.rot.x), step(4, cur.rot.y, target.rot.y), step(5, cur.rot.z, target.rot.z));
+  for (let i = 0; i < 4; i++) cur.curl[i] = step(6 + i, cur.curl[i], target.curl[i]);
+  cur.thumb = step(10, cur.thumb, target.thumb);
+  cur.oppose = step(11, cur.oppose, target.oppose);
+  cur.spread = step(12, cur.spread, target.spread);
 }
 
 // ------------------------------------------------------------------ items
@@ -391,23 +501,23 @@ function buildItems(look: HandLook) {
   // flashlight: rear end sits in the fist, head + lens protrude well past the knuckles
   const torch = g('flashlight');
   const tb = new THREE.Group();
-  const body = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.018, 0.15, 20), hardMat('#1d1f22', 0.4, 0.6));
+  const body = new THREE.Mesh(new THREE.CylinderGeometry(0.017, 0.017, 0.15, 20), hardMat('#1d1f22', 0.4, 0.6));
   body.position.y = 0.04;
-  const grip = new THREE.Mesh(new THREE.CylinderGeometry(0.0185, 0.0185, 0.05, 20), hardMat('#3a3d40', 0.85));
+  const grip = new THREE.Mesh(new THREE.CylinderGeometry(0.0178, 0.0178, 0.05, 20), hardMat('#3a3d40', 0.85));
   grip.position.y = 0.0;
-  const head = new THREE.Mesh(new THREE.CylinderGeometry(0.026, 0.019, 0.04, 20), hardMat('#26292d', 0.35, 0.7));
+  const head = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.018, 0.04, 20), hardMat('#26292d', 0.35, 0.7));
   head.position.y = 0.135;
-  const bezel = new THREE.Mesh(new THREE.TorusGeometry(0.024, 0.003, 8, 24), steelMat('#c8ccd0', 0.3));
+  const bezel = new THREE.Mesh(new THREE.TorusGeometry(0.023, 0.003, 8, 24), steelMat('#c8ccd0', 0.3));
   bezel.position.y = 0.155;
   bezel.rotation.x = Math.PI / 2;
   const lensG = glow('#fff4dd', 6);
-  const lens = new THREE.Mesh(new THREE.CircleGeometry(0.022, 20), lensG.material);
+  const lens = new THREE.Mesh(new THREE.CircleGeometry(0.021, 20), lensG.material);
   lens.position.y = 0.1555;
   lens.rotation.x = -Math.PI / 2;
   tb.add(body, grip, head, bezel, lens);
   torch.add(tb);
   torch.rotation.set(-Math.PI / 2, 0, 0);
-  torch.position.set(0, 0.008, 0.01);
+  torch.position.set(0, 0.004, 0.02);
   torch.userData.lens = lensG.intensity;
   for (const it of Object.values(items)) it.traverse((o) => { if ((o as THREE.Mesh).isMesh) { o.castShadow = false; o.receiveShadow = true; } });
   return items;
@@ -422,6 +532,7 @@ export interface HandsFrame {
   bobPhase: number;
   lookDX: number; // mouse delta this frame
   lookDY: number;
+  vy?: number; // vertical velocity (m/s), for the falling/balance reflex
 }
 
 type Action = { pose: string; dur: number; t: number; onHit?: () => void; hitAt?: number; hit?: boolean; next?: Action };
@@ -429,21 +540,29 @@ type Action = { pose: string; dur: number; t: number; onHit?: () => void; hitAt?
 /**
  * First-person viewmodel. Authored at real scale around the eye, then shrunk toward the camera
  * (VIEW_SCALE) so the hands never clip into nearby walls while looking full-size on screen.
+ *
+ * Empty hands hang out of view like real arms do; they come up for actions, the torch, sprinting
+ * and falling, and drop away again afterwards.
  */
 export class Hands {
   static VIEW_SCALE = 0.32;
   root = new THREE.Group();
-  private right: HandRig;
-  private left: HandRig;
+  readonly right: HandRig;
+  readonly left: HandRig;
   private items: Record<string, THREE.Group>;
   private base = 'idle';
   private action: Action | null = null;
   private sway = new THREE.Vector2();
   private swayVel = new THREE.Vector2();
   private dip = 0;
+  private dipVel = 0;
+  private air = 0;
+  private wasGrounded = true;
   private t = 0;
   private accent = { value: 3 };
   private kick = 0;
+  private pump = 0;
+  private target = { r: clonePose(DOWN), l: clonePose(DOWN) };
   flashlightOn = false;
   readonly flashlight: THREE.SpotLight;
 
@@ -451,7 +570,7 @@ export class Hands {
     this.right = new HandRig(1, look, this.accent);
     this.left = new HandRig(-1, look, this.accent);
     this.items = buildItems(look);
-    this.root.add(this.right.root, this.left.root);
+    this.root.add(this.right.root, this.left.root, this.right.upper, this.left.upper);
     this.root.scale.setScalar(Hands.VIEW_SCALE);
     this.root.renderOrder = 5;
     // flashlight beam emitted from the torch in the left hand (light lives at camera scale)
@@ -477,6 +596,8 @@ export class Hands {
 
   /** Play a transient pose sequence. `onHit` fires at `hitAt` seconds into the last step. */
   play(steps: { pose: string; dur: number }[], onHit?: () => void, hitStep = steps.length - 1, hitAt = 0) {
+    // never swallow the interrupted action's payoff (an eaten ration still heals, a throw still throws)
+    for (let a = this.action; a; a = a.next ?? null) if (a.onHit && !a.hit) { a.hit = true; a.onHit(); }
     let first: Action | null = null;
     let prev: Action | null = null;
     steps.forEach((s, i) => {
@@ -489,16 +610,16 @@ export class Hands {
   }
 
   throwEmp(onRelease: () => void) {
-    this.play([{ pose: 'empHold', dur: 0.18 }, { pose: 'empWind', dur: 0.22 }, { pose: 'empThrow', dur: 0.35 }], onRelease, 2, 0.05);
+    this.play([{ pose: 'empHold', dur: 0.3 }, { pose: 'empWind', dur: 0.26 }, { pose: 'empThrow', dur: 0.4 }], onRelease, 2, 0.06);
   }
   eat(onDone?: () => void) {
-    this.play([{ pose: 'eat', dur: 0.35 }, { pose: 'eat', dur: 0.9 }], onDone, 1, 0.5);
+    this.play([{ pose: 'eat', dur: 0.45 }, { pose: 'eat', dur: 0.9 }], onDone, 1, 0.5);
   }
   reach(onTouch?: () => void) {
-    this.play([{ pose: 'reach', dur: 0.2 }, { pose: 'grab', dur: 0.3 }], onTouch, 1, 0.05);
+    this.play([{ pose: 'reach', dur: 0.2 }, { pose: 'grab', dur: 0.32 }], onTouch, 1, 0.04);
   }
   press(onPress?: () => void) {
-    this.play([{ pose: 'keypad', dur: 0.25 }, { pose: 'keypad', dur: 0.25 }], onPress, 0, 0.2);
+    this.play([{ pose: 'keypad', dur: 0.24 }, { pose: 'keypad', dur: 0.25 }], onPress, 0, 0.2);
   }
   /** Small recoil kick (zap, landing, EMP blast). */
   jolt(k: number) {
@@ -516,13 +637,41 @@ export class Hands {
       if (a.onHit && !a.hit && a.t >= (a.hitAt ?? 0)) { a.hit = true; a.onHit(); }
       if (a.t >= a.dur) this.action = a.next ?? null;
     } else if (this.base === 'idle') {
-      poseName = f.sprint ? 'run' : f.crouch ? 'crouch' : 'idle';
+      // balance reflex: after a moment in the air (not a little hop) the arms come up
+      this.air = f.grounded ? 0 : this.air + dt;
+      poseName = this.air > 0.28 || (f.vy ?? 0) < -5 ? 'air' : f.sprint ? 'run' : f.crouch ? 'crouch' : 'idle';
     }
     const def = POSES[poseName] ?? POSES.idle;
-    const k = 1 - Math.exp(-(this.action ? 18 : 9) * dt);
     const torchGrip = this.flashlightOn && !def.items?.l && poseName !== 'lockpick' && poseName !== 'showcase' && poseName !== 'showcaseEmp';
-    blendPose(this.right.cur, def.r, k);
-    blendPose(this.left.cur, torchGrip ? TORCH_L : def.l, k);
+
+    // sprinting: arms pump in counter-phase with the legs, fists swinging up into the bottom of the view
+    this.pump += ((f.sprint && f.grounded && !this.action && this.base === 'idle' ? 1 : 0) - this.pump) * (1 - Math.exp(-6 * dt));
+    const tr = this.target.r, tl = this.target.l;
+    copyPose(tr, def.r);
+    copyPose(tl, torchGrip ? TORCH_L : def.l);
+    if (this.pump > 0.01) {
+      const swing = Math.sin(f.bobPhase);
+      const pumpPose = (t: HandPose, ph: number, isTorch: boolean) => {
+        if (isTorch) { t.pos.y += Math.max(0, ph) * 0.02 * this.pump; return; }
+        const up = (ph * 0.5 + 0.5) * this.pump; // 0 = swung back, 1 = swung forward
+        t.pos.set(
+          THREE.MathUtils.lerp(t.pos.x, 0.2 - up * 0.06, this.pump),
+          THREE.MathUtils.lerp(t.pos.y, -0.54 + up * 0.3, this.pump),
+          THREE.MathUtils.lerp(t.pos.z, -0.28 - up * 0.12, this.pump),
+        );
+        t.rot.set(THREE.MathUtils.lerp(t.rot.x, 0.2 + up * 0.5, this.pump), THREE.MathUtils.lerp(t.rot.y, 0.35, this.pump), THREE.MathUtils.lerp(t.rot.z, -1.35, this.pump));
+        for (let i = 0; i < 4; i++) t.curl[i] = THREE.MathUtils.lerp(t.curl[i], 0.62 + i * 0.05, this.pump);
+        t.thumb = THREE.MathUtils.lerp(t.thumb, 0.55, this.pump);
+        t.oppose = THREE.MathUtils.lerp(t.oppose, 0.55, this.pump);
+      };
+      pumpPose(tr, swing, false);
+      pumpPose(tl, -swing, torchGrip);
+    }
+    // springs: snappy for deliberate actions, softer for drifting between rest poses; the off-hand
+    // lags a touch so the two never move in lockstep
+    const w = this.action ? 17 : 10;
+    springPose(this.right.cur, tr, this.right.vel, w, dt);
+    springPose(this.left.cur, tl, this.left.vel, w * 0.88, dt);
 
     // items in hands
     const want = { r: def.items?.r, l: def.items?.l ?? (torchGrip ? 'flashlight' : undefined) };
@@ -534,28 +683,35 @@ export class Hands {
     }
 
     // procedural motion: gait bob, look sway (spring), landing dip, breathing, kick
-    const move = Math.min(1, f.speed / 3.4);
-    const run = f.sprint ? 1 : 0;
-    const bobX = Math.sin(f.bobPhase) * 0.012 * move * (1 + run);
-    const bobY = Math.abs(Math.cos(f.bobPhase)) * 0.014 * move * (1 + run * 1.2);
-    const breathe = Math.sin(this.t * 1.6) * 0.003;
-    // spring toward the negative of mouse motion (hands lag behind the view)
-    const target = new THREE.Vector2(-f.lookDX * 0.00025, f.lookDY * 0.00025);
+    const move = Math.min(1, f.speed / 3.4) * (f.grounded ? 1 : 0);
+    const bobX = Math.sin(f.bobPhase) * 0.008 * move;
+    const bobY = (Math.abs(Math.cos(f.bobPhase)) - 0.5) * 0.012 * move;
+    const breathe = Math.sin(this.t * 1.5) * 0.0025 + Math.sin(this.t * 0.37) * 0.001;
+    // hands lag behind the view: spring toward the negative of mouse motion
+    const target = _sway.set(-f.lookDX * 0.00025, f.lookDY * 0.00025);
     target.clampLength(0, 0.05);
     this.swayVel.addScaledVector(target.sub(this.sway), 120 * dt);
     this.swayVel.multiplyScalar(Math.exp(-14 * dt));
     this.sway.addScaledVector(this.swayVel, dt);
-    this.dip = damp(this.dip, f.grounded ? 0 : -0.02, 6, dt);
-    this.kick = damp(this.kick, 0, 5, dt);
+    // landing: the arms keep falling for a moment and spring back (weight, not a canned offset)
+    if (f.grounded && !this.wasGrounded) this.dipVel -= Math.min(0.6, Math.max(0, -(f.vy ?? -3)) * 0.05);
+    this.wasGrounded = f.grounded;
+    this.dipVel += (-this.dip * 110 - this.dipVel * 13) * dt;
+    this.dip += this.dipVel * dt;
+    this.kick += -this.kick * Math.min(1, 5 * dt);
 
     const apply = (rig: HandRig, phase: number) => {
-      const p = clonePose(rig.cur);
+      const p = _pose;
+      copyPose(p, rig.cur);
       p.pos.x += bobX * phase + this.sway.x;
-      p.pos.y += -bobY + breathe + this.sway.y + this.dip - this.kick * 0.04;
+      p.pos.y += bobY + breathe + this.sway.y + this.dip - this.kick * 0.04;
       p.pos.z += this.kick * 0.05;
       p.rot.z += this.sway.x * 3 * phase;
+      p.rot.y += this.sway.x * 1.5;
       p.rot.x += this.sway.y * 2 + this.kick * 0.3;
       rig.apply(p);
+      // fully lowered hands are off-screen: skip their ~30 draw calls
+      rig.root.visible = rig.upper.visible = rig.cur.pos.y > -0.5 || p.pos.y > -0.5;
     };
     apply(this.right, 1);
     apply(this.left, -1);
@@ -566,7 +722,14 @@ export class Hands {
     ring.value = 4 + Math.sin(this.t * 18) * 2;
     const lens = this.items.flashlight.userData.lens as { value: number };
     lens.value = this.flashlightOn ? 8 : 0.1;
-    this.flashlight.intensity = damp(this.flashlight.intensity, this.flashlightOn && want.l === 'flashlight' ? 16 : 0, 14, dt);
+    const lit = this.flashlightOn && want.l === 'flashlight';
+    this.flashlight.intensity += ((lit ? 16 : 0) - this.flashlight.intensity) * (1 - Math.exp(-14 * dt));
+    // the beam follows the torch hand (bob, sway, sprint pump) instead of being glued to the eye
+    if (lit) {
+      const lp = this.left.cur.pos;
+      this.flashlight.position.set(-0.05 + (lp.x * -1 + 0.165) * 0.32, -0.05 + (lp.y + 0.2) * 0.32, -0.35);
+      this.flashlight.target.position.set(-0.02 - this.sway.x * 8, -0.12 + this.sway.y * 8 + (lp.y + 0.2) * 3, -6);
+    }
   }
 
   dispose() {
@@ -576,3 +739,13 @@ export class Hands {
   }
 }
 
+const _sway = new THREE.Vector2();
+const _pose = clonePose(DOWN);
+function copyPose(dst: HandPose, src: HandPose) {
+  dst.pos.copy(src.pos);
+  dst.rot.copy(src.rot);
+  for (let i = 0; i < 4; i++) dst.curl[i] = src.curl[i];
+  dst.thumb = src.thumb;
+  dst.oppose = src.oppose;
+  dst.spread = src.spread;
+}

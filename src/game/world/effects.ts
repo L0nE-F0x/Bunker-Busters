@@ -2,7 +2,7 @@ import * as THREE from 'three/webgpu';
 import {
   Fn, vec2, vec3, vec4, float, uniform, instanceIndex, hash, time, cameraPosition, fract, uv, length, smoothstep, mix, max,
   pow, dot, normalize, sin, positionLocal, positionWorld, texture, color, clamp,
-  normalWorld, abs, viewportLinearDepth, linearDepth, cameraNear, cameraFar,
+  normalWorld, abs, viewportLinearDepth, linearDepth, cameraNear, cameraFar, instancedDynamicBufferAttribute, exp,
 } from 'three/tsl';
 import type { Atmosphere } from './Atmosphere';
 import type { Heightfield } from './Heightfield';
@@ -126,6 +126,88 @@ export class GroundHaze {
     this.offset.x += w.x * dt * 5;
     this.offset.y += w.y * dt * 5;
     (this.uOffset.value as THREE.Vector2).copy(this.offset);
+  }
+}
+
+/**
+ * Kicked-up dust: landings, sprinting footfalls, things hitting the ground. One sprite draw call;
+ * the CPU writes spawn data into a ring buffer and the GPU animates every puff (drag, wind drift,
+ * slow rise, growth and fade), lit like the ground haze so it sits in the scene's light.
+ */
+export class DustPuffs {
+  sprite: THREE.Sprite;
+  private readonly N = 96;
+  private a: THREE.InstancedBufferAttribute; // xyz = spawn position, w = spawn time
+  private b: THREE.InstancedBufferAttribute; // xyz = initial velocity, w = size
+  private next = 0;
+  private now = 0;
+  private uTime = uniform(0);
+  private uWind = uniform(new THREE.Vector3());
+
+  constructor(private atmo: Atmosphere) {
+    const N = this.N;
+    this.a = new THREE.InstancedBufferAttribute(new Float32Array(N * 4).fill(-1e4), 4);
+    this.b = new THREE.InstancedBufferAttribute(new Float32Array(N * 4), 4);
+    this.a.setUsage(THREE.DynamicDrawUsage);
+    this.b.setUsage(THREE.DynamicDrawUsage);
+    const A: N = instancedDynamicBufferAttribute(this.a, 'vec4');
+    const B: N = instancedDynamicBufferAttribute(this.b, 'vec4');
+    const mat = new THREE.SpriteNodeMaterial({ transparent: true, depthWrite: false });
+    const life = float(1.8);
+    const age = this.uTime.sub(A.w);
+    const alive = age.greaterThan(0).and(age.lessThan(life));
+    const k = float(2.6); // air drag on the grains
+    const travel = B.xyz.mul(float(1).sub(exp(age.mul(k).negate())).div(k));
+    const pos = A.xyz.add(travel).add(this.uWind.mul(age.mul(0.5))).add(vec3(0, age.mul(0.12), 0));
+    mat.positionNode = pos;
+    const size = B.w.mul(age.mul(1.1).add(0.45)).mul(alive.select(float(1), float(0)));
+    mat.scaleNode = vec2(size, size.mul(0.8));
+    mat.rotationNode = hash(instanceIndex).mul(6.28).add(age.mul(0.3));
+    mat.colorNode = Fn(() => {
+      const p = uv().sub(0.5).mul(2);
+      const n = noise(p.mul(0.5).add(hash(instanceIndex.add(5)).mul(9))).r.sub(0.5);
+      const shape = smoothstep(1.0, 0.15, length(p).add(n.mul(0.6)));
+      const t = age.div(life);
+      const fade = pow(float(1).sub(t), 2).mul(smoothstep(0.0, 0.06, age));
+      const soft = clamp(viewportLinearDepth.sub(linearDepth()).mul(cameraFar.sub(cameraNear)).div(0.4), 0, 1);
+      const view = normalize(pos.sub(cameraPosition));
+      const mu = max(dot(view, atmo.uSunDir), 0);
+      const night = float(1).sub(atmo.uNight.mul(0.75));
+      const lit = atmo.uHaze.mul(0.75).add(atmo.uSunColor.mul(pow(mu, 3).mul(0.7).add(0.25))).mul(night);
+      return vec4(lit, shape.mul(fade).mul(soft).mul(0.32));
+    })();
+    this.sprite = new THREE.Sprite(mat);
+    this.sprite.count = N;
+    this.sprite.frustumCulled = false;
+    this.sprite.renderOrder = 12;
+  }
+
+  /** `n` puffs around `p`: `spread` m/s outward, `up` m/s upward, `size` m, optional push `dir`. */
+  emit(p: THREE.Vector3, n: number, spread: number, up: number, size: number, dir?: THREE.Vector3) {
+    const A = this.a.array as Float32Array, B = this.b.array as Float32Array;
+    for (let i = 0; i < n; i++) {
+      const j = this.next;
+      this.next = (this.next + 1) % this.N;
+      const ang = (i / n) * Math.PI * 2 + Math.random() * 0.8;
+      const sp = spread * (0.6 + Math.random() * 0.6);
+      A[j * 4] = p.x + Math.cos(ang) * 0.12;
+      A[j * 4 + 1] = p.y + 0.06;
+      A[j * 4 + 2] = p.z + Math.sin(ang) * 0.12;
+      A[j * 4 + 3] = this.now - Math.random() * 0.05;
+      B[j * 4] = Math.cos(ang) * sp + (dir?.x ?? 0);
+      B[j * 4 + 1] = up * (0.5 + Math.random() * 0.8);
+      B[j * 4 + 2] = Math.sin(ang) * sp + (dir?.z ?? 0);
+      B[j * 4 + 3] = size * (0.7 + Math.random() * 0.6);
+    }
+    this.a.needsUpdate = true;
+    this.b.needsUpdate = true;
+  }
+
+  update(dt: number) {
+    this.now += dt;
+    this.uTime.value = this.now;
+    const w = this.atmo.wind;
+    (this.uWind.value as THREE.Vector3).set(w.x, 0, w.y);
   }
 }
 

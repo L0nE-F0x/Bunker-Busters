@@ -7,6 +7,13 @@ import { damp, dampAngle } from '@/engine/noise';
 const STAND_HALF = 0.5;
 const CROUCH_HALF = 0.2;
 const RADIUS = 0.33;
+const GRAVITY = 9.81;
+const JUMP_SPEED = Math.sqrt(2 * GRAVITY * 0.55); // ~0.55 m standing jump
+const GROUND_ACCEL = 10; // m/s² from a standstill up to walking pace
+const SPRINT_ACCEL = 5; // m/s² building from a jog to a full sprint
+const GROUND_DECEL = 16; // m/s² stopping / reversing (feet planted)
+const AIR_ACCEL = 1.2; // m/s² of mid-air steering
+const DRAG = GRAVITY / (55 * 55); // quadratic drag coefficient → terminal velocity ~55 m/s
 
 /** Rapier kinematic character controller + procedural model. */
 export class Player {
@@ -29,7 +36,20 @@ export class Player {
   private jumpBuffer = 0;
   private lastYaw = 0;
   private turnRate = 0;
-  onLand: ((impact: number) => void) | null = null;
+  private snapping = false; // vy is the artificial ground-snap velocity, not a real fall
+  private recover = 0; // post-landing beat before the next jump
+  private grade = 0; // terrain rise/run along the direction of travel
+  /** 0..1 after a hard landing; slows you and blocks sprinting while it wears off. */
+  stumble = 0;
+  /** Sprint reserve 0..1. Run it dry and you're winded until you've caught your breath. */
+  stamina = 1;
+  winded = false;
+  /** Smoothed 0..1 "how out of breath" (drives breathing audio + view heave). */
+  exertion = 0;
+  /** `k` 0..1 for effects, `speed` = impact speed in m/s. */
+  onLand: ((k: number, speed: number) => void) | null = null;
+  /** Mid-air tuck/untuck moved the feet by `dy` while the head stayed put. */
+  onTuck: ((dy: number) => void) | null = null;
   onJump: (() => void) | null = null;
 
   constructor(private physics: Physics, archetype: string, spawn: THREE.Vector3) {
@@ -67,17 +87,30 @@ export class Player {
   private setCrouch(c: boolean) {
     if (c === this.crouching) return;
     const t = this.body.translation();
+    const delta = STAND_HALF - CROUCH_HALF;
+    // airborne: crouching tucks the legs up (head stays put, feet rise), so a tuck-jump clears more
+    let tuck = !this.grounded;
     if (!c) {
-      // headroom check before standing up
-      const dist = this.physics.raycast({ x: t.x, y: t.y + this.halfHeight + RADIUS - 0.05, z: t.z }, { x: 0, y: 1, z: 0 }, (STAND_HALF - CROUCH_HALF) * 2 + 0.1, this.collider);
-      if (dist !== null) return;
+      if (tuck) {
+        // un-tuck downward only if the legs have room, otherwise stand up from the feet
+        const below = this.physics.raycast({ x: t.x, y: t.y - this.halfHeight - RADIUS + 0.02, z: t.z }, { x: 0, y: -1, z: 0 }, delta * 2 + 0.1, this.collider);
+        if (below !== null) tuck = false;
+      }
+      if (!tuck) {
+        // headroom check before standing up
+        const dist = this.physics.raycast({ x: t.x, y: t.y + this.halfHeight + RADIUS - 0.05, z: t.z }, { x: 0, y: 1, z: 0 }, delta * 2 + 0.1, this.collider);
+        if (dist !== null) return;
+      }
     }
     this.crouching = c;
     const newHalf = c ? CROUCH_HALF : STAND_HALF;
     const dy = newHalf - this.halfHeight;
     this.halfHeight = newHalf;
     this.collider.setHalfHeight(newHalf);
-    this.body.setTranslation({ x: t.x, y: t.y + dy, z: t.z }, true);
+    // grounded: keep the feet planted. tucking: keep the head where it is (feet move by 2·dy)
+    const shift = tuck ? -dy : dy;
+    this.body.setTranslation({ x: t.x, y: t.y + shift, z: t.z }, true);
+    if (tuck) this.onTuck?.(2 * dy);
   }
 
   /** `faceCamera`: first person — the body always faces the view heading. */
@@ -92,7 +125,7 @@ export class Player {
     const wantCrouch = !this.frozen && (input.isDown('KeyC') || input.isDown('ControlLeft'));
     this.setCrouch(wantCrouch);
     const moving = mx !== 0 || mz !== 0;
-    this.sprinting = moving && !this.crouching && input.isDown('ShiftLeft') && mz >= 0;
+    this.sprinting = moving && !this.crouching && input.isDown('ShiftLeft') && mz > 0 && this.stumble < 0.3 && !this.winded;
 
     const len = Math.hypot(mx, mz) || 1;
     mx /= len; mz /= len;
@@ -100,28 +133,65 @@ export class Player {
     const sin = Math.sin(camYaw), cos = Math.cos(camYaw);
     const dirX = mx * cos - mz * sin;
     const dirZ = -mx * sin - mz * cos;
-    const speed = (this.crouching ? 1.8 : this.sprinting ? 6.4 : 3.4) * this.speedMult;
-    const target = new THREE.Vector3(dirX * speed, 0, dirZ * speed);
-    if (!moving) target.set(0, 0, 0);
-    const accel = this.grounded ? (moving ? 12 : 14) : 2.5;
-    this.velocity.x = damp(this.velocity.x, target.x, accel, dt);
-    this.velocity.z = damp(this.velocity.z, target.z, accel, dt);
+    // backpedalling and strafing are slower than walking forward; uphill is slower, downhill a touch faster
+    const dirMult = mz < 0 ? 0.7 : mz === 0 ? 0.88 : 1;
+    const slopeMult = THREE.MathUtils.clamp(1 - this.grade * 0.9, 0.55, 1.1);
+    const speed = (this.crouching ? 1.8 : this.sprinting ? 6.4 : 3.4) * this.speedMult * dirMult * slopeMult * (1 - this.stumble * 0.6);
+    const tx = moving ? dirX * speed : 0, tz = moving ? dirZ * speed : 0;
 
-    // jump with coyote time + buffer
-    this.coyote = this.grounded ? 0.12 : Math.max(0, this.coyote - dt);
+    // acceleration-limited ground movement: a body has mass, it takes a moment to get going and to
+    // stop. In the air there's nothing to push against — momentum carries, with only a little steering.
+    let dvx = tx - this.velocity.x, dvz = tz - this.velocity.z;
+    const dv = Math.hypot(dvx, dvz);
+    if (dv > 1e-5) {
+      const hs0 = Math.hypot(this.velocity.x, this.velocity.z);
+      const braking = !moving || tx * this.velocity.x + tz * this.velocity.z < 0;
+      const accel = this.grounded
+        ? braking ? GROUND_DECEL : THREE.MathUtils.lerp(GROUND_ACCEL, SPRINT_ACCEL, THREE.MathUtils.clamp((hs0 - 3.4) / 3, 0, 1))
+        : moving ? AIR_ACCEL : 0;
+      const k = Math.min(1, (accel * dt) / dv);
+      dvx *= k; dvz *= k;
+      this.velocity.x += dvx;
+      this.velocity.z += dvz;
+    }
+
+    // jump with coyote time + buffer; a landing needs a beat of recovery before the next jump
+    this.coyote = this.grounded ? 0.1 : Math.max(0, this.coyote - dt);
     this.jumpBuffer = input.pressed('Space') && !this.frozen ? 0.15 : Math.max(0, this.jumpBuffer - dt);
-    if (this.jumpBuffer > 0 && this.coyote > 0 && !this.crouching) {
-      this.velocity.y = 6.0;
+    this.recover = Math.max(0, this.recover - dt);
+    this.stumble = Math.max(0, this.stumble - dt * 1.4);
+    let jumped = false;
+    // stamina: ~14 s of flat-out sprinting, back in ~5 s standing still (slower on the move)
+    const hsNow = Math.hypot(this.velocity.x, this.velocity.z);
+    if (this.sprinting && hsNow > 4) this.stamina -= dt / 14;
+    else this.stamina += dt * (hsNow < 0.5 ? 0.2 : this.crouching ? 0.15 : 0.11);
+    this.stamina = THREE.MathUtils.clamp(this.stamina, 0, 1);
+    if (this.stamina <= 0) this.winded = true;
+    else if (this.winded && this.stamina > 0.4) this.winded = false;
+    this.exertion = damp(this.exertion, THREE.MathUtils.clamp((0.92 - this.stamina) * 1.4 + (this.sprinting ? 0.15 : 0), 0, 1), this.exertion < 0.1 ? 0.8 : 1.6, dt);
+    if (this.jumpBuffer > 0 && this.coyote > 0 && !this.crouching && this.recover <= 0) {
+      this.stamina = Math.max(0, this.stamina - 0.03);
+      this.velocity.y = JUMP_SPEED * (1 - this.stumble * 0.5) * (this.winded ? 0.85 : 1);
       this.coyote = 0;
       this.jumpBuffer = 0;
       this.grounded = false;
+      this.snapping = false;
+      jumped = true;
       this.onJump?.();
     }
-    this.velocity.y -= 19 * dt;
-    if (this.grounded && this.velocity.y < 0) this.velocity.y = -2;
+    // walking off an edge: the fall starts from rest, not at the ground-snap velocity
+    if (!this.grounded && this.snapping) { this.velocity.y = 0; this.snapping = false; }
+    // gravity + quadratic air drag (terminal velocity ≈ 55 m/s for a person)
+    this.velocity.y -= GRAVITY * dt;
+    if (!this.grounded) {
+      const v = this.velocity.length();
+      const drag = Math.min(1, DRAG * v * dt);
+      this.velocity.multiplyScalar(1 - drag);
+    }
+    if (this.grounded && this.velocity.y < 0 && !jumped) { this.velocity.y = -2; this.snapping = true; }
 
     const desired = { x: this.velocity.x * dt, y: this.velocity.y * dt, z: this.velocity.z * dt };
-    this.controller.computeColliderMovement(this.collider, desired);
+    this.controller.computeColliderMovement(this.collider, desired, this.physics.R.QueryFilterFlags.EXCLUDE_DYNAMIC);
     const mv = this.controller.computedMovement();
     const wasGrounded = this.grounded;
     const prevVy = this.velocity.y;
@@ -129,13 +199,31 @@ export class Player {
     const t = this.body.translation();
     const next = { x: t.x + mv.x, y: t.y + mv.y, z: t.z + mv.z };
     this.body.setNextKinematicTranslation(next);
-    // if we were blocked, bleed velocity
     if (dt > 0) {
-      this.velocity.x = THREE.MathUtils.lerp(this.velocity.x, mv.x / dt, 0.5);
-      this.velocity.z = THREE.MathUtils.lerp(this.velocity.z, mv.z / dt, 0.5);
-      if (Math.abs(mv.y / dt - this.velocity.y) > 0.5 && this.velocity.y > 0) this.velocity.y = Math.min(this.velocity.y, mv.y / dt);
+      // blocked by a wall: lose the velocity into it (no sticking, no sliding back out)
+      const ax = mv.x / dt, az = mv.z / dt;
+      if (Math.hypot(ax, az) < Math.hypot(this.velocity.x, this.velocity.z) - 0.05) { this.velocity.x = ax; this.velocity.z = az; }
+      // bumped your head
+      if (this.velocity.y > 0 && mv.y / dt < this.velocity.y - 0.5) this.velocity.y = Math.max(0, mv.y / dt);
+      // terrain grade along the direction of travel (rise / run), smoothed
+      const run = Math.hypot(mv.x, mv.z);
+      if (this.grounded && run > 0.004) this.grade = damp(this.grade, THREE.MathUtils.clamp(mv.y / run, -1, 1), 6, dt);
+      else if (!this.grounded) this.grade = damp(this.grade, 0, 4, dt);
     }
-    if (!wasGrounded && this.grounded && prevVy < -4) this.onLand?.(Math.min(1, -prevVy / 14));
+    if (!wasGrounded && this.grounded) {
+      const impact = -prevVy;
+      if (impact > 2) {
+        this.recover = 0.12 + Math.min(0.5, impact * 0.03);
+        // a hard landing knocks the wind out of you: brief slowdown, scaled by the impact
+        if (impact > 6) this.stumble = Math.min(1, (impact - 6) / 6 + 0.35);
+        // horizontal momentum bleeds off on impact
+        const keep = THREE.MathUtils.clamp(1 - (impact - 3) * 0.06, 0.45, 1);
+        this.velocity.x *= keep; this.velocity.z *= keep;
+      }
+      this.velocity.y = -2;
+      this.snapping = true;
+      if (impact > 2.5) this.onLand?.(Math.min(1, impact / 14), impact);
+    }
     this.position.set(next.x, next.y - this.halfHeight - RADIUS, next.z);
 
     // face movement direction (or camera when interacting)

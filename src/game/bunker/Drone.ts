@@ -29,6 +29,8 @@ export interface DroneEvents {
   onStateChange?: (s: DroneState, prev: DroneState) => void;
   onZap?: () => void;
   onSputter?: () => void;
+  /** Hit the ground with its rotors dead (k 0..1 = impact strength). */
+  onCrash?: (k: number) => void;
 }
 
 /** SeedBot: refurbished guard drone with 12% battery health. */
@@ -46,6 +48,10 @@ export class Drone {
   position = new THREE.Vector3();
   yaw = 0;
   private vel = new THREE.Vector3();
+  private vy = 0; // vertical speed from the thrust model
+  private accS = new THREE.Vector3(); // smoothed horizontal acceleration (for banking)
+  private prevVel = new THREE.Vector3();
+  private crashTilt = new THREE.Vector2(); // resting lean after a crash landing
   private wp = 0;
   private stateTime = 0;
   private sputterTimer = 18 + Math.random() * 8;
@@ -174,10 +180,43 @@ export class Drone {
     this.events.onStateChange?.(s, prev);
   }
 
+  /**
+   * Vertical flight: lift comes from the rotors (∝ spin²) under a PD altitude controller, against
+   * real gravity. Kill the rotors (EMP) and it drops like a stone, bounces, and comes to rest
+   * tilted on the ground; a brownout leaves it sagging and wobbling on weak thrust.
+   */
+  private flyVertical(dt: number, targetY: number, t: number) {
+    const g = 9.81;
+    const spin = this.rotorSpin.value as number;
+    const sputter = this.state === 'sputter';
+    const goal = sputter ? targetY - 1.3 : targetY;
+    const kp = sputter ? 6 : 14, kd = sputter ? 2.5 : 6.5;
+    let thrust = g + kp * (goal - this.position.y) - kd * this.vy;
+    if (sputter) thrust *= 0.75 + Math.sin(t * 9) * Math.sin(t * 3.3) * 0.35; // stuttering power
+    thrust = THREE.MathUtils.clamp(thrust, 0, 2.2 * g * spin * spin);
+    this.vy += (thrust - g) * dt - this.vy * Math.abs(this.vy) * 0.02 * dt;
+    this.position.y += this.vy * dt;
+    const floor = this.groundY + 0.35;
+    if (this.position.y < floor) {
+      this.position.y = floor;
+      if (this.vy < -1.5) {
+        this.events.onCrash?.(Math.min(1, -this.vy / 8));
+        // land on one skid: lean over a little, more for a harder hit
+        const k = Math.min(1, -this.vy / 8);
+        this.crashTilt.set((Math.random() - 0.5) * 0.5 * k, (Math.random() < 0.5 ? -1 : 1) * (0.15 + 0.25 * k));
+        this.vel.multiplyScalar(0.3);
+      }
+      this.vy = this.vy < -1.5 ? -this.vy * 0.22 : Math.max(0, this.vy);
+    }
+    // righting itself once the rotors bite again
+    if (spin > 0.5 && this.position.y > floor + 0.05) this.crashTilt.multiplyScalar(Math.exp(-4 * dt));
+  }
+
   private moveToward(target: THREE.Vector3, speed: number, dt: number) {
     const d = target.clone().sub(this.position);
     const dist = d.length();
     const desired = dist > 0.01 ? d.multiplyScalar(Math.min(speed, dist * 2) / dist) : d.set(0, 0, 0);
+    desired.y = 0; // altitude is the thrust model's job
     this.vel.lerp(desired, 1 - Math.exp(-3 * dt));
     this.position.addScaledVector(this.vel, dt);
     // stay out of the house volume (slide along walls)
@@ -257,7 +296,6 @@ export class Drone {
       case 'sputter': {
         this.vel.multiplyScalar(Math.exp(-3 * dt));
         this.position.addScaledVector(this.vel, dt);
-        this.position.y = damp(this.position.y, hover - 1.3, 2, dt);
         if (this.stateTime > 4.5) this.setState('patrol');
         break;
       }
@@ -311,8 +349,8 @@ export class Drone {
       case 'disabled': {
         this.disabledFor -= dt;
         this.vel.multiplyScalar(Math.exp(-2 * dt));
+        this.vel.y = 0;
         this.position.addScaledVector(this.vel, dt);
-        this.position.y = damp(this.position.y, this.groundY + 0.35, 3, dt);
         if (this.disabledFor <= 0) this.setState('patrol');
         break;
       }
@@ -320,13 +358,23 @@ export class Drone {
     // keep within the yard (plus margin)
     this.position.x = THREE.MathUtils.clamp(this.position.x, this.yard.min.x - 6, this.yard.max.x + 6);
     this.position.z = THREE.MathUtils.clamp(this.position.z, this.yard.min.z - 6, this.yard.max.z + 6);
-    if (this.state !== 'disabled' && this.state !== 'sputter') this.position.y = damp(this.position.y, hover + Math.sin(t * 1.7) * 0.12, 3, dt);
+    this.flyVertical(dt, hover + Math.sin(t * 1.7) * 0.12, t);
 
     // ---- visuals ----
     this.group.position.copy(this.position);
     const local = this.vel.clone().applyAxisAngle(new THREE.Vector3(0, 1, 0), -this.yaw);
     this.body.rotation.set(0, 0, 0);
-    this.group.rotation.set(THREE.MathUtils.clamp(local.z * 0.08, -0.3, 0.3), this.yaw, THREE.MathUtils.clamp(-local.x * 0.08, -0.3, 0.3), 'YXZ');
+    // a multirotor banks into its acceleration (plus a little to hold speed against drag)
+    if (dt > 0) {
+      const acc = _a.copy(this.vel).sub(this.prevVel).divideScalar(dt).setY(0);
+      this.accS.lerp(acc, 1 - Math.exp(-6 * dt));
+    }
+    this.prevVel.copy(this.vel);
+    const accL = _b.copy(this.accS).applyAxisAngle(_up, -this.yaw);
+    const airborne = this.state !== 'disabled' || this.position.y > this.groundY + 0.45;
+    const pitch = airborne ? THREE.MathUtils.clamp((accL.z + local.z * 0.5) * 0.06, -0.35, 0.35) : 0;
+    const roll = airborne ? THREE.MathUtils.clamp(-(accL.x + local.x * 0.5) * 0.06, -0.35, 0.35) : 0;
+    this.group.rotation.set(pitch + this.crashTilt.x, this.yaw, roll + this.crashTilt.y, 'YXZ');
     let colorKey = 'calm';
     if (this.state === 'alert') colorKey = 'alert';
     else if (this.state === 'suspicious' || this.state === 'search' || this.detection > 0.25) colorKey = 'sus';
@@ -340,9 +388,11 @@ export class Drone {
     this.spot.intensity = 70 * power * (1 + s.night * 0.6);
     (this.cone.color.value as THREE.Color).copy(this.spot.color);
     this.cone.intensity.value = (0.18 + s.night * 0.4 + (this.state === 'alert' ? 0.25 : 0)) * power;
-    this.rotorSpin.value = damp(this.rotorSpin.value as number, this.state === 'disabled' ? 0.02 : this.state === 'sputter' ? 0.35 : 1, 3, dt);
+    this.rotorSpin.value = damp(this.rotorSpin.value as number, this.state === 'disabled' ? 0.02 : this.state === 'sputter' ? 0.7 : 1, 3, dt);
     for (const r of this.rotors) r.rotation.z += dt * 40 * (this.rotorSpin.value as number);
     (this.screen.material as THREE.MeshStandardNodeMaterial).emissiveIntensity = Math.sin(t * 4) > 0 ? 1 : 0.25;
     void this.home;
   }
 }
+
+const _a = new THREE.Vector3(), _b = new THREE.Vector3(), _up = new THREE.Vector3(0, 1, 0);

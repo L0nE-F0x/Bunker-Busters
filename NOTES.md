@@ -33,6 +33,64 @@ URL flags: `?webgl` forces WebGL2. `?gpu=high` / `?gpu=low` force WebGPU on the 
 - Interaction targeting follows your gaze. Banners are queued. The hotbar moved bottom-right so it doesn't sit on the hands.
 - Dev tool: `http://localhost:5173/debug/hands.html?pose=lockpick&look=engineer&torch` renders the hands alone in a studio (dev server only, not part of the build).
 
+### Realism pass (2026-10-05)
+Owner feedback: the hands looked like "zombie hook hands", and falling and other physics weren't believable.
+
+**Hands (`Hands.ts`, rebuilt)**
+- Anatomy:
+  - The palm is a remapped rounded box: tapers to the wrist, arched back, thenar and hypothenar pads.
+  - Knuckles sit on an arc, with the middle finger furthest forward and the pinky set back.
+  - Joints are full spherical caps, so bent fingers don't open gaps.
+  - DIP flexion is about ⅔ of PIP, like real tendons. A single curl value cascades: the index finger stays straightest and the pinky curls most.
+  - The thumb sits on the correct side and lies along the index finger.
+- Forearms use two-bone IK (`SHOULDER`/`UPPER`/`FORE`, elbow pole down and out), plus an upper-arm sleeve for big reaches. The wrist now bends against a forearm that heads toward a real elbow, instead of the forearm being glued to the hand.
+- Presentation:
+  - Empty hands hang out of view, like real arms. The `idle` pose is `DOWN`, and lowered rigs skip their ~30 draw calls.
+  - Hands rise for actions, the torch, a sprint arm-pump (counter-phase with the stride) and a falling/balance reflex.
+- Pose blending is a critically damped spring per channel, so the hands accelerate and settle. The off-hand lags slightly.
+- Landing drops the arms through a spring. The flashlight beam follows the torch hand.
+- Fresnel rim emissive cut from 0.35 to 0.08. It was the glowing red outline in the owner's night screenshot. Bump strength was retuned for the shrunken viewmodel.
+- Interactions fire when the hand arrives (~0.25 s), not on the keypress. A new action fires the interrupted action's pending callback, so an interrupted eat still heals. E/F are ignored while the hands are busy.
+- Lab: `&view=side|palm|top&hand=r|l` orbit camera, `&frame={…}` movement state, `&t=` sim time.
+
+**Movement physics (`Player.ts`)**
+- Real gravity (9.81, it was 19). Jump apex is ~0.55 m (it was ~0.95 m); the low laser at 0.32 m is still easy to clear.
+- Acceleration-limited movement with mass:
+  - 10 m/s² from a standstill, 5 m/s² building into a sprint, 16 m/s² braking.
+  - 1.2 m/s² of air steering. In the air, momentum carries.
+- Quadratic air drag, terminal velocity ~55 m/s.
+- Walking off a ledge starts the fall from rest, not from the −2 m/s ground-snap velocity.
+- Landing:
+  - A recovery beat before the next jump (no bunny-hopping).
+  - Horizontal speed bleeds off on hard impacts.
+  - A stumble after more than 6 m/s: slowed, no sprint.
+- Fall damage above 7.7 m/s impact (~3 m): (v − 7.7) × 11, scaled by toughness. 5 m ≈ 28 HP and 9 m ≈ 80 HP for the Infiltrator.
+- Crouching in mid-air tucks the legs: the feet rise and the head stays put (`onTuck` → `cam.shiftEye`).
+- Slower backpedal and strafe. Speed follows the terrain grade (uphill slower).
+- Stamina: ~14 s of sprinting, recovered in ~5 s standing. Run dry and you're winded until it's back to 40%. No HUD bar: procedural breathing (`audio.breathe`) and a view heave tell you.
+- Measured headless: apex 0.52 m; impact 6.7 / 9.5 / 13.0 m/s from 2.5 / 5 / 9 m (ideal 7.0 / 9.9 / 13.3; the gap is drag).
+
+**Camera**
+- Footsteps fire at the low point of the first-person stride (`cam.onStep`), so sound and head-bob agree. Before, they ran on the hidden body's own clock.
+- Landing dip scales with impact speed (knees absorb up to ~24 cm, plus a nod). Hard landings add shake.
+
+**World physics**
+- `physics.world.timestep = dt` every frame. It was a fixed 1/60 per rendered frame, so physics ran 2.4× fast at 144 Hz.
+- The EMP canister is a real Rapier rigid body: ~0.5 kg, restitution 0.32, CCD, spin on release. It inherits the player's velocity and makes impact sounds (`bounce`) and dust. The character controller ignores dynamic bodies (`EXCLUDE_DYNAMIC`), so you can walk into it and nudge it.
+- SeedBot has a thrust model:
+  - Lift ∝ rotor spin² under a PD altitude controller.
+  - An EMP drops it like a stone (rotors spin down, ~0.4 s): it crashes, bounces, rests tilted, then spins up, lifts off and rights itself.
+  - Brownouts sag and wobble on stuttering thrust.
+  - It banks into acceleration, not velocity.
+
+**FX / audio**
+- `DustPuffs` (`effects.ts`): one sprite draw call with a GPU-animated ring buffer (drag, wind drift, rise, growth, fade, soft-particle depth fade, haze lighting). Fired on landings, sprint footfalls on sand, canister bounces and the drone crash.
+- New sounds: `thud` (painful landing / crash), `bounce` (small steel can), richer `land`, and breathing.
+
+**Next**
+- The owner should play-test the feel: acceleration, stamina length, fall-damage curve and hidden idle hands are tuning knobs at the top of `Player.ts` and in `POSES`.
+- Not done: dust storms, footstep surface types beyond sand/metal, a ragdoll for the shadow body.
+
 ### Hand-off & tooling (2026-10-05)
 - `CLAUDE.md` is the agent hand-off: daily loop, release procedure, code map, verification harness, hard-won rules, backlog.
 - `scripts/release.sh patch|minor|major|X.Y.Z [--dry-run]` bumps all three version files, verifies, commits, tags and pushes.

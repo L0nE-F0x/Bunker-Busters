@@ -66,6 +66,11 @@ export class Garage {
         ctx.audio.play('droneSputter', { pos: this.drone.position });
         if (this.distToPlayer() < 30) ctx.ui.subtitle('SeedBot', '*bzzt* LOW BATTERY. ENTERING POWER-SAVE. *whirr*');
       },
+      onCrash: (k) => {
+        ctx.audio.play('thud', { pos: this.drone.position, intensity: 0.4 + k * 0.5 });
+        ctx.audio.play('bounce', { pos: this.drone.position, intensity: 0.6 + k * 0.4 });
+        ctx.puffs?.emit(this.drone.position.clone().setY(this.drone.position.y - 0.3), 10, 1 + k * 1.5, 0.4, 0.45);
+      },
     });
     ctx.scene.add(this.drone.group);
 

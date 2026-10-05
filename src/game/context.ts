@@ -6,6 +6,7 @@ import type { Player } from './player/Player';
 import type { PostFX } from '@/engine/postfx';
 import type { Atmosphere } from './world/Atmosphere';
 import type { Heightfield } from './world/Heightfield';
+import type { DustPuffs } from './world/effects';
 
 export type LockResult = 'success' | 'abort' | 'out-of-picks';
 
@@ -45,6 +46,8 @@ export interface GameContext {
   atmo: Atmosphere;
   hf: Heightfield;
   scene: THREE.Scene;
+  /** Kicked-up dust (landings, impacts). */
+  puffs?: DustPuffs;
   /** Knock the player out and respawn them outside (used by drone zaps). */
   caught: (reason: string) => void;
 }

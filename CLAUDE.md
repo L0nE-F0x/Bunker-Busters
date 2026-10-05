@@ -89,7 +89,7 @@ Headless harness. It needs `npm run dev` running, and nothing appears on screen:
 ```bash
 node scripts/dev/shot.mjs "http://localhost:5173/play/?webgl&autostart" out.png \
   --wait 3000 --eval "game.atmo.hour = 21.5" --wait 2000 --fps --shot night.png
-node scripts/dev/hands-lab.mjs sheet.png "pose=idle" "pose=lockpick&look=engineer" "pose=idle&torch"
+node scripts/dev/hands-lab.mjs sheet.png "pose=reach" "pose=lockpick&look=engineer" "pose=idle&torch" "pose=flat&view=palm"
 node scripts/dev/marketing-shots.mjs [hero night interior camp lockpick]   # regenerate site screenshots
 node scripts/dev/og-card.mjs                                               # regenerate public/og.jpg
 scripts/dev/bench-desktop.sh [high|medium]   # real desktop-app perf: opens a window ~40 s, self-closes
@@ -136,7 +136,14 @@ The webview's `console.log` goes to stdout.
 - **Hands** (`src/game/player/Hands.ts`):
   - Authored at real scale, scaled 1.3 (FP convention), then shrunk by `VIEW_SCALE` toward the eye so they never clip walls.
   - For a right hand palm-down, the thumb is on −x: `a = -side` for anatomy, `side` for screen mirroring.
-  - Iterate with the hands lab, never blind.
+  - Empty hands rest **off-screen** (`idle` = `DOWN`), like real arms, at the owner's request ("zombie hook hands"). They rise for actions, the torch, sprinting and falling.
+  - Forearms come from two-bone IK, and poses blend through a critically damped spring. Keep the rim emissive tiny: near the lens it reads as a glowing outline.
+  - Iterate with the hands lab (`&view=palm|side` to check anatomy), never blind.
+- **Physics:**
+  - The world steps by the frame `dt`.
+  - The player is a kinematic controller with real gravity and acceleration limits (constants at the top of `Player.ts`).
+  - Dynamic bodies (the EMP canister) are excluded from the controller's query (`EXCLUDE_DYNAMIC`).
+  - Footsteps come from `FirstPersonCamera.onStep`, not the shadow body.
 - Fonts are self-hosted via `@fontsource` (`src/fonts.ts`). Import paths have **no `.css` suffix** (the packages' export maps add it).
 - In bash with `set -o pipefail`, don't use `grep -q` on a producer's output (SIGPIPE → false failure).
 - Node scripts: use `fileURLToPath(new URL(…))`, not `.pathname`. The repo path contains a space.

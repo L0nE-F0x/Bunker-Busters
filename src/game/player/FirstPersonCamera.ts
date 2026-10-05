@@ -9,6 +9,7 @@ export interface FPFrame {
   speed: number;
   grounded: boolean;
   strafe: number; // -1..1 lateral input, for a subtle roll
+  exertion?: number; // 0..1 out of breath: the view heaves with each breath
 }
 
 /**
@@ -25,6 +26,7 @@ export class FirstPersonCamera {
   private roll = 0;
   private dip = 0;
   private dipVel = 0;
+  private breathPhase = 0;
   private trauma = 0;
   private t = 0;
   private fov = 64;
@@ -39,9 +41,19 @@ export class FirstPersonCamera {
     this.trauma = Math.min(1, this.trauma + v);
   }
 
-  /** Landing impulse (0..1). */
-  land(k: number) {
-    this.dipVel -= k * 2.2;
+  /** Footstep callback, fired at the low point of each stride so sound and head-bob agree. */
+  onStep: ((intensity: number) => void) | null = null;
+
+  /** Landing: the knees absorb the impact. `speed` = vertical impact speed in m/s. */
+  land(speed: number) {
+    const depth = Math.min(0.24, speed * 0.022);
+    this.dipVel -= depth * 12;
+    if (speed > 6) this.addTrauma(Math.min(0.5, (speed - 6) * 0.06));
+  }
+
+  /** The body moved under the head (mid-air tuck): keep the eye where it was. */
+  shiftEye(dy: number) {
+    this.eye -= dy;
   }
 
   snap(yaw: number, pitch = 0) {
@@ -66,13 +78,18 @@ export class FirstPersonCamera {
     // gait bob: phase advances with distance travelled
     const move = f.grounded ? Math.min(1, f.speed / 3.4) : 0;
     const stride = f.sprint ? 2.25 : f.crouch ? 1.05 : 1.45;
+    const prevPhase = this.bobPhase;
     this.bobPhase += (f.speed / stride) * Math.PI * dt * (f.grounded ? 1 : 0);
+    // foot strike = head at its lowest = |cos| crossing zero (phase passes π/2 + kπ)
+    if (f.grounded && f.speed > 0.5 && Math.floor(prevPhase / Math.PI + 0.5) !== Math.floor(this.bobPhase / Math.PI + 0.5)) {
+      this.onStep?.(Math.min(1.2, 0.35 + f.speed / 6) * (f.crouch ? 0.45 : 1));
+    }
     const amp = f.sprint ? 1.6 : f.crouch ? 0.55 : 1;
     const bobY = (Math.abs(Math.cos(this.bobPhase)) - 0.5) * 0.045 * amp * move;
     const bobX = Math.sin(this.bobPhase) * 0.022 * amp * move;
 
     // landing spring
-    this.dipVel += (-this.dip * 60 - this.dipVel * 9) * dt;
+    this.dipVel += (-this.dip * 70 - this.dipVel * 11) * dt;
     this.dip += this.dipVel * dt;
 
     this.roll = damp(this.roll, -f.strafe * 0.018 - bobX * 0.35, 8, dt);
@@ -82,10 +99,15 @@ export class FirstPersonCamera {
     const sh = this.trauma * this.trauma;
     const k = this.t * 24;
 
+    // breathing heave: slow and invisible at rest, deep and quick when winded
+    const ex = f.exertion ?? 0;
+    this.breathPhase += dt * Math.PI * 2 / (2.2 - ex * 1.3);
+    const heave = Math.sin(this.breathPhase) * (0.0012 + ex * 0.009);
+
     const right = new THREE.Vector3(Math.cos(this.yaw), 0, -Math.sin(this.yaw));
-    this.camera.position.set(f.feet.x, f.feet.y + this.eye + bobY + this.dip * 0.12, f.feet.z).addScaledVector(right, bobX);
+    this.camera.position.set(f.feet.x, f.feet.y + this.eye + bobY + this.dip + heave, f.feet.z).addScaledVector(right, bobX);
     this.camera.rotation.set(
-      this.pitch + this.shake.noise(k, 1) * 0.04 * sh + bobY * 0.15,
+      this.pitch + this.shake.noise(k, 1) * 0.04 * sh + bobY * 0.15 + this.dip * 0.35 + heave * 0.8,
       this.yaw + this.shake.noise(2, k) * 0.04 * sh,
       this.roll + this.shake.noise(k, k) * 0.05 * sh,
     );

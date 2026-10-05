@@ -12,7 +12,7 @@ import { Terrain } from './world/Terrain';
 import { Props } from './world/Props';
 import { Landmarks } from './world/Landmarks';
 import { Scrub } from './world/Scrub';
-import { DustMotes, GroundHaze, Shockwave, heightTexture } from './world/effects';
+import { DustMotes, GroundHaze, DustPuffs, Shockwave, heightTexture } from './world/effects';
 import { updateRim, glow } from './world/materials';
 import { Garage } from './bunker/Garage';
 import { Player } from './player/Player';
@@ -36,7 +36,8 @@ const BENCH = new URLSearchParams(location.search).has('bench');
 
 type Mode = 'loading' | 'title' | 'charselect' | 'playing';
 
-interface Grenade { mesh: THREE.Mesh; vel: THREE.Vector3; fuse: number }
+interface Grenade { mesh: THREE.Object3D; body: RigidBody; fuse: number; lastVel: THREE.Vector3; clink: number }
+type RigidBody = ReturnType<Physics['world']['createRigidBody']>;
 
 /** Owns the scene, world, player and the top-level state machine (title → select → play). */
 export class Game {
@@ -57,6 +58,7 @@ export class Game {
   scrub!: Scrub;
   dust!: DustMotes;
   haze!: GroundHaze;
+  puffs!: DustPuffs;
   garage!: Garage;
   map!: MapData;
   player: Player | null = null;
@@ -82,6 +84,7 @@ export class Game {
   private envScene = new THREE.Scene();
   private envTimer = 0;
   private landmarkSeen = new Set<string>();
+  private windedHint = false;
   private ctx!: GameContext;
   private last = performance.now();
   frames = 0;
@@ -136,6 +139,8 @@ export class Game {
     this.haze = new GroundHaze(this.atmo, this.hf, ht, 150);
     if (!SKIP.has('dust')) this.scene.add(this.dust.sprite);
     if (!SKIP.has('haze')) this.scene.add(this.haze.sprite);
+    this.puffs = new DustPuffs(this.atmo);
+    if (!SKIP.has('dust')) this.scene.add(this.puffs.sprite);
     await step(0.62, 'Charting the wasteland');
     this.map = new MapData(this.hf);
     this.cam = new FirstPersonCamera(this.camera);
@@ -196,6 +201,7 @@ export class Game {
       atmo: this.atmo,
       hf: this.hf,
       scene: this.scene,
+      get puffs() { return self.puffs; },
       caught: (reason: string) => this.caught(reason),
     } as unknown as GameContext;
   }
@@ -425,8 +431,20 @@ export class Game {
     this.hands?.dispose();
     this.hands = new Hands(HAND_LOOKS[state.data.archetype] ?? HAND_LOOKS.infiltrator);
     this.hands.attach(this.camera);
-    this.player.model.onFootstep = (_f, k) => this.audio.play(this.garage.playerInside ? 'stepMetal' : 'step', { intensity: k });
-    this.player.onLand = (k) => { this.audio.play('land', { intensity: k }); this.cam.land(k); this.hands?.jolt(k * 0.6); };
+    // footsteps follow the first-person stride (the shadow body's gait runs on its own clock)
+    this.player.model.onFootstep = null;
+    this.cam.onStep = (k) => {
+      const inside = this.garage.playerInside;
+      this.audio.play(inside ? 'stepMetal' : 'step', { intensity: k });
+      // sprinting on sand kicks up a little dust behind each footfall
+      const pl = this.player;
+      if (!inside && pl && pl.sprinting && pl.grounded) {
+        const back = pl.velocity.clone().setY(0).multiplyScalar(-0.15);
+        this.puffs.emit(pl.position.clone().addScaledVector(pl.velocity, 0.05), 2, 0.35, 0.35, 0.35, back);
+      }
+    };
+    this.player.onLand = (k, speed) => this.landed(k, speed);
+    this.player.onTuck = (dy) => this.cam.shiftEye(dy);
     this.player.onJump = () => this.audio.play('step', { intensity: 0.6 });
     this.cam.snap(state.data.yaw + Math.PI, -0.05);
     this.garage.applyFlags(true);
@@ -444,6 +462,23 @@ export class Game {
       setTimeout(() => this.ui.banner('THE WASTELAND', `${state.archetype.name} · Day 1,284 after the Great Pivot`, 'info'), 900);
     }
     this.startLoops();
+  }
+
+  /** Touchdown. Above ~3 m (7.7 m/s) a fall starts to hurt; ~11 m will put you down. */
+  private landed(k: number, speed: number) {
+    this.audio.play('land', { intensity: k });
+    this.cam.land(speed);
+    this.hands?.jolt(k * 0.5);
+    if (this.player && !this.garage.playerInside && speed > 3.5) {
+      this.puffs.emit(this.player.position, Math.round(6 + k * 10), 0.8 + k * 2.2, 0.25 + k * 0.5, 0.45 + k * 0.5, this.player.velocity.clone().multiplyScalar(0.4));
+    }
+    if (speed > 7.7 && this.state) {
+      const dmg = Math.round((speed - 7.7) * 11);
+      this.state.damage(dmg);
+      this.audio.play('thud', { intensity: Math.min(1, (speed - 7.7) / 6 + 0.4) });
+      this.post.damage.value = Math.min(1, 0.4 + dmg / 60);
+      if (dmg >= 8) this.ui.toast(dmg >= 40 ? 'That fall nearly broke your legs.' : 'Hard landing. Your knees disagree with that decision.', 'bad');
+    }
   }
 
   private removePlayer() {
@@ -576,45 +611,69 @@ export class Game {
   private throwEmp() {
     const s = this.state!;
     if (!this.player || !s.removeItem('emp', 1)) { this.audio.play('deny'); return; }
-    const mat = glow('#7fe8ff', 6);
-    const m = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 0.16, 12), mat.material);
-    m.castShadow = true;
+    // a real canister: dark knurled body with a glowing arming band (matches the one in your hand)
+    const m = new THREE.Group();
+    const can = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 0.12, 16), new THREE.MeshStandardNodeMaterial({ color: '#3a4248', roughness: 0.35, metalness: 0.7 }));
+    can.castShadow = true;
+    const ring = glow('#7fe8ff', 6);
+    const band = new THREE.Mesh(new THREE.CylinderGeometry(0.0415, 0.0415, 0.014, 16, 1, true), ring.material);
+    band.position.y = 0.015;
+    const cap = new THREE.Mesh(new THREE.CylinderGeometry(0.033, 0.04, 0.02, 16), new THREE.MeshStandardNodeMaterial({ color: '#c8ccd0', roughness: 0.3, metalness: 1 }));
+    cap.position.y = 0.07;
+    m.add(can, band, cap);
     // released from the right hand, just below and right of the eye
     const right = new THREE.Vector3(1, 0, 0).applyQuaternion(this.camera.quaternion);
-    const start = this.camera.position.clone().addScaledVector(right, 0.15).add(new THREE.Vector3(0, -0.12, 0));
+    const start = this.camera.position.clone().addScaledVector(right, 0.18).add(new THREE.Vector3(0, -0.1, 0));
     const fwd = new THREE.Vector3(0, 0, -1).applyQuaternion(this.camera.quaternion);
-    fwd.y = Math.max(fwd.y + 0.35, 0.2);
+    fwd.y = Math.max(fwd.y + 0.3, 0.12);
     fwd.normalize();
-    m.position.copy(start).addScaledVector(fwd, 0.35);
+    start.addScaledVector(fwd, 0.4);
+    m.position.copy(start);
     this.scene.add(m);
-    this.grenades.push({ mesh: m, vel: fwd.multiplyScalar(13).add(this.player.velocity.clone().multiplyScalar(0.5)), fuse: 1.4 });
+    // rigid body: ~0.5 kg steel can, bounces and rolls on the real colliders (CCD so it can't tunnel)
+    const R = this.physics.R;
+    const vel = fwd.multiplyScalar(12.5).add(this.player.velocity.clone().setY(Math.max(0, this.player.velocity.y)));
+    const q = new THREE.Quaternion().setFromEuler(new THREE.Euler(Math.random() * 0.5, Math.random() * 6.28, Math.PI / 2 + (Math.random() - 0.5) * 0.4));
+    const body = this.physics.world.createRigidBody(
+      R.RigidBodyDesc.dynamic()
+        .setTranslation(start.x, start.y, start.z)
+        .setRotation(q)
+        .setLinvel(vel.x, vel.y, vel.z)
+        .setAngvel({ x: right.x * -9 + (Math.random() - 0.5) * 4, y: (Math.random() - 0.5) * 6, z: right.z * -9 })
+        .setLinearDamping(0.02)
+        .setAngularDamping(0.35)
+        .setCcdEnabled(true),
+    );
+    this.physics.world.createCollider(R.ColliderDesc.cylinder(0.06, 0.04).setDensity(830).setRestitution(0.32).setFriction(0.6), body);
+    this.grenades.push({ mesh: m, body, fuse: 1.6, lastVel: vel.clone(), clink: 0 });
     this.audio.play('throw');
   }
 
   private updateGrenades(dt: number) {
     for (const g of [...this.grenades]) {
       g.fuse -= dt;
-      g.vel.y -= 16 * dt;
-      const step = g.vel.clone().multiplyScalar(dt);
-      const len = step.length();
-      if (len > 0) {
-        const hit = this.physics.raycast(g.mesh.position, step.clone().normalize(), len + 0.08, this.player?.collider);
-        if (hit !== null) {
-          // crude bounce: reflect off ground-ish, damp
-          g.vel.multiplyScalar(-0.35);
-          g.vel.y = Math.abs(g.vel.y) * 0.6;
-        } else g.mesh.position.add(step);
+      g.clink = Math.max(0, g.clink - dt);
+      const t = g.body.translation(), r = g.body.rotation(), v = g.body.linvel();
+      g.mesh.position.set(t.x, t.y, t.z);
+      g.mesh.quaternion.set(r.x, r.y, r.z, r.w);
+      // impacts: a sudden change in velocity = it hit something
+      const jolt = Math.hypot(v.x - g.lastVel.x, v.y - g.lastVel.y, v.z - g.lastVel.z);
+      if (jolt > 1.6 && g.clink <= 0) {
+        g.clink = 0.07;
+        this.audio.play('bounce', { pos: g.mesh.position, intensity: Math.min(1, jolt / 9) });
+        if (jolt > 3) this.puffs.emit(g.mesh.position, 3, 0.5, 0.2, 0.18);
       }
-      const ground = this.hf.heightAt(g.mesh.position.x, g.mesh.position.z) + 0.08;
-      if (g.mesh.position.y < ground) { g.mesh.position.y = ground; g.vel.y = Math.abs(g.vel.y) * 0.4; g.vel.x *= 0.7; g.vel.z *= 0.7; }
-      g.mesh.rotation.x += dt * 12;
+      g.lastVel.set(v.x, v.y, v.z);
+      // fell out of the world (shouldn't happen, but never leak a body)
+      if (t.y < -200) g.fuse = Math.min(g.fuse, 0);
       if (g.fuse <= 0) {
         this.scene.remove(g.mesh);
+        this.physics.world.removeRigidBody(g.body);
         this.grenades.splice(this.grenades.indexOf(g), 1);
         const sw = new Shockwave(g.mesh.position, 8);
         this.scene.add(sw.mesh);
         this.shockwaves.push(sw);
-        this.flash.position.copy(g.mesh.position);
+        this.flash.position.copy(g.mesh.position).y += 0.3;
         this.flash.intensity = 80;
         this.audio.play('emp', { pos: g.mesh.position });
         const near = this.player ? this.player.position.distanceTo(g.mesh.position) : 99;
@@ -737,6 +796,7 @@ export class Game {
     this.scrub.update(focusPos, this.atmo.wind);
     this.dust.update(dt);
     this.haze.update(dt);
+    this.puffs.update(dt);
     this.updateGrenades(dt);
     this.updateEnvironment(dt);
     for (const [, g] of this.intelMeshes) {
@@ -755,6 +815,8 @@ export class Game {
 
     if (BENCH) this.bench(now);
     const tPhys = performance.now();
+    // step by the real frame time (the world default of 1/60 per frame ran physics 2.4× fast at 144 Hz)
+    this.physics.world.timestep = Math.max(1 / 240, dt);
     this.physics.step();
     const tRender = performance.now();
     if (SKIP.has('post')) this.renderer.render(this.scene, this.camera); else this.post.render();
@@ -796,8 +858,13 @@ export class Game {
     this.garage.update(dt);
     const strafe = blocked ? 0 : (input.isDown('KeyD') ? 1 : 0) - (input.isDown('KeyA') ? 1 : 0);
     const hs = Math.hypot(player.velocity.x, player.velocity.z);
-    this.cam.update(dt, input, { feet: player.position, crouch: player.crouching, sprint: player.sprinting, speed: hs, grounded: player.grounded, strafe });
-    this.hands?.update(dt, { speed: hs, grounded: player.grounded, crouch: player.crouching, sprint: player.sprinting, bobPhase: this.cam.bobPhase, lookDX: input.mouseDX, lookDY: input.mouseDY });
+    this.cam.update(dt, input, { feet: player.position, crouch: player.crouching, sprint: player.sprinting, speed: hs, grounded: player.grounded, strafe, exertion: player.exertion });
+    this.audio.breathe(dt, player.exertion);
+    if (player.winded && !this.windedHint) {
+      this.windedHint = true;
+      this.ui.toast('Winded. Catch your breath before sprinting again.', 'info');
+    }
+    this.hands?.update(dt, { speed: hs, grounded: player.grounded, crouch: player.crouching, sprint: player.sprinting, bobPhase: this.cam.bobPhase, lookDX: input.mouseDX, lookDY: input.mouseDY, vy: player.velocity.y });
 
     // interaction
     this.focus = blocked ? null : this.pickFocus();
@@ -812,10 +879,14 @@ export class Game {
         if (f.id === 'camp') label = this.atmo.isNight ? 'Sleep until dawn' : 'Wait until nightfall (stealthier)';
         prompt.push({ key: 'F', label, na: sa === true ? undefined : sa });
       }
-      if (input.pressed('KeyE')) {
-        if (pa === true) { this.hands?.reach(); void f.primary.run(); } else this.audio.play('deny');
+      // the action lands when the hand gets there, not on the keypress
+      if (this.hands?.busy) {
+        // hands already doing something: wait for them
+      } else if (input.pressed('KeyE')) {
+        if (pa === true) { if (this.hands) this.hands.reach(() => void f.primary.run()); else void f.primary.run(); } else this.audio.play('deny');
       } else if (input.pressed('KeyF') && f.secondary) {
-        if (f.secondary.available() === true) { this.hands?.press(); void f.secondary.run(); } else this.audio.play('deny');
+        const sec = f.secondary;
+        if (sec.available() === true) { if (this.hands) this.hands.press(() => void sec.run()); else void sec.run(); } else this.audio.play('deny');
       }
     }
 

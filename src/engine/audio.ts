@@ -326,6 +326,43 @@ export class AudioEngine {
 
   // ---------- one-shots ----------
 
+  private breathT = 0;
+  private breathIn = true;
+
+  /**
+   * Exertion breathing (call every frame). 0 = silent, 1 = gasping after a long sprint: breaths
+   * get faster, louder and rougher. Inhale is higher and airier, exhale lower and longer.
+   */
+  breathe(dt: number, exertion: number) {
+    if (!this.started) return;
+    this.breathT -= dt;
+    if (this.breathT > 0) return;
+    if (exertion < 0.12) { this.breathT = 0.25; this.breathIn = true; return; }
+    const period = 2.2 - exertion * 1.3; // seconds per breath cycle
+    const inhale = this.breathIn;
+    const dur = period * (inhale ? 0.42 : 0.52);
+    const ctx = this.ctx;
+    const t = ctx.currentTime;
+    const n = this.noiseSource(false);
+    const f = ctx.createBiquadFilter();
+    f.type = 'bandpass';
+    f.frequency.value = (inhale ? 1400 : 700) + Math.random() * 250 + exertion * 300;
+    f.Q.value = 0.8;
+    const lp = ctx.createBiquadFilter();
+    lp.type = 'lowpass';
+    lp.frequency.value = 3200;
+    const g = ctx.createGain();
+    const peak = (inhale ? 0.05 : 0.075) * Math.min(1, exertion * 1.2);
+    // soft swell, not a click: breath ramps in and out
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.linearRampToValueAtTime(peak, t + dur * (inhale ? 0.55 : 0.3));
+    g.gain.linearRampToValueAtTime(0.0001, t + dur);
+    n.connect(f).connect(lp).connect(g).connect(this.sfx);
+    n.start(t, Math.random() * 3, dur + 0.05);
+    this.breathIn = !inhale;
+    this.breathT = dur + (inhale ? 0.02 : period * 0.06);
+  }
+
   private env(g: GainNode, t: number, a: number, peak: number, d: number) {
     g.gain.setValueAtTime(0.0001, t);
     g.gain.exponentialRampToValueAtTime(peak, t + a);
@@ -379,8 +416,24 @@ export class AudioEngine {
         this.tone(320 + Math.random() * 40, 'triangle', 0.05 * k, 0.15, 0, dest);
         break;
       case 'land':
-        this.burst('lowpass', 260, 1, 0.6 * k, 0.18, 0, dest);
+        // body weight onto the ground: low thump plus a scuff of grit
+        this.burst('lowpass', 220, 1, 0.65 * k, 0.2, 0, dest);
+        this.burst('bandpass', 1100 + Math.random() * 500, 1.4, 0.18 * k, 0.12, 0.012, dest);
         break;
+      case 'thud':
+        // a painful landing: heavy body impact and a grunt-like low tone
+        this.burst('lowpass', 120, 1.2, 0.9 * k, 0.35, 0, dest);
+        this.tone(95, 'triangle', 0.25 * k, 0.25, 0.02, dest, 60);
+        this.burst('bandpass', 700, 2, 0.2 * k, 0.15, 0.03, dest);
+        break;
+      case 'bounce': {
+        // small steel can hitting the ground: a dull knock plus a short metallic ring
+        const f0 = 1900 + Math.random() * 500;
+        this.burst('bandpass', 600 + Math.random() * 300, 2, 0.35 * k, 0.05, 0, dest);
+        this.tone(f0, 'sine', 0.06 * k, 0.12, 0, dest);
+        this.tone(f0 * 2.76, 'sine', 0.025 * k, 0.08, 0, dest);
+        break;
+      }
       case 'click':
         this.burst('highpass', 3500, 1, 0.25, 0.025, 0, dest);
         break;
@@ -534,6 +587,6 @@ export class AudioEngine {
 export type SfxName =
   | 'step' | 'stepMetal' | 'land' | 'click' | 'pinSet' | 'pickStrain' | 'pickBreak' | 'unlock' | 'door' | 'pickup'
   | 'intel' | 'levelUp' | 'loot' | 'ui' | 'uiHover' | 'uiConfirm' | 'deny' | 'cans' | 'zap' | 'emp' | 'throw'
-  | 'droneAlert' | 'droneSputter' | 'detectTick' | 'megaphone' | 'eat' | 'disarm';
+  | 'droneAlert' | 'droneSputter' | 'detectTick' | 'megaphone' | 'eat' | 'disarm' | 'thud' | 'bounce';
 
 export type LoopHandle = NonNullable<ReturnType<AudioEngine['loop']>>;
