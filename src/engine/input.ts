@@ -1,6 +1,9 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+const ipc = (window as any).__TAURI_INTERNALS__ as { invoke: (cmd: string, args?: object) => Promise<any> } | undefined;
+
 /** Keyboard + mouse state with pointer lock and edge-triggered "pressed" queries. */
 export class Input {
-  private down = new Set<string>();
+  down = new Set<string>();
   private pressedThisFrame = new Set<string>();
   private releasedThisFrame = new Set<string>();
   mouseDX = 0;
@@ -25,7 +28,7 @@ export class Input {
     });
     window.addEventListener('blur', () => this.down.clear());
     window.addEventListener('mousemove', (e) => {
-      if (!this.locked) return;
+      if (!this.locked || this.rawLive) return;
       this.mouseDX += e.movementX;
       this.mouseDY += e.movementY;
     });
@@ -37,7 +40,30 @@ export class Input {
     window.addEventListener('wheel', (e) => (this.wheel += Math.sign(e.deltaY)), { passive: true });
     document.addEventListener('pointerlockchange', () => {
       this.locked = document.pointerLockElement === this.el;
+      if (this.locked) this.rawFlush = true; // drop motion gathered while the cursor was free
     });
+  }
+
+  // Linux desktop app (X11/XWayland): WebKitGTK's pointer lock barely reports motion there, so
+  // mouse-look reads XInput2 raw motion from the shell instead (src-tauri/src/rawmouse.rs).
+  private rawPending = false;
+  private rawUnavailable = !ipc;
+  private rawFlush = false;
+  /** Raw motion is flowing: browser movementX is ignored while locked. */
+  rawLive = false;
+
+  /** Call once per frame. Async: the delta lands in mouseDX/DY for the next frame. */
+  pollRaw() {
+    if (this.rawUnavailable || this.rawPending || !this.locked) return;
+    this.rawPending = true;
+    ipc!.invoke('raw_mouse_delta').then((d: [number, number] | null) => {
+      this.rawPending = false;
+      if (!d) { this.rawUnavailable = true; return; }
+      if (this.rawFlush) { this.rawFlush = false; return; }
+      const [dx, dy] = d;
+      if (dx || dy) this.rawLive = true;
+      if (this.locked && this.rawLive) { this.mouseDX += dx; this.mouseDY += dy; }
+    }, () => { this.rawPending = false; this.rawUnavailable = true; });
   }
 
   requestLock() {

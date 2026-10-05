@@ -173,6 +173,10 @@ export class Game {
     this.renderer.setAnimationLoop(() => this.frame());
     window.addEventListener('resize', () => this.resize());
     document.addEventListener('pointerlockchange', () => this.onLockChange());
+    // the grab can fail (WebKitGTK/XWayland, now and then): say so, and the next click on the view retries
+    document.addEventListener('pointerlockerror', () => {
+      if (this.mode === 'playing' && !this.ui.modalOpen && !this.ui.minigameOpen) this.ui.resumeHint(true);
+    });
     this.canvas.addEventListener('click', () => {
       if (this.mode === 'playing' && !this.ui.modalOpen && !this.ui.minigameOpen) this.input.requestLock();
     });
@@ -828,6 +832,7 @@ export class Game {
   }
 
   private playFrame(dt: number) {
+    this.input.pollRaw();
     const player = this.player!;
     const s = this.state!;
     const input = this.input;

@@ -203,6 +203,7 @@ dependencies = [
  "tauri-build",
  "tauri-plugin-updater",
  "webkit2gtk",
+ "x11-dl",
 ]
 
 [[package]]

@@ -3,6 +3,8 @@
 // user's everyday browser.
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+#[cfg(target_os = "linux")]
+mod rawmouse;
 mod update;
 
 use std::time::Duration;
@@ -54,12 +56,26 @@ fn select_gpu() {
 
 fn main() {
     #[cfg(target_os = "linux")]
-    select_gpu();
+    {
+        select_gpu();
+        // mouse-look source on X11/XWayland (see rawmouse.rs)
+        let x11 = std::env::var("GDK_BACKEND").map(|b| b == "x11").unwrap_or(false) || std::env::var_os("WAYLAND_DISPLAY").is_none();
+        // XInitThreads has to come before GTK opens its display; only then is a reader thread safe
+        if x11 && rawmouse::init_threads() {
+            rawmouse::start();
+        }
+    }
 
     tauri::Builder::default()
         .plugin(tauri_plugin_updater::Builder::new().build())
         .manage(update::UpdateState::default())
-        .invoke_handler(tauri::generate_handler![update::update_check, update::update_install, update::update_progress])
+        .invoke_handler(tauri::generate_handler![
+            update::update_check,
+            update::update_install,
+            update::update_progress,
+            #[cfg(target_os = "linux")]
+            rawmouse::raw_mouse_delta
+        ])
         .setup(|app| {
             let win = app
                 .get_webview_window("main")

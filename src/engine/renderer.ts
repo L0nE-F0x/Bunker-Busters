@@ -21,9 +21,13 @@ export const QUALITY_PRESETS: Record<QualityLevel, Omit<QualitySettings, 'level'
   ultra: { pixelRatio: 1.5, shadowMapSize: 4096, ao: true, godrays: true, bloom: true, smaa: true, dustCount: 6000, grassDensity: 1.3 },
 };
 
+/** Debug: ?pr=1.25 caps the device pixel ratio the canvas renders at. */
+const PR_CAP = Number(new URLSearchParams(location.search).get('pr')) || Infinity;
+
 export function makeQuality(level: QualityLevel): QualitySettings {
   const p = QUALITY_PRESETS[level];
-  return { level, ...p, pixelRatio: Math.min(window.devicePixelRatio || 1, p.pixelRatio * Math.max(1, window.devicePixelRatio || 1)) };
+  const dpr = Math.min(window.devicePixelRatio || 1, PR_CAP);
+  return { level, ...p, pixelRatio: Math.min(dpr, p.pixelRatio * Math.max(1, dpr)) };
 }
 
 // Remembered backend choice for this browser. v3 invalidates choices made by older builds.

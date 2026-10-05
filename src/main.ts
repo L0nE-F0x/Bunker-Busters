@@ -16,8 +16,24 @@ if (TRACE !== null) {
     tag.style.cssText = 'position:fixed;top:12px;right:16px;z-index:99;font:700 28px monospace;color:#3ff2e0;background:#000a;padding:4px 12px;pointer-events:none';
     document.body.appendChild(tag);
   }
-  let moved = 0;
-  window.addEventListener('mousemove', () => { if (moved++ % 60 === 0) console.log(`[trace] mousemove x${moved}`); }, true);
+  // mouse stats per second: event count and summed movementX/Y (0 while locked = mouse look is dead)
+  let mm = 0, mdx = 0, mdy = 0;
+  window.addEventListener('mousemove', (e) => { mm++; mdx += Math.abs(e.movementX); mdy += Math.abs(e.movementY); }, true);
+  window.addEventListener('keyup', (e) => console.log(`[trace] keyup ${e.code}`), true);
+  document.addEventListener('pointerlockchange', () => console.log(`[trace] pointerlockchange locked=${!!document.pointerLockElement}`));
+  document.addEventListener('pointerlockerror', () => console.log('[trace] pointerlockerror'));
+  // once a second: what the game thinks is going on
+  setInterval(() => {
+    const g = (window as any).game;
+    if (!g) return;
+    const p = g.player, b = document.querySelector('#title .menu .btn') as HTMLElement | null;
+    const r = b?.getBoundingClientRect();
+    console.log(`[trace] mode=${g.mode} locked=${g.input.locked} enabled=${g.input.enabled} modal=${g.ui.modalOpen} mg=${g.ui.minigameOpen}` +
+      (p ? ` pos=${p.position.x.toFixed(2)},${p.position.z.toFixed(2)} yaw=${g.cam.yaw.toFixed(2)} frozen=${p.frozen} down=[${[...g.input.down].join(',')}]` : '') +
+      ` mouse=${mm}ev dx=${mdx.toFixed(0)} dy=${mdy.toFixed(0)} raw=${g.input.rawLive}` +
+      (r ? ` btn0=${(r.x + r.width / 2).toFixed(0)},${(r.y + r.height / 2).toFixed(0)} inner=${innerWidth}x${innerHeight} dpr=${devicePixelRatio}` : ''));
+    mm = mdx = mdy = 0;
+  }, 1000);
   for (const t of ['pointerdown', 'mousedown', 'mouseup', 'click', 'touchstart', 'keydown'] as const) {
     window.addEventListener(t, (e) => {
       const el = e.target as HTMLElement;
