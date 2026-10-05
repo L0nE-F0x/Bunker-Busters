@@ -1,5 +1,5 @@
 import * as THREE from 'three/webgpu';
-import { fabric, leather, rustyMetal, glow, plainStandard } from '../world/materials';
+import { fabric, fabricUnique, leather, rustyMetal, glow, plainStandard } from '../world/materials';
 import { damp } from '@/engine/noise';
 
 export interface Look {
@@ -280,7 +280,7 @@ export class CharacterModel {
 }
 
 function fabricDouble(c: string) {
-  const m = fabric(c);
+  const m = fabricUnique(c);
   m.side = THREE.DoubleSide;
   return m;
 }

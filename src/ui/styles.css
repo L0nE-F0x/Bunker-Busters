@@ -74,8 +74,7 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #000; color:
 
 /* ---------- title ---------- */
 #title { position: fixed; inset: 0; display: flex; flex-direction: column; justify-content: center; padding: 0 8vw; z-index: 20; }
-#title .vignette { position: absolute; inset: 0; background: linear-gradient(90deg, rgba(8,5,3,0.85) 0%, rgba(8,5,3,0.45) 38%, transparent 65%); pointer-events: none; }
-.logo { position: relative; line-height: 0.82; margin-bottom: 8px; }
+.logo { position: relative; line-height: 0.82; margin-bottom: 8px; will-change: transform; /* rasterise the glowing logo once, composite as a texture */ }
 .logo .l1, .logo .l2 {
   display: block; font-family: var(--display); font-weight: 900; font-size: clamp(64px, 11vw, 170px); letter-spacing: 0.01em;
   background: linear-gradient(180deg, #ffe0a6 0%, #ffb347 35%, #ff6a1a 70%, #b8300c 100%);
@@ -123,6 +122,8 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #000; color:
 
 /* ---------- HUD ---------- */
 #hud { position: fixed; inset: 0; transition: opacity 0.6s ease; }
+/* static HUD widgets on their own cached layers, so per-frame canvas updates don't re-rasterise them */
+.objective, .vitals, .hotbar, .stance, .minimap, .clock { will-change: transform; }
 #hud.dim { opacity: 0; }
 .objective { position: absolute; top: 28px; left: 32px; max-width: 420px; padding: 12px 16px 12px 18px; border-left: 2px solid var(--amber); background: linear-gradient(90deg, rgba(10,7,5,0.6), transparent); }
 .objective .text { font-size: 16px; margin-top: 4px; line-height: 1.35; text-shadow: 0 1px 3px #000; }

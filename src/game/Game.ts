@@ -97,6 +97,9 @@ export class Game {
     this.ui = new UI(this.audio);
     const qOverride = new URLSearchParams(location.search).get('q') as Settings['quality'] | null;
     this.quality = makeQuality(qOverride ?? this.settings.quality);
+    // WebGL: skip the GTAO pre-pass — it renders the whole scene a second time and draw calls are
+    // the bottleneck there (especially in WebKitGTK). WebGPU keeps it.
+    if (!isWebGPU) this.quality.ao = false;
     this.flash = new THREE.PointLight(0x7fe8ff, 0, 18, 2);
     this.scene.add(this.flash);
     this.applyAudioSettings();
@@ -409,7 +412,16 @@ export class Game {
     this.player.yaw = state.data.yaw;
     this.player.speedMult = state.archetype.stats.speed;
     this.scene.add(this.player.model.root);
-    this.player.model.root.traverse((o) => o.layers.set(1)); // shadow-only body in first person
+    this.player.model.root.traverse((o) => {
+      o.layers.set(1); // shadow-only body in first person
+      const mesh = o as THREE.Mesh;
+      if (mesh.isMesh) {
+        mesh.geometry.computeBoundingSphere();
+        // straps, buckles, goggles etc. don't change the silhouette — skip them in the shadow pass
+        mesh.castShadow = (mesh.geometry.boundingSphere?.radius ?? 0) > 0.07;
+        mesh.visible = mesh.castShadow;
+      }
+    });
     this.hands?.dispose();
     this.hands = new Hands(HAND_LOOKS[state.data.archetype] ?? HAND_LOOKS.infiltrator);
     this.hands.attach(this.camera);
@@ -520,6 +532,7 @@ export class Game {
     if (this.garage) this.garage.voiceEnabled = s.voice;
     if (s.quality !== this.quality.level && this.post) {
       this.quality = makeQuality(s.quality);
+      if (!this.isWebGPU) this.quality.ao = false;
       this.resize();
       this.atmo.setShadowMapSize(this.quality.shadowMapSize);
       this.post.setQuality(this.quality);
@@ -732,6 +745,7 @@ export class Game {
     }
     // gameplay-driven post
     this.post.damage.value = damp(this.post.damage.value as number, 0, 2.5, dt);
+    this.post.menuShade.value = damp(this.post.menuShade.value as number, this.mode === 'title' || this.mode === 'charselect' ? 1 : 0, 3, dt);
     this.post.emp.value = damp(this.post.emp.value as number, 0, 1.2, dt);
     const alertTarget = this.mode === 'playing' && this.garage.drone.state === 'alert' ? 0.8 : this.mode === 'playing' ? this.garage.drone.detection * 0.4 : 0;
     this.post.alert.value = damp(this.post.alert.value as number, alertTarget, 4, dt);

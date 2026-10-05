@@ -31,6 +31,7 @@ export class PostFX {
   readonly alert = uniform(0); // 0..1 detection pulse
   readonly emp = uniform(0); // 0..1 EMP static
   readonly fade = uniform(0); // 0..1 fade to black
+  readonly menuShade = uniform(0); // 0..1 left-side darkening behind menus
   readonly saturation = uniform(1.08);
   readonly bloomStrength = uniform(0.55);
   readonly godrayColor = uniform(new THREE.Color(1.0, 0.62, 0.35));
@@ -128,7 +129,7 @@ export class PostFX {
 
   /** Lens + gameplay overlays in display space. */
   private finish(ldr: N): N {
-    const { vignette, grain, aberration, damage, alert, emp, fade } = this;
+    const { vignette, grain, aberration, damage, alert, emp, fade, menuShade } = this;
     return Fn(() => {
       const uv = screenUV;
       const centered = uv.sub(0.5);
@@ -165,6 +166,9 @@ export class PostFX {
       const lum = dot(col, vec3(0.3, 0.59, 0.11));
       col.addAssign(g.mul(grain).mul(float(0.35).add(pow(max(float(1).sub(lum), 0.0), 2.0))));
 
+      // menu legibility: darken the left of the frame (replaces a full-screen CSS gradient layer)
+      const shade = smoothstep(0.65, 0.0, uv.x).mul(0.82).mul(menuShade);
+      col.assign(col.mul(float(1).sub(shade)));
       col.assign(col.mul(float(1).sub(fade)));
       return vec4(clamp(col, 0, 1), 1);
     })();

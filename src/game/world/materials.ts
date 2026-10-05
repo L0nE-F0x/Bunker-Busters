@@ -10,6 +10,17 @@ import { noise } from '@/engine/noiseTex';
 type N = any;
 
 // NOTE: every tweakable parameter is a uniform, so all instances of a factory share one shader program.
+// On top of that, identical calls return the *same* material instance (memo below), so MeshBatch can
+// merge geometry that used "different" but equal materials — fewer meshes, far fewer draw calls.
+// Callers must not mutate a returned material; use the *Unique variants if you need to.
+
+const _memo = new Map<string, THREE.Material>();
+function memo<T extends THREE.Material>(key: string, make: () => T): T {
+  let m = _memo.get(key) as T | undefined;
+  if (!m) _memo.set(key, (m = make()));
+  return m;
+}
+const k = (name: string, ...args: unknown[]) => name + JSON.stringify(args, (_, v) => (v instanceof THREE.Color ? '#' + v.getHexString() : v));
 
 /** World-space planar coordinate picked by the dominant normal axis (works on arbitrary props). */
 const triCoord = (): N => {
@@ -34,7 +45,9 @@ const rim = (power = 3): N =>
 export interface RustOpts { base: THREE.ColorRepresentation; rust?: number; roughness?: number; metalness?: number; scale?: number; paintChips?: boolean; rim?: number }
 
 /** Painted / bare metal with rust blooms, vertical streaks and chipped paint. */
-export function rustyMetal(o: RustOpts) {
+export const rustyMetal = (o: RustOpts) => memo(k('rust', o), () => rustyMetalUnique(o));
+
+export function rustyMetalUnique(o: RustOpts) {
   const m = new THREE.MeshStandardNodeMaterial();
   const base = uniform(new THREE.Color(o.base));
   const rustAmt = uniform(o.rust ?? 0.5);
@@ -58,7 +71,9 @@ export function rustyMetal(o: RustOpts) {
 }
 
 /** Weathered concrete with stains, pitting and water streaks. */
-export function concrete(tint: THREE.ColorRepresentation = '#9a9184', opts: { scale?: number; stains?: number } = {}) {
+export const concrete = (tint: THREE.ColorRepresentation = '#9a9184', opts: { scale?: number; stains?: number } = {}) => memo(k('concrete', tint, opts), () => concreteUnique(tint, opts));
+
+function concreteUnique(tint: THREE.ColorRepresentation, opts: { scale?: number; stains?: number }) {
   const m = new THREE.MeshStandardNodeMaterial({ roughness: 0.92, metalness: 0 });
   const s = uniform(opts.scale ?? 1);
   const stainAmt = uniform(opts.stains ?? 0.6);
@@ -75,8 +90,10 @@ export function concrete(tint: THREE.ColorRepresentation = '#9a9184', opts: { sc
 }
 
 /** Corrugated sheet metal: ridges via sin along a local axis, with rust. */
-export function corrugated(base: THREE.ColorRepresentation, rust = 0.6, axis: 'x' | 'y' | 'z' = 'x') {
-  const m = rustyMetal({ base, rust, roughness: 0.5, metalness: 0.7 });
+export const corrugated = (base: THREE.ColorRepresentation, rust = 0.6, axis: 'x' | 'y' | 'z' = 'x') => memo(k('corr', base, rust, axis), () => corrugatedUnique(base, rust, axis));
+
+function corrugatedUnique(base: THREE.ColorRepresentation, rust: number, axis: 'x' | 'y' | 'z') {
+  const m = rustyMetalUnique({ base, rust, roughness: 0.5, metalness: 0.7 });
   const coord = axis === 'x' ? positionLocal.x : axis === 'y' ? positionLocal.y : positionLocal.z;
   const ridge = sin(coord.mul(Math.PI * 2 * 7)).mul(0.5).add(0.5);
   const n = noise(triCoord().mul(0.5)).r;
@@ -85,7 +102,7 @@ export function corrugated(base: THREE.ColorRepresentation, rust = 0.6, axis: 'x
 }
 
 export function plainStandard(c: THREE.ColorRepresentation, roughness = 0.8, metalness = 0, extra: Partial<THREE.MeshStandardNodeMaterialParameters> = {}) {
-  return new THREE.MeshStandardNodeMaterial({ color: c, roughness, metalness, ...extra });
+  return memo(k('plain', c, roughness, metalness, extra), () => new THREE.MeshStandardNodeMaterial({ color: c, roughness, metalness, ...extra }));
 }
 
 /** HDR emissive "neon" with optional flicker driven by an external value. */
@@ -110,7 +127,9 @@ export function glow(c: THREE.ColorRepresentation, intensity = 4) {
 }
 
 /** Chain-link fence: alpha-tested diamond lattice (uv pre-scaled to metres) with rust variation. */
-export function chainLink() {
+export const chainLink = () => memo('chainlink', chainLinkUnique);
+
+function chainLinkUnique() {
   const m = new THREE.MeshStandardNodeMaterial({ side: THREE.DoubleSide, roughness: 0.45, metalness: 0.85 });
   const u = uv();
   const q = vec2(u.x.add(u.y), u.x.sub(u.y)).mul(9);
@@ -123,7 +142,9 @@ export function chainLink() {
 }
 
 /** Rough fabric with weave bump and rim light. */
-export function fabric(c: THREE.ColorRepresentation, roughness = 0.95) {
+export const fabric = (c: THREE.ColorRepresentation, roughness = 0.95) => memo(k('fabric', c, roughness), () => fabricUnique(c, roughness));
+
+export function fabricUnique(c: THREE.ColorRepresentation, roughness = 0.95) {
   const m = new THREE.MeshStandardNodeMaterial({ roughness, metalness: 0 });
   const base = uniform(new THREE.Color(c));
   const t = noise(positionLocal.xy.add(positionLocal.z).mul(1.5));
@@ -135,7 +156,9 @@ export function fabric(c: THREE.ColorRepresentation, roughness = 0.95) {
 }
 
 /** Leather / skin with fine grain and rim light. */
-export function leather(c: THREE.ColorRepresentation) {
+export const leather = (c: THREE.ColorRepresentation) => memo(k('leather', c), () => leatherUnique(c));
+
+function leatherUnique(c: THREE.ColorRepresentation) {
   const m = new THREE.MeshStandardNodeMaterial({ roughness: 0.65, metalness: 0 });
   const base = uniform(new THREE.Color(c));
   const n = noise(positionLocal.xy.add(positionLocal.z).mul(6)).r;
@@ -146,7 +169,9 @@ export function leather(c: THREE.ColorRepresentation) {
 }
 
 /** Window glass that glows faintly from inside. */
-export function warmWindow(c: THREE.ColorRepresentation = '#ffb35c', intensity = 2.5) {
+export const warmWindow = (c: THREE.ColorRepresentation = '#ffb35c', intensity = 2.5) => memo(k('window', c, intensity), () => warmWindowUnique(c, intensity));
+
+function warmWindowUnique(c: THREE.ColorRepresentation, intensity: number) {
   const m = new THREE.MeshStandardNodeMaterial({ color: 0x111111, roughness: 0.1, metalness: 0.2 });
   const col = uniform(new THREE.Color(c));
   const k = uniform(intensity);
@@ -156,7 +181,9 @@ export function warmWindow(c: THREE.ColorRepresentation = '#ffb35c', intensity =
 }
 
 /** Wood with stretched grain. */
-export function wood(c: THREE.ColorRepresentation = '#6b4a2e') {
+export const wood = (c: THREE.ColorRepresentation = '#6b4a2e') => memo(k('wood', c), () => woodUnique(c));
+
+function woodUnique(c: THREE.ColorRepresentation) {
   const m = new THREE.MeshStandardNodeMaterial({ roughness: 0.85 });
   const base = uniform(new THREE.Color(c));
   const grain = noise(vec2(positionLocal.x.add(positionLocal.z).mul(0.15), positionLocal.y.mul(4))).r;

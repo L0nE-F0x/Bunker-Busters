@@ -45,6 +45,8 @@ export class UI implements UIBridge {
   modalOpen = false;
   minigameOpen = false;
   private subtitleTimer = 0;
+  private lastClock = '';
+  private minimapT = 0;
   private lastObjective = '';
   private loadingEl: HTMLElement;
 
@@ -81,7 +83,6 @@ export class UI implements UIBridge {
   // ------------------------------------------------------------------ title
   showTitle(opts: { canContinue: boolean; backend: string; onContinue: () => void; onNew: () => void; onSettings: () => void }) {
     const el = h('div', '', `
-      <div class="vignette"></div>
       <div class="logo">
         <span class="l1">BUNKER</span><span class="l2">BUSTERS</span>
         <div class="glitch"><span>BUNKER\n   BUSTERS</span></div>
@@ -319,9 +320,12 @@ export class UI implements UIBridge {
     // clock
     const hh = Math.floor(f.hour), mm = Math.floor((f.hour - hh) * 60);
     const phase = f.hour < 5 || f.hour > 20.5 ? 'NIGHT' : f.hour < 7.5 ? 'DAWN' : f.hour < 16.5 ? 'DAY' : f.hour < 19 ? 'GOLDEN HOUR' : 'DUSK';
-    this.els.clock.innerHTML = `<b>${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}</b> · ${phase}`;
+    const clock = `<b>${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}</b> · ${phase}`;
+    if (clock !== this.lastClock) { this.lastClock = clock; this.els.clock.innerHTML = clock; }
     // minimap + compass
-    this.minimap?.draw(f.px, f.pz, f.heading, f.playerYaw, f.markers);
+    // ~20 Hz is plenty for the minimap, and every canvas update forces the overlay to recomposite
+    this.minimapT -= dt;
+    if (this.minimapT <= 0) { this.minimapT = 0.05; this.minimap?.draw(f.px, f.pz, f.heading, f.playerYaw, f.markers); }
     // subtitle fade
     if (this.subtitleTimer > 0) {
       this.subtitleTimer -= dt;

@@ -202,6 +202,8 @@ export class Props {
     const glassMat = plainStandard('#0b0f12', 0.15, 0.6);
     const chromeMat = rustyMetal({ base: '#9a9a96', rust: 0.35, metalness: 0.9, roughness: 0.35 });
     const body = carBody(rand);
+    // every wreck goes into one shared batch → one draw call per material for all 16 cars
+    const all = new MeshBatch();
     for (let i = 0; i < 16; i++) {
       const t = 0.06 + (i / 16) * 0.88 + (rand() - 0.5) * 0.03;
       const { p, tan } = this.highwayAt(t);
@@ -212,26 +214,29 @@ export class Props {
       const y = this.hf.heightAt(x, z);
       const yaw = Math.atan2(-tan.z, tan.x) + (rand() - 0.5) * 0.9 + (rand() < 0.2 ? Math.PI : 0);
       const flipped = rand() < 0.12;
-      const car = new THREE.Group();
-      const paint = rustyMetal({ base: paints[i % paints.length], rust: 0.45 + rand() * 0.45, metalness: 0.4, roughness: 0.6, rim: 0.4 });
-      const b = new MeshBatch();
-      b.add(paint, body.clone());
-      // windows (inset dark panels)
-      b.add(glassMat, box(1.2, 0.38, 1.62, 0.1, 1.22, 0, 0));
-      b.add(chromeMat, box(0.1, 0.18, 1.8, 2.32, 0.48, 0), box(0.1, 0.18, 1.8, -2.32, 0.48, 0));
+      // rust quantised to two levels so equal paints share one cached material
+      const paint = rustyMetal({ base: paints[i % paints.length], rust: rand() < 0.5 ? 0.55 : 0.8, metalness: 0.4, roughness: 0.6, rim: 0.4 });
+      const parts: [THREE.Material, THREE.BufferGeometry][] = [
+        [paint, body.clone()],
+        [glassMat, box(1.2, 0.38, 1.62, 0.1, 1.22, 0, 0)], // windows (inset dark panels)
+        [chromeMat, box(0.1, 0.18, 1.8, 2.32, 0.48, 0)],
+        [chromeMat, box(0.1, 0.18, 1.8, -2.32, 0.48, 0)],
+      ];
       // wheels (some missing)
       for (const [wx, wz] of [[1.35, 0.85], [1.35, -0.85], [-1.35, 0.85], [-1.35, -0.85]]) {
         if (rand() < 0.25) continue;
-        b.add(tireMat, cyl(0.36, 0.36, 0.26, wx, 0.36, wz, 12, Math.PI / 2));
+        parts.push([tireMat, cyl(0.36, 0.36, 0.26, wx, 0.36, wz, 12, Math.PI / 2)]);
       }
-      const meshes = b.build('car');
-      car.add(meshes);
       const sink = rand() * 0.25;
-      car.position.set(x, y - sink - (flipped ? -1.5 : 0), z);
-      car.rotation.set(flipped ? Math.PI : (rand() - 0.5) * 0.08, yaw, flipped ? 0 : (rand() - 0.5) * 0.1);
-      this.group.add(car);
+      const m = new THREE.Matrix4().compose(
+        new THREE.Vector3(x, y - sink - (flipped ? -1.5 : 0), z),
+        new THREE.Quaternion().setFromEuler(new THREE.Euler(flipped ? Math.PI : (rand() - 0.5) * 0.08, yaw, flipped ? 0 : (rand() - 0.5) * 0.1)),
+        new THREE.Vector3(1, 1, 1),
+      );
+      for (const [mat, g] of parts) all.add(mat, g.applyMatrix4(m));
       this.physics.addBox({ x, y: y + 0.8, z }, { x: 2.3, y: 0.8, z: 0.9 }, yaw);
     }
+    this.group.add(all.build('cars'));
   }
 
   private buildPoles() {
