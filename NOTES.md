@@ -41,7 +41,7 @@ URL flags: `?webgl` forces WebGL2. `?gpu=high` / `?gpu=low` force WebGPU on the 
   - The AppImage is replaced in place.
   - The .deb goes through pkexec.
   - Windows runs the NSIS installer in passive mode.
-- The bundler stamps the bundle type into `target/release/bunker-busters` in place, so CI resets the tarball copy to "unknown". Otherwise it would try `dpkg`.
+- The bundler stamps the bundle type ("deb", "appimage"…) into a *copy* of the binary for each package. `target/release/bunker-busters` stays "unknown", so the tarball updates as a plain binary. CI checks this. Don't rewrite markers by string replace: on CI's compiler the other type names are match literals in the binary.
 - CI signs everything with `TAURI_SIGNING_PRIVATE_KEY` and publishes `latest.json` (`scripts/update-manifest.mjs`). The release notes come from `CHANGELOG.md` (`scripts/changelog.mjs`), and `release.sh` requires an entry.
 - v0.1.0 installs have no updater, so they need one manual download of v0.1.1. Updates are in-app from then on.
 

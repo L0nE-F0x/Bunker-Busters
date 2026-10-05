@@ -91,13 +91,12 @@ jobs:
           cp $B/bundle/deb/*.deb out/BunkerBusters-linux-amd64.deb
           cp $B/bundle/deb/*.deb.sig sigs/linux-x86_64-deb.sig
           # Omarchy/Arch tarball: plain binary against the system WebKitGTK + per-user installer.
-          # The bundler stamps its bundle type into target/release/bunker-busters in place; reset it to
-          # "unknown" so the updater swaps this binary in place instead of reaching for dpkg.
+          # The bundler stamps the bundle type into a *copy* of the binary for each package, so this one
+          # must still say "unknown" (its static initialiser is the only _UNK string; the other names
+          # are match literals). If it ever got stamped, the updater would reach for dpkg: fail loudly.
           cp $B/bunker-busters out/bunker-busters/bunker-busters-bin
-          perl -0777 -pi -e 's/__TAURI_BUNDLE_TYPE_VAR_(DEB|RPM|APP)/__TAURI_BUNDLE_TYPE_VAR_UNK/g' out/bunker-busters/bunker-busters-bin
-          marks="$(grep -ao '__TAURI_BUNDLE_TYPE_VAR_[A-Z]*' out/bunker-busters/bunker-busters-bin | sort | uniq -c)"
-          echo "bundle markers: $marks"
-          [ "$(echo "$marks" | tr -s ' ')" = " 1 __TAURI_BUNDLE_TYPE_VAR_UNK" ] || { echo "unexpected bundle markers"; exit 1; }
+          unk="$(grep -ao '__TAURI_BUNDLE_TYPE_VAR_UNK' out/bunker-busters/bunker-busters-bin | wc -l)"
+          [ "$unk" = 1 ] || { echo "tarball binary has a bundle type stamped in (UNK count $unk)"; exit 1; }
           cp src-tauri/icons/128x128@2x.png out/bunker-busters/icon.png
           cp scripts/install-linux.sh out/bunker-busters/install.sh
           chmod +x out/bunker-busters/install.sh out/bunker-busters/bunker-busters-bin
