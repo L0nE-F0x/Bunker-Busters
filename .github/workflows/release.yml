@@ -5,6 +5,10 @@
 # Assets keep fixed names so the website can always link to
 #   https://github.com/L0nE-F0x/Bunker-Busters/releases/latest/download/<asset>
 # The release stays a draft until every platform has built and uploaded successfully.
+#
+# In-app updates: builds are signed with the TAURI_SIGNING_PRIVATE_KEY secret (public key in
+# src-tauri/tauri.conf.json), and the publish job uploads latest.json, which the desktop app polls
+# via releases/latest/download/latest.json. Release notes come from CHANGELOG.md.
 name: Release
 
 on:
@@ -26,18 +30,28 @@ jobs:
   draft:
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.TAG }}
       - name: Create draft release (if missing)
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1 || \
-          gh release create "$TAG" --repo "$GITHUB_REPOSITORY" --draft --title "Bunker Busters $TAG" \
-            --notes "Desktop builds of Bunker Busters $TAG. Download from the website or the assets below.
-
-          - **Omarchy / Arch:** \`BunkerBusters-linux-x86_64.tar.gz\` (uses system WebKitGTK; run \`install.sh\`)
-          - **Any Linux:** \`BunkerBusters-linux-x86_64.AppImage\`
-          - **Debian / Ubuntu:** \`BunkerBusters-linux-amd64.deb\`
-          - **Windows 10/11:** \`BunkerBusters-windows-x64-setup.exe\` (unsigned: SmartScreen → More info → Run anyway)"
+          set -euo pipefail
+          gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1 && exit 0
+          {
+            echo "## What's new"
+            node scripts/changelog.mjs "$TAG"
+            echo
+            echo "## Downloads"
+            echo "Already installed? The app offers this update on its title screen (from v0.1.1 on)."
+            echo
+            echo "- **Omarchy / Arch:** \`BunkerBusters-linux-x86_64.tar.gz\` (uses system WebKitGTK; run \`install.sh\`)"
+            echo "- **Any Linux:** \`BunkerBusters-linux-x86_64.AppImage\`"
+            echo "- **Debian / Ubuntu:** \`BunkerBusters-linux-amd64.deb\`"
+            echo "- **Windows 10/11:** \`BunkerBusters-windows-x64-setup.exe\` (unsigned: SmartScreen → More info → Run anyway)"
+          } > notes.md
+          gh release create "$TAG" --repo "$GITHUB_REPOSITORY" --draft --title "Bunker Busters $TAG" --notes-file notes.md
 
   linux:
     needs: draft
@@ -59,27 +73,51 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y libwebkit2gtk-4.1-dev libgtk-3-dev libayatana-appindicator3-dev librsvg2-dev patchelf file
       - run: npm ci
-      - name: Build (AppImage + deb)
+      - name: Build (AppImage + deb, signed for the updater)
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ''
         run: npx tauri build --bundles appimage,deb
       - name: Collect assets
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ''
         run: |
           set -euo pipefail
-          mkdir -p out/bunker-busters
-          cp src-tauri/target/release/bundle/appimage/*.AppImage out/BunkerBusters-linux-x86_64.AppImage
-          cp src-tauri/target/release/bundle/deb/*.deb out/BunkerBusters-linux-amd64.deb
-          # Omarchy/Arch tarball: plain binary against the system WebKitGTK + per-user installer
-          cp src-tauri/target/release/bunker-busters out/bunker-busters/bunker-busters-bin
+          B=src-tauri/target/release
+          mkdir -p out/bunker-busters sigs
+          cp $B/bundle/appimage/*.AppImage out/BunkerBusters-linux-x86_64.AppImage
+          cp $B/bundle/appimage/*.AppImage.sig sigs/linux-x86_64-appimage.sig
+          cp $B/bundle/deb/*.deb out/BunkerBusters-linux-amd64.deb
+          cp $B/bundle/deb/*.deb.sig sigs/linux-x86_64-deb.sig
+          # Omarchy/Arch tarball: plain binary against the system WebKitGTK + per-user installer.
+          # The bundler stamps its bundle type into target/release/bunker-busters in place; reset it to
+          # "unknown" so the updater swaps this binary in place instead of reaching for dpkg.
+          cp $B/bunker-busters out/bunker-busters/bunker-busters-bin
+          perl -0777 -pi -e 's/__TAURI_BUNDLE_TYPE_VAR_(DEB|RPM|APP)/__TAURI_BUNDLE_TYPE_VAR_UNK/g' out/bunker-busters/bunker-busters-bin
+          marks="$(grep -ao '__TAURI_BUNDLE_TYPE_VAR_[A-Z]*' out/bunker-busters/bunker-busters-bin | sort | uniq -c)"
+          echo "bundle markers: $marks"
+          [ "$(echo "$marks" | tr -s ' ')" = " 1 __TAURI_BUNDLE_TYPE_VAR_UNK" ] || { echo "unexpected bundle markers"; exit 1; }
           cp src-tauri/icons/128x128@2x.png out/bunker-busters/icon.png
           cp scripts/install-linux.sh out/bunker-busters/install.sh
           chmod +x out/bunker-busters/install.sh out/bunker-busters/bunker-busters-bin
           tar -C out -czf out/BunkerBusters-linux-x86_64.tar.gz bunker-busters
-          ls -la out
+          # the same binary, raw, is what tarball installs download when they update in-app
+          cp out/bunker-busters/bunker-busters-bin out/BunkerBusters-linux-x86_64-update.bin
+          npx tauri signer sign out/BunkerBusters-linux-x86_64-update.bin
+          mv out/BunkerBusters-linux-x86_64-update.bin.sig sigs/linux-x86_64.sig
+          ls -la out sigs
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sigs-linux
+          path: sigs/
       - name: Upload to release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh release upload "$TAG" --repo "$GITHUB_REPOSITORY" --clobber \
-            out/BunkerBusters-linux-x86_64.AppImage out/BunkerBusters-linux-amd64.deb out/BunkerBusters-linux-x86_64.tar.gz
+            out/BunkerBusters-linux-x86_64.AppImage out/BunkerBusters-linux-amd64.deb out/BunkerBusters-linux-x86_64.tar.gz \
+            out/BunkerBusters-linux-x86_64-update.bin
 
   windows:
     needs: draft
@@ -97,7 +135,10 @@ jobs:
         with:
           workspaces: src-tauri
       - run: npm ci
-      - name: Build (NSIS installer)
+      - name: Build (NSIS installer, signed for the updater)
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ''
         run: npx tauri build --bundles nsis
       - name: Collect + upload
         shell: bash
@@ -105,15 +146,32 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          mkdir -p out
+          mkdir -p out sigs
           cp src-tauri/target/release/bundle/nsis/*-setup.exe out/BunkerBusters-windows-x64-setup.exe
+          cp src-tauri/target/release/bundle/nsis/*-setup.exe.sig sigs/windows-x86_64-nsis.sig
           gh release upload "$TAG" --repo "$GITHUB_REPOSITORY" --clobber out/BunkerBusters-windows-x64-setup.exe
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sigs-windows
+          path: sigs/
 
   publish:
     needs: [linux, windows]
     runs-on: ubuntu-latest
     steps:
-      - name: Publish release
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.TAG }}
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: sigs-*
+          path: sigs
+          merge-multiple: true
+      - name: Updater manifest + publish
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release edit "$TAG" --repo "$GITHUB_REPOSITORY" --draft=false --latest
+        run: |
+          set -euo pipefail
+          node scripts/update-manifest.mjs "$TAG" sigs latest.json
+          gh release upload "$TAG" --repo "$GITHUB_REPOSITORY" --clobber latest.json
+          gh release edit "$TAG" --repo "$GITHUB_REPOSITORY" --draft=false --latest

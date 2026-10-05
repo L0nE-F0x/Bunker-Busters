@@ -10,6 +10,7 @@ import type { LockResult, UIBridge } from '@/game/context';
 import { LockpickGame } from './Lockpick';
 import { CircuitGame, KeypadGame } from './Circuit';
 import { Minimap, MapData, drawWorldMap, type MapMarker } from './Minimap';
+import { mountUpdateNotice } from './Updater';
 
 const h = <K extends keyof HTMLElementTagNameMap>(tag: K, cls = '', html = '') => {
   const el = document.createElement(tag);
@@ -104,6 +105,7 @@ export class UI implements UIBridge {
     add('Settings', opts.onSettings);
     add('Controls', () => this.showControls());
     this.root.appendChild(el);
+    void mountUpdateNotice(el, () => { this.audio.start(); this.audio.play('uiConfirm'); });
     // first interaction starts audio
     const kick = () => { this.audio.start(); window.removeEventListener('pointerdown', kick); };
     window.addEventListener('pointerdown', kick);

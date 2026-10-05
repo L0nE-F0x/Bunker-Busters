@@ -3,6 +3,8 @@
 // user's everyday browser.
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+mod update;
+
 use std::time::Duration;
 use tauri::Manager;
 
@@ -49,6 +51,9 @@ fn main() {
     select_gpu();
 
     tauri::Builder::default()
+        .plugin(tauri_plugin_updater::Builder::new().build())
+        .manage(update::UpdateState::default())
+        .invoke_handler(tauri::generate_handler![update::update_check, update::update_install, update::update_progress])
         .setup(|app| {
             let win = app
                 .get_webview_window("main")
@@ -69,6 +74,12 @@ fn main() {
                     settings.set_enable_write_console_messages_to_stdout(true);
                 }
             })?;
+
+            // Testing the updater end to end without clicking: check, install, restart.
+            if std::env::var_os("BB_SELF_UPDATE").is_some() {
+                let handle = app.handle().clone();
+                tauri::async_runtime::spawn(async move { update::self_update_for_test(handle).await });
+            }
 
             // Safety valve for automated test runs: quit after N seconds.
             if let Ok(secs) = std::env::var("BB_EXIT_AFTER") {

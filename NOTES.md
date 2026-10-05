@@ -33,6 +33,18 @@ URL flags: `?webgl` forces WebGL2. `?gpu=high` / `?gpu=low` force WebGPU on the 
 - Interaction targeting follows your gaze. Banners are queued. The hotbar moved bottom-right so it doesn't sit on the hands.
 - Dev tool: `http://localhost:5173/debug/hands.html?pose=lockpick&look=engineer&torch` renders the hands alone in a studio (dev server only, not part of the build).
 
+### In-app updates (2026-10-05)
+- The desktop app checks GitHub for a newer signed release on the title screen and shows an "Update available" card. It lists the CHANGELOG bullets and offers **Update & restart** with a progress bar.
+- Built on `tauri-plugin-updater`, wrapped in our own commands (`src-tauri/src/update.rs`), so no capability files or JS plugin API are needed. The browser build never shows it.
+- Install types:
+  - The tarball binary (Omarchy) is swapped in place without root.
+  - The AppImage is replaced in place.
+  - The .deb goes through pkexec.
+  - Windows runs the NSIS installer in passive mode.
+- The bundler stamps the bundle type into `target/release/bunker-busters` in place, so CI resets the tarball copy to "unknown". Otherwise it would try `dpkg`.
+- CI signs everything with `TAURI_SIGNING_PRIVATE_KEY` and publishes `latest.json` (`scripts/update-manifest.mjs`). The release notes come from `CHANGELOG.md` (`scripts/changelog.mjs`), and `release.sh` requires an entry.
+- v0.1.0 installs have no updater, so they need one manual download of v0.1.1. Updates are in-app from then on.
+
 ### Realism pass (2026-10-05)
 Owner feedback: the hands looked like "zombie hook hands", and falling and other physics weren't believable.
 

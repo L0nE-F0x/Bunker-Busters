@@ -41,6 +41,18 @@
       "icons/icon.png",
       "icons/icon.icns",
       "icons/icon.ico"
-    ]
+    ],
+    "createUpdaterArtifacts": true
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEFFNjI2NjA2RTVFRjA0NEMKUldSTUJPL2xCbVppcmd6MVlGbjZUUmcwZHQyWGVaNEp0bEZYYjR2U2N5dDNtTkwrSHVxeEVFenkK",
+      "endpoints": [
+        "https://github.com/L0nE-F0x/Bunker-Busters/releases/latest/download/latest.json"
+      ],
+      "windows": {
+        "installMode": "passive"
+      }
+    }
   }
 }

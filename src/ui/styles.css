@@ -97,6 +97,28 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #000; color:
 .tagline { font-size: clamp(14px, 1.4vw, 19px); letter-spacing: 0.42em; text-transform: uppercase; color: var(--ink-dim); margin: 18px 0 42px 6px; }
 .tagline b { color: var(--teal); font-weight: 600; }
 .menu { display: flex; flex-direction: column; gap: 8px; width: min(340px, 80vw); position: relative; }
+/* in-app update notice (desktop app) */
+.update-card {
+  position: absolute; right: 8vw; bottom: 72px; width: min(360px, 84vw); padding: 16px 18px 14px;
+  background: var(--panel); border: 1px solid var(--line); border-left: 3px solid var(--teal);
+  font-size: 13px; color: var(--ink-dim); animation: updIn 0.5s ease both 0.4s;
+}
+@keyframes updIn { from { opacity: 0; transform: translateY(8px); } }
+.update-card .u-tag { font-family: var(--mono); font-size: 10px; letter-spacing: 0.18em; color: var(--teal); }
+.update-card .u-ver { font-family: var(--font); font-weight: 600; font-size: 20px; color: var(--ink); margin: 2px 0 6px; }
+.update-card .u-ver span { font-size: 12px; font-weight: 400; color: var(--ink-faint); }
+.update-card ul { margin: 0 0 8px; padding-left: 16px; line-height: 1.45; }
+.update-card li b { color: var(--ink); font-weight: 600; }
+.update-card .u-hint { font-size: 11px; color: var(--ink-faint); margin-bottom: 8px; }
+.update-card .u-bar { display: none; height: 3px; background: rgba(255,255,255,0.08); margin: 8px 0 6px; overflow: hidden; }
+.update-card .u-bar i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, var(--amber-hot), var(--teal)); transition: width 0.15s linear; }
+.update-card .u-status { font-family: var(--mono); font-size: 11px; min-height: 1em; margin-bottom: 8px; }
+.update-card.failed .u-status { color: var(--red); }
+.update-card .u-actions { display: flex; gap: 8px; }
+.update-card .u-actions .btn { font-size: 12px; padding: 8px 14px; }
+.update-card .u-actions .btn.primary { flex: 1; }
+@media (max-width: 720px) { .update-card { right: 16px; left: 16px; width: auto; bottom: 64px; } }
+
 .title-foot { position: absolute; bottom: 28px; left: 8vw; right: 8vw; display: flex; justify-content: space-between; font-family: var(--mono); font-size: 11px; color: var(--ink-faint); letter-spacing: 0.12em; }
 .press { animation: pulse 2s ease-in-out infinite; }
 @keyframes pulse { 50% { opacity: 0.35; } }

@@ -34,6 +34,7 @@ esac
 tag="v$next"
 git rev-parse -q --verify "refs/tags/$tag" >/dev/null && { echo "Tag $tag already exists."; exit 1; }
 git ls-remote --exit-code --tags origin "$tag" >/dev/null 2>&1 && { echo "Tag $tag already exists on origin."; exit 1; }
+node scripts/changelog.mjs "$next" >/dev/null || { echo "Add a '## $tag' section to CHANGELOG.md (it's the release notes + in-app update notes), commit, then re-run."; exit 1; }
 echo "Releasing $current -> $next ($tag)"
 
 # ---- bump: package.json(+lock), tauri.conf.json, Cargo.toml, Cargo.lock ----------------------

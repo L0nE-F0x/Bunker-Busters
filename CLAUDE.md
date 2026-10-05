@@ -49,13 +49,32 @@ The tag triggers `.github/workflows/release.yml`:
 | `BunkerBusters-linux-amd64.deb` | Debian/Ubuntu |
 | `BunkerBusters-windows-x64-setup.exe` | Windows 10/11, NSIS. **Unsigned**: SmartScreen shows "More info → Run anyway" |
 
+| `BunkerBusters-linux-x86_64-update.bin` | in-app updater only: the tarball's raw binary, swapped in place |
+| `latest.json` | in-app updater manifest (signatures + per-install-type URLs), built by `scripts/update-manifest.mjs` |
+
 - **Don't rename the assets.** The website links to `releases/latest/download/<fixed name>` and asks the GitHub API which assets exist (`src/site/site.ts`).
 - The version shown in the game title and the site footer comes from `package.json` (`__APP_VERSION__`, injected in `vite.config.ts`).
+
+Release notes: add a `## vX.Y.Z` section to `CHANGELOG.md` **before** running the script (it refuses otherwise). It becomes the GitHub release notes and the "what's new" bullets in the in-app update card.
+
+**In-app updates** (desktop, from v0.1.1). On the title screen the app checks `releases/latest/download/latest.json` and offers "Update & restart":
+- **Code:** `src-tauri/src/update.rs` (commands `update_check` / `update_install` / `update_progress`) and `src/ui/Updater.ts` (the card).
+- **How each install type updates:**
+  - tarball binary: swapped in place, no root
+  - AppImage: replaced in place
+  - .deb: `dpkg` through a pkexec password prompt
+  - Windows: NSIS installer in passive mode
+- **Signing:**
+  - Every download is verified against the public key in `tauri.conf.json`.
+  - The private key is at `~/.tauri/bunker-busters.key` on the owner's machine (empty password) and in the repo secret `TAURI_SIGNING_PRIVATE_KEY`.
+  - **If that key is lost, installed copies can never update again.** It must stay backed up.
+- **Local builds:** `npm run desktop:build` now needs the key: `TAURI_SIGNING_PRIVATE_KEY="$(cat ~/.tauri/bunker-busters.key)" TAURI_SIGNING_PRIVATE_KEY_PASSWORD="" npm run desktop:build`. `desktop:release`/`desktop:install` (`--no-bundle`) don't.
+- **End-to-end test:** run an older binary with `BB_SELF_UPDATE=1 BB_EXIT_AFTER=30`. It checks, installs and restarts with no UI, printing `[update] …` to stdout.
 
 After a release:
 ```bash
 gh run watch $(gh run list --workflow Release --limit 1 --json databaseId --jq '.[0].databaseId') --exit-status
-gh release view vX.Y.Z --json assets --jq '.assets[].name'   # expect the 4 assets above
+gh release view vX.Y.Z --json assets --jq '.assets[].name'   # expect the 6 assets above
 npm run desktop:install          # update the owner's installed copy (~/.local/bin + app launcher entry)
 ```
 
@@ -76,8 +95,8 @@ src/game/player/            Player (Rapier controller), FirstPersonCamera, Hands
 src/content/                data: items, skills, archetypes, world layout, bunkers/garage.ts (data-driven)
 src/ui/                     DOM HUD/menus (UI.ts), Lockpick/Circuit/Keypad minigames, Minimap, styles.css
 src/site/ + index.html      marketing page.   play/index.html: game page.   public/media + og.jpg: site art
-src-tauri/                  desktop shell. main.rs: auto NVIDIA selection on hybrid Linux laptops, dev hooks
-scripts/                    release.sh, install-linux.sh, run-nvidia.sh, dev/* (test harness, below)
+src-tauri/                  desktop shell. main.rs: auto NVIDIA selection on hybrid Linux laptops, dev hooks. update.rs: in-app updater
+scripts/                    release.sh, changelog.mjs, update-manifest.mjs, install-linux.sh, run-nvidia.sh, dev/* (test harness, below)
 debug/                      dev-only pages (served by `npm run dev`, never deployed): hands lab, GPU canary, OG card
 ```
 
@@ -111,6 +130,7 @@ Desktop dev hooks (env vars):
 - `BB_START_URL`: open another URL
 - `BB_EXIT_AFTER=N`: auto-quit
 - `BB_GPU=integrated`: skip NVIDIA selection
+- `BB_SELF_UPDATE=1`: check for and install an update with no UI (updater test)
 
 The webview's `console.log` goes to stdout.
 
