@@ -588,6 +588,8 @@ export class Game {
   }
 
   private resize() {
+    this.fitW = innerWidth;
+    this.fitH = innerHeight;
     const { aspect } = fitCanvas(this.renderer, this.canvas, this.quality.pixelRatio, this.isWebGPU);
     this.camera.aspect = aspect;
     this.camera.updateProjectionMatrix();
@@ -764,8 +766,14 @@ export class Game {
   }
 
   // ------------------------------------------------------------------ frame
+  private fitW = 0;
+  private fitH = 0;
+
   private frame() {
     const now = performance.now();
+    // Re-fit the canvas whenever the window size changes. The 'resize' event alone isn't enough: the
+    // desktop app's window gets tiled/resized while we're still loading, before the listener exists.
+    if (innerWidth !== this.fitW || innerHeight !== this.fitH) this.resize();
     const dt = Math.min(1 / 20, (now - this.last) / 1000);
     this.last = now;
     this.t += dt;
