@@ -12,7 +12,7 @@ import { Terrain } from './world/Terrain';
 import { Props } from './world/Props';
 import { Landmarks } from './world/Landmarks';
 import { Scrub } from './world/Scrub';
-import { DustMotes, GroundHaze, DustPuffs, SandStreaks, Shockwave, heightTexture } from './world/effects';
+import { DustMotes, GroundHaze, DustPuffs, SandStreaks, DustDevils, Shockwave, heightTexture } from './world/effects';
 import { Weather } from './world/Weather';
 import { updateRim, glow } from './world/materials';
 import { Garage } from './bunker/Garage';
@@ -61,6 +61,7 @@ export class Game {
   haze!: GroundHaze;
   puffs!: DustPuffs;
   streaks!: SandStreaks;
+  devils!: DustDevils;
   weather!: Weather;
   garage!: Garage;
   map!: MapData;
@@ -146,6 +147,8 @@ export class Game {
     if (!SKIP.has('dust')) this.scene.add(this.puffs.sprite);
     this.streaks = new SandStreaks(this.atmo, this.hf, ht, Math.round(this.quality.dustCount * 0.3));
     if (!SKIP.has('dust')) this.scene.add(this.streaks.sprite);
+    this.devils = new DustDevils(this.atmo, this.hf, ht);
+    if (!SKIP.has('haze')) this.scene.add(this.devils.sprite);
     this.weather = new Weather(this.atmo);
     this.weather.onPhase = (p) => {
       if (this.mode !== 'playing') return;
@@ -822,6 +825,7 @@ export class Game {
     this.haze.update(dt);
     this.puffs.update(dt);
     this.streaks.update(dt);
+    this.devils.update();
     this.updateGrenades(dt);
     this.updateEnvironment(dt);
     for (const [, g] of this.intelMeshes) {

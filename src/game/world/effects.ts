@@ -3,7 +3,7 @@ import {
   Fn, vec2, vec3, vec4, float, uniform, instanceIndex, hash, time, cameraPosition, fract, uv, length, smoothstep, mix, max,
   pow, dot, normalize, sin, positionLocal, positionWorld, texture, color, clamp,
   normalWorld, abs, viewportLinearDepth, linearDepth, cameraNear, cameraFar, instancedDynamicBufferAttribute, exp,
-  cameraViewMatrix, atan, renderGroup,
+  cameraViewMatrix, atan, renderGroup, step,
 } from 'three/tsl';
 import type { Atmosphere } from './Atmosphere';
 import type { Heightfield } from './Heightfield';
@@ -192,6 +192,83 @@ export class SandStreaks {
     this.offset.y += w.y * dt * 3.2;
     (this.uOffset.value as THREE.Vector2).copy(this.offset);
     (this.uDir.value as THREE.Vector2).set(w.x, w.y).normalize();
+  }
+}
+
+/**
+ * Dust devils: a few slim whirls of sand wandering the flats on hot, calm afternoons. Each devil is a
+ * column of soft sprites spiralling up and fanning out; the whole set is one sprite draw call placed
+ * entirely on the GPU (instanceIndex -> devil + ring), world-anchored and wrapped around the camera.
+ */
+export class DustDevils {
+  sprite: THREE.Sprite;
+  readonly uAmount = uniform(0);
+  /** Debug/screenshots: `pin(x, z)` parks devil 0 there (and keeps it alive). */
+  readonly uPin = uniform(new THREE.Vector3(0, 0, 0));
+  static readonly DEVILS = 4;
+  static readonly RINGS = 36;
+
+  constructor(private atmo: Atmosphere, hf: Heightfield, heightTex: THREE.Texture) {
+    const mat = new THREE.SpriteNodeMaterial({ transparent: true, depthWrite: false });
+    const R = float(220);
+    const rings = float(DustDevils.RINGS);
+    const devil = instanceIndex.div(DustDevils.RINGS).toFloat();
+    const k = instanceIndex.mod(DustDevils.RINGS).toFloat();
+    const t = k.div(rings); // 0 at the ground, 1 at the top
+    const seed = vec3(hash(devil.add(31)), hash(devil.add(57)), hash(devil.add(97)));
+    // each devil lives ~45 s, then a new one spawns somewhere else
+    const cycle = time.div(seed.z.mul(20).add(35)).add(seed.x);
+    const life = fract(cycle);
+    const gen = cycle.floor();
+    const spawn = vec2(hash(gen.mul(13).add(devil)), hash(gen.mul(29).add(devil.add(5))));
+    const drift = vec2(sin(time.mul(0.05).add(seed.y.mul(9))), sin(time.mul(0.04).add(seed.x.mul(7)))).mul(18);
+    const lxz = fract(spawn.add(drift.div(R.mul(2))).add(cameraPosition.xz.div(R.mul(2)).negate())).sub(0.5).mul(R.mul(2));
+    const pinned = this.uPin.y.mul(step(devil, 0.5));
+    const cxz = mix(cameraPosition.xz.add(lxz), this.uPin.xz, pinned);
+    const ground = texture(heightTex, cxz.div(hf.size).add(0.5)).r;
+    const H = seed.y.mul(14).add(10);
+    const ang = time.mul(float(4).sub(t.mul(1.5))).add(k.mul(2.39)).add(seed.x.mul(20));
+    const rad = t.mul(t).mul(2.4).add(0.3).add(sin(time.mul(1.3).add(k)).mul(0.15));
+    // the column leans and snakes a little with height
+    const sway = vec2(sin(time.mul(0.7).add(t.mul(3)).add(seed.z.mul(10))), sin(time.mul(0.6).add(t.mul(2.5)))).mul(t.mul(1.6));
+    const pos = vec3(cxz.x.add(sin(ang).mul(rad)).add(sway.x), ground.add(t.mul(H)), cxz.y.add(sin(ang.add(1.5708)).mul(rad)).add(sway.y));
+    mat.positionNode = pos;
+    const size = t.mul(2.2).add(0.8);
+    mat.scaleNode = vec2(size, size);
+    mat.rotationNode = ang;
+    mat.colorNode = Fn(() => {
+      const p = uv().sub(0.5).mul(2);
+      const n = noise(p.mul(0.4).add(hash(instanceIndex).mul(9)).add(time.mul(0.03))).r.sub(0.5);
+      const shape = smoothstep(1.0, 0.1, length(p).add(n.mul(0.7)));
+      const env = mix(sin(life.mul(Math.PI)).mul(smoothstep(0.0, 0.15, life)).mul(smoothstep(1.0, 0.8, life)), float(1), pinned);
+      const dist = length(lxz);
+      const fade = mix(smoothstep(R, R.mul(0.7), dist).mul(smoothstep(8, 25, dist)), float(1), pinned);
+      const soft = clamp(viewportLinearDepth.sub(linearDepth()).mul(cameraFar.sub(cameraNear)).div(2), 0, 1);
+      const view = normalize(pos.sub(cameraPosition));
+      const mu = max(dot(view, atmo.uSunDir), 0);
+      // denser than the haze around it: ochre sand lit by the sun, so it reads against the bright flats
+      const lit = vec3(0.66, 0.47, 0.3).mul(atmo.uSunColor.mul(pow(mu, 4).mul(0.4).add(0.38)).add(atmo.uHaze.mul(0.4)));
+      const a = shape.mul(env).mul(fade).mul(soft).mul(float(1).sub(t.mul(0.72))).mul(this.uAmount).mul(0.9);
+      return vec4(lit, clamp(a, 0, 1));
+    })();
+    this.sprite = new THREE.Sprite(mat);
+    this.sprite.count = DustDevils.DEVILS * DustDevils.RINGS;
+    this.sprite.frustumCulled = false;
+    this.sprite.renderOrder = 11;
+  }
+
+  pin(x: number, z: number, on = true) {
+    (this.uPin.value as THREE.Vector3).set(x, on ? 1 : 0, z);
+  }
+
+  update() {
+    const a = this.atmo;
+    // hot, bright, calm-ish air only: no storm, sun well up, not on gusty days
+    const day = Math.min(1, Math.max(0, (a.sunElevation - 0.05) / 0.2));
+    const calm = 1 - Math.min(1, a.storm * 3);
+    const v = day * calm;
+    this.uAmount.value = v;
+    this.sprite.visible = v > 0.01;
   }
 }
 
