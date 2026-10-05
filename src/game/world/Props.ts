@@ -1,6 +1,6 @@
 import * as THREE from 'three/webgpu';
 import {
-  vec2, vec3, float, positionWorld, mix, smoothstep, sin, normalWorld, color,
+  vec2, vec3, float, positionWorld, mix, smoothstep, sin, normalWorld, color, texture, floor, step, uv, time, fract, abs,
 } from 'three/tsl';
 import { Simplex2, mulberry32 } from '@/engine/noise';
 import type { Heightfield } from './Heightfield';
@@ -9,7 +9,8 @@ import { HIGHWAY, WORLD_SEED } from '@/content/world';
 import { box, cyl, beam, merge, MeshBatch, wire, canvasTexture, grime, norm } from './kit';
 import { rustyMetal, plainStandard, wood } from './materials';
 import { bumpFromHeight } from './Terrain';
-import { noise } from '@/engine/noiseTex';
+import { noise, noiseTexture } from '@/engine/noiseTex';
+import type { Atmosphere } from './Atmosphere';
 
 export function rockMaterial() {
   const m = new THREE.MeshStandardNodeMaterial({ roughness: 0.9, flatShading: true });
@@ -97,9 +98,14 @@ const BILLBOARDS = [
 
 export class Props {
   group = new THREE.Group();
-  tumbleweeds: { mesh: THREE.Mesh; vel: THREE.Vector3; spin: THREE.Vector3; r: number }[] = [];
+  /** Tumbleweeds share one InstancedMesh (one draw call + one shadow call instead of ten each). */
+  tumbleweeds: { pos: THREE.Vector3; rot: THREE.Euler; scale: number; vel: THREE.Vector3; r: number }[] = [];
+  private tumbleMesh!: THREE.InstancedMesh;
+  private readonly _m = new THREE.Matrix4();
+  private readonly _q = new THREE.Quaternion();
+  private readonly _s = new THREE.Vector3();
 
-  constructor(private hf: Heightfield, private physics: Physics) {
+  constructor(private hf: Heightfield, private physics: Physics, private atmo?: Atmosphere) {
     this.group.name = 'props';
     this.scatterRocks();
     this.scatterTrees();
@@ -360,39 +366,129 @@ export class Props {
   private buildTumbleweeds() {
     const rand = mulberry32(WORLD_SEED + 5);
     const twigs: THREE.BufferGeometry[] = [];
-    for (let i = 0; i < 70; i++) {
-      const a = new THREE.Vector3(rand() - 0.5, rand() - 0.5, rand() - 0.5).normalize().multiplyScalar(0.25 + rand() * 0.3);
-      const b2 = new THREE.Vector3(rand() - 0.5, rand() - 0.5, rand() - 0.5).normalize().multiplyScalar(0.3 + rand() * 0.35);
-      twigs.push(beam(a, b2, 0.012, 3));
+    // a hollow tangle: curved twigs wrapping a squashed sphere, a few spokes through the middle
+    const v = new THREE.Vector3(), t = new THREE.Vector3(), prev = new THREE.Vector3();
+    for (let i = 0; i < 90; i++) {
+      v.set(rand() - 0.5, rand() - 0.5, rand() - 0.5).normalize();
+      t.set(rand() - 0.5, rand() - 0.5, rand() - 0.5).cross(v).normalize();
+      const R = 0.36 + rand() * 0.16, arc = 0.5 + rand() * 0.9, segs = 3;
+      const axis = new THREE.Vector3().crossVectors(v, t).normalize();
+      prev.copy(v).multiplyScalar(R);
+      for (let k = 1; k <= segs; k++) {
+        const p = v.clone().applyAxisAngle(axis, (arc * k) / segs).multiplyScalar(R * (1 + (rand() - 0.5) * 0.12));
+        p.y *= 0.85;
+        twigs.push(beam(prev.clone(), p, 0.006 + rand() * 0.006, 3));
+        prev.copy(p);
+      }
+    }
+    for (let i = 0; i < 12; i++) {
+      const a = new THREE.Vector3(rand() - 0.5, rand() - 0.5, rand() - 0.5).normalize().multiplyScalar(0.4);
+      twigs.push(beam(a, a.clone().multiplyScalar(-0.6 - rand() * 0.4), 0.014, 3));
     }
     const geo = merge(twigs);
     const mat = plainStandard('#8a6a44', 0.95, 0, { side: THREE.DoubleSide });
-    for (let i = 0; i < 10; i++) {
-      const m = new THREE.Mesh(geo, mat);
-      m.castShadow = true;
-      const s = 0.8 + rand() * 0.8;
-      m.scale.setScalar(s);
-      m.position.set(9999, 0, 0);
-      this.group.add(m);
-      this.tumbleweeds.push({ mesh: m, vel: new THREE.Vector3(), spin: new THREE.Vector3(), r: 0.55 * s });
+    const N = 10;
+    this.tumbleMesh = new THREE.InstancedMesh(geo, mat, N);
+    this.tumbleMesh.castShadow = true;
+    this.tumbleMesh.frustumCulled = false;
+    this.tumbleMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+    this.group.add(this.tumbleMesh);
+    for (let i = 0; i < N; i++) {
+      const sc = 0.8 + rand() * 0.8;
+      this.tumbleweeds.push({ pos: new THREE.Vector3(9999, -999, 0), rot: new THREE.Euler(rand() * 6, rand() * 6, 0), scale: sc, vel: new THREE.Vector3(), r: 0.5 * sc });
     }
   }
 
-  /** Ruined skyline silhouette far beyond the mountains to the north-west. */
+  /** Ground height of the far terrain ring (mirrors Terrain.buildFar) so distant ruins sit on it. */
+  private farGround(x: number, z: number) {
+    const inner = this.hf.size * 0.47, outer = 3600;
+    const t = Math.pow(Math.min(1, Math.max(0, (Math.hypot(x, z) - inner) / (outer - inner))), 1 / 1.8);
+    return this.hf.farHeight(x, z) + Math.pow(t, 0.7) * 40;
+  }
+
+  /**
+   * The dead megacity on the north-west horizon: supertall towers (some snapped, one leaning, one
+   * stripped to its frame) over a band of mid-rises. One merged mesh. At night a few windows are still
+   * lit and aviation beacons blink on the tallest roofs (uv.x > 1.5 marks beacon geometry).
+   */
   private buildFarCity() {
     const rand = mulberry32(77);
     const parts: THREE.BufferGeometry[] = [];
-    const cx = -1400, cz = -1700;
-    for (let i = 0; i < 70; i++) {
-      const w = 30 + rand() * 60, d = 30 + rand() * 60, h = 60 + Math.pow(rand(), 2) * 320;
-      const x = cx + (rand() - 0.5) * 1400, z = cz + (rand() - 0.5) * 500;
-      const tilt = rand() < 0.2 ? (rand() - 0.5) * 0.25 : 0;
-      parts.push(box(w, h, d, x, h / 2 + 20, z, rand() * 0.5, 0, tilt));
-      if (rand() < 0.4) parts.push(box(w * 0.5, h * 0.3, d * 0.5, x + (rand() - 0.5) * w * 0.4, h + h * 0.12 + 20, z, 0, 0, (rand() - 0.5) * 0.6));
-      if (rand() < 0.25) parts.push(cyl(1.5, 1.5, 60, x, h + 50, z, 4));
+    const beacons: THREE.BufferGeometry[] = [];
+    const cx = -1500, cz = -1950;
+    const ax = new THREE.Vector2(0.8, -0.6); // the city's long axis (roughly across the view from camp)
+    const at = (u: number, v: number) => [cx + ax.x * u - ax.y * v, cz + ax.y * u + ax.x * v] as const;
+    // mid-rise band
+    for (let i = 0; i < 46; i++) {
+      const [x, z] = at((rand() - 0.5) * 1900, (rand() - 0.5) * 520);
+      const w = 40 + rand() * 70, d = 40 + rand() * 70, h = 70 + Math.pow(rand(), 1.5) * 200;
+      const y0 = this.farGround(x, z) - 15;
+      const tilt = rand() < 0.15 ? (rand() - 0.5) * 0.3 : 0;
+      parts.push(box(w, h, d, x, y0 + h / 2, z, rand() * 0.6, 0, tilt));
+      if (rand() < 0.35) parts.push(box(w * 0.55, h * 0.25, d * 0.55, x + (rand() - 0.5) * w * 0.3, y0 + h * 1.12, z, rand(), 0, (rand() - 0.5) * 0.5));
     }
-    const mat = plainStandard('#2a2420', 1, 0);
-    const mesh = new THREE.Mesh(merge(parts), mat);
+    // supertalls
+    const towers = 10;
+    for (let i = 0; i < towers; i++) {
+      const [x, z] = at(((i + 0.5) / towers - 0.5) * 1300 + (rand() - 0.5) * 90, (rand() - 0.5) * 260);
+      const H = 380 + Math.pow(rand(), 0.8) * 460;
+      let w = 70 + rand() * 50, d = 60 + rand() * 50;
+      const ry = rand() * 0.8;
+      const fate = rand();
+      const lean = fate > 0.85 ? 0.11 * (rand() < 0.5 ? -1 : 1) : 0;
+      const ground = this.farGround(x, z);
+      let y = ground - 20;
+      const segs = 3 + Math.floor(rand() * 3);
+      const skeletal = fate > 0.7 && fate <= 0.85;
+      for (let s = 0; s < segs; s++) {
+        const h = (H / segs) * (0.8 + rand() * 0.4);
+        const last = s === segs - 1;
+        const lx = x + Math.sin(lean) * (y + h / 2 - ground), ly = y + h / 2;
+        if (last && skeletal) {
+          // stripped frame: corner columns + floor rings
+          for (const [sx, sz] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) parts.push(box(7, h, 7, lx + (sx * w) / 2.2, ly, z + (sz * d) / 2.2, ry));
+          for (let k = 0; k < 5; k++) parts.push(box(w, 5, d, lx, y + (k + 0.5) * (h / 5), z, ry));
+        } else if (last && fate < 0.3) {
+          // snapped top: a slab hanging off at an angle
+          parts.push(box(w, h * 0.55, d, lx, y + h * 0.27, z, ry, 0, lean));
+          parts.push(box(w * 0.9, h * 0.5, d * 0.9, lx + w * 0.35, y + h * 0.62, z, ry, 0, 0.45 + rand() * 0.3));
+        } else {
+          parts.push(box(w, h, d, lx, ly, z, ry, 0, lean));
+        }
+        y += h;
+        w *= 0.72 + rand() * 0.14;
+        d *= 0.72 + rand() * 0.14;
+      }
+      const topX = x + Math.sin(lean) * (y - ground);
+      if (fate >= 0.3 && !skeletal) {
+        if (rand() < 0.6) parts.push(cyl(2.5, 4, 90 + rand() * 80, topX, y + 60, z, 5));
+        const bg = new THREE.BoxGeometry(9, 9, 9);
+        bg.translate(topX, y + 6, z);
+        beacons.push(bg);
+      }
+    }
+    const geo = merge([...parts, ...beacons.map((bg) => {
+      const n = norm(bg);
+      (n.attributes.uv.array as Float32Array).fill(2);
+      return n;
+    })]);
+    const mat = new THREE.MeshStandardNodeMaterial({ roughness: 1, metalness: 0 });
+    const p = positionWorld;
+    const tone = noise(p.xz.div(300)).r;
+    mat.colorNode = mix(vec3(0.07, 0.065, 0.06), vec3(0.14, 0.12, 0.1), tone);
+    if (this.atmo) {
+      const night = this.atmo.uNight;
+      // window cells (~3.5 m x 4 m); the atlas' per-texel hash decides which still have power
+      const cell = vec2(floor(p.x.add(p.z).div(3.5)), floor(p.y.div(4)));
+      const h = texture(noiseTexture(), cell.add(0.5).div(256)).level(float(0)).a;
+      const side = step(abs(normalWorld.y), 0.5);
+      const flick = sin(time.mul(h.mul(7).add(1)).add(h.mul(90))).mul(0.15).add(0.85);
+      const lit = step(0.985, h).mul(side).mul(flick);
+      const warm = mix(vec3(1.0, 0.55, 0.22), vec3(0.55, 0.85, 1.0), step(0.996, h));
+      const beacon = step(1.5, uv().x).mul(step(0.82, fract(time.mul(0.55))));
+      mat.emissiveNode = warm.mul(lit).mul(9).add(vec3(1.0, 0.08, 0.04).mul(beacon).mul(60)).mul(night);
+    }
+    const mesh = new THREE.Mesh(geo, mat);
     mesh.name = 'farCity';
     this.group.add(mesh);
   }
@@ -400,30 +496,40 @@ export class Props {
   /** Respawn tumbleweeds upwind of the player and roll them with the wind. */
   update(dt: number, focus: THREE.Vector3, wind: THREE.Vector2) {
     const wl = Math.max(0.1, wind.length());
+    // storms make them bound: bigger hops, more often
+    const hopChance = 0.04 * wl * (wl > 1.8 ? 2.5 : 1);
+    let i = 0;
     for (const tw of this.tumbleweeds) {
-      const p = tw.mesh.position;
+      const p = tw.pos;
       const dx = p.x - focus.x, dz = p.z - focus.z;
       if (dx * dx + dz * dz > 120 * 120 || p.x > 9000 || this.hf.zoneDistance(p.x, p.z) < 2) {
         const a = Math.random() * Math.PI * 2;
         const upwind = new THREE.Vector2(-wind.x, -wind.y).normalize();
         p.set(focus.x + upwind.x * 70 + Math.cos(a) * 50, 0, focus.z + upwind.y * 70 + Math.sin(a) * 50);
-        if (this.hf.zoneDistance(p.x, p.z) < 6) { p.x = 9999; continue; }
-        p.y = this.hf.heightAt(p.x, p.z) + tw.r;
-        tw.vel.set(wind.x * 4, 0, wind.y * 4);
+        if (this.hf.zoneDistance(p.x, p.z) < 6) {
+          p.set(9999, -999, 0);
+        } else {
+          p.y = this.hf.heightAt(p.x, p.z) + tw.r;
+          tw.vel.set(wind.x * 4, 0, wind.y * 4);
+        }
       }
-      const gust = 0.7 + Math.sin(performance.now() * 0.0007 + p.x) * 0.5;
-      tw.vel.x += (wind.x * 9 * gust - tw.vel.x) * dt * 0.8;
-      tw.vel.z += (wind.y * 9 * gust - tw.vel.z) * dt * 0.8;
-      tw.vel.y -= 14 * dt;
-      p.addScaledVector(tw.vel, dt);
-      const g = this.hf.heightAt(p.x, p.z) + tw.r;
-      if (p.y < g) {
-        p.y = g;
-        tw.vel.y = Math.random() < 0.04 * wl ? 2 + Math.random() * 3 : Math.abs(tw.vel.y) * 0.3;
+      if (p.x < 9000) {
+        const gust = 0.7 + Math.sin(performance.now() * 0.0007 + p.x) * 0.5;
+        tw.vel.x += (wind.x * 9 * gust - tw.vel.x) * dt * 0.8;
+        tw.vel.z += (wind.y * 9 * gust - tw.vel.z) * dt * 0.8;
+        tw.vel.y -= 14 * dt;
+        p.addScaledVector(tw.vel, dt);
+        const g = this.hf.heightAt(p.x, p.z) + tw.r;
+        if (p.y < g) {
+          p.y = g;
+          tw.vel.y = Math.random() < hopChance ? 2 + Math.random() * 3 * Math.min(2, wl) : Math.abs(tw.vel.y) * 0.3;
+        }
+        tw.rot.z -= (tw.vel.x / tw.r) * dt * 0.7;
+        tw.rot.x += (tw.vel.z / tw.r) * dt * 0.7;
       }
-      tw.mesh.rotation.z -= (tw.vel.x / tw.r) * dt * 0.7;
-      tw.mesh.rotation.x += (tw.vel.z / tw.r) * dt * 0.7;
+      this._m.compose(p, this._q.setFromEuler(tw.rot), this._s.setScalar(tw.scale));
+      this.tumbleMesh.setMatrixAt(i++, this._m);
     }
+    this.tumbleMesh.instanceMatrix.needsUpdate = true;
   }
 }
-

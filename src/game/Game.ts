@@ -130,7 +130,7 @@ export class Game {
     this.terrain.addToPhysics(this.physics);
     this.scene.add(this.terrain.mesh, this.terrain.far);
     await step(0.4, 'Scattering debris of a failed civilisation');
-    this.props = new Props(this.hf, this.physics);
+    this.props = new Props(this.hf, this.physics, this.atmo);
     if (!SKIP.has('props')) this.scene.add(this.props.group);
     this.landmarks = new Landmarks(this.hf, this.physics);
     if (!SKIP.has('landmarks')) this.scene.add(this.landmarks.group);
