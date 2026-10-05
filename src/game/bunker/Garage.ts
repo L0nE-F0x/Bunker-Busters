@@ -534,6 +534,9 @@ export class Garage {
     this.b.neonFlicker.value = n > 0.93 ? 0.1 : 1;
     this.b.interiorLight.intensity = (this.alarm > 0 ? 6 + Math.max(0, Math.sin(this.t * 10)) * 20 : 14) * (Math.sin(this.t * 31) > 0.97 ? 0.4 : 1);
     this.b.interiorLight.color.set(this.alarm > 0 ? 0xff3020 : 0xffb070);
+    // the Runway Room pulses with its ceiling beacon during an alarm
+    this.b.vaultLight.color.set(this.alarm > 0 ? 0xff2a18 : 0xffc070);
+    this.b.vaultLight.intensity = this.alarm > 0 ? 4 + Math.max(0, Math.sin(this.t * 10)) * 14 : 10;
     const ch = this.b.halos.channels;
     this.b.blinkers.forEach((bl, i) => {
       const ph = ((this.t + bl.offset) % bl.period) / bl.period;

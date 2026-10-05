@@ -425,6 +425,7 @@ export function dressWorkshop(D: Dress, H: { x0: number; x1: number; z0: number;
   D.b.add(dark, beam(v(bx - 0.3, by, -2.0), v(bx - 0.1, by + 0.55, -2.0), 0.012, 4), beam(v(bx - 0.1, by + 0.55, -2.0), v(bx + 0.15, by + 0.4, -2.0), 0.012, 4));
   D.b.add(steel, cyl(0.04, 0.09, 0.12, bx + 0.15, by + 0.36, -2.0, 10, 0, 0, -0.9));
   D.halos.add(v(bx + 0.2, by + 0.3, -2.0), '#ffd6a0', 0.5, CH.NIGHT, 1.0);
+  D.d.add(lightPoolMaterial(), floorDecal('poolWarm', 0.86, 1.2, bx, by + 0.004, -2.05));
   // under-bench: car battery, paint cans, cardboard
   D.b.add(dark, box(0.3, 0.2, 0.18, bx - 0.15, 0.11, -4.4));
   can(D, bx + 0.2, 0.01, -3.7, 0.08, 0.18);
