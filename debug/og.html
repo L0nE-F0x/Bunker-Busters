@@ -1,0 +1,24 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>OG card</title>
+<script type="module">import '/src/fonts.ts'; await document.fonts.ready; await Promise.all(['900 160px "Big Shoulders Stencil Display"','600 30px "Chakra Petch"'].map(f=>document.fonts.load(f))); window.__ready = true;</script>
+<style>
+  html,body{margin:0;width:1200px;height:630px;overflow:hidden;background:#0b0806}
+  .card{position:relative;width:1200px;height:630px;overflow:hidden;font-family:'Chakra Petch',sans-serif;color:#f3e9d8}
+  .bg{position:absolute;inset:0;background:url('/media/hero.jpg') 72% 55%/cover}
+  .shade{position:absolute;inset:0;background:linear-gradient(90deg,rgba(8,5,3,.93) 0%,rgba(8,5,3,.72) 42%,rgba(8,5,3,.05) 78%),linear-gradient(0deg,rgba(8,5,3,.75) 0%,transparent 35%)}
+  .inner{position:absolute;left:70px;top:70px}
+  .kicker{font-size:18px;letter-spacing:.34em;text-transform:uppercase;color:#ffb347;font-weight:600}
+  .logo{margin:14px 0 0;line-height:.8}
+  .logo span{display:block;font-family:'Big Shoulders Stencil Display',sans-serif;font-weight:900;font-size:168px;background:linear-gradient(180deg,#ffe0a6 0%,#ffb347 35%,#ff6a1a 70%,#b8300c 100%);-webkit-background-clip:text;background-clip:text;color:transparent;filter:drop-shadow(0 6px 0 rgba(60,20,5,.9)) drop-shadow(0 0 30px rgba(255,106,26,.35))}
+  .logo span+span{margin-left:.4em}
+  .tag{margin-top:30px;font-size:26px;letter-spacing:.24em;text-transform:uppercase;color:#d8cbb4}
+  .tag b{color:#3ff2e0;font-weight:600}
+  .foot{position:absolute;left:70px;bottom:46px;right:70px;display:flex;justify-content:space-between;align-items:center;font-size:20px;letter-spacing:.14em;text-transform:uppercase;color:#b9ab95}
+  .pill{color:#1a0d05;background:linear-gradient(90deg,#ff7a1f,#ff5e1a);padding:10px 18px;font-weight:700;letter-spacing:.12em}
+</style></head>
+<body><div class="card"><div class="bg"></div><div class="shade"></div>
+<div class="inner"><div class="kicker">A post-apocalyptic heist game</div>
+<div class="logo"><span>BUNKER</span><span>BUSTERS</span></div>
+<div class="tag">They built bunkers. <b>You brought lockpicks.</b></div></div>
+<div class="foot"><span>Free · Linux · Windows · Browser</span><span class="pill">bunker-busters.netlify.app</span></div>
+</div></body></html>
