@@ -244,7 +244,7 @@ export class Atmosphere {
       const band = exp(md.mul(md).mul(-22));
       const mwCloud = noise(vec2(mwU.mul(9), md.mul(3.1))).r;
       const mwLanes = smoothstep(0.42, 0.62, noise(vec2(mwU.mul(17), md.mul(5.3)).add(0.37)).g);
-      const milky = band.mul(mwCloud.mul(1.3).add(0.2)).mul(float(1).sub(mwLanes.mul(band).mul(0.75)));
+      const milky = band.mul(mwCloud.mul(1.3).add(0.2)).mul(float(1).sub(mwLanes.mul(band).mul(0.55)));
       col.addAssign(vec3(0.52, 0.58, 0.78).mul(milky).mul(0.11).mul(dark));
       const s1 = mx_cell_noise_float(rd.mul(520));
       const faint = smoothstep(float(0.992).sub(band.mul(0.012)), 1.0, s1).mul(s1.mul(97.3).fract().mul(0.7).add(0.3));
