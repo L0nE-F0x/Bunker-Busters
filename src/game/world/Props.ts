@@ -97,7 +97,9 @@ const BILLBOARDS = [
 
 export class Props {
   group = new THREE.Group();
-  tumbleweeds: { mesh: THREE.Mesh; vel: THREE.Vector3; spin: THREE.Vector3; r: number }[] = [];
+  /** each tumbleweed is a transform (not in the scene); all of them draw as one InstancedMesh */
+  tumbleweeds: { mesh: THREE.Object3D; vel: THREE.Vector3; spin: THREE.Vector3; r: number }[] = [];
+  private tumbleMesh!: THREE.InstancedMesh;
 
   constructor(private hf: Heightfield, private physics: Physics) {
     this.group.name = 'props';
@@ -367,13 +369,17 @@ export class Props {
     }
     const geo = merge(twigs);
     const mat = plainStandard('#8a6a44', 0.95, 0, { side: THREE.DoubleSide });
-    for (let i = 0; i < 10; i++) {
-      const m = new THREE.Mesh(geo, mat);
-      m.castShadow = true;
+    const N = 10;
+    this.tumbleMesh = new THREE.InstancedMesh(geo, mat, N);
+    this.tumbleMesh.castShadow = true;
+    this.tumbleMesh.frustumCulled = false; // they roam around the player; one draw either way
+    this.tumbleMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+    this.group.add(this.tumbleMesh);
+    for (let i = 0; i < N; i++) {
+      const m = new THREE.Object3D();
       const s = 0.8 + rand() * 0.8;
       m.scale.setScalar(s);
       m.position.set(9999, 0, 0);
-      this.group.add(m);
       this.tumbleweeds.push({ mesh: m, vel: new THREE.Vector3(), spin: new THREE.Vector3(), r: 0.55 * s });
     }
   }
@@ -424,6 +430,11 @@ export class Props {
       tw.mesh.rotation.z -= (tw.vel.x / tw.r) * dt * 0.7;
       tw.mesh.rotation.x += (tw.vel.z / tw.r) * dt * 0.7;
     }
+    this.tumbleweeds.forEach((tw, i) => {
+      tw.mesh.updateMatrix();
+      this.tumbleMesh.setMatrixAt(i, tw.mesh.matrix);
+    });
+    this.tumbleMesh.instanceMatrix.needsUpdate = true;
   }
 }
 

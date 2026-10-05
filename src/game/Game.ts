@@ -425,16 +425,8 @@ export class Game {
     this.player.yaw = state.data.yaw;
     this.player.speedMult = state.archetype.stats.speed;
     this.scene.add(this.player.model.root);
-    this.player.model.root.traverse((o) => {
-      o.layers.set(1); // shadow-only body in first person
-      const mesh = o as THREE.Mesh;
-      if (mesh.isMesh) {
-        mesh.geometry.computeBoundingSphere();
-        // straps, buckles, goggles etc. don't change the silhouette — skip them in the shadow pass
-        mesh.castShadow = (mesh.geometry.boundingSphere?.radius ?? 0) > 0.07;
-        mesh.visible = mesh.castShadow;
-      }
-    });
+    // shadow-only body in first person (layer 1): one merged caster per animated joint
+    this.player.model.bakeShadowProxy(0.07);
     this.hands?.dispose();
     this.hands = new Hands(HAND_LOOKS[state.data.archetype] ?? HAND_LOOKS.infiltrator);
     this.hands.attach(this.camera);
