@@ -147,6 +147,23 @@ export class GarageBuilder {
         const oz = az === bz ? (az === z1 ? off : -off) * 0.8 : 0;
         b.add(barbMat, wire(new THREE.Vector3(ax + ox, H + 0.45 + k * 0.2, az + oz), new THREE.Vector3(bx + ox, H + 0.45 + k * 0.2, bz + oz), 0.08, 0.012, 24));
       }
+      // concertina razor wire coiled along the top rail (one thin tube per side)
+      {
+        const len = Math.hypot(bx - ax, bz - az);
+        const dir = new THREE.Vector3(bx - ax, 0, bz - az).normalize();
+        const out = new THREE.Vector3(ax === bx ? (ax === x1 ? 1 : -1) : 0, 0, az === bz ? (az === z1 ? 1 : -1) : 0);
+        const base = new THREE.Vector3(ax, H + 0.3, az).addScaledVector(out, 0.12);
+        const pitch = 0.32, loops = Math.max(4, Math.round(len / pitch));
+        const pts: THREE.Vector3[] = [];
+        for (let i = 0; i <= loops * 8; i++) {
+          const t = i / (loops * 8);
+          const th = t * loops * Math.PI * 2;
+          const r = 0.24 + Math.sin(i * 1.7) * 0.02;
+          pts.push(base.clone().addScaledVector(dir, t * len).addScaledVector(out, Math.cos(th) * r).add(new THREE.Vector3(0, Math.sin(th) * r, 0)));
+        }
+        const coil = new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), loops * 8, 0.006, 3, false);
+        b.add(rustyMetal({ base: '#9a9a96', rust: 0.4 }), norm(coil));
+      }
       // collider
       const cx = (ax + bx) / 2, cz = (az + bz) / 2;
       this.col(cx, H / 2, cz, Math.abs(bx - ax) / 2 + 0.06, H / 2 + 0.5, Math.abs(bz - az) / 2 + 0.06);
