@@ -1,5 +1,5 @@
 import * as THREE from 'three/webgpu';
-import { positionLocal, positionGeometry, uniform, vec3, sin, time, mix, color, float, smoothstep, positionWorld, length, cameraPosition } from 'three/tsl';
+import { positionLocal, positionGeometry, uniform, vec3, sin, mix, color, float, smoothstep, positionWorld, length, cameraPosition } from 'three/tsl';
 import { noise } from '@/engine/noiseTex';
 import type { Heightfield } from './Heightfield';
 import { Simplex2 } from '@/engine/noise';
@@ -33,6 +33,11 @@ export class Scrub {
   private center = new THREE.Vector2(1e9, 1e9);
   private noise = new Simplex2(4242);
   readonly uWind = uniform(new THREE.Vector2(1, 0));
+  /** Sway phase, advanced faster in strong wind so tufts thrash in a storm instead of lying flat. */
+  readonly uPhase = uniform(0);
+  /** Gust field offset integrated on the CPU (wind × time jumped whenever the wind changed). */
+  readonly uGust = uniform(new THREE.Vector2());
+  private lastT = performance.now();
   private capacity: number;
 
   constructor(private hf: Heightfield, density = 1) {
@@ -40,8 +45,8 @@ export class Scrub {
     const mat = new THREE.MeshStandardNodeMaterial({ side: THREE.DoubleSide, roughness: 0.9 });
     // instancing is applied before positionNode, so positionLocal is already in world space here
     const hgt = positionGeometry.y;
-    const sway = sin(time.mul(2.2).add(positionLocal.x.mul(0.35)).add(positionLocal.z.mul(0.27))).mul(0.5).add(0.6);
-    const gust = noise(positionLocal.xz.mul(0.012).sub(this.uWind.mul(time.mul(0.15)))).r;
+    const sway = sin(this.uPhase.add(positionLocal.x.mul(0.35)).add(positionLocal.z.mul(0.27))).mul(0.5).add(0.6);
+    const gust = noise(positionLocal.xz.mul(0.012).sub(this.uGust)).r;
     const bend = hgt.mul(hgt).mul(sway.add(gust)).mul(0.9);
     mat.positionNode = positionLocal.add(vec3(this.uWind.x.mul(bend), bend.mul(-0.15), this.uWind.y.mul(bend)));
     const tint = noise(positionWorld.xz.mul(0.02)).g;
@@ -59,7 +64,16 @@ export class Scrub {
   }
 
   update(focus: THREE.Vector3, wind: THREE.Vector2) {
-    (this.uWind.value as THREE.Vector2).set(wind.x * 0.5, wind.y * 0.5);
+    const now = performance.now();
+    const dt = Math.min(0.1, (now - this.lastT) / 1000);
+    this.lastT = now;
+    const wl = wind.length();
+    this.uPhase.value = ((this.uPhase.value as number) + dt * (2.2 + Math.max(0, wl - 0.8) * 2.5)) % (Math.PI * 200);
+    // stiff stems: bend saturates instead of laying the tufts flat in a gale
+    const k = 0.5 * Math.min(1, 0.95 / Math.max(wl * 0.5, 1e-3)) ;
+    (this.uWind.value as THREE.Vector2).set(wind.x * k, wind.y * k);
+    const g = this.uGust.value as THREE.Vector2;
+    g.set((g.x + wind.x * k * dt * 0.15) % 64, (g.y + wind.y * k * dt * 0.15) % 64);
     if (Math.hypot(focus.x - this.center.x, focus.z - this.center.y) < 12) return;
     this.center.set(focus.x, focus.z);
     const R = 60, cell = 1.5;

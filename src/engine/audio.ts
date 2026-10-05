@@ -15,6 +15,7 @@ export class AudioEngine {
   private noiseBuf!: AudioBuffer;
   private windGain!: GainNode;
   private windFilters: BiquadFilterNode[] = [];
+  private storm: { hiss: GainNode; howl: GainNode; howlF: BiquadFilterNode[]; rumble: GainNode } | null = null;
   private padFilter!: BiquadFilterNode;
   private padOscs: OscillatorNode[] = [];
   private alarm: { osc: OscillatorNode; gain: GainNode; lfo: OscillatorNode } | null = null;
@@ -134,6 +135,37 @@ export class AudioEngine {
     g.gain.value = 0.7;
     rumble.connect(lp).connect(g).connect(this.amb);
     rumble.start();
+    this.startStorm();
+  }
+
+  /** Dust-storm layers, silent until a storm: sand hiss, a whistling howl, and a deep buffeting rumble. */
+  private startStorm() {
+    const ctx = this.ctx;
+    const layer = (gainOut: GainNode, ...chain: AudioNode[]) => {
+      const src = this.noiseSource();
+      let n: AudioNode = src;
+      for (const c of chain) n = n.connect(c);
+      n.connect(gainOut).connect(this.amb);
+      src.start(0, Math.random() * 3);
+    };
+    const filt = (type: BiquadFilterType, f: number, q = 0.7) => {
+      const b = ctx.createBiquadFilter();
+      b.type = type;
+      b.frequency.value = f;
+      b.Q.value = q;
+      return b;
+    };
+    const hiss = ctx.createGain(), howl = ctx.createGain(), rumble = ctx.createGain();
+    hiss.gain.value = howl.gain.value = rumble.gain.value = 0;
+    layer(hiss, filt('highpass', 1800), filt('peaking', 4200, 0.6));
+    const howlF = [filt('bandpass', 520, 7), filt('bandpass', 840, 9)];
+    const pan = [ctx.createStereoPanner(), ctx.createStereoPanner()];
+    pan[0].pan.value = -0.5;
+    pan[1].pan.value = 0.5;
+    layer(howl, howlF[0], pan[0]);
+    layer(howl, howlF[1], pan[1]);
+    layer(rumble, filt('lowpass', 140));
+    this.storm = { hiss, howl, howlF, rumble };
   }
 
   private startPad() {
@@ -171,13 +203,23 @@ export class AudioEngine {
   }
 
   /** Called every frame. */
-  update(dt: number, camera: THREE.Camera, windStrength: number, tension: number) {
+  update(dt: number, camera: THREE.Camera, windStrength: number, tension: number, storm = 0) {
     if (!this.started) return;
     const t = this.ctx.currentTime;
     const gust = 0.5 + 0.5 * Math.sin(t * 0.37) * Math.sin(t * 0.13 + 1.3);
-    this.windGain.gain.setTargetAtTime(0.18 + windStrength * 0.45 * (0.5 + gust), t, 0.3);
-    this.windFilters[0].frequency.setTargetAtTime(220 + gust * 500, t, 0.5);
-    this.windFilters[1].frequency.setTargetAtTime(600 + gust * 900, t, 0.5);
+    this.windGain.gain.setTargetAtTime(0.18 + Math.min(windStrength, 1.6) * 0.45 * (0.5 + gust) + storm * 0.25, t, 0.3);
+    this.windFilters[0].frequency.setTargetAtTime(220 + gust * 500 + storm * 200, t, 0.5);
+    this.windFilters[1].frequency.setTargetAtTime(600 + gust * 900 + storm * 500, t, 0.5);
+    if (this.storm) {
+      // fast, irregular buffeting on top of the slow gust cycle
+      const buffet = 0.55 + 0.45 * Math.sin(t * 1.9) * Math.sin(t * 0.71 + 2.1);
+      const s = this.storm;
+      s.hiss.gain.setTargetAtTime(storm * 0.2 * (0.5 + buffet * 0.7), t, 0.25);
+      s.howl.gain.setTargetAtTime(storm * storm * 0.32 * (0.3 + gust * 0.9), t, 0.6);
+      s.howlF[0].frequency.setTargetAtTime(430 + gust * 260 + buffet * 60, t, 0.8);
+      s.howlF[1].frequency.setTargetAtTime(760 + gust * 380, t, 0.9);
+      s.rumble.gain.setTargetAtTime(storm * 0.7 * (0.4 + buffet * 0.6), t, 0.3);
+    }
     this.padFilter.frequency.setTargetAtTime(380 + tension * 1400 + Math.sin(t * 0.1) * 120, t, 0.8);
 
     const l = this.ctx.listener;

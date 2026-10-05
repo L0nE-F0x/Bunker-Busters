@@ -3,6 +3,7 @@ import {
   Fn, vec2, vec3, vec4, float, uniform, instanceIndex, hash, time, cameraPosition, fract, uv, length, smoothstep, mix, max,
   pow, dot, normalize, sin, positionLocal, positionWorld, texture, color, clamp,
   normalWorld, abs, viewportLinearDepth, linearDepth, cameraNear, cameraFar, instancedDynamicBufferAttribute, exp,
+  cameraViewMatrix, atan,
 } from 'three/tsl';
 import type { Atmosphere } from './Atmosphere';
 import type { Heightfield } from './Heightfield';
@@ -62,7 +63,7 @@ export class DustMotes {
       const fade = smoothstep(B.mul(0.5), B.mul(0.2), length(local)).mul(smoothstep(0.3, 1.5, length(local)));
       const night = float(1).sub(atmo.uNight.mul(0.8));
       const c = atmo.uSunColor.mul(phase).add(atmo.uHaze.mul(0.4)).mul(night);
-      return vec4(c.mul(soft).mul(fade).mul(0.35), 1);
+      return vec4(c.mul(soft).mul(fade).mul(atmo.uStorm.mul(1.6).add(0.35)), 1);
     })();
     this.sprite = new THREE.Sprite(mat);
     this.sprite.count = count;
@@ -93,10 +94,10 @@ export class GroundHaze {
     const wxz = cameraPosition.xz.add(lxz);
     const hUv = wxz.div(hf.size).add(0.5);
     const ground = texture(heightTex, hUv).r;
-    const size = seed.z.mul(10).add(6);
+    const size = seed.z.mul(10).add(6).mul(atmo.uStorm.mul(0.8).add(1));
     const pos = vec3(wxz.x, ground.add(size.mul(0.28)), wxz.y);
     mat.positionNode = pos;
-    mat.scaleNode = vec2(size.mul(1.6), size.mul(0.7));
+    mat.scaleNode = vec2(size.mul(1.6), size.mul(atmo.uStorm.mul(0.5).add(0.7)));
     mat.rotationNode = seed.x.mul(6.28);
 
     mat.colorNode = Fn(() => {
@@ -112,8 +113,8 @@ export class GroundHaze {
       const view = normalize(pos.sub(cameraPosition));
       const mu = max(dot(view, atmo.uSunDir), 0);
       const lit = atmo.uHaze.mul(0.9).add(atmo.uSunColor.mul(pow(mu, 4).mul(0.6)));
-      const a = shape.mul(fade).mul(soft).mul(atmo.uDust.mul(0.22).add(0.04));
-      return vec4(lit, a);
+      const a = shape.mul(fade).mul(soft).mul(atmo.uDust.mul(0.22).add(0.04).add(atmo.uStorm.mul(0.4)));
+      return vec4(mix(lit, (atmo.uStormColor as N).mul(1.15), atmo.uStorm.mul(0.6)), a);
     })();
     this.sprite = new THREE.Sprite(mat);
     this.sprite.count = count;
@@ -126,6 +127,71 @@ export class GroundHaze {
     this.offset.x += w.x * dt * 5;
     this.offset.y += w.y * dt * 5;
     (this.uOffset.value as THREE.Vector2).copy(this.offset);
+  }
+}
+
+/**
+ * Blowing sand: thin streaks racing low over the ground with the wind, the signature of a dust
+ * storm (and a hint of it on gusty days). One sprite draw call; every streak is placed on the GPU
+ * from instanceIndex, wraps around the camera, hugs the terrain, and is rotated in screen space to
+ * line up with the projected wind direction.
+ */
+export class SandStreaks {
+  sprite: THREE.Sprite;
+  readonly uOffset = uniform(new THREE.Vector2());
+  readonly uDir = uniform(new THREE.Vector2(1, 0));
+  readonly uAmount = uniform(0);
+  private offset = new THREE.Vector2();
+
+  constructor(private atmo: Atmosphere, hf: Heightfield, heightTex: THREE.Texture, count = 900) {
+    const mat = new THREE.SpriteNodeMaterial({ transparent: true, depthWrite: false });
+    const B = float(48);
+    const seed = vec3(hash(instanceIndex.add(17)), hash(instanceIndex.add(4099)), hash(instanceIndex.add(8191)));
+    const speedK = hash(instanceIndex.add(23)).mul(0.7).add(0.65);
+    const lxz = fract(seed.xz.add(this.uOffset.mul(speedK).div(B))).sub(0.5).mul(B);
+    const wxz = cameraPosition.xz.add(lxz);
+    const ground = texture(heightTex, wxz.div(hf.size).add(0.5)).r;
+    // most streaks skim the sand; a few loft up to head height
+    const lift = pow(seed.y, 2.4).mul(2.6).add(0.04);
+    const flutter = sin(time.mul(seed.x.mul(3).add(4)).add(seed.z.mul(40))).mul(0.06).mul(lift);
+    const pos = vec3(wxz.x, ground.add(lift).add(flutter), wxz.y);
+    mat.positionNode = pos;
+    // align with the wind as seen on screen; foreshortened when it blows toward/away from the camera
+    const wv = cameraViewMatrix.mul(vec4(this.uDir.x, 0, this.uDir.y, 0)).xy;
+    const along = clamp(length(wv), 0.12, 1);
+    mat.rotationNode = atan(wv.y, wv.x);
+    const len = hash(instanceIndex.add(5)).mul(2.6).add(0.9);
+    mat.scaleNode = vec2(len.mul(along), hash(instanceIndex.add(6)).mul(0.06).add(0.025));
+
+    mat.colorNode = Fn(() => {
+      const p = uv();
+      // bright leading head, long fading tail, soft edges across
+      const head = smoothstep(0.0, 0.85, p.x).mul(smoothstep(1.0, 0.88, p.x));
+      const across = pow(smoothstep(0.5, 0.0, abs(p.y.sub(0.5))), 1.5);
+      const dist = length(lxz);
+      const fade = smoothstep(B.mul(0.5), B.mul(0.25), dist).mul(smoothstep(0.6, 2.5, dist));
+      // streaks pulse in and out so the field never looks like a static pattern
+      const pulse = smoothstep(0.2, 0.7, sin(time.mul(speedK.mul(2.3)).add(seed.x.mul(60))).mul(0.5).add(0.5));
+      const view = normalize(pos.sub(cameraPosition));
+      const mu = max(dot(view, atmo.uSunDir), 0);
+      const lit = (atmo.uStormColor as N).mul(1.6).add(atmo.uSunColor.mul(pow(mu, 6).mul(0.5).mul(float(1).sub(atmo.uNight))));
+      return vec4(lit, head.mul(across).mul(fade).mul(pulse).mul(this.uAmount).mul(0.4));
+    })();
+    this.sprite = new THREE.Sprite(mat);
+    this.sprite.count = count;
+    this.sprite.frustumCulled = false;
+    this.sprite.renderOrder = 12;
+  }
+
+  update(dt: number) {
+    const w = this.atmo.wind;
+    const amount = Math.min(1, this.atmo.storm * 1.3 + Math.max(0, this.atmo.windStrength - 1.1) * 0.25);
+    this.uAmount.value = amount;
+    this.sprite.visible = amount > 0.01;
+    this.offset.x += w.x * dt * 3.2;
+    this.offset.y += w.y * dt * 3.2;
+    (this.uOffset.value as THREE.Vector2).copy(this.offset);
+    (this.uDir.value as THREE.Vector2).set(w.x, w.y).normalize();
   }
 }
 
