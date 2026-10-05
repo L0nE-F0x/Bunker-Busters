@@ -78,6 +78,8 @@ export class Atmosphere {
   /** Ground sand-flow offset integrated from the wind (terrain storm ribbons). */
   readonly uSandFlow = uniform(new THREE.Vector2());
   readonly uFront = uniform(0);
+  /** Lightning flash 0..1, lights up the storm dust from inside. */
+  readonly uFlash = uniform(0);
   readonly uUpwind = uniform(new THREE.Vector2(-1, 0));
   /** Storm dust colour, lit by the current daylight (CPU-side so sky, fog and particles agree). */
   readonly uStormColor = uniform(new THREE.Color('#8a5a32'));
@@ -93,6 +95,7 @@ export class Atmosphere {
   dustiness = 0.2;
   storm = 0;
   stormFront = 0;
+  flash = 0;
   private dustTimer = 0;
 
   private readonly setDir = new THREE.Vector3(0.68, 0, -0.73).normalize();
@@ -104,7 +107,7 @@ export class Atmosphere {
     // e.g. the far city whenever the sun stood still (paused clock, storm fronts in screenshots).
     for (const u of [this.uSunDir, this.uMoonDir, this.uZenith, this.uHorizon, this.uHaze, this.uSunColor, this.uFogDensity,
       this.uFogFalloff, this.uFogBase, this.uNight, this.uDust, this.uWind, this.uStorm, this.uCloudDrift, this.uFront,
-      this.uUpwind, this.uStormColor, this.uSandFlow] as N[]) u.setGroup(renderGroup);
+      this.uUpwind, this.uStormColor, this.uSandFlow, this.uFlash] as N[]) u.setGroup(renderGroup);
     this.sun = new THREE.DirectionalLight(0xffffff, 4);
     this.sun.castShadow = true;
     const s = this.sun.shadow;
@@ -189,7 +192,9 @@ export class Atmosphere {
     const belt = pow(max(az.negate(), 0), 2).mul(smoothstep(0.0, 0.08, hp)).mul(smoothstep(0.32, 0.1, hp));
     calm.addAssign(vec3(0.42, 0.2, 0.3).mul(belt).mul(twi).mul(0.35));
     // storm: airborne sand swallows everything into one warm brown, glowing toward the sun
-    const stormCol = (this.uStormColor as N).add(this.uSunColor.mul(pow(mu, 4).mul(sunVis).mul(0.35)));
+    // a lightning flash lights the dust from inside: pale violet-white, strongest overhead
+    const stormCol = (this.uStormColor as N).add(this.uSunColor.mul(pow(mu, 4).mul(sunVis).mul(0.35)))
+      .add(vec3(0.55, 0.52, 0.68).mul(this.uFlash).mul(this.uStorm).mul(float(0.6).add(clamp(rd.y, 0, 1))));
     const w = this.wall(rd);
     return mix(mix(calm, stormCol, this.uStorm.mul(0.94)), this.wallShade(rd, w), w.mul(0.97));
   });
@@ -354,6 +359,7 @@ export class Atmosphere {
     this.uStorm.value = st;
     coneMurk.value = st;
     this.uFront.value = this.stormFront;
+    this.uFlash.value = this.flash;
     this.uFogFalloff.value = lerp(0.018, 0.007, st);
     // storm dust colour follows the daylight: ochre by day, rust at dusk, deep umber at night
     const daylight = smoothN(-0.2, 0.25, sunDir.y);
@@ -389,6 +395,10 @@ export class Atmosphere {
       this.hemi.groundColor.lerp(tmpB.copy(sc).multiplyScalar(0.7), st * 0.5);
       this.hemi.intensity *= 1 + st * 0.6;
       this.envIntensity *= 1 - st * 0.55;
+      if (this.flash > 0) {
+        this.hemi.color.lerp(tmpB.set('#c8c4ff'), Math.min(1, this.flash));
+        this.hemi.intensity += this.flash * st * 2.2;
+      }
     }
     this.scene.environmentIntensity = this.envIntensity;
   }

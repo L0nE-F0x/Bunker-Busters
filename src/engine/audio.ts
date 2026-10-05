@@ -138,6 +138,16 @@ export class AudioEngine {
     this.startStorm();
   }
 
+  /** Thunder for dry lightning: `k` 0..1 closeness. Far = late, soft, low rumble; near = crack + boom. */
+  thunder(k: number) {
+    if (!this.started) return;
+    const delay = 0.3 + (1 - k) * 2.8;
+    const dur = 2.2 + (1 - k) * 2.5;
+    if (k > 0.7) this.burst('bandpass', 900, 0.8, 0.35 * k, 0.25, delay - 0.15, this.amb);
+    this.burst('lowpass', 140 + k * 120, 0.9, 0.9 * (0.4 + k * 0.6), dur, delay, this.amb);
+    this.burst('lowpass', 70, 1.2, 0.7 * (0.5 + k * 0.5), dur * 1.3, delay + 0.25, this.amb);
+  }
+
   /** Dust-storm layers, silent until a storm: sand hiss, a whistling howl, and a deep buffeting rumble. */
   private startStorm() {
     const ctx = this.ctx;

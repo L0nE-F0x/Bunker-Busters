@@ -155,6 +155,7 @@ export class Game {
       if (p === 'front') this.ui.toast('A dust storm is rolling in. Low visibility will blind SeedBot\'s optics.', 'info');
       else if (p === 'clearing') this.ui.toast('The dust storm is passing.', 'info');
     };
+    this.weather.onLightning = (k) => this.audio.thunder(k);
     await step(0.62, 'Charting the wasteland');
     this.map = new MapData(this.hf);
     this.cam = new FirstPersonCamera(this.camera);
