@@ -3,3 +3,6 @@ dist
 .DS_Store
 src-tauri/target
 src-tauri/gen
+
+# agent worktrees (Claude Code subagents)
+.claude/worktrees/
