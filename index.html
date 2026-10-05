@@ -4,14 +4,147 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Bunker Busters</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Big+Shoulders+Stencil+Display:wght@700;900&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
+    <meta name="description" content="They built bunkers. You brought lockpicks. A first-person heist game set in a wasteland full of billionaire doomsday bunkers." />
+    <meta property="og:title" content="Bunker Busters" />
+    <meta property="og:description" content="They built bunkers. You brought lockpicks. A first-person post-apocalyptic heist game." />
+    <meta property="og:image" content="/media/hero.jpg" />
+    <meta name="twitter:card" content="summary_large_image" />
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='12' fill='%23140d08'/><path d='M12 44 L32 16 L52 44 Z' fill='none' stroke='%23ff8a2a' stroke-width='5'/><circle cx='32' cy='36' r='5' fill='%233ff2e0'/></svg>" />
   </head>
   <body>
-    <canvas id="game"></canvas>
-    <div id="ui"></div>
-    <script type="module" src="/src/main.ts"></script>
+    <div class="grain"></div>
+
+    <nav class="nav">
+      <a class="brand" href="#top"><span class="mark"></span>BUNKER BUSTERS</a>
+      <div class="links">
+        <a href="#features">Features</a>
+        <a href="#garage">The Garage</a>
+        <a href="#ladder">Roadmap</a>
+        <a href="#download" class="cta-small">Download</a>
+      </div>
+    </nav>
+
+    <header class="hero" id="top">
+      <div class="hero-bg" style="background-image: url('/media/hero.jpg')"></div>
+      <div class="hero-shade"></div>
+      <div class="hero-inner">
+        <div class="kicker">A post-apocalyptic heist game</div>
+        <h1 class="logo"><span>BUNKER</span><span>BUSTERS</span></h1>
+        <p class="tagline">They built bunkers. <b>You brought lockpicks.</b></p>
+        <p class="lede">The tech elite sealed themselves into luxury doomsday bunkers. Scout them, outwit their half-broken security, crack the vault and take what you need to survive.</p>
+        <div class="dl-row">
+          <a class="btn primary" id="dl-primary" href="#download">
+            <span class="os-icon" id="dl-primary-icon"></span>
+            <span><b id="dl-primary-label">Download</b><small id="dl-primary-sub">Free · v0.1 vertical slice</small></span>
+          </a>
+          <a class="btn ghost" href="#download">All platforms</a>
+        </div>
+        <a class="play-link" href="/play/">or play in your browser <span>→</span></a>
+      </div>
+      <div class="scroll-hint">scroll</div>
+    </header>
+
+    <section class="features" id="features">
+      <article class="feature">
+        <div class="shot" style="background-image: url('/media/night.jpg')"></div>
+        <div class="copy">
+          <div class="num">01</div>
+          <h3>Stealth over shootouts</h3>
+          <p>Crouch past tin-can tripwires, wait out a guard drone's battery brown-outs, kill the floodlights or go in under the cover of night. Every layer of a bunker has more than one way through.</p>
+        </div>
+      </article>
+      <article class="feature rev">
+        <div class="shot" style="background-image: url('/media/lockpick.jpg')"></div>
+        <div class="copy">
+          <div class="num">02</div>
+          <h3>Pick every lock by feel</h3>
+          <p>A real pin-tumbler minigame: find the binding pin, set it at the shear line, don't overset or your pick snaps. Engineers can short keypads instead, and anyone can guess a founder's default PIN.</p>
+        </div>
+      </article>
+      <article class="feature">
+        <div class="shot" style="background-image: url('/media/camp.jpg')"></div>
+        <div class="copy">
+          <div class="num">03</div>
+          <h3>A living wasteland</h3>
+          <p>A full day/night cycle, dust storms rolling over the dunes, godrays through broken power lines and neon flickering out in the dark. Everything is generated in code: no textures, no asset packs.</p>
+        </div>
+      </article>
+    </section>
+
+    <section class="garage" id="garage">
+      <div class="garage-bg" style="background-image: url('/media/interior.jpg')"></div>
+      <div class="garage-inner">
+        <div class="kicker">Tier 1 bunker</div>
+        <h2>The Garage</h2>
+        <p class="owner">Owner: <b>Tanner Pivotson</b>, founder &amp; Chief Visionary of Bunkr.ly <i>("Uber for Bunkers")</i></p>
+        <p>He raised $40M on a napkin and built exactly one bunker: his own. It's guarded by <b>SeedBot</b>, a refurbished security drone with 12% battery health, a padlock with a five-star rating, and a laser grid wired to a fuse box nobody labelled.</p>
+        <blockquote>"This property is pre-revenue but <em>post</em>-apocalypse. Leave."</blockquote>
+        <ul class="ticks">
+          <li>Razor-wire perimeter: pick the gate or find the gap the raccoons use</li>
+          <li>SeedBot patrols with a vision cone, gets suspicious, and tases on sight</li>
+          <li>Laser tripwires: jump the low beam, crouch under the high one</li>
+          <li>The Runway Room: loot crates, a safe and a 30-under-30 shrine</li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="ladder" id="ladder">
+      <div class="kicker">The road to Bunker Master</div>
+      <h2>Seven bunkers. One wasteland.</h2>
+      <ol class="tiers">
+        <li class="open"><span class="t">Tier 1</span><b>The Garage</b><small>Failed-startup prepper · padlocks &amp; a drone on 12%</small><em>Playable now</em></li>
+        <li><span class="t">Tier 2</span><b>Apex Vault</b><small>A mogul who tweets constantly · chaotic, half-broken automation</small></li>
+        <li><span class="t">Tier 3</span><b>The Panopticon</b><small>Surveillance-obsessed founder · cameras &amp; line-of-sight puzzles</small></li>
+        <li><span class="t">Tier 4</span><b>Alignment Spire</b><small>Safety-obsessed AI lab · ethics-quiz door locks, polite turrets</small></li>
+        <li><span class="t">Tier 5</span><b>Singularity Dome</b><small>A rogue AI runs the bunker · defences that learn your habits</small></li>
+        <li><span class="t">Tier 6</span><b>Cloud Cathedral</b><small>Logistics emperor · conveyor mazes &amp; drone swarms</small></li>
+        <li><span class="t">Tier 7</span><b>The Chip Fortress</b><small>GPU baron · heat, power &amp; cooling puzzles</small></li>
+        <li class="final"><span class="t">Final</span><b>Bunker Zero</b><small>The Bunker Master's legacy</small></li>
+      </ol>
+    </section>
+
+    <section class="download" id="download">
+      <div class="kicker">Free download</div>
+      <h2>Get Bunker Busters</h2>
+      <p class="rel" id="release-info">Checking for the latest release…</p>
+      <div class="dl-cards">
+        <div class="dl-card" data-os="linux">
+          <div class="os"><span class="os-icon linux"></span>Linux</div>
+          <p>Omarchy, Arch and most distros. Hybrid NVIDIA laptops automatically render on the NVIDIA GPU.</p>
+          <a class="btn primary" data-asset="BunkerBusters-linux-x86_64.tar.gz">Omarchy / Arch <small>.tar.gz · uses system WebKitGTK</small></a>
+          <a class="btn ghost" data-asset="BunkerBusters-linux-x86_64.AppImage">AppImage <small>any distro</small></a>
+          <a class="btn ghost" data-asset="BunkerBusters-linux-amd64.deb">.deb <small>Debian / Ubuntu</small></a>
+          <details>
+            <summary>Install on Omarchy / Arch</summary>
+            <pre>sudo pacman -S --needed webkit2gtk-4.1
+tar xzf BunkerBusters-linux-x86_64.tar.gz
+./bunker-busters/install.sh</pre>
+            <p>Adds <b>Bunker Busters</b> to your app launcher. For the AppImage: <code>chmod +x</code> it and run.</p>
+          </details>
+        </div>
+        <div class="dl-card" data-os="windows">
+          <div class="os"><span class="os-icon windows"></span>Windows</div>
+          <p>Windows 10 / 11, 64-bit. The installer isn't code-signed yet, so SmartScreen may warn you: <i>More info → Run anyway</i>.</p>
+          <a class="btn primary" data-asset="BunkerBusters-windows-x64-setup.exe">Installer <small>.exe · x64</small></a>
+        </div>
+        <div class="dl-card web">
+          <div class="os"><span class="os-icon web"></span>Browser</div>
+          <p>No install. Runs on WebGPU where your browser supports it, otherwise WebGL2. Best in Chrome or Edge.</p>
+          <a class="btn ghost" href="/play/">Play in browser</a>
+        </div>
+      </div>
+      <div class="reqs">
+        <div><b>Controls</b>WASD · mouse · Shift sprint · C crouch · Space jump · E/F interact · L flashlight · Tab kit · M map</div>
+        <div><b>Graphics</b>A dedicated GPU is recommended · integrated graphics run well on the Low/Medium preset (Settings)</div>
+      </div>
+    </section>
+
+    <footer class="foot">
+      <div class="brand"><span class="mark"></span>BUNKER BUSTERS</div>
+      <div>v0.1 vertical slice · built with Three.js, TSL &amp; Rapier · everything procedural</div>
+      <a href="https://github.com/L0nE-F0x/Bunker-Busters" target="_blank" rel="noopener">GitHub →</a>
+    </footer>
+
+    <script type="module" src="/src/site/site.ts"></script>
   </body>
 </html>

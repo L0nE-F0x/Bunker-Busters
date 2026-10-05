@@ -1,3 +1,4 @@
+import './fonts';
 import { createRenderer } from '@/engine/renderer';
 import { Game } from '@/game/Game';
 

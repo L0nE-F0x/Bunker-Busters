@@ -45,7 +45,7 @@ export class LockpickGame {
     this.root.innerHTML = `
       <div class="panel mg interactive">
         <div class="scan"></div>
-        <header><h3>${opts.title}</h3><span class="sub">${n}-PIN TUMBLER · LOCKPICKING ${opts.skill}</span></header>
+        <header><h3>${opts.title}</h3><span class="sub">${n}-PIN TUMBLER · LOCKPICKING ${opts.skill}</span><span class="msg" style="margin-left:auto;color:var(--amber);font-size:14px;letter-spacing:.06em;text-align:right"></span></header>
         <canvas width="1720" height="760"></canvas>
         <footer>
           <span><span class="kbd">A</span> <span class="kbd">D</span> / mouse — choose pin</span>
@@ -53,7 +53,6 @@ export class LockpickGame {
           <span><span class="kbd">Esc</span> — back off</span>
           <span class="right">PICKS <b class="picks"></b> · STRAIN <b class="strain"></b></span>
         </footer>
-        <div class="msg" style="position:absolute;left:0;right:0;bottom:64px;text-align:center;font-size:14px;letter-spacing:.14em;color:var(--ink-dim)"></div>
       </div>`;
     this.canvas = this.root.querySelector('canvas')!;
     this.ctx = this.canvas.getContext('2d')!;

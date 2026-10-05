@@ -1,0 +1,119 @@
+# Builds the desktop app for Linux + Windows and publishes it as a GitHub Release.
+#
+#   git tag v0.1.1 && git push origin v0.1.1
+#
+# Assets keep fixed names so the website can always link to
+#   https://github.com/L0nE-F0x/Bunker-Busters/releases/latest/download/<asset>
+# The release stays a draft until every platform has built and uploaded successfully.
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag to (re)build, e.g. v0.1.0'
+        required: true
+
+permissions:
+  contents: write
+
+env:
+  TAG: ${{ github.event.inputs.tag || github.ref_name }}
+
+jobs:
+  draft:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Create draft release (if missing)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1 || \
+          gh release create "$TAG" --repo "$GITHUB_REPOSITORY" --draft --title "Bunker Busters $TAG" \
+            --notes "Desktop builds of Bunker Busters $TAG. Download from the website or the assets below.
+
+          - **Omarchy / Arch:** \`BunkerBusters-linux-x86_64.tar.gz\` (uses system WebKitGTK; run \`install.sh\`)
+          - **Any Linux:** \`BunkerBusters-linux-x86_64.AppImage\`
+          - **Debian / Ubuntu:** \`BunkerBusters-linux-amd64.deb\`
+          - **Windows 10/11:** \`BunkerBusters-windows-x64-setup.exe\` (unsigned: SmartScreen → More info → Run anyway)"
+
+  linux:
+    needs: draft
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.TAG }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+      - name: System dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libgtk-3-dev libayatana-appindicator3-dev librsvg2-dev patchelf file
+      - run: npm ci
+      - name: Build (AppImage + deb)
+        run: npx tauri build --bundles appimage,deb
+      - name: Collect assets
+        run: |
+          set -euo pipefail
+          mkdir -p out/bunker-busters
+          cp src-tauri/target/release/bundle/appimage/*.AppImage out/BunkerBusters-linux-x86_64.AppImage
+          cp src-tauri/target/release/bundle/deb/*.deb out/BunkerBusters-linux-amd64.deb
+          # Omarchy/Arch tarball: plain binary against the system WebKitGTK + per-user installer
+          cp src-tauri/target/release/bunker-busters out/bunker-busters/bunker-busters-bin
+          cp src-tauri/icons/128x128@2x.png out/bunker-busters/icon.png
+          cp scripts/install-linux.sh out/bunker-busters/install.sh
+          chmod +x out/bunker-busters/install.sh out/bunker-busters/bunker-busters-bin
+          tar -C out -czf out/BunkerBusters-linux-x86_64.tar.gz bunker-busters
+          ls -la out
+      - name: Upload to release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release upload "$TAG" --repo "$GITHUB_REPOSITORY" --clobber \
+            out/BunkerBusters-linux-x86_64.AppImage out/BunkerBusters-linux-amd64.deb out/BunkerBusters-linux-x86_64.tar.gz
+
+  windows:
+    needs: draft
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.TAG }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+      - run: npm ci
+      - name: Build (NSIS installer)
+        run: npx tauri build --bundles nsis
+      - name: Collect + upload
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p out
+          cp src-tauri/target/release/bundle/nsis/*-setup.exe out/BunkerBusters-windows-x64-setup.exe
+          gh release upload "$TAG" --repo "$GITHUB_REPOSITORY" --clobber out/BunkerBusters-windows-x64-setup.exe
+
+  publish:
+    needs: [linux, windows]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release edit "$TAG" --repo "$GITHUB_REPOSITORY" --draft=false --latest

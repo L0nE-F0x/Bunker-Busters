@@ -12,17 +12,30 @@ npm run build        # production bundle → dist/
 
 The web build deploys to Netlify as-is (`netlify.toml`: `npm run build` → `dist/`). The renderer uses WebGPU where it works and falls back to WebGL2 automatically. The title screen shows which backend is active.
 
+## Website
+
+`index.html` is the marketing/download page (site root). `play/index.html` is the browser build of the game. Netlify deploys both from `main` (`netlify.toml`). The download buttons link to fixed asset names on the latest GitHub Release.
+
 ## Desktop app (Tauri)
 
-The same game in a native window (WebKitGTK on Linux, WebView2 on Windows, WKWebView on macOS). On hybrid-GPU Linux laptops this lets the game run on the discrete GPU without touching your everyday browser:
+The same game in a native window (WebKitGTK on Linux, WebView2 on Windows). On hybrid-GPU Linux laptops the app automatically renders on the NVIDIA dGPU (PRIME offload via XWayland). Set `BB_GPU=integrated` to opt out.
 
 ```bash
-npm run desktop          # dev window, default GPU
-npm run desktop:nvidia   # dev window on the NVIDIA dGPU (PRIME offload, see scripts/run-nvidia.sh)
-npm run desktop:build    # release bundles (AppImage / .deb) in src-tauri/target/release/bundle
+npm run desktop           # dev window
+npm run desktop:install   # optimised build + install to ~/.local (app launcher entry)
+scripts/install-linux.sh --uninstall
 ```
 
 Needs Rust and, on Linux, `webkit2gtk-4.1`.
+
+## Releasing
+
+```bash
+# bump "version" in package.json and src-tauri/tauri.conf.json, then:
+git tag v0.1.1 && git push origin v0.1.1
+```
+
+`.github/workflows/release.yml` builds Linux (tar.gz for Omarchy/Arch, AppImage, .deb) and Windows (NSIS installer) and publishes the release once every platform has built.
 
 ## Controls
 
