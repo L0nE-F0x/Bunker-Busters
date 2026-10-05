@@ -98,7 +98,9 @@ export class Drone {
     eye.castShadow = true;
     this.body.add(eye);
     // arms + motors + rotors
-    const rotorMat = new THREE.MeshBasicNodeMaterial({ transparent: true, depthWrite: false, side: THREE.DoubleSide });
+    // flat discs: each triangle faces one way, so the default back-then-front double pass only ever
+    // drew it once anyway; a single pass is the same picture for half the draws
+    const rotorMat = new THREE.MeshBasicNodeMaterial({ transparent: true, depthWrite: false, side: THREE.DoubleSide, forceSinglePass: true });
     const spin = this.rotorSpin;
     const turn = this.rotorAngle;
     rotorMat.colorNode = vec3(0.08, 0.08, 0.09);

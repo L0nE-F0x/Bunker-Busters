@@ -7,6 +7,7 @@ import {
 import type { Atmosphere } from './Atmosphere';
 import type { Heightfield } from './Heightfield';
 import { noise } from '@/engine/noiseTex';
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 type N = any;
@@ -218,7 +219,9 @@ export class Fire {
   private t = Math.random() * 10;
 
   constructor(scale = 1, lightIntensity = 30) {
-    const mat = new THREE.MeshBasicNodeMaterial({ transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide });
+    // additive blending is order-independent, so one pass over both faces looks the same as three's
+    // default back-then-front double pass for transparent DoubleSide (one draw instead of two)
+    const mat = new THREE.MeshBasicNodeMaterial({ transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide, forceSinglePass: true });
     mat.colorNode = Fn(() => {
       const p = uv();
       const n = noise(vec2(p.x.mul(0.6), p.y.mul(0.45).sub(time.mul(0.5)))).r.sub(0.5).mul(1.8);
@@ -228,13 +231,16 @@ export class Fire {
       const col = mix(vec3(1.0, 0.25, 0.03), vec3(1.0, 0.75, 0.3), core).mul(flame.mul(9));
       return vec4(col, flame);
     })();
-    const geo = new THREE.PlaneGeometry(1.1 * scale, 1.6 * scale);
-    geo.translate(0, 0.8 * scale, 0);
+    // the three crossed flame cards, stones and logs are each one merged mesh (static relative to the fire)
+    const at = (g: THREE.BufferGeometry, x: number, y: number, z: number, rx: number, ry: number) =>
+      g.applyMatrix4(new THREE.Matrix4().compose(new THREE.Vector3(x, y, z), new THREE.Quaternion().setFromEuler(new THREE.Euler(rx, ry, 0)), new THREE.Vector3(1, 1, 1)));
+    const cards: THREE.BufferGeometry[] = [];
     for (let i = 0; i < 3; i++) {
-      const m = new THREE.Mesh(geo, mat);
-      m.rotation.y = (i / 3) * Math.PI;
-      this.group.add(m);
+      const geo = new THREE.PlaneGeometry(1.1 * scale, 1.6 * scale);
+      geo.translate(0, 0.8 * scale, 0);
+      cards.push(at(geo, 0, 0, 0, 0, (i / 3) * Math.PI));
     }
+    this.group.add(new THREE.Mesh(mergeGeometries(cards, false)!, mat));
     // embers
     const em = new THREE.SpriteNodeMaterial({ transparent: true, depthWrite: false, blending: THREE.AdditiveBlending });
     const life = fract(time.mul(0.35).add(hash(instanceIndex)));
@@ -249,22 +255,21 @@ export class Fire {
 
     // stone ring
     const stone = new THREE.MeshStandardNodeMaterial({ color: '#4a4440', roughness: 0.9, flatShading: true });
+    const stones: THREE.BufferGeometry[] = [];
     for (let i = 0; i < 9; i++) {
       const a = (i / 9) * Math.PI * 2;
-      const s = new THREE.Mesh(new THREE.DodecahedronGeometry(0.22 * scale, 0), stone);
-      s.position.set(Math.cos(a) * 0.65 * scale, 0.08, Math.sin(a) * 0.65 * scale);
-      s.rotation.set(a, a * 2, 0);
-      s.castShadow = true;
-      this.group.add(s);
+      stones.push(at(new THREE.DodecahedronGeometry(0.22 * scale, 0), Math.cos(a) * 0.65 * scale, 0.08, Math.sin(a) * 0.65 * scale, a, a * 2));
     }
+    const ring = new THREE.Mesh(mergeGeometries(stones, false)!, stone);
+    ring.castShadow = true;
+    this.group.add(ring);
     const logMat = new THREE.MeshStandardNodeMaterial({ color: '#1a120c', roughness: 1 });
     logMat.emissiveNode = color('#ff4a10').mul(noise(positionWorld.xz.mul(0.8).add(time.mul(0.1))).r.sub(0.5).mul(2).mul(0.5).add(0.5).mul(1.5));
+    const logs: THREE.BufferGeometry[] = [];
     for (let i = 0; i < 4; i++) {
-      const log = new THREE.Mesh(new THREE.CylinderGeometry(0.07 * scale, 0.08 * scale, 0.9 * scale, 6), logMat);
-      log.rotation.set(Math.PI / 2 - 0.3, (i / 4) * Math.PI * 2, 0);
-      log.position.y = 0.15;
-      this.group.add(log);
+      logs.push(at(new THREE.CylinderGeometry(0.07 * scale, 0.08 * scale, 0.9 * scale, 6).toNonIndexed(), 0, 0.15, 0, Math.PI / 2 - 0.3, (i / 4) * Math.PI * 2));
     }
+    this.group.add(new THREE.Mesh(mergeGeometries(logs, false)!, logMat));
 
     this.light = new THREE.PointLight(0xff8a3a, lightIntensity, 22, 1.6);
     this.light.position.y = 1.2 * scale;
@@ -288,7 +293,8 @@ export function lightCone(length: number, radius: number, c: THREE.ColorRepresen
   geo.translate(0, -length / 2, 0);
   const uIntensity = uniform(intensity);
   const uColor = uniform(new THREE.Color(c));
-  const mat = new THREE.MeshBasicNodeMaterial({ transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide, fog: false });
+  // additive: single pass over both faces = same result as the back-then-front double pass
+  const mat = new THREE.MeshBasicNodeMaterial({ transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide, fog: false, forceSinglePass: true });
   mat.colorNode = Fn(() => {
     const along = positionLocal.y.negate().div(length); // 0 at tip, 1 at base
     const v = normalize(cameraPosition.sub(positionWorld));
@@ -310,7 +316,7 @@ export class Shockwave {
   done = false;
 
   constructor(pos: THREE.Vector3, private radius = 8) {
-    const mat = new THREE.MeshBasicNodeMaterial({ transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide, fog: false });
+    const mat = new THREE.MeshBasicNodeMaterial({ transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide, fog: false, forceSinglePass: true });
     const t = this.uT;
     mat.colorNode = Fn(() => {
       const v = normalize(cameraPosition.sub(positionWorld));

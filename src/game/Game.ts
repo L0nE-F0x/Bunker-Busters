@@ -273,7 +273,8 @@ export class Game {
       paper.rotation.x = -1.2;
       g.add(paper);
       // vertical light beam
-      const beamMat = new THREE.MeshBasicNodeMaterial({ transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide });
+      // additive, so one pass over both faces matches the default two-pass DoubleSide transparency
+      const beamMat = new THREE.MeshBasicNodeMaterial({ transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide, forceSinglePass: true });
       beamMat.colorNode = Fn(() => {
         const v = uv();
         const edge = smoothstep(0.5, 0.0, length(v.x.sub(0.5)));
