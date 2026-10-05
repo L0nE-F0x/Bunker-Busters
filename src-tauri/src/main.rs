@@ -13,7 +13,8 @@ use tauri::Manager;
 ///
 /// Measured on Intel + RTX 4050 under Hyprland: native-Wayland dmabuf presentation is rejected by
 /// the compositor and native Wayland without dmabuf caps at ~45 fps; XWayland without dmabuf runs
-/// at full refresh. So: PRIME render offload + XWayland + no dmabuf renderer.
+/// at full refresh. So: PRIME render offload + XWayland + no dmabuf renderer (+ core device events,
+/// or GTK under XWayland never delivers mouse clicks to the page).
 ///
 /// Opt out with BB_GPU=integrated (or any explicit __NV_PRIME_RENDER_OFFLOAD setting).
 #[cfg(target_os = "linux")]
@@ -43,6 +44,11 @@ fn select_gpu() {
     env::set_var("WEBKIT_DISABLE_DMABUF_RENDERER", "1");
     if env::var_os("WAYLAND_DISPLAY").is_some() && env::var_os("DISPLAY").is_some() {
         env::set_var("GDK_BACKEND", "x11");
+        // GTK3's XInput2 handling under XWayland (Hyprland) drops mouse button presses: the page
+        // got hover/motion but never a click, so the menu looked frozen. Core device events fix it.
+        if env::var_os("GDK_CORE_DEVICE_EVENTS").is_none() {
+            env::set_var("GDK_CORE_DEVICE_EVENTS", "1");
+        }
     }
 }
 

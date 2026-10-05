@@ -131,6 +131,7 @@ Desktop dev hooks (env vars):
 - `BB_EXIT_AFTER=N`: auto-quit
 - `BB_GPU=integrated`: skip NVIDIA selection
 - `BB_SELF_UPDATE=1`: check for and install an update with no UI (updater test)
+- Page flag `?trace` (or `?trace=A`, which shows a label): log clicks and keys reaching the page. Uncaught JS errors always go to the console, which is stdout in the app.
 
 The webview's `console.log` goes to stdout.
 
@@ -142,7 +143,7 @@ The webview's `console.log` goes to stdout.
   - The backend chain in `src/engine/renderer.ts` falls back to Intel WebGPU, then WebGL2, and remembers the choice.
   - Detect device loss with `device.lost`, not just `uncapturederror`.
   - WebGPU canvas sizes are padded to 64 px × 128 rows (`fitCanvas`) for cross-GPU swapchain import.
-- **Desktop GPU path (Linux hybrid):** PRIME offload + **XWayland + `WEBKIT_DISABLE_DMABUF_RENDERER=1`** is the only path that runs at full refresh. Native-Wayland dmabuf crashes with Error 71. `select_gpu()` in `src-tauri/src/main.rs` applies this automatically. WebKitGTK has **no WebGPU**, so the desktop app uses WebGL2.
+- **Desktop GPU path (Linux hybrid):** PRIME offload + **XWayland + `WEBKIT_DISABLE_DMABUF_RENDERER=1` + `GDK_CORE_DEVICE_EVENTS=1`** is the only path that runs at full refresh. Without the last one, GTK under XWayland never delivers mouse clicks to the page, so the menu looks frozen. Native-Wayland dmabuf crashes with Error 71. `select_gpu()` in `src-tauri/src/main.rs` applies this automatically. WebKitGTK has **no WebGPU**, so the desktop app uses WebGL2.
 - **Performance in WebKit:**
   - The bottlenecks are draw-call submission and HTML/CSS compositing over the canvas, not the GPU.
   - Keep meshes merged: `MeshBatch` per material, and material factories are **memoized**, so equal calls return one instance.

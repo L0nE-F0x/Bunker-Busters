@@ -3,6 +3,10 @@
 Each `## vX.Y.Z` section becomes the GitHub release notes and the "what's new" list in the in-app
 update notice (the first few bullets). `scripts/release.sh` refuses to release a version without one.
 
+## v0.1.2
+- **Fixed: menu clicks did nothing in the Linux desktop app** on NVIDIA laptops under Wayland (Hyprland/Omarchy), so you couldn't get past the title screen
+- **Fixed: the app launcher showed a placeholder icon** for tarball installs (re-run `install.sh` to refresh the menu entry)
+
 ## v0.1.1
 - **Natural hands**: rebuilt anatomy and poses; empty hands rest out of view and come up when you use them
 - **Real physics**: true gravity, momentum and air drag, fall damage, hard landings, stamina and breathing

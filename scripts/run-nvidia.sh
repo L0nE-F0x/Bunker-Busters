@@ -23,6 +23,7 @@ if [ "${BB_WAYLAND:-0}" = "1" ]; then
   [ "${BB_NO_DMABUF:-0}" = "1" ] && export WEBKIT_DISABLE_DMABUF_RENDERER=1
 else
   export GDK_BACKEND=x11
+  export GDK_CORE_DEVICE_EVENTS=1  # GTK3 under XWayland otherwise never delivers mouse clicks
   export WEBKIT_DISABLE_DMABUF_RENDERER=1
 fi
 

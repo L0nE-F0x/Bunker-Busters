@@ -29,6 +29,7 @@ fi
 install -Dm755 "$BIN" "$BIN_DST"
 install -Dm644 "$ICON" "$ICON_DST"
 mkdir -p "$(dirname "$DESK_DST")"
+# absolute icon path: some launchers (Omarchy's) don't resolve theme icon names from ~/.local
 cat > "$DESK_DST" <<DESKTOP
 [Desktop Entry]
 Type=Application
@@ -36,7 +37,7 @@ Name=Bunker Busters
 GenericName=Heist Game
 Comment=They built bunkers. You brought lockpicks.
 Exec=$BIN_DST
-Icon=bunker-busters
+Icon=$ICON_DST
 Categories=Game;ActionGame;
 Terminal=false
 StartupWMClass=bunker-busters
