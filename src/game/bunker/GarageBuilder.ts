@@ -367,7 +367,9 @@ export class GarageBuilder {
 
     // roof (hidden when the player is inside)
     const roofMat = corrugated('#8d8a82', 0.75, 'x');
-    const rb = new MeshBatch();
+    // the roof always shows in first person, so it joins the static batch (its paints merge with
+    // the walls' families); `this.roof` stays as an (empty) handle
+    const rb = b;
     rb.add(roofMat, box(x1 - x0 + 0.8, 0.12, z1 - z0 + 0.8, 0, h + 0.1, (z0 + z1) / 2, 0, 0.03));
     rb.add(block, box(x1 - x0 + 0.3, 0.4, 0.3, 0, h + 0.2, z1 - 0.15));
     // satellite dish + solar on roof
@@ -381,7 +383,6 @@ export class GarageBuilder {
     rb.add(plainStandard('#333', 0.5, 0.8), cyl(0.03, 0.03, 3, 6, h + 1.5, -10, 5));
     rb.add(antenna.material, place(new THREE.SphereGeometry(0.08, 8, 6), 6, h + 3.05, -10));
     this.blinkers.push({ u: antenna.intensity, period: 2, offset: 0.5, on: 12 });
-    this.roof.add(rb.build('roof'));
   }
 
   // ---------------------------------------------------------------- yard
@@ -606,7 +607,9 @@ export class GarageBuilder {
       const g = new THREE.Group();
       g.position.set(cx, 0, cz);
       g.rotation.y = ry;
-      const lb = new MeshBatch();
+      // the bodies never move (only the lids do): bake them into the static batch at their spot
+      const toStatic = new THREE.Matrix4().compose(new THREE.Vector3(cx, 0, cz), new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), ry), new THREE.Vector3(1, 1, 1));
+      const lb = { add: (mat: THREE.Material, ...gs: THREE.BufferGeometry[]) => b.add(mat, ...gs.map((x) => x.applyMatrix4(toStatic))) };
       if (id === 'safe') {
         lb.add(rustyMetal({ base: '#2b2d30', rust: 0.15, metalness: 0.85, roughness: 0.35 }), box(1.1, 1.3, 0.9, 0, 0.65, 0));
         lb.add(rustyMetal({ base: '#d4b04a', rust: 0.1, metalness: 1, roughness: 0.25 }), cyl(0.16, 0.16, 0.06, 0.15, 0.75, 0.47, 16, Math.PI / 2));
@@ -614,7 +617,6 @@ export class GarageBuilder {
         lb.add(crate, box(1.4, 0.7, 0.9, 0, 0.35, 0));
         lb.add(crateGlow.material, box(1.42, 0.05, 0.92, 0, 0.55, 0));
       }
-      g.add(lb.build(id));
       let lid: THREE.Object3D | undefined;
       if (id !== 'safe') {
         const lp = new THREE.Group();
