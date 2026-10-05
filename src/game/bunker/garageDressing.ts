@@ -247,7 +247,8 @@ export function dressHouse(D: Dress, H: { x0: number; x1: number; z0: number; z1
   D.b.add(M.steelDark(), box(0.36, 0.04, 0.46, x1 + 0.22, 2.79, -3), box(0.06, 0.25, 0.06, x1 + 0.03, 2.85, -3));
   D.halos.add(v(x1 + 0.22, 2.58, -3), '#ffc890', 0.9, CH.NIGHT, 2.2);
   lightPool(D, 'poolWarm', 3.6, 3.0, x1 + 1.3, 0.05, -3.0, Math.PI / 2);
-  D.d.add(lightPoolMaterial(), decal('poolCyan', 6.0, 2.6, -2.2, 3.0, z1 + 0.072), decal('poolPink', 6.0, 2.6, 2.2, 3.0, z1 + 0.072));
+  // neon washing down the roll-up door from the sign above
+  D.d.add(lightPoolMaterial(), decal('washCyan', 4.6, 3.0, -2.0, 1.85, z1 + 0.072), decal('washPink', 4.6, 3.0, 2.0, 1.85, z1 + 0.072));
   lightPool(D, 'poolCyan', 7, 5, -2.3, 0.1, z1 + 2.6);
   lightPool(D, 'poolPink', 7, 5, 2.3, 0.1, z1 + 2.6);
 }
@@ -359,7 +360,11 @@ export function dressYard(D: Dress) {
   const pyX = -13.7, pyZ = 4.0;
   D.b.add(M.steelDark(), box(0.32, 1.3, 0.32, pyX, 0.65, pyZ), box(0.42, 0.06, 0.42, pyX, 1.32, pyZ));
   D.b.add(M.cable(), wire(v(pyX + 0.1, 0.9, pyZ), v(-12.6, 0.22, 4.0), 0.15, 0.025, 8));
-  D.b.add(M.cable(), wire(v(pyX, 0.05, pyZ - 0.1), v(-8.15, 0.3, -1.0), 0.0, 0.025, 20));
+  // power cable lying in the sand from the pylon to the house, then up the wall
+  const cablePts = [v(pyX, 0.03, pyZ - 0.16), v(-12.6, 0.03, 2.1), v(-11.0, 0.03, 1.2), v(-9.6, 0.03, -0.2), v(-8.45, 0.03, -1.1)];
+  for (let i = 0; i < cablePts.length - 1; i++) D.b.add(M.cable(), beam(cablePts[i], cablePts[i + 1], 0.025, 5));
+  D.b.add(M.cable(), beam(v(-8.45, 0.03, -1.1), v(-8.12, 0.12, -1.1), 0.025, 5), beam(v(-8.12, 0.12, -1.1), v(-8.12, 1.1, -1.1), 0.025, 5));
+  D.b.add(M.galv(), box(0.1, 0.18, 0.14, -8.1, 1.15, -1.1));
   ground(D, 'arrow', 2.0, 1.0, -12.0, 0.04, 6.4, Math.PI / 2);
   ground(D, 'hazard', 2.8, 0.35, -12.0, 0.215, 4.0 + 1.55, 0);
   lightPool(D, 'poolCyan', 4.2, 4.2, -12.0, 0.23, 4.0);
@@ -489,7 +494,7 @@ export function dressWorkshop(D: Dress, H: { x0: number; x1: number; z0: number;
   iband(-vaultZ - 0.6, x0 + 0.312, vaultZ / 2, Math.PI / 2);
   // vault frame: steel jambs, hazard stripes and the stencil above
   D.b.add(dark, box(0.18, 2.6, 0.12, -1.09, 1.3, vaultZ + 0.25), box(0.18, 2.6, 0.12, 1.09, 1.3, vaultZ + 0.25), box(2.36, 0.18, 0.12, 0, 2.5, vaultZ + 0.25));
-  for (const sx of [-1, 1]) wallDecal(D, 'hazard', 2.5, 0.22, sx * 1.32, 1.27, vaultZ + 0.212, 0), D.d.add(decalMaterial(), decal('hazard', 2.5, 0.22, sx * 1.32, 1.27, vaultZ + 0.213, 0, 0, Math.PI / 2));
+  for (const sx of [-1, 1]) D.d.add(decalMaterial(), decal('hazard', 2.5, 0.22, sx * 1.3, 1.27, vaultZ + 0.213, 0, 0, Math.PI / 2));
   wallDecal(D, 'runway', 2.6, 0.65, 0, 3.0, vaultZ + 0.212, 0);
   wallDecal(D, 'restricted', 1.7, 0.32, -2.3, 2.55, vaultZ + 0.212, 0);
 }

@@ -402,15 +402,24 @@ const DRAW: Record<string, [number, number, Draw]> = {
   poolRed: [128, 128, (c, w, h) => pool(c, w, h, '255,40,30')],
   poolWhite: [128, 128, (c, w, h) => pool(c, w, h, '235,240,255')],
   // vertical wash for light falling down a wall from a lamp above
-  washWarm: [128, 256, (c, w, h) => {
-    const g = c.createRadialGradient(w / 2, 0, 0, w / 2, 0, h);
-    g.addColorStop(0, 'rgba(255,190,120,1)');
-    g.addColorStop(0.35, 'rgba(255,170,100,0.35)');
-    g.addColorStop(1, 'rgba(255,150,80,0)');
-    c.fillStyle = g;
-    c.fillRect(0, 0, w, h);
-  }],
+  washWarm: [128, 256, (c, w, h) => wash(c, w, h, '255,190,120')],
+  washCyan: [128, 256, (c, w, h) => wash(c, w, h, '60,240,225')],
+  washPink: [128, 256, (c, w, h) => wash(c, w, h, '255,60,160')],
 };
+
+/** Half-ellipse of light hanging from the top edge (a lamp or sign washing down a wall). */
+function wash(c: CanvasRenderingContext2D, w: number, h: number, rgb: string) {
+  c.save();
+  c.scale(1, h / w);
+  const g = c.createRadialGradient(w / 2, 0, 0, w / 2, 0, w / 2);
+  g.addColorStop(0, `rgba(${rgb},1)`);
+  g.addColorStop(0.25, `rgba(${rgb},0.6)`);
+  g.addColorStop(0.6, `rgba(${rgb},0.18)`);
+  g.addColorStop(1, `rgba(${rgb},0)`);
+  c.fillStyle = g;
+  c.fillRect(0, 0, w, w);
+  c.restore();
+}
 
 function pool(c: CanvasRenderingContext2D, w: number, h: number, rgb: string) {
   const g = c.createRadialGradient(w / 2, h / 2, 0, w / 2, h / 2, w / 2);

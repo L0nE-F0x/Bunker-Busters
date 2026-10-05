@@ -413,10 +413,10 @@ export class GarageBuilder {
     this.doors.vault = { pivot: vPivot, open: 0, target: 0, collider: this.physics.addBox(vdPos, vdHalf), axis: 'y', amount: -1.6, colliderSpec: { pos: vdPos, half: vdHalf } };
     this.points.vaultDoor = this.w(0.0, 1.2, vaultZ + 0.9);
     const vk = this.pal.slot('#ff3a3a', 2.5);
-    b.add(plainStandard('#202326', 0.4, 0.6), box(0.24, 0.34, 0.06, 1.35, 1.35, vaultZ + vt / 2 + 0.03));
-    vk.add(b, box(0.16, 0.06, 0.02, 1.35, 1.45, vaultZ + vt / 2 + 0.07));
-    for (let r = 0; r < 4; r++) for (let c = 0; c < 3; c++) b.add(rustyMetal({ base: '#5c6266', rust: 0.35 }), box(0.04, 0.035, 0.015, 1.3 + c * 0.05, 1.33 - r * 0.045, vaultZ + vt / 2 + 0.065));
-    this.halos.add(new THREE.Vector3(1.35, 1.45, vaultZ + vt / 2 + 0.1), '#ff3a3a', 0.3, this.blink(vk.intensity, 1.4, 0, 2.5), 1.5);
+    b.add(plainStandard('#202326', 0.4, 0.6), box(0.24, 0.34, 0.06, 1.65, 1.35, vaultZ + vt / 2 + 0.03));
+    vk.add(b, box(0.16, 0.06, 0.02, 1.65, 1.45, vaultZ + vt / 2 + 0.07));
+    for (let r = 0; r < 4; r++) for (let c = 0; c < 3; c++) b.add(rustyMetal({ base: '#5c6266', rust: 0.35 }), box(0.04, 0.035, 0.015, 1.6 + c * 0.05, 1.33 - r * 0.045, vaultZ + vt / 2 + 0.065));
+    this.halos.add(new THREE.Vector3(1.65, 1.45, vaultZ + vt / 2 + 0.1), '#ff3a3a', 0.3, this.blink(vk.intensity, 1.4, 0, 2.5), 1.5);
 
     // roof (hidden when the player is inside)
     const roofMat = corrugated('#8d8a82', 0.75, 'x');
@@ -465,6 +465,10 @@ export class GarageBuilder {
     b.add(tankMat, cyl(1.4, 1.4, 3, -16, 1.9, -13, 18), cyl(1.45, 1.45, 0.1, -16, 3.45, -13, 18));
     for (const [lx, lz] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) b.add(frameMat, cyl(0.06, 0.06, 0.6, -16 + lx, 0.3, -13 + lz, 5));
     this.col(-16, 1.9, -13, 1.4, 1.9, 1.4);
+    for (const lx of [-0.25, 0.25]) b.add(frameMat, box(0.05, 3.4, 0.05, -16 + lx, 1.7, -11.5));
+    for (let i = 0; i < 10; i++) b.add(frameMat, box(0.5, 0.03, 0.03, -16, 0.3 + i * 0.33, -11.5));
+    b.add(frameMat, cyl(0.07, 0.07, 1.4, -14.7, 0.7, -12.2, 8, 0, 0, Math.PI / 2 - 0.0));
+    b.add(plainStandard('#1a1a1a', 0.6, 0.6), cyl(0.12, 0.12, 0.04, -14.0, 0.7, -12.2, 10, 0, 0, Math.PI / 2));
     // generator (east)
     const genMat = rustyMetal({ base: '#c4952a', rust: 0.45 });
     b.add(genMat, box(1.8, 1.1, 1.0, 12, 0.6, -9));
@@ -505,8 +509,14 @@ export class GarageBuilder {
       tp.setXYZ(i, x * (1 + Math.sin(y * 3 + z) * 0.02), y * wedge + Math.sin(x * 4 + z * 3) * 0.04, z * (y > 0 ? 0.95 : 1));
     }
     tg.computeVertexNormals();
-    tg.translate(13, 0.9, 1.5);
+    tg.translate(13, 0.9 + 0.3, 1.5);
     b.add(tarp, norm(tg));
+    for (const [wx, wz] of [[11.3, 0.45], [14.7, 0.45], [11.3, 2.55], [14.7, 2.55]]) {
+      b.add(plainStandard('#161412', 0.95), place(new THREE.TorusGeometry(0.3, 0.13, 8, 18), wx, 0.42, wz));
+      b.add(rustyMetal({ base: '#9a9a96', rust: 0.4 }), cyl(0.18, 0.18, 0.06, wx, 0.42, wz + (wz < 1.5 ? -0.08 : 0.08), 12, Math.PI / 2));
+    }
+    b.add(rustyMetal({ base: '#9a9a96', rust: 0.4 }), box(0.12, 0.2, 2.1, 15.55, 0.5, 1.5), box(0.12, 0.2, 2.1, 10.45, 0.5, 1.5));
+    for (const tx of [11.6, 13.0, 14.4]) b.add(plainStandard('#c9b48a', 0.8), wire(new THREE.Vector3(tx, 0.35, 0.3), new THREE.Vector3(tx, 0.35, 2.7), -1.95, 0.012, 12));
     this.col(13, 0.9, 1.5, 2.5, 0.9, 1.15);
 
     // floodlight poles at the front corners + megaphone pole
@@ -600,7 +610,7 @@ export class GarageBuilder {
       grime(ctx, w, h, 0.25, 12);
     });
     const wb = new THREE.Mesh(new THREE.PlaneGeometry(3, 1.75), new THREE.MeshStandardNodeMaterial({ map: wbTex, roughness: 0.3 }));
-    wb.position.set(3, 2.0, vaultZ + 0.21);
+    wb.position.set(3.35, 2.0, vaultZ + 0.21);
     this.group.add(wb);
 
     // "HUSTLE" neon on east wall
@@ -666,7 +676,7 @@ export class GarageBuilder {
         const shimmer = noise(vec2(along.mul(0.35).sub(time.mul(0.9)), time.mul(0.23))).r.mul(1.1).add(0.45);
         const glints = smoothstep(0.62, 0.8, noise(vec2(along.mul(1.7).add(time.mul(0.35)), time.mul(0.6).add(uSeed))).r);
         const core = smoothstep(0.9, 0.995, facing).mul(1.3).add(pow(facing, 10).mul(0.35));
-        const halo = pow(facing, 2.5).mul(0.16).mul(shimmer).add(pow(facing, 6).mul(glints).mul(0.9));
+        const halo = pow(facing, 2.5).mul(0.07).mul(shimmer).add(pow(facing, 6).mul(glints).mul(0.9));
         const beamC = vec3(1.0, 0.08, 0.04).mul(core.add(halo)).add(vec3(1.0, 0.75, 0.6).mul(core.mul(0.25)));
         const across = abs(uv().y.sub(2.5)).mul(2);
         const floorC = vec3(1.0, 0.05, 0.02).mul(pow(clamp(float(1).sub(across), 0, 1), 3).mul(float(0.08).div(uLy.mul(1.6).add(0.2)))).mul(shimmer.mul(0.5).add(0.5));
@@ -760,12 +770,22 @@ export class GarageBuilder {
     ring.add(b, place(new THREE.TorusGeometry(0.35, 0.03, 8, 32), 1.6, 1.7, z0 + 0.9, 0, 0.4));
     b.add(metal, cyl(0.02, 0.02, 1.5, 1.6, 0.75, z0 + 0.9, 5));
     const hoodie = fabric('#20242a');
-    b.add(hoodie, place(new THREE.CapsuleGeometry(0.28, 0.6, 4, 10), -1.2, 1.15, z0 + 0.8), place(new THREE.SphereGeometry(0.17, 10, 8), -1.2, 1.78, z0 + 0.8));
+    const mx = -1.2, mz = z0 + 0.8;
+    b.add(hoodie, place(new THREE.CapsuleGeometry(0.24, 0.45, 4, 12), mx, 1.2, mz), place(new THREE.SphereGeometry(0.2, 12, 8, 0, Math.PI * 2, 0, Math.PI * 0.62), mx, 1.72, mz - 0.03));
+    b.add(hoodie, place(new THREE.CapsuleGeometry(0.075, 0.5, 3, 8), mx - 0.3, 1.18, mz + 0.05), place(new THREE.CapsuleGeometry(0.075, 0.5, 3, 8), mx + 0.3, 1.18, mz + 0.05));
+    b.add(plainStandard('#c9b8a0', 0.6), place(new THREE.SphereGeometry(0.15, 12, 10), mx, 1.7, mz + 0.02));
+    b.add(plainStandard('#1a1a1a', 0.6, 0.6), box(0.22, 0.05, 0.02, mx, 1.72, mz + 0.16)); // sunglasses, obviously
+    b.add(plainStandard('#202326', 0.4, 0.6), box(0.3, 0.12, 0.05, mx, 1.0, mz + 0.24)); // hoodie pocket
+    b.add(plainStandard('#202326', 0.4, 0.6), cyl(0.25, 0.28, 0.05, mx, 0.03, mz, 16));
+    // velvet rope in front of the shrine
+    const brass = rustyMetal({ base: '#d4b04a', rust: 0.1, metalness: 1, roughness: 0.25 });
+    for (const px of [-2.0, 2.3]) b.add(brass, cyl(0.025, 0.025, 0.9, px, 0.45, z0 + 1.7, 8), cyl(0.12, 0.14, 0.04, px, 0.02, z0 + 1.7, 12), place(new THREE.SphereGeometry(0.045, 10, 8), px, 0.92, z0 + 1.7));
+    b.add(rustyMetal({ base: '#a3301f', rust: 0.45, metalness: 0.5, roughness: 0.5 }), wire(new THREE.Vector3(-2.0, 0.86, z0 + 1.7), new THREE.Vector3(2.3, 0.86, z0 + 1.7), 0.35, 0.025, 16));
     b.add(metal, cyl(0.03, 0.03, 0.8, -1.2, 0.4, z0 + 0.8, 5));
     this.col(-1.2, 0.9, z0 + 0.8, 0.3, 0.9, 0.3);
 
     // lights
-    this.interiorLight = new THREE.PointLight(0xffb070, 14, 13, 1.8);
+    this.interiorLight = new THREE.PointLight(0xffb070, 14, 16, 1.6);
     this.interiorLight.position.copy(this.w(0, 3.6, -3.2));
     this.vaultLight = new THREE.PointLight(0xffc070, 10, 10, 1.8);
     this.vaultLight.position.copy(this.w(0, 3.4, -9.5));
