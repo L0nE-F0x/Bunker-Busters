@@ -33,6 +33,20 @@ URL flags: `?webgl` forces WebGL2. `?gpu=high` / `?gpu=low` force WebGPU on the 
 - Interaction targeting follows your gaze. Banners are queued. The hotbar moved bottom-right so it doesn't sit on the hands.
 - Dev tool: `http://localhost:5173/debug/hands.html?pose=lockpick&look=engineer&torch` renders the hands alone in a studio (dev server only, not part of the build).
 
+### Distribution (2026-10-05)
+- **Site:** `index.html` (root) is the marketing/download page, built from `src/site/*`, with screenshots in `public/media/`. `/play/` is the browser build. Netlify deploys `main`.
+- **Download buttons** point at `releases/latest/download/<fixed asset name>`. The page asks the GitHub API which assets exist and falls back to "play in browser" before the first release.
+- **Releases:** push a `v*` tag and `.github/workflows/release.yml` builds:
+  - `BunkerBusters-linux-x86_64.tar.gz`: plain binary against the system WebKitGTK, plus `install.sh` (recommended for Omarchy/Arch)
+  - `BunkerBusters-linux-x86_64.AppImage`
+  - `BunkerBusters-linux-amd64.deb`
+  - `BunkerBusters-windows-x64-setup.exe`: NSIS, unsigned, so SmartScreen warns
+- **GPU:** the Linux desktop app picks the NVIDIA GPU by itself on hybrid laptops (`select_gpu()` in `src-tauri/src/main.rs`).
+- **Local install:** `npm run desktop:install` builds the release binary and runs `scripts/install-linux.sh` (~/.local/bin + app-launcher entry). `--uninstall` removes it.
+- **Verified on this machine (v0.1.0 CI builds):** the tarball binary and the AppImage both launch and auto-select NVIDIA. The AppImage is slower (~23 fps vs 35–50 for the tarball on the system's newer WebKitGTK 2.52), so the tarball stays the recommended Omarchy download.
+- **Not yet verified:** the Windows installer on real hardware.
+- **The repo is private**, so anonymous `releases/latest/download/…` links return 404 until the repo is public or binaries are hosted elsewhere.
+
 ### Desktop shell (Tauri) — GPU findings (2026-10-05)
 - `src-tauri/` hosts the same web game in WebKitGTK on Linux. `npm run desktop`, `npm run desktop:nvidia` (via `scripts/run-nvidia.sh`), `npm run desktop:build`.
 - WebKitGTK has **no WebGPU**, so the game uses the WebGL2 backend there.
