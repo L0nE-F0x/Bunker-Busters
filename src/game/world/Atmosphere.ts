@@ -29,8 +29,8 @@ interface SkyKey {
 // Keyed on sun elevation, not clock time, so dawn and dusk share a palette.
 const KEYS: SkyKey[] = [
   { e: -0.45, zenith: '#03060f', horizon: '#0a1428', haze: '#0b1220', sun: '#5d7fc4', sunI: 0.75, hemiSky: '#2a4472', hemiGround: '#0c0a0a', hemiI: 0.42, fog: 0.0030, env: 0.22, exp: 1.55 },
-  { e: -0.12, zenith: '#071228', horizon: '#1d2440', haze: '#1c1e32', sun: '#6a84c0', sunI: 0.55, hemiSky: '#2c4270', hemiGround: '#100b0a', hemiI: 0.4, fog: 0.0032, env: 0.22, exp: 1.45 },
-  { e: -0.03, zenith: '#132a50', horizon: '#c0502a', haze: '#6a3a3c', sun: '#ff4d1a', sunI: 0.6, hemiSky: '#3a4a70', hemiGround: '#2a1610', hemiI: 0.45, fog: 0.0034, env: 0.3, exp: 1.2 },
+  { e: -0.12, zenith: '#081430', horizon: '#262a4a', haze: '#221f36', sun: '#6a84c0', sunI: 0.55, hemiSky: '#2c4270', hemiGround: '#100b0a', hemiI: 0.4, fog: 0.0032, env: 0.22, exp: 1.45 },
+  { e: -0.03, zenith: '#163260', horizon: '#8a4a4a', haze: '#563848', sun: '#ff4d1a', sunI: 0.6, hemiSky: '#3a4a70', hemiGround: '#2a1610', hemiI: 0.45, fog: 0.0034, env: 0.3, exp: 1.2 },
   { e: 0.04, zenith: '#1a4c70', horizon: '#ff7a2e', haze: '#d07040', sun: '#ff6a1e', sunI: 3.2, hemiSky: '#5a8ca0', hemiGround: '#5a3420', hemiI: 0.6, fog: 0.0030, env: 0.55, exp: 1.0 },
   { e: 0.16, zenith: '#22648e', horizon: '#f2a464', haze: '#d89a6a', sun: '#ffa45c', sunI: 4.2, hemiSky: '#7aaab8', hemiGround: '#6a4428', hemiI: 0.7, fog: 0.0024, env: 0.7, exp: 0.92 },
   { e: 0.42, zenith: '#2a72a8', horizon: '#d8c2a2', haze: '#c4a884', sun: '#ffe2bc', sunI: 5.0, hemiSky: '#86b4cc', hemiGround: '#6a4a30', hemiI: 0.62, fog: 0.0015, env: 0.72, exp: 0.82 },
@@ -166,7 +166,7 @@ export class Atmosphere {
   });
 
   /** Haze colour seen along a view ray (no sun disk). Shared by sky + fog. */
-  private haze = Fn(([rd]: [N]) => {
+  private haze = Fn(([rd, glowK]: [N, N]) => {
     const mu = max(dot(rd, this.uSunDir), 0);
     const h = clamp(rd.y, -1, 1);
     const base = mix(this.uHaze, this.uHorizon, smoothstep(-0.05, 0.12, h).mul(0.6));
@@ -183,9 +183,9 @@ export class Atmosphere {
     const az = dot(flatRd, flatSun);
     const hp = max(h, 0);
     // clamp: pow() of a negative is NaN, and NaN * 0 still blacks out the whole frame through bloom
-    const afterglow = pow(clamp(az.mul(0.5).add(0.5), 0, 1), 5).mul(exp(hp.mul(-9)));
-    const glowCol = mix(vec3(1.0, 0.32, 0.08), vec3(1.0, 0.62, 0.3), smoothstep(0.0, 0.12, hp));
-    calm.addAssign(glowCol.mul(afterglow).mul(twi).mul(0.55));
+    const afterglow = pow(clamp(az.mul(0.5).add(0.5), 0, 1), 4).mul(exp(hp.mul(-4.5)));
+    const glowCol = mix(vec3(1.0, 0.3, 0.07), vec3(1.0, 0.6, 0.28), smoothstep(0.05, 0.25, hp));
+    calm.addAssign(glowCol.mul(afterglow).mul(twi).mul(0.85).mul(glowK));
     const belt = pow(max(az.negate(), 0), 2).mul(smoothstep(0.0, 0.08, hp)).mul(smoothstep(0.32, 0.1, hp));
     calm.addAssign(vec3(0.42, 0.2, 0.3).mul(belt).mul(twi).mul(0.35));
     // storm: airborne sand swallows everything into one warm brown, glowing toward the sun
@@ -200,7 +200,7 @@ export class Atmosphere {
       const rd = normalize(positionLocal).toVar();
       const h = rd.y;
       const mu = dot(rd, this.uSunDir);
-      const hz = this.haze(rd);
+      const hz = this.haze(rd, float(1));
       // gradient: haze at horizon → zenith
       const t = pow(clamp(h, 0, 1), 0.42);
       const col = mix(hz, this.uZenith, t).toVar();
@@ -235,7 +235,7 @@ export class Atmosphere {
       col.assign(mix(col, cloudCol, cloud.mul(0.75).mul(clear)));
 
       // night sky: milky way, two star layers, a cratered moon with a soft halo
-      const dark = pow(this.uNight, 2.5).mul(pow(clear, 4)).mul(float(1).sub(cloud)).mul(smoothstep(0.0, 0.25, h)).toVar();
+      const dark = pow(this.uNight, 4).mul(pow(clear, 4)).mul(float(1).sub(cloud)).mul(smoothstep(0.0, 0.25, h)).toVar();
       const mwN = vec3(0.32, 0.55, 0.77).normalize();
       const mwT = vec3(0.86, -0.5, 0).normalize();
       const mwB = mwN.cross(mwT);
@@ -296,7 +296,8 @@ export class Atmosphere {
     });
     const color = Fn(() => {
       const rd = normalize(positionWorld.sub(cameraPosition));
-      return this.haze(vec3(rd.x, max(rd.y, 0.0).mul(0.3), rd.z).normalize());
+      // terrain under the afterglow stays a dark silhouette against the glowing sky
+      return this.haze(vec3(rd.x, max(rd.y, 0.0).mul(0.3), rd.z).normalize(), float(0.3));
     });
     return fog(color(), factor());
   }
