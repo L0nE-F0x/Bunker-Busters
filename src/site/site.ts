@@ -2,6 +2,7 @@ import '../fonts';
 import './site.css';
 
 const REPO = 'L0nE-F0x/Bunker-Busters';
+document.getElementById('site-version')!.textContent = `v${__APP_VERSION__} early access`;
 const dl = (asset: string) => `https://github.com/${REPO}/releases/latest/download/${asset}`;
 
 type OS = 'linux' | 'windows' | 'mac' | 'other';

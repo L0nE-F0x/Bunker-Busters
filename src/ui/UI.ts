@@ -89,7 +89,7 @@ export class UI implements UIBridge {
       </div>
       <div class="tagline">They built bunkers. <b>You brought lockpicks.</b></div>
       <div class="menu interactive"></div>
-      <div class="title-foot"><span>v0.1 · VERTICAL SLICE · ${opts.backend.toUpperCase()}</span><span class="press">THE WASTELAND IS OPEN</span></div>`);
+      <div class="title-foot"><span>v${__APP_VERSION__} · VERTICAL SLICE · ${opts.backend.toUpperCase()}</span><span class="press">THE WASTELAND IS OPEN</span></div>`);
     el.id = 'title';
     const menu = el.querySelector('.menu')!;
     const add = (label: string, fn: () => void, primary = false, disabled = false) => {
