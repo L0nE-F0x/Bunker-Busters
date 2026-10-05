@@ -3,7 +3,7 @@ import {
   Fn, vec2, vec3, vec4, float, uniform, instanceIndex, hash, time, cameraPosition, fract, uv, length, smoothstep, mix, max,
   pow, dot, normalize, sin, positionLocal, positionWorld, texture, color, clamp,
   normalWorld, abs, viewportLinearDepth, linearDepth, cameraNear, cameraFar, instancedDynamicBufferAttribute, exp,
-  cameraViewMatrix, atan,
+  cameraViewMatrix, atan, renderGroup,
 } from 'three/tsl';
 import type { Atmosphere } from './Atmosphere';
 import type { Heightfield } from './Heightfield';
@@ -348,6 +348,10 @@ export class Fire {
   }
 }
 
+/** Storm density 0..1 shared by every light cone (set by Atmosphere): cones are fog-less additive
+ *  meshes, so without this their hard edges stayed crisp while the storm swallowed everything else. */
+export const coneMurk = uniform(0).setGroup(renderGroup);
+
 /** Additive cone of light for spotlights (drone, floodlights) with drifting dust inside. */
 export function lightCone(length: number, radius: number, c: THREE.ColorRepresentation, intensity = 0.6) {
   const geo = new THREE.ConeGeometry(radius, length, 32, 1, true);
@@ -361,7 +365,8 @@ export function lightCone(length: number, radius: number, c: THREE.ColorRepresen
     const facing = abs(dot(normalWorld, v));
     const n = noise(positionWorld.xz.add(positionWorld.y).mul(0.12).add(time.mul(0.02))).r.sub(0.5).mul(2);
     const a = pow(facing, 2.0).mul(smoothstep(1.0, 0.05, along)).mul(smoothstep(0.0, 0.08, along)).mul(n.mul(0.35).add(0.75));
-    return vec4((uColor as N).mul(a).mul(uIntensity), 1);
+    const murk = exp(positionWorld.sub(cameraPosition).length().mul(coneMurk).mul(-0.07));
+    return vec4((uColor as N).mul(a).mul(uIntensity).mul(murk), 1);
   })();
   const mesh = new THREE.Mesh(geo, mat);
   mesh.renderOrder = 20;

@@ -5,6 +5,7 @@ import {
 } from 'three/tsl';
 import { clamp as clampN, lerp, smoothstep as smoothN } from '@/engine/noise';
 import { noise } from '@/engine/noiseTex';
+import { coneMurk } from './effects';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 type N = any;
@@ -234,7 +235,7 @@ export class Atmosphere {
       col.assign(mix(col, cloudCol, cloud.mul(0.75).mul(clear)));
 
       // night sky: milky way, two star layers, a cratered moon with a soft halo
-      const dark = pow(this.uNight, 2.5).mul(clear).mul(float(1).sub(cloud)).mul(smoothstep(0.0, 0.25, h)).toVar();
+      const dark = pow(this.uNight, 2.5).mul(pow(clear, 4)).mul(float(1).sub(cloud)).mul(smoothstep(0.0, 0.25, h)).toVar();
       const mwN = vec3(0.32, 0.55, 0.77).normalize();
       const mwT = vec3(0.86, -0.5, 0).normalize();
       const mwB = mwN.cross(mwT);
@@ -260,7 +261,7 @@ export class Atmosphere {
       const mUv = vec2(dot(rd, mT), dot(rd, mB)).mul(28);
       const maria = smoothstep(0.35, 0.65, noise(mUv.add(0.21)).r).mul(-0.45).add(noise(mUv.mul(2.7)).b.mul(0.2)).add(0.95);
       const moonGlow = pow(max(mmu, 0), 2500).mul(0.18).add(pow(max(mmu, 0), 80).mul(0.05));
-      col.addAssign(vec3(0.82, 0.87, 1.0).mul(moonDisk.mul(maria).mul(0.75).add(moonGlow)).mul(this.uNight).mul(clear));
+      col.addAssign(vec3(0.82, 0.87, 1.0).mul(moonDisk.mul(maria).mul(0.75).add(moonGlow)).mul(this.uNight).mul(pow(clear, 3)));
 
       // faint dust band glow near horizon
       col.addAssign(hz.mul(smoothstep(0.08, 0.0, abs(h)).mul(0.08)));
@@ -350,6 +351,7 @@ export class Atmosphere {
     this.uNight.value = smoothN(0.02, -0.2, sunDir.y);
     this.uDust.value = this.dustiness;
     this.uStorm.value = st;
+    coneMurk.value = st;
     this.uFront.value = this.stormFront;
     this.uFogFalloff.value = lerp(0.018, 0.007, st);
     // storm dust colour follows the daylight: ochre by day, rust at dusk, deep umber at night

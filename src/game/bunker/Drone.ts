@@ -393,7 +393,7 @@ export class Drone {
     this.spot.intensity = 70 * power * (1 + s.night * 0.6);
     (this.cone.color.value as THREE.Color).copy(this.spot.color);
     // airborne dust scatters the beam: the cone glows brighter (and reads as "blinded") in a storm
-    const dusty = 1 + (1 - (s.visibility ?? 1)) * 2.2;
+    const dusty = 1 + (1 - (s.visibility ?? 1)) * 0.8;
     this.cone.intensity.value = (0.18 + s.night * 0.4 + (this.state === 'alert' ? 0.25 : 0)) * power * dusty;
     this.rotorSpin.value = damp(this.rotorSpin.value as number, this.state === 'disabled' ? 0.02 : this.state === 'sputter' ? 0.7 : 1, 3, dt);
     for (const r of this.rotors) r.rotation.z += dt * 40 * (this.rotorSpin.value as number);
