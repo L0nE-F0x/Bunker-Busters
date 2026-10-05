@@ -824,7 +824,7 @@ export class GarageBuilder {
       const cone = lightCone(7, 1.8, '#ff2a14', 1.8);
       cone.mesh.rotation.z = Math.PI / 2 - 0.3;
       pivot.add(cone.mesh);
-      pivot.visible = false;
+      // left visible for the load-time shader pre-compile; Garage.updateLights hides it
       this.group.add(pivot);
       this.beacons.push(pivot);
     }

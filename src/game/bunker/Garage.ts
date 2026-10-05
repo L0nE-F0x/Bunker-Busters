@@ -416,6 +416,8 @@ export class Garage {
     this.playerInside = this.houseBox.containsPoint(p.clone().setY(this.houseBox.min.y + 1));
     this.playerInYard = this.yardBox.containsPoint(p.clone().setY(this.yardBox.min.y + 1));
     this.b.roof.visible = true; // first person: the roof stays (interior is lit by lamps + your torch)
+    // the halo sprite is never frustum-culled (instanced), so drop it when the Garage is far away
+    this.b.halos.sprite.visible = p.distanceTo(this.b.origin) < 260;
 
     // doors
     for (const d of Object.values(this.b.doors)) {

@@ -373,6 +373,7 @@ export class Sparks {
   private c: THREE.InstancedBufferAttribute; // x palette (0 fire, 1 electric), y size, z life
   private next = 0;
   private now = 0;
+  private lastEmit = -99;
   private uTime = uniform(0);
 
   constructor() {
@@ -404,7 +405,7 @@ export class Sparks {
     const sLen: N = length(sv);
     const t: N = age.div(life);
     const size: N = C.y.mul(float(1).sub(t.mul(0.5)));
-    mat.scaleNode = vec2(size.add(sLen.mul(depth).mul(0.022)), size.mul(0.55)).mul(alive.select(float(1), float(0)));
+    mat.scaleNode = vec2(size.mul(1.3).add(sLen.mul(depth).mul(0.03)), size.mul(0.8)).mul(alive.select(float(1), float(0)));
     mat.rotationNode = atan(sv.y, sv.x);
     const vT: N = varying(t);
     const vPal: N = varying(C.x);
@@ -422,6 +423,7 @@ export class Sparks {
     this.sprite.frustumCulled = false;
     this.sprite.renderOrder = 23;
     this.sprite.name = 'sparks';
+    // starts visible so the scene pre-compile builds its shader; update() hides it while idle
   }
 
   /**
@@ -451,11 +453,15 @@ export class Sparks {
       C[j * 4 + 2] = (opts.life ?? 0.7) * (0.45 + Math.random() * 0.9);
     }
     this.a.needsUpdate = this.b.needsUpdate = this.c.needsUpdate = true;
+    this.lastEmit = this.now;
+    this.sprite.visible = true;
   }
 
   update(dt: number) {
     this.now += dt;
     this.uTime.value = this.now;
+    // nothing alive → skip the draw call entirely
+    if (this.now - this.lastEmit > 2) this.sprite.visible = false;
   }
 }
 
