@@ -1,0 +1,100 @@
+import * as THREE from 'three/webgpu';
+import type { Input } from '@/engine/input';
+import { damp, clamp, Simplex2 } from '@/engine/noise';
+
+export interface FPFrame {
+  feet: THREE.Vector3;
+  crouch: boolean;
+  sprint: boolean;
+  speed: number;
+  grounded: boolean;
+  strafe: number; // -1..1 lateral input, for a subtle roll
+}
+
+/**
+ * First-person head camera: mouse look, eye-height easing for crouch, gait head-bob, strafe roll,
+ * landing dip, sprint FOV kick and trauma shake. Yaw convention matches the rest of the game:
+ * forward = (-sin yaw, 0, -cos yaw).
+ */
+export class FirstPersonCamera {
+  yaw = 0;
+  pitch = 0;
+  enabled = true;
+  bobPhase = 0;
+  private eye = 1.62;
+  private roll = 0;
+  private dip = 0;
+  private dipVel = 0;
+  private trauma = 0;
+  private t = 0;
+  private fov = 64;
+  private shake = new Simplex2(7);
+  readonly baseFov = 64;
+
+  constructor(public camera: THREE.PerspectiveCamera) {
+    camera.rotation.order = 'YXZ';
+  }
+
+  addTrauma(v: number) {
+    this.trauma = Math.min(1, this.trauma + v);
+  }
+
+  /** Landing impulse (0..1). */
+  land(k: number) {
+    this.dipVel -= k * 2.2;
+  }
+
+  snap(yaw: number, pitch = 0) {
+    this.yaw = yaw;
+    this.pitch = pitch;
+  }
+
+  get forward() {
+    return new THREE.Vector3(-Math.sin(this.yaw) * Math.cos(this.pitch), Math.sin(this.pitch), -Math.cos(this.yaw) * Math.cos(this.pitch));
+  }
+
+  update(dt: number, input: Input, f: FPFrame) {
+    this.t += dt;
+    if (this.enabled) {
+      const s = 0.0021 * input.sensitivity;
+      this.yaw -= input.mouseDX * s;
+      this.pitch = clamp(this.pitch - input.mouseDY * s, -1.48, 1.48);
+    }
+    // eye height eases between standing and crouched
+    this.eye = damp(this.eye, f.crouch ? 1.02 : 1.62, 10, dt);
+
+    // gait bob: phase advances with distance travelled
+    const move = f.grounded ? Math.min(1, f.speed / 3.4) : 0;
+    const stride = f.sprint ? 2.25 : f.crouch ? 1.05 : 1.45;
+    this.bobPhase += (f.speed / stride) * Math.PI * dt * (f.grounded ? 1 : 0);
+    const amp = f.sprint ? 1.6 : f.crouch ? 0.55 : 1;
+    const bobY = (Math.abs(Math.cos(this.bobPhase)) - 0.5) * 0.045 * amp * move;
+    const bobX = Math.sin(this.bobPhase) * 0.022 * amp * move;
+
+    // landing spring
+    this.dipVel += (-this.dip * 60 - this.dipVel * 9) * dt;
+    this.dip += this.dipVel * dt;
+
+    this.roll = damp(this.roll, -f.strafe * 0.018 - bobX * 0.35, 8, dt);
+
+    // trauma shake
+    this.trauma = Math.max(0, this.trauma - dt * 1.3);
+    const sh = this.trauma * this.trauma;
+    const k = this.t * 24;
+
+    const right = new THREE.Vector3(Math.cos(this.yaw), 0, -Math.sin(this.yaw));
+    this.camera.position.set(f.feet.x, f.feet.y + this.eye + bobY + this.dip * 0.12, f.feet.z).addScaledVector(right, bobX);
+    this.camera.rotation.set(
+      this.pitch + this.shake.noise(k, 1) * 0.04 * sh + bobY * 0.15,
+      this.yaw + this.shake.noise(2, k) * 0.04 * sh,
+      this.roll + this.shake.noise(k, k) * 0.05 * sh,
+    );
+
+    const target = this.baseFov + (f.sprint ? 7 : 0) - (f.crouch ? 2 : 0);
+    this.fov = damp(this.fov, target, 4, dt);
+    if (Math.abs(this.camera.fov - this.fov) > 0.01) {
+      this.camera.fov = this.fov;
+      this.camera.updateProjectionMatrix();
+    }
+  }
+}

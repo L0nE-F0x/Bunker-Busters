@@ -1,0 +1,43 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>GPU canary</title>
+<style>html,body{margin:0;height:100%;background:#120c08;color:#ffb347;font:16px monospace}canvas{position:fixed;inset:0;width:100%;height:100%}pre{position:fixed;left:16px;top:12px;z-index:2}</style></head>
+<body><canvas id="c"></canvas><pre id="o">canary…</pre>
+<script>
+// Minimal WebGL2 spinning cube: proves which GPU the webview renders on, and that it's stable.
+const log = (...a) => { console.log('[CANARY]', ...a); document.getElementById('o').textContent += '\n' + a.join(' '); };
+const c = document.getElementById('c');
+const gl = c.getContext('webgl2', { powerPreference: 'high-performance' });
+if (!gl) { log('NO WEBGL2'); throw 0; }
+const dbg = gl.getExtension('WEBGL_debug_renderer_info');
+log('webgl2', dbg ? gl.getParameter(dbg.UNMASKED_RENDERER_WEBGL) : gl.getParameter(gl.RENDERER));
+log('ua', navigator.userAgent);
+log('webgpu', 'gpu' in navigator ? 'present' : 'absent');
+if ('gpu' in navigator) navigator.gpu.requestAdapter({ powerPreference: 'high-performance' }).then((a) => log('webgpu-adapter', a ? JSON.stringify(a.info || {}) : 'none')).catch((e) => log('webgpu-err', e));
+const vs = `#version 300 es
+in vec3 p; in vec3 n; uniform mat4 m; out vec3 vn; void main(){ vn = mat3(m)*n; gl_Position = vec4((m*vec4(p,1)).xyz*vec3(0.5,0.8,0.5), 1.0); }`;
+const fs = `#version 300 es
+precision highp float; in vec3 vn; out vec4 o; void main(){ float l = max(dot(normalize(vn), normalize(vec3(.4,.7,.6))),0.); o = vec4(vec3(1.,.55,.18)*(.25+l), 1); }`;
+const sh = (t, s) => { const x = gl.createShader(t); gl.shaderSource(x, s); gl.compileShader(x); return x; };
+const pr = gl.createProgram(); gl.attachShader(pr, sh(gl.VERTEX_SHADER, vs)); gl.attachShader(pr, sh(gl.FRAGMENT_SHADER, fs)); gl.linkProgram(pr); gl.useProgram(pr);
+const P = [], N = [];
+const faces = [[0,0,1],[0,0,-1],[0,1,0],[0,-1,0],[1,0,0],[-1,0,0]];
+for (const f of faces) { const [a,b] = f[2] ? [[1,0,0],[0,1,0]] : f[1] ? [[1,0,0],[0,0,1]] : [[0,1,0],[0,0,1]];
+  const q = (s,t) => f.map((v,i)=>v*.5 + a[i]*s*.5 + b[i]*t*.5);
+  for (const [s,t] of [[-1,-1],[1,-1],[1,1],[-1,-1],[1,1],[-1,1]]) { P.push(...q(s,t)); N.push(...f); } }
+const buf = (d, loc) => { const b = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, b); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(d), gl.STATIC_DRAW); const l = gl.getAttribLocation(pr, loc); gl.enableVertexAttribArray(l); gl.vertexAttribPointer(l, 3, gl.FLOAT, false, 0, 0); };
+buf(P, 'p'); buf(N, 'n');
+gl.enable(gl.DEPTH_TEST);
+const um = gl.getUniformLocation(pr, 'm');
+let frames = 0, last = performance.now(), t0 = last;
+function frame(now) {
+  c.width = innerWidth; c.height = innerHeight; gl.viewport(0, 0, c.width, c.height);
+  const t = (now - t0) / 1000, cy = Math.cos(t), sy = Math.sin(t), cx = Math.cos(t*.7), sx = Math.sin(t*.7);
+  gl.uniformMatrix4fv(um, false, [cy,sx*sy,-cx*sy,0, 0,cx,sx,0, sy,-sx*cy,cx*cy,0, 0,0,0,1]);
+  gl.clearColor(.07,.045,.03,1); gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+  gl.drawArrays(gl.TRIANGLES, 0, 36);
+  frames++;
+  if (now - last > 1000) { log('fps', (frames * 1000 / (now - last)).toFixed(1)); frames = 0; last = now; }
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+</script></body></html>
