@@ -1,7 +1,7 @@
 import * as THREE from 'three/webgpu';
 import {
   Fn, vec2, vec3, float, positionWorld, normalWorld, texture, smoothstep, mix, abs, pow, sin,
-  uniform, normalView, positionView, faceDirection, step,
+  uniform, normalView, positionView, faceDirection, step, fwidth,
 } from 'three/tsl';
 import { noise, fbm2 } from '@/engine/noiseTex';
 import type { Heightfield } from './Heightfield';
@@ -184,8 +184,8 @@ export class Terrain {
     const ripple = sin(xz.x.mul(0.9).add(xz.y.mul(0.4)).mul(5.5).add(warp)).mul(0.5).add(0.5);
     const rippleH = pow(ripple, 2.0).mul(0.6).add(fine.mul(0.3)).add(grain.mul(0.15));
     const sandBase = mix(
-      mix(vec3(0.78, 0.55, 0.34), vec3(0.60, 0.39, 0.23), smoothstep(-0.25, 0.25, big)),
-      vec3(0.88, 0.70, 0.48),
+      mix(vec3(0.64, 0.41, 0.23), vec3(0.50, 0.30, 0.17), smoothstep(-0.25, 0.25, big)),
+      vec3(0.74, 0.54, 0.33),
       smoothstep(0.0, 0.3, mid).mul(0.5),
     );
     const sand = sandBase.mul(float(0.9).add(ripple.mul(0.1)).add(grain.mul(0.06)));
@@ -194,15 +194,17 @@ export class Terrain {
     const lowMask = smoothstep(-6.5, -9.0, wp.y.add(mid.mul(6))).mul(smoothstep(0.25, 0.05, slope));
     const crackTap = noise(xz.div(7));
     const crk = smoothstep(0.16, 0.03, crackTap.b);
-    const mud = mix(mix(vec3(0.82, 0.74, 0.62), vec3(0.66, 0.58, 0.48), crackTap.r), vec3(0.30, 0.24, 0.20), crk.mul(0.85));
+    const mud = mix(mix(vec3(0.68, 0.58, 0.46), vec3(0.54, 0.45, 0.35), crackTap.r), vec3(0.24, 0.18, 0.14), crk.mul(0.85));
 
     // rock / mesa faces with strata
     const rockMask = smoothstep(0.22, 0.42, slope.add(mid.mul(0.15)));
     const strataN = fbm2(xz.div(90)).mul(5);
     const strata = sin(wp.y.mul(1.6).add(strataN)).mul(0.5).add(0.5);
-    const strata2 = sin(wp.y.mul(6.3).add(strataN.mul(2))).mul(0.5).add(0.5);
+    // fine bands fade out once they get thinner than a pixel (they shimmered into moire on far mesas)
+    const strata2 = sin(wp.y.mul(6.3).add(strataN.mul(2))).mul(0.5).add(0.5)
+      .sub(0.5).mul(smoothstep(1.2, 0.35, fwidth(wp.y.mul(6.3)))).add(0.5);
     const rockTap = noise(vec2(xz.x.add(xz.y).mul(0.6), wp.y).div(4));
-    const rock = mix(mix(vec3(0.36, 0.22, 0.16), vec3(0.56, 0.31, 0.19), strata), vec3(0.74, 0.52, 0.36), strata2.mul(0.35))
+    const rock = mix(mix(vec3(0.30, 0.17, 0.11), vec3(0.50, 0.26, 0.14), strata), vec3(0.64, 0.42, 0.27), strata2.mul(0.35))
       .mul(float(0.8).add(rockTap.r.mul(0.35)));
     const rockH = strata2.mul(0.6).add(rockTap.r.mul(0.9)).add(rockTap.b.mul(0.4));
 

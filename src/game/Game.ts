@@ -788,6 +788,10 @@ export class Game {
     this.atmo.update(dt, focusPos);
     updateRim(this.atmo.sunColor, 0.35 + (1 - Math.min(1, Math.max(0, this.atmo.sunElevation * 3))) * 0.5);
     (this.post.godrayColor.value as THREE.Color).copy(this.atmo.sunColor).multiplyScalar(this.atmo.isNight ? 0.25 : 1);
+    // eye adaptation follows the sun; a storm's murk opens the eye a little and adds grit
+    const st = this.weather.intensity;
+    this.post.exposure.value = this.atmo.exposure * (1 + st * 0.25);
+    this.post.grain.value = 0.045 + st * 0.025;
 
     if (this.mode === 'title') {
       this.titleT += dt;

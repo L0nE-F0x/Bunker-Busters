@@ -21,17 +21,19 @@ interface SkyKey {
   hemiI: number;
   fog: number;
   env: number;
+  /** Camera exposure (a slow "eye adaptation": brighter nights, tamer noon). */
+  exp: number;
 }
 
 // Keyed on sun elevation, not clock time, so dawn and dusk share a palette.
 const KEYS: SkyKey[] = [
-  { e: -0.45, zenith: '#03060f', horizon: '#0a1428', haze: '#0b1220', sun: '#5d7fc4', sunI: 0.55, hemiSky: '#20365e', hemiGround: '#0a0806', hemiI: 0.35, fog: 0.0030, env: 0.18 },
-  { e: -0.12, zenith: '#081430', horizon: '#2a2c4a', haze: '#252338', sun: '#6a84c0', sunI: 0.4, hemiSky: '#273a64', hemiGround: '#100b0a', hemiI: 0.35, fog: 0.0032, env: 0.2 },
-  { e: -0.03, zenith: '#122a4c', horizon: '#c0502a', haze: '#6a3a3c', sun: '#ff4d1a', sunI: 0.6, hemiSky: '#3a4a70', hemiGround: '#2a1610', hemiI: 0.45, fog: 0.0034, env: 0.3 },
-  { e: 0.04, zenith: '#1a4c66', horizon: '#ff7a2e', haze: '#d07040', sun: '#ff6a1e', sunI: 3.2, hemiSky: '#5a8ca0', hemiGround: '#5a3420', hemiI: 0.6, fog: 0.0030, env: 0.55 },
-  { e: 0.16, zenith: '#246a86', horizon: '#f2a464', haze: '#d89a6a', sun: '#ffa45c', sunI: 4.2, hemiSky: '#7aaab8', hemiGround: '#6a4428', hemiI: 0.7, fog: 0.0024, env: 0.7 },
-  { e: 0.42, zenith: '#3486a0', horizon: '#ecc49a', haze: '#d8b48e', sun: '#ffe2bc', sunI: 5.0, hemiSky: '#9cc6d0', hemiGround: '#7a5636', hemiI: 0.8, fog: 0.0020, env: 0.85 },
-  { e: 1.0, zenith: '#3c90a8', horizon: '#eccaa4', haze: '#dcbc98', sun: '#fff2dc', sunI: 5.4, hemiSky: '#a6ccd4', hemiGround: '#806040', hemiI: 0.85, fog: 0.0018, env: 0.9 },
+  { e: -0.45, zenith: '#03060f', horizon: '#0a1428', haze: '#0b1220', sun: '#5d7fc4', sunI: 0.75, hemiSky: '#2a4472', hemiGround: '#0c0a0a', hemiI: 0.42, fog: 0.0030, env: 0.22, exp: 1.55 },
+  { e: -0.12, zenith: '#071228', horizon: '#1d2440', haze: '#1c1e32', sun: '#6a84c0', sunI: 0.55, hemiSky: '#2c4270', hemiGround: '#100b0a', hemiI: 0.4, fog: 0.0032, env: 0.22, exp: 1.45 },
+  { e: -0.03, zenith: '#132a50', horizon: '#c0502a', haze: '#6a3a3c', sun: '#ff4d1a', sunI: 0.6, hemiSky: '#3a4a70', hemiGround: '#2a1610', hemiI: 0.45, fog: 0.0034, env: 0.3, exp: 1.2 },
+  { e: 0.04, zenith: '#1a4c70', horizon: '#ff7a2e', haze: '#d07040', sun: '#ff6a1e', sunI: 3.2, hemiSky: '#5a8ca0', hemiGround: '#5a3420', hemiI: 0.6, fog: 0.0030, env: 0.55, exp: 1.0 },
+  { e: 0.16, zenith: '#22648e', horizon: '#f2a464', haze: '#d89a6a', sun: '#ffa45c', sunI: 4.2, hemiSky: '#7aaab8', hemiGround: '#6a4428', hemiI: 0.7, fog: 0.0024, env: 0.7, exp: 0.92 },
+  { e: 0.42, zenith: '#2a72a8', horizon: '#d8c2a2', haze: '#c4a884', sun: '#ffe2bc', sunI: 5.0, hemiSky: '#86b4cc', hemiGround: '#6a4a30', hemiI: 0.62, fog: 0.0015, env: 0.72, exp: 0.82 },
+  { e: 1.0, zenith: '#2266a8', horizon: '#ccc0aa', haze: '#b8aa94', sun: '#fff2dc', sunI: 5.4, hemiSky: '#8cbad4', hemiGround: '#6e5236', hemiI: 0.62, fog: 0.0012, env: 0.72, exp: 0.78 },
 ];
 
 const tmpA = new THREE.Color();
@@ -81,6 +83,8 @@ export class Atmosphere {
   sunElevation = 0;
   sunColor = new THREE.Color();
   envIntensity = 0.6;
+  /** Suggested camera exposure for the post stack. */
+  exposure = 1;
   windDir = new THREE.Vector2(0.9, 0.35).normalize();
   windStrength = 0.6;
   dustiness = 0.2;
@@ -167,7 +171,20 @@ export class Atmosphere {
     const sunVis = smoothstep(-0.12, 0.05, this.uSunDir.y);
     const dustTint = vec3(0.72, 0.5, 0.32);
     const c = base.add(this.uSunColor.mul(forward).mul(sunVis).mul(0.55));
-    const calm = mix(c, dustTint.mul(length(this.uHaze as N).mul(0.7).add(0.15)), this.uDust.mul(0.3));
+    const calm = mix(c, dustTint.mul(length(this.uHaze as N).mul(0.7).add(0.15)), this.uDust.mul(0.3)).toVar();
+    // twilight: afterglow hugging the horizon under the set sun, and the pink anti-twilight arch
+    const sy = this.uSunDir.y;
+    const twi = smoothstep(-0.24, -0.05, sy).mul(smoothstep(0.16, -0.01, sy));
+    const flatRd = vec2(rd.x, rd.z).add(vec2(1e-4, 0)).normalize();
+    const flatSun = vec2(this.uSunDir.x, this.uSunDir.z).add(vec2(1e-4, 0)).normalize();
+    const az = dot(flatRd, flatSun);
+    const hp = max(h, 0);
+    // clamp: pow() of a negative is NaN, and NaN * 0 still blacks out the whole frame through bloom
+    const afterglow = pow(clamp(az.mul(0.5).add(0.5), 0, 1), 5).mul(exp(hp.mul(-9)));
+    const glowCol = mix(vec3(1.0, 0.32, 0.08), vec3(1.0, 0.62, 0.3), smoothstep(0.0, 0.12, hp));
+    calm.addAssign(glowCol.mul(afterglow).mul(twi).mul(0.55));
+    const belt = pow(max(az.negate(), 0), 2).mul(smoothstep(0.0, 0.08, hp)).mul(smoothstep(0.32, 0.1, hp));
+    calm.addAssign(vec3(0.42, 0.2, 0.3).mul(belt).mul(twi).mul(0.35));
     // storm: airborne sand swallows everything into one warm brown, glowing toward the sun
     const stormCol = (this.uStormColor as N).add(this.uSunColor.mul(pow(mu, 4).mul(sunVis).mul(0.35)));
     const w = this.wall(rd);
@@ -214,14 +231,34 @@ export class Atmosphere {
       );
       col.assign(mix(col, cloudCol, cloud.mul(0.75).mul(clear)));
 
-      // stars + moon at night
-      const starCell = mx_cell_noise_float(rd.mul(420));
-      const twinkle = time.mul(2).add(starCell.mul(40)).sin().mul(0.35).add(0.65);
-      const stars = smoothstep(0.9965, 1.0, starCell).mul(twinkle).mul(smoothstep(0.02, 0.3, h));
-      col.addAssign(vec3(0.85, 0.9, 1.0).mul(stars).mul(this.uNight).mul(float(1).sub(cloud)).mul(3).mul(clear));
+      // night sky: milky way, two star layers, a cratered moon with a soft halo
+      const dark = pow(this.uNight, 2.5).mul(clear).mul(float(1).sub(cloud)).mul(smoothstep(0.0, 0.25, h)).toVar();
+      const mwN = vec3(0.32, 0.55, 0.77).normalize();
+      const mwT = vec3(0.86, -0.5, 0).normalize();
+      const mwB = mwN.cross(mwT);
+      const md = dot(rd, mwN);
+      const mwU = atan(dot(rd, mwB), dot(rd, mwT)).div(Math.PI * 2);
+      const band = exp(md.mul(md).mul(-22));
+      const mwCloud = noise(vec2(mwU.mul(9), md.mul(3.1))).r;
+      const mwLanes = smoothstep(0.42, 0.62, noise(vec2(mwU.mul(17), md.mul(5.3)).add(0.37)).g);
+      const milky = band.mul(mwCloud.mul(1.3).add(0.2)).mul(float(1).sub(mwLanes.mul(band).mul(0.75)));
+      col.addAssign(vec3(0.52, 0.58, 0.78).mul(milky).mul(0.11).mul(dark));
+      const s1 = mx_cell_noise_float(rd.mul(520));
+      const faint = smoothstep(float(0.992).sub(band.mul(0.012)), 1.0, s1).mul(s1.mul(97.3).fract().mul(0.7).add(0.3));
+      const s2 = mx_cell_noise_float(rd.mul(210).add(13.7));
+      const twinkle = time.mul(2.3).add(s2.mul(60)).sin().mul(0.3).add(0.7);
+      const bright = smoothstep(0.9988, 1.0, s2).mul(twinkle);
+      const tint = mix(vec3(1.0, 0.82, 0.66), vec3(0.72, 0.84, 1.0), s2.mul(53.1).fract());
+      col.addAssign(tint.mul(faint.mul(0.9).add(bright.mul(2.2))).mul(dark));
       const mmu = dot(rd, this.uMoonDir);
-      const moon = smoothstep(0.99935, 0.9996, mmu);
-      col.addAssign(vec3(0.8, 0.86, 1.0).mul(moon.mul(6).add(pow(max(mmu, 0), 200).mul(0.4))).mul(this.uNight).mul(clear));
+      const moonDisk = smoothstep(0.99935, 0.99955, mmu);
+      // crater/maria pattern in the disk's own tangent frame
+      const mT = this.uMoonDir.cross(vec3(0, 1, 0.001)).normalize();
+      const mB = this.uMoonDir.cross(mT);
+      const mUv = vec2(dot(rd, mT), dot(rd, mB)).mul(28);
+      const maria = smoothstep(0.35, 0.65, noise(mUv.add(0.21)).r).mul(-0.45).add(noise(mUv.mul(2.7)).b.mul(0.2)).add(0.95);
+      const moonGlow = pow(max(mmu, 0), 2500).mul(0.18).add(pow(max(mmu, 0), 80).mul(0.05));
+      col.addAssign(vec3(0.82, 0.87, 1.0).mul(moonDisk.mul(maria).mul(0.75).add(moonGlow)).mul(this.uNight).mul(clear));
 
       // faint dust band glow near horizon
       col.addAssign(hz.mul(smoothstep(0.08, 0.0, abs(h)).mul(0.08)));
@@ -307,6 +344,7 @@ export class Atmosphere {
     (this.uSunColor.value as THREE.Color).copy(this.sunColor);
     this.uFogDensity.value = lerp(a.fog, b.fog, t);
     this.envIntensity = lerp(a.env, b.env, t);
+    this.exposure = lerp(a.exp, b.exp, t);
     this.uNight.value = smoothN(0.02, -0.2, sunDir.y);
     this.uDust.value = this.dustiness;
     this.uStorm.value = st;
