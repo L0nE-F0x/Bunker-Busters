@@ -5,6 +5,8 @@ import type { Heightfield } from './Heightfield';
 import { Simplex2 } from '@/engine/noise';
 import { norm, merge } from './kit';
 
+const CELL = 1.5; // scatter grid (m)
+
 function tuftGeometry() {
   const parts: THREE.BufferGeometry[] = [];
   const blades = 7;
@@ -58,37 +60,48 @@ export class Scrub {
     this.mesh.frustumCulled = false;
   }
 
+  private cells = new Map<number, { x: number; z: number; m: THREE.Matrix4 } | null>();
+
+  /** The tuft for grid cell (ix, iz), or null if the cell stays empty. Deterministic. */
+  private cell(ix: number, iz: number) {
+    const key = (ix + 32768) * 65536 + (iz + 32768);
+    const hit = this.cells.get(key);
+    if (hit !== undefined) return hit;
+    // deterministic per-cell hash
+    const hsh = Math.abs(Math.sin(ix * 127.1 + iz * 311.7) * 43758.5453) % 1;
+    const hsh2 = Math.abs(Math.sin(ix * 269.5 + iz * 183.3) * 12543.123) % 1;
+    const x = (ix + hsh) * CELL, z = (iz + hsh2) * CELL;
+    let out: { x: number; z: number; m: THREE.Matrix4 } | null = null;
+    const dens = this.noise.fbm(x * 0.02, z * 0.02, 2) * 0.5 + 0.5;
+    if (!(hsh * hsh2 > dens * 0.55) && !(this.hf.roadDistanceAt(x, z) < 5) && !(this.hf.zoneDistance(x, z) < -6) && !(this.hf.normalAt(x, z).y < 0.82)) {
+      const sc = 0.6 + hsh2 * 0.9;
+      const m = new THREE.Matrix4().compose(
+        new THREE.Vector3(x, this.hf.heightAt(x, z) - 0.03, z),
+        new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), hsh * 6.283),
+        new THREE.Vector3(sc, sc * (0.8 + hsh * 0.5), sc),
+      );
+      out = { x, z, m };
+    }
+    this.cells.set(key, out);
+    return out;
+  }
+
   update(focus: THREE.Vector3, wind: THREE.Vector2) {
     (this.uWind.value as THREE.Vector2).set(wind.x * 0.5, wind.y * 0.5);
     if (Math.hypot(focus.x - this.center.x, focus.z - this.center.y) < 12) return;
     this.center.set(focus.x, focus.z);
-    const R = 60, cell = 1.5;
-    const m = new THREE.Matrix4();
-    const q = new THREE.Quaternion();
-    const s = new THREE.Vector3();
-    const p = new THREE.Vector3();
+    const R = 60;
     let n = 0;
-    const x0 = Math.floor((focus.x - R) / cell), x1 = Math.ceil((focus.x + R) / cell);
-    const z0 = Math.floor((focus.z - R) / cell), z1 = Math.ceil((focus.z + R) / cell);
+    const x0 = Math.floor((focus.x - R) / CELL), x1 = Math.ceil((focus.x + R) / CELL);
+    const z0 = Math.floor((focus.z - R) / CELL), z1 = Math.ceil((focus.z + R) / CELL);
+    // placement is a pure function of the cell, so each cell is evaluated once and remembered: a
+    // re-scatter (every 12 m of travel) only pays for the cells entering the radius
+    if (this.cells.size > 60000) this.cells.clear();
     for (let iz = z0; iz <= z1 && n < this.capacity; iz++) {
       for (let ix = x0; ix <= x1 && n < this.capacity; ix++) {
-        // deterministic per-cell hash
-        const hsh = Math.abs(Math.sin(ix * 127.1 + iz * 311.7) * 43758.5453) % 1;
-        const hsh2 = Math.abs(Math.sin(ix * 269.5 + iz * 183.3) * 12543.123) % 1;
-        const x = (ix + hsh) * cell, z = (iz + hsh2) * cell;
-        if ((x - focus.x) ** 2 + (z - focus.z) ** 2 > R * R) continue;
-        const dens = this.noise.fbm(x * 0.02, z * 0.02, 2) * 0.5 + 0.5;
-        if (hsh * hsh2 > dens * 0.55) continue;
-        if (this.hf.roadDistanceAt(x, z) < 5) continue;
-        if (this.hf.zoneDistance(x, z) < -6) continue;
-        const nrm = this.hf.normalAt(x, z);
-        if (nrm.y < 0.82) continue;
-        const sc = 0.6 + hsh2 * 0.9;
-        p.set(x, this.hf.heightAt(x, z) - 0.03, z);
-        q.setFromAxisAngle(new THREE.Vector3(0, 1, 0), hsh * 6.283);
-        s.set(sc, sc * (0.8 + hsh * 0.5), sc);
-        m.compose(p, q, s);
-        this.mesh.setMatrixAt(n++, m);
+        const c = this.cell(ix, iz);
+        if (!c || (c.x - focus.x) ** 2 + (c.z - focus.z) ** 2 > R * R) continue;
+        this.mesh.setMatrixAt(n++, c.m);
       }
     }
     this.mesh.count = n;
