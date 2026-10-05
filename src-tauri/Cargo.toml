@@ -1,6 +1,6 @@
 [package]
 name = "bunker-busters"
-version = "0.1.4"
+version = "0.1.5"
 description = "Bunker Busters — desktop shell"
 edition = "2021"
 
