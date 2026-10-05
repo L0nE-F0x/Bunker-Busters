@@ -2,7 +2,7 @@ import * as THREE from 'three/webgpu';
 import { Fn, uv, vec3, float, length, smoothstep, atan, time, sin, uniform } from 'three/tsl';
 import { rustyMetal, glow, plainStandard } from '../world/materials';
 import { lightCone } from '../world/effects';
-import { canvasTexture } from '../world/kit';
+import { canvasTexture, MeshBatch, merge, norm } from '../world/kit';
 import { damp, dampAngle } from '@/engine/noise';
 import type { Physics } from '@/engine/physics';
 
@@ -37,7 +37,8 @@ export interface DroneEvents {
 export class Drone {
   group = new THREE.Group();
   private body = new THREE.Group();
-  private rotors: THREE.Mesh[] = [];
+  private rotors!: THREE.Mesh;
+  private rotorAngle = uniform(0);
   private eye: ReturnType<typeof glow>;
   private spot: THREE.SpotLight;
   private cone: ReturnType<typeof lightCone>;
@@ -80,44 +81,47 @@ export class Drone {
     const shell = rustyMetal({ base: '#e8e4da', rust: 0.18, metalness: 0.3, roughness: 0.4, rim: 0.6 });
     const orange = rustyMetal({ base: '#ff6a1a', rust: 0.15, metalness: 0.3, roughness: 0.4 });
     const dark = plainStandard('#1a1c1f', 0.4, 0.7);
-    const add = (geo: THREE.BufferGeometry, mat: THREE.Material, x = 0, y = 0, z = 0, sx = 1, sy = 1, sz = 1) => {
-      const m = new THREE.Mesh(geo, mat);
-      m.position.set(x, y, z);
-      m.scale.set(sx, sy, sz);
-      m.castShadow = true;
-      this.body.add(m);
-      return m;
+    // every rigid part of the body goes into one batch (a handful of draws instead of ~15)
+    const parts = new MeshBatch();
+    const add = (geo: THREE.BufferGeometry, mat: THREE.Material, x = 0, y = 0, z = 0, sx = 1, sy = 1, sz = 1, rx = 0, ry = 0) => {
+      geo.applyMatrix4(_m.compose(_p.set(x, y, z), _q.setFromEuler(_e.set(rx, ry, 0)), _s.set(sx, sy, sz)));
+      parts.add(mat, norm(geo));
     };
     add(new THREE.SphereGeometry(0.42, 24, 16), shell, 0, 0, 0, 1, 0.42, 1.15);
-    add(new THREE.TorusGeometry(0.42, 0.035, 8, 32), orange, 0, 0, 0, 1, 1, 1.15).rotation.x = Math.PI / 2;
+    add(new THREE.TorusGeometry(0.42, 0.035, 8, 32), orange, 0, 0, 0, 1, 1, 1.15, Math.PI / 2);
     add(new THREE.CylinderGeometry(0.18, 0.24, 0.12, 16), dark, 0, -0.17, 0.05);
-    // eye
+    // eye (its own mesh: the colour animates, so it can't be baked into a batch)
     this.eye = glow('#3ff2e0', 8);
     add(new THREE.SphereGeometry(0.11, 16, 12), dark, 0, -0.06, 0.42);
-    add(new THREE.SphereGeometry(0.075, 16, 12), this.eye.material, 0, -0.06, 0.47);
+    const eye = new THREE.Mesh(new THREE.SphereGeometry(0.075, 16, 12), this.eye.material);
+    eye.position.set(0, -0.06, 0.47);
+    eye.castShadow = true;
+    this.body.add(eye);
     // arms + motors + rotors
     const rotorMat = new THREE.MeshBasicNodeMaterial({ transparent: true, depthWrite: false, side: THREE.DoubleSide });
     const spin = this.rotorSpin;
+    const turn = this.rotorAngle;
     rotorMat.colorNode = vec3(0.08, 0.08, 0.09);
     rotorMat.opacityNode = Fn(() => {
       const p = uv().sub(0.5).mul(2);
       const r = length(p);
-      const a = atan(p.y, p.x);
+      // the four discs are one static mesh; their shared spin angle is applied here instead
+      const a = atan(p.y, p.x).sub(turn);
       const blades = smoothstep(0.6, 1.0, sin(a.mul(2).add(time.mul(spin).mul(70))).abs()).mul(0.5).add(0.18);
       return blades.mul(smoothstep(1.0, 0.92, r)).mul(smoothstep(0.08, 0.15, r)).mul(float(0.35).add(spin.mul(0.65)));
     })();
+    const discs: THREE.BufferGeometry[] = [];
     for (const [x, z] of [[0.62, 0.52], [-0.62, 0.52], [0.62, -0.52], [-0.62, -0.52]]) {
-      const arm = add(new THREE.BoxGeometry(0.06, 0.05, 0.72), shell, x / 2, 0.02, z / 2);
-      arm.rotation.y = Math.atan2(x, z);
+      add(new THREE.BoxGeometry(0.06, 0.05, 0.72), shell, x / 2, 0.02, z / 2, 1, 1, 1, 0, Math.atan2(x, z));
       add(new THREE.CylinderGeometry(0.07, 0.08, 0.12, 12), dark, x, 0.05, z);
-      const rotor = new THREE.Mesh(new THREE.CircleGeometry(0.34, 24), rotorMat);
-      rotor.rotation.x = -Math.PI / 2;
-      rotor.position.set(x, 0.12, z);
-      this.body.add(rotor);
-      this.rotors.push(rotor);
+      // same colour everywhere, so blending order between overlapping discs doesn't matter
+      discs.push(norm(new THREE.CircleGeometry(0.34, 24).rotateX(-Math.PI / 2).translate(x, 0.12, z)));
     }
+    this.rotors = new THREE.Mesh(merge(discs), rotorMat);
+    this.body.add(this.rotors);
     // antenna + battery screen
     add(new THREE.CylinderGeometry(0.008, 0.008, 0.35, 4), dark, -0.15, 0.3, -0.2);
+    this.body.add(parts.build('droneBody', true, false));
     const tex = canvasTexture(256, 128, (ctx, w, h) => {
       ctx.fillStyle = '#050505';
       ctx.fillRect(0, 0, w, h);
@@ -389,10 +393,11 @@ export class Drone {
     (this.cone.color.value as THREE.Color).copy(this.spot.color);
     this.cone.intensity.value = (0.18 + s.night * 0.4 + (this.state === 'alert' ? 0.25 : 0)) * power;
     this.rotorSpin.value = damp(this.rotorSpin.value as number, this.state === 'disabled' ? 0.02 : this.state === 'sputter' ? 0.7 : 1, 3, dt);
-    for (const r of this.rotors) r.rotation.z += dt * 40 * (this.rotorSpin.value as number);
+    this.rotorAngle.value = ((this.rotorAngle.value as number) + dt * 40 * (this.rotorSpin.value as number)) % (Math.PI * 2);
     (this.screen.material as THREE.MeshStandardNodeMaterial).emissiveIntensity = Math.sin(t * 4) > 0 ? 1 : 0.25;
     void this.home;
   }
 }
 
 const _a = new THREE.Vector3(), _b = new THREE.Vector3(), _up = new THREE.Vector3(0, 1, 0);
+const _m = new THREE.Matrix4(), _p = new THREE.Vector3(), _q = new THREE.Quaternion(), _e = new THREE.Euler(), _s = new THREE.Vector3();
