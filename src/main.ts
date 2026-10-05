@@ -21,6 +21,8 @@ if (TRACE !== null) {
   window.addEventListener('mousemove', (e) => { mm++; mdx += Math.abs(e.movementX); mdy += Math.abs(e.movementY); }, true);
   window.addEventListener('keyup', (e) => console.log(`[trace] keyup ${e.code}`), true);
   document.addEventListener('pointerlockchange', () => console.log(`[trace] pointerlockchange locked=${!!document.pointerLockElement}`));
+  document.addEventListener('bb-lockchange', () => console.log(`[trace] bb-lockchange locked=${(window as any).game?.input.locked}`));
+  document.addEventListener('bb-lockerror', () => console.log('[trace] bb-lockerror'));
   document.addEventListener('pointerlockerror', () => console.log('[trace] pointerlockerror'));
   // once a second: what the game thinks is going on
   setInterval(() => {

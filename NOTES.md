@@ -33,6 +33,17 @@ URL flags: `?webgl` forces WebGL2. `?gpu=high` / `?gpu=low` force WebGPU on the 
 - Interaction targeting follows your gaze. Banners are queued. The hotbar moved bottom-right so it doesn't sit on the hands.
 - Dev tool: `http://localhost:5173/debug/hands.html?pose=lockpick&look=engineer&torch` renders the hands alone in a studio (dev server only, not part of the build).
 
+### Desktop freeze: the real cause (2026-10-06, overnight)
+- The owner's "frozen" reports were never input or game logic. **The window stopped presenting frames** while the page kept rendering, and `?bench` still said 50 fps. Found with a screenshot oracle: `grim` the window every 0.5 s and compare md5s.
+- Trigger: **WebKitGTK's own pointer lock** (its X grab from the UI-process connection). Entering gameplay requests pointer lock, so the picture froze at Continue / Enter the Wasteland.
+  - A grab held by a *separate* X client (same hidden cursor, same confine-to) leaves presentation live.
+  - Rarely, it also stalled without a lock while tiled. It hasn't reproduced since.
+- Fix: in the Linux app `Input` uses **native capture**. `mouse_capture(on)` in `rawmouse.rs` grabs the pointer on our window from its own X connection (invisible cursor, confined, no events), and mouse look comes from XI2 raw motion.
+  - Escape and window blur release it, since there's no browser Escape handling.
+  - Game code listens for `bb-lockchange` / `bb-lockerror`, which fire for either capture kind.
+- Also fixed: XWayland exposes the mouse as `xwayland-pointer` (absolute) and `xwayland-relative-pointer`. Summing the absolute device's raw values spun the camera ~19 turns. Only relative slave pointers count now.
+- Verified with screenshots at 1512×910: 60 s captured, 120/120 frames changed; walking and looking work; 51–54 fps. Earlier dead ends: native Wayland on NVIDIA (Error 71 / ~25 fps), Intel native Wayland (~18 fps on High).
+
 ### Desktop mouse look (2026-10-05)
 - Symptom (owner): "can't move, nothing works" in the installed app. The `?trace` log from the owner's real session showed:
   - Pointer lock engaged, but real mouse motion arrived as 3–15 px/s (vs ~600 px/s unlocked), so the view never turned.

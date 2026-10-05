@@ -153,3 +153,97 @@ fn run() -> Result<(), String> {
         }
     }
 }
+
+// ------------------------------------------------------------------------------------------------
+// Mouse capture without WebKit's pointer lock.
+//
+// While WebKitGTK holds its own X pointer grab (its pointer-lock implementation), the window stops
+// presenting new frames under XWayland/PRIME: the page keeps rendering, the screen freezes. A grab
+// held by a *separate* X client doesn't do that (measured: screenshots stay live), so the page asks
+// us to grab the pointer on its window from our own connection: invisible cursor, confined to the
+// window, no events requested (mouse-look comes from raw motion above).
+
+static CAPTURE: Mutex<Option<usize>> = Mutex::new(None); // *mut Display of the grabbing connection
+
+/// Grab (`on`) or release the pointer for the app window. Returns whether it's captured.
+#[tauri::command]
+pub async fn mouse_capture(on: bool) -> bool {
+    tauri::async_runtime::spawn_blocking(move || capture(on)).await.unwrap_or(false)
+}
+
+fn capture(on: bool) -> bool {
+    use x11_dl::xlib;
+    let Ok(xl) = xlib::Xlib::open() else { return false };
+    let mut cap = CAPTURE.lock().unwrap();
+    unsafe {
+        if !on {
+            if let Some(d) = cap.take() {
+                let dpy = d as *mut xlib::Display;
+                (xl.XUngrabPointer)(dpy, xlib::CurrentTime);
+                (xl.XCloseDisplay)(dpy);
+            }
+            return false;
+        }
+        if cap.is_some() {
+            return true;
+        }
+        let dpy = (xl.XOpenDisplay)(std::ptr::null());
+        if dpy.is_null() {
+            return false;
+        }
+        let Some(win) = find_app_window(&xl, dpy) else {
+            (xl.XCloseDisplay)(dpy);
+            return false;
+        };
+        // invisible cursor
+        let pm = (xl.XCreatePixmap)(dpy, win, 1, 1, 1);
+        let mut black: xlib::XColor = std::mem::zeroed();
+        let cursor = (xl.XCreatePixmapCursor)(dpy, pm, pm, &mut black, &mut black, 0, 0);
+        (xl.XFreePixmap)(dpy, pm);
+        // the click that asked for capture may still hold an implicit grab: retry briefly
+        for _ in 0..30 {
+            let r = (xl.XGrabPointer)(dpy, win, xlib::False, 0, xlib::GrabModeAsync, xlib::GrabModeAsync, win, cursor, xlib::CurrentTime);
+            if r == xlib::GrabSuccess {
+                (xl.XFlush)(dpy);
+                *cap = Some(dpy as usize);
+                return true;
+            }
+            std::thread::sleep(std::time::Duration::from_millis(40));
+        }
+        (xl.XCloseDisplay)(dpy);
+        false
+    }
+}
+
+/// The viewable top-level X window owned by this process (GTK sets _NET_WM_PID).
+unsafe fn find_app_window(xl: &x11_dl::xlib::Xlib, dpy: *mut x11_dl::xlib::Display) -> Option<x11_dl::xlib::Window> {
+    use x11_dl::xlib;
+    let pid_atom = (xl.XInternAtom)(dpy, c"_NET_WM_PID".as_ptr(), xlib::True);
+    if pid_atom == 0 {
+        return None;
+    }
+    let me = std::process::id() as u64;
+    let mut stack = vec![(xl.XDefaultRootWindow)(dpy)];
+    while let Some(w) = stack.pop() {
+        let (mut ty, mut fmt, mut n, mut after) = (0, 0, 0, 0);
+        let mut prop: *mut u8 = std::ptr::null_mut();
+        if (xl.XGetWindowProperty)(dpy, w, pid_atom, 0, 1, xlib::False, xlib::XA_CARDINAL, &mut ty, &mut fmt, &mut n, &mut after, &mut prop) == xlib::Success as i32 && !prop.is_null() {
+            let pid = if n > 0 { *(prop as *const std::os::raw::c_ulong) as u64 } else { 0 };
+            (xl.XFree)(prop as *mut _);
+            if pid == me {
+                let mut attrs: xlib::XWindowAttributes = std::mem::zeroed();
+                if (xl.XGetWindowAttributes)(dpy, w, &mut attrs) != 0 && attrs.map_state == xlib::IsViewable {
+                    return Some(w);
+                }
+            }
+        }
+        let (mut root, mut parent) = (0, 0);
+        let mut kids: *mut xlib::Window = std::ptr::null_mut();
+        let mut nk = 0u32;
+        if (xl.XQueryTree)(dpy, w, &mut root, &mut parent, &mut kids, &mut nk) != 0 && !kids.is_null() {
+            stack.extend_from_slice(std::slice::from_raw_parts(kids, nk as usize));
+            (xl.XFree)(kids as *mut _);
+        }
+    }
+    None
+}

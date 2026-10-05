@@ -144,7 +144,8 @@ The webview's `console.log` goes to stdout.
   - Detect device loss with `device.lost`, not just `uncapturederror`.
   - WebGPU canvas sizes are padded to 64 px × 128 rows (`fitCanvas`) for cross-GPU swapchain import.
 - **Desktop GPU path (Linux hybrid):** PRIME offload + **XWayland + `WEBKIT_DISABLE_DMABUF_RENDERER=1` + `GDK_CORE_DEVICE_EVENTS=1`** is the only path that runs at full refresh. Without the last one, GTK under XWayland never delivers mouse clicks to the page, so the menu looks frozen. Native-Wayland dmabuf crashes with Error 71. `select_gpu()` in `src-tauri/src/main.rs` applies this automatically. WebKitGTK has **no WebGPU**, so the desktop app uses WebGL2.
-- **Mouse look in the Linux app (XWayland):** WebKitGTK's pointer lock barely reports motion there. Mouse look comes from XInput2 raw motion (`src-tauri/src/rawmouse.rs` → `raw_mouse_delta` → `Input.pollRaw()`). It must announce XI ≥2.1 and call `XInitThreads()` before GTK starts.
+- **Never use WebKit's pointer lock in the Linux app.** Its X grab freezes the window's presentation under XWayland/PRIME (the page keeps rendering, the screen doesn't). `Input` uses native capture (`mouse_capture` in `rawmouse.rs`); game code listens for `bb-lockchange`/`bb-lockerror`. **Verify desktop changes with screenshots** (grim + md5 every 0.5 s), never `?bench` alone.
+- **Mouse look in the Linux app (XWayland):** WebKitGTK's pointer lock barely reports motion there. Mouse look comes from XInput2 raw motion (`src-tauri/src/rawmouse.rs` → `raw_mouse_delta` → `Input.pollRaw()`). It must announce XI ≥2.1, call `XInitThreads()` before GTK starts, and only accept *relative* slave pointers (XWayland's `xwayland-pointer` is absolute).
 - **Performance in WebKit:**
   - The bottlenecks are draw-call submission and HTML/CSS compositing over the canvas, not the GPU.
   - Keep meshes merged: `MeshBatch` per material, and material factories are **memoized**, so equal calls return one instance.

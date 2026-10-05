@@ -172,9 +172,9 @@ export class Game {
     await step(0.95, 'Polishing neon');
     this.renderer.setAnimationLoop(() => this.frame());
     window.addEventListener('resize', () => this.resize());
-    document.addEventListener('pointerlockchange', () => this.onLockChange());
+    document.addEventListener('bb-lockchange', () => this.onLockChange());
     // the grab can fail (WebKitGTK/XWayland, now and then): say so, and the next click on the view retries
-    document.addEventListener('pointerlockerror', () => {
+    document.addEventListener('bb-lockerror', () => {
       if (this.mode === 'playing' && !this.ui.modalOpen && !this.ui.minigameOpen) this.ui.resumeHint(true);
     });
     this.canvas.addEventListener('click', () => {

@@ -3,6 +3,11 @@
 Each `## vX.Y.Z` section becomes the GitHub release notes and the "what's new" list in the in-app
 update notice (the first few bullets). `scripts/release.sh` refuses to release a version without one.
 
+## v0.1.5
+- **Fixed: the Linux desktop app froze the moment you entered the game.** Capturing the mouse stopped the window from showing new frames (the game kept running behind a frozen picture). The app now captures the mouse itself, so the picture stays live
+- **Fixed: mouse look spun wildly** in the desktop app (it was reading screen positions as movement)
+- Escape or switching away from the window releases the mouse and pauses
+
 ## v0.1.4
 - **Fixed: mouse look was dead in the Linux desktop app** (XWayland on NVIDIA laptops), so the game seemed frozen once you were in: the app now reads raw mouse motion itself
 - If the game can't capture the mouse it now says "Click to resume" instead of silently ignoring the mouse

@@ -17,6 +17,8 @@ export class Input {
 
   constructor(private el: HTMLElement) {
     window.addEventListener('keydown', (e) => {
+      // native capture has no browser-provided Escape-to-release, so do it here
+      if (e.code === 'Escape' && this.native && this.locked) this.exitLock();
       if (e.repeat) return;
       if (['Tab', 'Space', 'ArrowUp', 'ArrowDown'].includes(e.code)) e.preventDefault();
       this.down.add(e.code);
@@ -26,7 +28,10 @@ export class Input {
       this.down.delete(e.code);
       this.releasedThisFrame.add(e.code);
     });
-    window.addEventListener('blur', () => this.down.clear());
+    window.addEventListener('blur', () => {
+      this.down.clear();
+      if (this.native && this.locked) this.exitLock(); // switched window/workspace: give the mouse back
+    });
     window.addEventListener('mousemove', (e) => {
       if (!this.locked || this.rawLive) return;
       this.mouseDX += e.movementX;
@@ -38,10 +43,26 @@ export class Input {
     });
     window.addEventListener('mouseup', (e) => (this.mouseDown[e.button] = false));
     window.addEventListener('wheel', (e) => (this.wheel += Math.sign(e.deltaY)), { passive: true });
-    document.addEventListener('pointerlockchange', () => {
-      this.locked = document.pointerLockElement === this.el;
-      if (this.locked) this.rawFlush = true; // drop motion gathered while the cursor was free
-    });
+    document.addEventListener('pointerlockchange', () => this.setLocked(document.pointerLockElement === this.el));
+    document.addEventListener('pointerlockerror', () => document.dispatchEvent(new Event('bb-lockerror')));
+    // Linux desktop app (X11/XWayland): capture the mouse natively instead of with pointer lock
+    ipc?.invoke('raw_mouse_delta').then((d) => { if (d) this.native = true; }, () => {});
+  }
+
+  /**
+   * Native capture (Linux desktop app): WebKitGTK's own pointer lock freezes the window's
+   * presentation under XWayland, so the shell grabs the pointer from a separate X connection
+   * (src-tauri/src/rawmouse.rs) and mouse-look comes from raw motion. Game code listens for
+   * 'bb-lockchange' / 'bb-lockerror' on document, which fire for either kind of capture.
+   */
+  private native = false;
+  private capturing = false;
+
+  private setLocked(v: boolean) {
+    if (v === this.locked) return;
+    this.locked = v;
+    if (v) this.rawFlush = true; // drop motion gathered while the cursor was free
+    document.dispatchEvent(new Event('bb-lockchange'));
   }
 
   // Linux desktop app (X11/XWayland): WebKitGTK's pointer lock barely reports motion there, so
@@ -68,10 +89,26 @@ export class Input {
   }
 
   requestLock() {
-    if (!this.locked) this.el.requestPointerLock?.()?.catch?.(() => {});
+    if (this.locked) return;
+    if (this.native) {
+      if (this.capturing) return;
+      this.capturing = true;
+      ipc!.invoke('mouse_capture', { on: true }).then((ok: boolean) => {
+        this.capturing = false;
+        if (ok) { this.rawLive = true; this.setLocked(true); } else document.dispatchEvent(new Event('bb-lockerror'));
+      }, () => { this.capturing = false; document.dispatchEvent(new Event('bb-lockerror')); });
+      return;
+    }
+    this.el.requestPointerLock?.()?.catch?.(() => {});
   }
   exitLock() {
-    if (this.locked) document.exitPointerLock();
+    if (!this.locked) return;
+    if (this.native) {
+      ipc!.invoke('mouse_capture', { on: false }).catch(() => {});
+      this.setLocked(false);
+      return;
+    }
+    document.exitPointerLock();
   }
 
   isDown(code: string) {

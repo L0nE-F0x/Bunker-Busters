@@ -74,7 +74,9 @@ fn main() {
             update::update_install,
             update::update_progress,
             #[cfg(target_os = "linux")]
-            rawmouse::raw_mouse_delta
+            rawmouse::raw_mouse_delta,
+            #[cfg(target_os = "linux")]
+            rawmouse::mouse_capture
         ])
         .setup(|app| {
             let win = app
