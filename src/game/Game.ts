@@ -126,7 +126,7 @@ export class Game {
     this.atmo = new Atmosphere(this.scene);
     this.atmo.setShadowMapSize(this.quality.shadowMapSize);
     this.hf = new Heightfield();
-    this.terrain = new Terrain(this.hf);
+    this.terrain = new Terrain(this.hf, this.atmo);
     this.terrain.addToPhysics(this.physics);
     this.scene.add(this.terrain.mesh, this.terrain.far);
     await step(0.4, 'Scattering debris of a failed civilisation');

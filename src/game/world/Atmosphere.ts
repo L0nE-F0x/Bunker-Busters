@@ -74,6 +74,8 @@ export class Atmosphere {
   readonly uStorm = uniform(0);
   /** Cirrus drift integrated on the CPU (wind × time would jump whenever the wind changes). */
   readonly uCloudDrift = uniform(new THREE.Vector2());
+  /** Ground sand-flow offset integrated from the wind (terrain storm ribbons). */
+  readonly uSandFlow = uniform(new THREE.Vector2());
   readonly uFront = uniform(0);
   readonly uUpwind = uniform(new THREE.Vector2(-1, 0));
   /** Storm dust colour, lit by the current daylight (CPU-side so sky, fog and particles agree). */
@@ -101,7 +103,7 @@ export class Atmosphere {
     // e.g. the far city whenever the sun stood still (paused clock, storm fronts in screenshots).
     for (const u of [this.uSunDir, this.uMoonDir, this.uZenith, this.uHorizon, this.uHaze, this.uSunColor, this.uFogDensity,
       this.uFogFalloff, this.uFogBase, this.uNight, this.uDust, this.uWind, this.uStorm, this.uCloudDrift, this.uFront,
-      this.uUpwind, this.uStormColor] as N[]) u.setGroup(renderGroup);
+      this.uUpwind, this.uStormColor, this.uSandFlow] as N[]) u.setGroup(renderGroup);
     this.sun = new THREE.DirectionalLight(0xffffff, 4);
     this.sun.castShadow = true;
     const s = this.sun.shadow;
@@ -356,6 +358,9 @@ export class Atmosphere {
     sc.set('#a8642c').multiplyScalar(0.75 * daylight).lerp(tmpA.copy(this.sunColor).multiplyScalar(0.3 * daylight), 0.2);
     sc.add(tmpA.set('#2a2622').multiplyScalar(1 - daylight)); // night: dim grey-brown murk, still readable
     (this.uWind.value as THREE.Vector2).set(this.windDir.x * this.windStrength, this.windDir.y * this.windStrength);
+    const sf = this.uSandFlow.value as THREE.Vector2;
+    // wraps every 14*256 m: a whole number of atlas tiles along the stretched axis
+    sf.set((sf.x + this.windDir.x * this.windStrength * dt * 4) % 3584, (sf.y + this.windDir.y * this.windStrength * dt * 4) % 3584);
     const cd = this.uCloudDrift.value as THREE.Vector2;
     const cw = Math.min(this.windStrength, 1.5) * dt * 0.004;
     cd.set((cd.x + this.windDir.x * cw) % 200, (cd.y + this.windDir.y * cw) % 200); // 200: whole atlas tiles for every tap
@@ -365,7 +370,7 @@ export class Atmosphere {
     const lightDir = isDay ? sunDir : moonDir;
     this.sun.color.copy(this.sunColor);
     const horizonFade = isDay ? smoothN(-0.06, 0.04, sunDir.y) : smoothN(-0.06, -0.16, sunDir.y);
-    this.sun.intensity = lerp(a.sunI, b.sunI, t) * Math.max(0.05, horizonFade) * (1 - this.dustiness * 0.35) * (1 - st * 0.82);
+    this.sun.intensity = lerp(a.sunI, b.sunI, t) * Math.max(0.05, horizonFade) * (1 - this.dustiness * 0.35) * (1 - st * 0.93);
     if (!isDay) this.sun.color.set('#6f8cd0');
     this.sun.position.copy(focus).addScaledVector(lightDir, 300);
     this.sun.target.position.copy(focus);
@@ -379,7 +384,7 @@ export class Atmosphere {
       // the sky light becomes the dust itself: flat, brown, directionless
       this.hemi.color.lerp(tmpB.copy(sc).multiplyScalar(1.6), st * 0.7);
       this.hemi.groundColor.lerp(tmpB.copy(sc).multiplyScalar(0.7), st * 0.5);
-      this.hemi.intensity *= 1 + st * 0.25;
+      this.hemi.intensity *= 1 + st * 0.6;
       this.envIntensity *= 1 - st * 0.55;
     }
     this.scene.environmentIntensity = this.envIntensity;

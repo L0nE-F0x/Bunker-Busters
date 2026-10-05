@@ -5,6 +5,7 @@ import {
 } from 'three/tsl';
 import { noise, fbm2 } from '@/engine/noiseTex';
 import type { Heightfield } from './Heightfield';
+import type { Atmosphere } from './Atmosphere';
 import type { Physics } from '@/engine/physics';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -30,7 +31,7 @@ export class Terrain {
   dataTexture: THREE.DataTexture;
   readonly uPlayer = uniform(new THREE.Vector3());
 
-  constructor(private hf: Heightfield) {
+  constructor(private hf: Heightfield, private atmo?: Atmosphere) {
     this.dataTexture = this.buildDataTexture();
     const material = this.buildMaterial();
     this.mesh = new THREE.Mesh(this.buildGeometry(), material);
@@ -233,16 +234,39 @@ export class Terrain {
     const tyre = smoothstep(0.4, 0.0, abs(trackD.sub(0.95))).mul(0.25);
     const dirt = vec3(0.52, 0.38, 0.26).mul(float(1).sub(tyre)).mul(float(0.9).add(grain.mul(0.2)));
 
+    // pebbles and grit scattered over sand and dirt (cell blobs, thinned by a second tap; they fade
+    // out before they shrink below a pixel so the far ground doesn't sparkle)
+    const pebTap = noise(xz.div(2.8).add(0.13));
+    const pebMask = smoothstep(0.62, 0.8, noise(xz.div(9).add(0.71)).r.add(mid.mul(0.6)));
+    const pebNear = smoothstep(0.5, 0.15, fwidth(xz.x.div(2.8)).mul(12));
+    const pebble = smoothstep(0.5, 0.8, pebTap.b).mul(step(0.72, pebTap.a)).mul(pebMask).mul(pebNear)
+      .mul(float(1).sub(rockMask)).mul(float(1).sub(roadFinal)).mul(float(1).sub(lowMask));
+    const pebCol = mix(vec3(0.34, 0.24, 0.17), vec3(0.62, 0.52, 0.42), pebTap.r);
+
     let col: N = mix(sand, vec3(0.42, 0.34, 0.22), scrubMask);
+    col = mix(col, pebCol, pebble);
     col = mix(col, mud, lowMask);
     col = mix(col, dirt, trackMask);
     col = mix(col, rock, rockMask);
     col = mix(col, asphalt, roadFinal);
 
-    let h: N = mix(rippleH.mul(0.5), rockH, rockMask);
+    let h: N = mix(rippleH.mul(0.5).add(pebble.mul(0.5)), rockH, rockMask);
     h = mix(h, crk.mul(-0.6).add(fine.mul(0.15)), lowMask);
     h = mix(h, roadCracks.mul(-0.4).add(grain.mul(0.08)), roadFinal);
     h = mix(h, tyre.mul(-0.5).add(grain.mul(0.1)), trackMask);
+
+    if (this.atmo) {
+      // storm: sand streams across the ground in long wind-aligned ribbons
+      const a = this.atmo;
+      const dir = a.uUpwind.negate().normalize();
+      const q = xz.sub(a.uSandFlow);
+      const along = q.dot(dir), across = q.dot(vec2(dir.y.negate(), dir.x));
+      const ribbons = noise(vec2(along.div(14), across.div(1.6))).r;
+      const flow = smoothstep(0.45, 0.75, ribbons).mul(float(1).sub(rockMask.mul(0.7)));
+      const amount = a.uStorm.mul(0.55).add(a.uDust.mul(0.08));
+      col = mix(col, (a.uStormColor as N).mul(2.2).add(vec3(0.05, 0.03, 0.01)), flow.mul(amount));
+      h = h.add(flow.mul(amount).mul(0.4));
+    }
 
     mat.colorNode = col;
     mat.normalNode = bumpFromHeight(h, float(0.06));
