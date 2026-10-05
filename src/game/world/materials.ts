@@ -1,7 +1,7 @@
 import * as THREE from 'three/webgpu';
 import {
   Fn, vec2, float, positionWorld, positionLocal, normalWorld, mix, smoothstep, abs, sin, uniform, time, pow, max,
-  fract, step, uv, cameraPosition, normalize, dot,
+  fract, step, uv, cameraPosition, normalize, dot, uniformArray, varying,
 } from 'three/tsl';
 import { bumpFromHeight } from './Terrain';
 import { noise } from '@/engine/noiseTex';
@@ -82,7 +82,12 @@ function concreteUnique(tint: THREE.ColorRepresentation, opts: { scale?: number;
   const t1 = noise(c.mul(0.1));
   const t2 = noise(c.mul(0.9));
   const streaks = noise(vec2(positionWorld.x.add(positionWorld.z).mul(s).mul(0.6), positionWorld.y.mul(0.05))).r;
-  const stain = smoothstep(0.45, 0.8, streaks.add(t1.r.mul(0.4)).sub(0.2)).mul(stainAmt);
+  // vertical rain streaks only make sense on walls; floors get blotchy wear instead (otherwise the
+  // streak term, constant in y, paints long diagonal stripes across every slab)
+  const upness = smoothstep(0.6, 0.9, abs(normalWorld.y));
+  const blotch = noise(c.mul(0.23).add(vec2(0.37, 0.11))).g;
+  const stainSrc = mix(streaks.add(t1.r.mul(0.4)), blotch.mul(0.9).add(t1.r.mul(0.45)), upness);
+  const stain = smoothstep(0.45, 0.8, stainSrc.sub(0.2)).mul(stainAmt);
   const pits = smoothstep(0.1, 0.0, t2.b);
   m.colorNode = base.mul(float(0.8).add(t1.r.mul(0.3))).mul(float(1).sub(stain.mul(0.45))).mul(float(1).sub(pits.mul(0.3)));
   m.normalNode = bumpFromHeight(t1.r.mul(0.3).add(t2.a.mul(0.1)).sub(pits.mul(0.5)), float(0.04));
@@ -195,4 +200,56 @@ function woodUnique(c: THREE.ColorRepresentation) {
 export function updateRim(sunColor: THREE.Color, strength: number) {
   (rimColor.value as THREE.Color).copy(sunColor);
   rimStrength.value = strength;
+}
+
+export interface GlowSlot {
+  index: number;
+  intensity: { value: number };
+  color: { value: THREE.Color };
+  /** add geometry lit by this slot to a MeshBatch-like `{ add(mat, ...geo) }` */
+  add: (batch: { add(m: THREE.Material, ...g: THREE.BufferGeometry[]): unknown }, ...g: THREE.BufferGeometry[]) => void;
+}
+
+/**
+ * Many small glowing bits (LEDs, lamps, lenses, screens) in ONE material: each "slot" has its own
+ * colour and intensity in a uniform array, picked per vertex through the uv.x the geometry is
+ * tagged with. Merged into a MeshBatch, every glow of a prop set costs a single draw call, and
+ * blinking a slot is just writing its intensity.
+ */
+export class GlowPalette {
+  readonly material: THREE.MeshStandardNodeMaterial;
+  private colors: THREE.Color[];
+  private k: number[];
+  private n = 0;
+
+  constructor(private size = 32) {
+    this.colors = Array.from({ length: size }, () => new THREE.Color(0, 0, 0));
+    this.k = new Array(size).fill(0);
+    const uc: N = uniformArray(this.colors, 'color');
+    const uk: N = uniformArray(this.k, 'float');
+    const idx: N = uv().x.mul(size).floor().toInt();
+    const m = new THREE.MeshStandardNodeMaterial({ color: 0x050505, roughness: 0.3 });
+    m.emissiveNode = varying(uc.element(idx).mul(uk.element(idx)));
+    this.material = m;
+  }
+
+  slot(c: THREE.ColorRepresentation, intensity = 4): GlowSlot {
+    if (this.n >= this.size) throw new Error('GlowPalette full');
+    const i = this.n++;
+    this.colors[i].set(c);
+    this.k[i] = intensity;
+    const k = this.k, size = this.size, material = this.material;
+    return {
+      index: i,
+      intensity: { get value() { return k[i]; }, set value(v: number) { k[i] = v; } },
+      color: { value: this.colors[i] },
+      add: (batch, ...g) => {
+        for (const geo of g) {
+          const uvA = geo.attributes.uv as THREE.BufferAttribute;
+          for (let j = 0; j < uvA.count; j++) uvA.setXY(j, (i + 0.5) / size, 0.5);
+        }
+        batch.add(material, ...g);
+      },
+    };
+  }
 }

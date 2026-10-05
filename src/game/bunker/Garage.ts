@@ -1,6 +1,9 @@
 import * as THREE from 'three/webgpu';
 import { GarageBuilder, YARD, HOUSE, type Door } from './GarageBuilder';
 import { Drone, type DroneState } from './Drone';
+import { CH } from './garageDressing';
+import { Sparks } from '../world/effects';
+import { uPoolNight, uPoolBoost } from './garageAtlas';
 import { GARAGE } from '@/content/bunkers/garage';
 import { ITEMS } from '@/content/items';
 import { XP_REWARDS } from '@/content/progression';
@@ -30,6 +33,8 @@ function segIntersect(p1: THREE.Vector2, p2: THREE.Vector2, q1: THREE.Vector2, q
 export class Garage {
   b: GarageBuilder;
   drone: Drone;
+  /** hot sparks (drone brown-outs and crashes, shorted fuse box, EMP bursts) */
+  sparks = new Sparks();
   houseBox: THREE.Box3;
   yardBox: THREE.Box3;
   interactables: Interactable[] = [];
@@ -73,6 +78,8 @@ export class Garage {
       },
     });
     ctx.scene.add(this.drone.group);
+    ctx.scene.add(this.sparks.sprite);
+    this.drone.fx = { sparks: this.sparks, get puffs() { return ctx.puffs; } };
 
     this.applyFlags(true);
     this.buildInteractables();
@@ -248,6 +255,9 @@ export class Garage {
           this.s.set(F.lasers);
           this.applyFlags();
           ctx.audio.play('disarm');
+          const fb = this.b.points.fuseBox;
+          this.sparks.emit(fb.clone().add(new THREE.Vector3(-0.45, 0.3, 0)), 36, 3, { up: 1, floorY: this.b.origin.y + 0.1, size: 0.025, life: 0.8 });
+          for (const l of this.b.lasers) for (const e of [l.a, l.b]) this.sparks.emit(e, 10, 1.6, { up: 0.5, floorY: this.b.origin.y + 0.1, size: 0.02, life: 0.5 });
         },
       },
     });
@@ -397,6 +407,7 @@ export class Garage {
   update(dt: number) {
     const { ctx } = this;
     this.t += dt;
+    this.sparks.update(dt);
     const player = ctx.player as GameContext['player'] | null;
     if (!player) { this.updateAmbient(dt); return; }
     const p = player.position;
@@ -497,6 +508,7 @@ export class Garage {
 
   /** Title-screen mode: no player, just make the place feel alive. */
   private updateAmbient(dt: number) {
+    this.sparks.update(dt);
     for (const d of Object.values(this.b.doors)) {
       d.open += (d.target - d.open) * (1 - Math.exp(-3 * dt));
       d.pivot.rotation.y = d.open * d.amount;
@@ -522,10 +534,27 @@ export class Garage {
     this.b.neonFlicker.value = n > 0.93 ? 0.1 : 1;
     this.b.interiorLight.intensity = (this.alarm > 0 ? 6 + Math.max(0, Math.sin(this.t * 10)) * 20 : 14) * (Math.sin(this.t * 31) > 0.97 ? 0.4 : 1);
     this.b.interiorLight.color.set(this.alarm > 0 ? 0xff3020 : 0xffb070);
-    for (const bl of this.b.blinkers) {
+    const ch = this.b.halos.channels;
+    this.b.blinkers.forEach((bl, i) => {
       const ph = ((this.t + bl.offset) % bl.period) / bl.period;
       bl.u.value = ph < 0.5 ? bl.on : bl.on * 0.08;
-    }
+      ch[this.b.blinkChannel[i]] = ph < 0.5 ? 1 : 0.04;
+    });
+    // halos, tubes and light pools follow the same lights
+    const nightOn = THREE.MathUtils.smoothstep(night, 0.2, 0.45);
+    const flick = Math.sin(this.t * 31) > 0.97 ? 0.4 : 1;
+    const alarmOn = this.alarm > 0;
+    const alarmPulse = alarmOn ? Math.max(0, Math.sin(this.t * 10)) : 0;
+    ch[CH.ON] = 1;
+    ch[CH.NIGHT] = 0.04 + nightOn * 0.96;
+    ch[CH.TUBES] = (alarmOn ? 0.25 : 1) * flick;
+    ch[CH.ALARM] = alarmOn ? 0.3 + alarmPulse : 0;
+    ch[CH.NEON] = this.b.neonFlicker.value;
+    ch[CH.LASER] = this.b.lasers[0]?.mesh.visible ? (alarmOn ? 1.4 : 1) : 0;
+    this.b.tubeGlow.value = (alarmOn ? 1.2 : 5) * flick;
+    (this.b.tubeColor.value as THREE.Color).set(alarmOn ? 0xff6050 : 0xffe2b8);
+    uPoolNight.value = nightOn;
+    uPoolBoost.value = this.b.neonFlicker.value < 0.5 ? 0.75 : 1;
   }
 
   /** Context-sensitive objective text. */

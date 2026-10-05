@@ -1,9 +1,11 @@
 import * as THREE from 'three/webgpu';
-import { uniform, vec3, vec4, float, time, sin, uv, smoothstep, abs, Fn, texture, color, mix } from 'three/tsl';
+import { uniform, vec2, vec3, vec4, float, time, sin, uv, smoothstep, abs, Fn, texture, color, mix, step, normalize, cameraPosition, positionWorld, normalWorld, dot, pow, clamp } from 'three/tsl';
+import { noise } from '@/engine/noiseTex';
 import type { Physics } from '@/engine/physics';
 import { box, cyl, beam, MeshBatch, canvasTexture, grime, wire, merge, norm } from '../world/kit';
-import { rustyMetal, concrete, corrugated, neon, plainStandard, fabric, wood, glow, chainLink, warmWindow } from '../world/materials';
-import { lightCone } from '../world/effects';
+import { rustyMetal, concrete, corrugated, neon, plainStandard, fabric, wood, glow, chainLink, warmWindow, GlowPalette } from '../world/materials';
+import { lightCone, GlowSprites } from '../world/effects';
+import { dressHouse, dressRoof, dressYard, dressWorkshop, dressVault, CH, type Dress } from './garageDressing';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 type N = any;
@@ -39,12 +41,30 @@ export class GarageBuilder {
   dronePath: THREE.Vector3[] = [];
   floodBulbs: { value: number }[] = [];
   gateLockMesh!: THREE.Object3D;
+  /** glow halos around every small light (one draw call); channels driven by Garage.updateLights */
+  halos = new GlowSprites(24);
+  /** fluorescent tube emissive (dims / goes red with the alarm) */
+  tubeGlow!: { value: number };
+  tubeColor!: { value: THREE.Color };
+  /** every small static glow (LEDs, lamps, lenses, screens, tubes) shares one material */
+  pal = new GlowPalette(40);
+  /** blinker index → halo channel */
+  blinkChannel: number[] = [];
+  private D!: Dress;
 
   constructor(private physics: Physics, origin: THREE.Vector3) {
     this.origin = origin.clone();
     this.group.position.copy(origin);
     this.group.name = 'garage';
     this.build();
+  }
+
+  /** Register a blinking emissive; its halo (if any) follows the same channel. */
+  private blink(u: { value: number }, period: number, offset: number, on: number) {
+    this.blinkers.push({ u, period, offset, on });
+    const ch = CH.BLINK0 + this.blinkers.length - 1;
+    this.blinkChannel.push(ch);
+    return ch;
   }
 
   /** local → world */
@@ -58,11 +78,21 @@ export class GarageBuilder {
 
   private build() {
     const b = new MeshBatch();
+    const d = new MeshBatch();
+    this.D = {
+      b, d, halos: this.halos, glow: (c, k) => this.pal.slot(c, k),
+      col: (x, y, z, hx, hy, hz, rotY) => { this.col(x, y, z, hx, hy, hz, rotY); },
+      blink: (u, period, offset, on) => this.blink(u, period, offset, on),
+    };
     this.buildFence(b);
     this.buildHouse(b);
     this.buildYard(b);
     this.buildInterior(b);
     this.group.add(b.build('garageStatic'));
+    const decals = d.build('garageDecals', false, false);
+    decals.traverse((o) => { o.renderOrder = 2; });
+    this.group.add(decals);
+    this.group.add(this.halos.build());
     this.group.add(this.roof);
 
     // patrol loop around the house inside the fence (world space), y = hover height
@@ -78,7 +108,7 @@ export class GarageBuilder {
     const { x0, x1, z0, z1 } = YARD;
     const postMat = rustyMetal({ base: '#7b7a74', rust: 0.6, metalness: 0.7 });
     const linkMat = chainLink();
-    const barbMat = plainStandard('#3a3632', 0.5, 0.8);
+    const barbMat = plainStandard('#1a1a1a', 0.6, 0.6);
     const H = 3.0;
     const linkPanels: THREE.BufferGeometry[] = [];
     const panel = (ax: number, az: number, bx: number, bz: number) => {
@@ -145,7 +175,7 @@ export class GarageBuilder {
     mkLeaf(-3.2, 1, 'gateL');
     mkLeaf(3.2, -1, 'gateR');
     // chain + padlock
-    const lockMat = rustyMetal({ base: '#c9a648', rust: 0.25, metalness: 0.9, roughness: 0.3 });
+    const lockMat = rustyMetal({ base: '#d4b04a', rust: 0.1, metalness: 1, roughness: 0.25 });
     const chain = new MeshBatch();
     for (let i = 0; i < 9; i++) {
       const g = new THREE.TorusGeometry(0.05, 0.012, 4, 8);
@@ -256,16 +286,10 @@ export class GarageBuilder {
     b.add(block, box(x1 - gx, h, t, -(gx + x1) / 2, h / 2, z1 - t / 2));
     b.add(block, box(gx * 2, h - gh, t, 0, gh + (h - gh) / 2, z1 - t / 2));
     this.col(0, h / 2, z1 - t / 2, (x1 - x0) / 2, h / 2, t / 2);
-    // roll-up door (welded shut)
-    const rollMat = corrugated('#7f8a8c', 0.55, 'y');
-    const roll = new THREE.Mesh(merge([box(gx * 2, gh, 0.08, 0, gh / 2, z1 + 0.02)]), rollMat);
-    roll.castShadow = roll.receiveShadow = true;
-    this.group.add(roll);
-    for (let i = 0; i < 12; i++) {
-      b.add(rustyMetal({ base: '#6f7a7c', rust: 0.6 }), box(gx * 2, 0.04, 0.05, 0, 0.15 + i * 0.28, z1 + 0.07));
-    }
+    // roll-up door (welded shut), plinth, roof trim, gutters, electrics, grime, light spill
+    dressHouse(this.D, HOUSE);
     // weld beads + graffiti
-    b.add(plainStandard('#2a2420', 0.6, 0.6), box(0.08, gh, 0.06, -gx + 0.05, gh / 2, z1 + 0.08), box(0.08, gh, 0.06, gx - 0.05, gh / 2, z1 + 0.08));
+    b.add(plainStandard('#1a1a1a', 0.6, 0.6), box(0.08, gh, 0.06, -gx + 0.05, gh / 2, z1 + 0.06), box(0.08, gh, 0.06, gx - 0.05, gh / 2, z1 + 0.06));
     const graffiti = canvasTexture(1024, 400, (ctx, w, hh) => {
       ctx.clearRect(0, 0, w, hh);
       ctx.save();
@@ -280,14 +304,15 @@ export class GarageBuilder {
       ctx.shadowBlur = 0;
       ctx.font = '700 64px "Chakra Petch", Arial, sans-serif';
       ctx.fillStyle = '#f4f0e0';
-      ctx.fillText('NO SOLICITORS · NO INVESTORS · NO REFUNDS', 0, 110);
+      ctx.fillText('NO SOLICITORS · NO INVESTORS · NO REFUNDS', 0, 110, w * 0.86);
       ctx.restore();
       // drips
       ctx.fillStyle = '#ff2f7a';
       for (let i = 0; i < 26; i++) ctx.fillRect(160 + Math.random() * 700, 200 + Math.random() * 20, 4, 20 + Math.random() * 80);
     });
     const graf = new THREE.Mesh(new THREE.PlaneGeometry(8, 3.1), new THREE.MeshStandardNodeMaterial({ map: graffiti, transparent: true, roughness: 0.8, alphaTest: 0.05 }));
-    graf.position.set(0, 1.75, z1 + 0.11);
+    graf.position.set(0, 1.75, z1 + 0.066);
+    graf.renderOrder = 3;
     this.group.add(graf);
 
     // neon sign "THE GARAGE" above door + Bunkr.ly logo box
@@ -310,7 +335,7 @@ export class GarageBuilder {
     const neonSign = new THREE.Mesh(new THREE.PlaneGeometry(7.5, 1.9), neonMat);
     neonSign.position.set(0, 3.75 + 0.15, z1 + 0.06);
     this.group.add(neonSign);
-    b.add(plainStandard('#151515', 0.6, 0.4), box(7.8, 1.2, 0.08, 0, 3.85, z1 + 0.0));
+    b.add(plainStandard('#1a1a1a', 0.6, 0.6), box(7.8, 1.2, 0.08, 0, 3.85, z1 + 0.0));
 
     // window slits with warm light on west + front
     b.add(warmWindow('#ffb66a', 1.6), box(0.06, 0.5, 1.6, x0 - 0.02, 2.8, -4), box(0.06, 0.5, 1.6, x0 - 0.02, 2.8, -9));
@@ -318,11 +343,11 @@ export class GarageBuilder {
     // side door (steel) on hinge at z = dz1 on the east wall
     const doorPivot = new THREE.Group();
     doorPivot.position.set(x1 + 0.02, 0, dz1);
-    const steel = rustyMetal({ base: '#4c5a63', rust: 0.45, metalness: 0.7, roughness: 0.45 });
+    const steel = rustyMetal({ base: '#4c5a63', rust: 0.2, metalness: 0.7, roughness: 0.45 });
     const db = new MeshBatch();
     db.add(steel, box(0.08, dh, 1.6, 0.04, dh / 2, -0.8));
-    db.add(rustyMetal({ base: '#b8a040', rust: 0.3, metalness: 0.9, roughness: 0.3 }), box(0.06, 0.16, 0.12, 0.12, 1.1, -1.35));
-    db.add(plainStandard('#222', 0.4, 0.8), box(0.04, 0.04, 0.25, 0.14, 1.05, -1.25));
+    db.add(rustyMetal({ base: '#d4b04a', rust: 0.1, metalness: 1, roughness: 0.25 }), box(0.06, 0.16, 0.12, 0.12, 1.1, -1.35));
+    db.add(plainStandard('#202326', 0.4, 0.6), box(0.04, 0.04, 0.25, 0.14, 1.05, -1.25));
     doorPivot.add(db.build('sideDoor'));
     this.group.add(doorPivot);
     const sdPos = this.w(x1 - 0.1, dh / 2, (dz0 + dz1) / 2);
@@ -330,14 +355,15 @@ export class GarageBuilder {
     this.doors.side = { pivot: doorPivot, open: 0, target: 0, collider: this.physics.addBox(sdPos, sdHalf), axis: 'y', amount: 1.7, colliderSpec: { pos: sdPos, half: sdHalf } };
     this.points.sideDoor = this.w(x1 + 0.7, 1.2, (dz0 + dz1) / 2);
     // keypad beside the door
-    const kp = glow('#38ffb0', 2.5);
+    const kp = this.pal.slot('#38ffb0', 2.5);
     b.add(plainStandard('#202326', 0.4, 0.6), box(0.06, 0.32, 0.22, x1 + 0.03, 1.35, dz1 + 0.35));
-    b.add(kp.material, box(0.02, 0.06, 0.16, x1 + 0.07, 1.45, dz1 + 0.35));
-    this.blinkers.push({ u: kp.intensity, period: 2.2, offset: 0.3, on: 2.5 });
+    kp.add(b, box(0.02, 0.06, 0.16, x1 + 0.07, 1.45, dz1 + 0.35));
+    for (let r = 0; r < 4; r++) for (let c = 0; c < 3; c++) b.add(rustyMetal({ base: '#5c6266', rust: 0.35 }), box(0.015, 0.035, 0.04, x1 + 0.065, 1.33 - r * 0.045, dz1 + 0.3 + c * 0.05));
+    this.halos.add(new THREE.Vector3(x1 + 0.1, 1.45, dz1 + 0.35), '#38ffb0', 0.3, this.blink(kp.intensity, 2.2, 0.3, 2.5), 1.5);
     // lamp over side door
-    const lamp = glow('#ffd6a0', 6);
-    b.add(plainStandard('#2a2a2a', 0.5, 0.6), box(0.3, 0.12, 0.4, x1 + 0.2, 2.7, -3));
-    b.add(lamp.material, box(0.22, 0.03, 0.3, x1 + 0.2, 2.63, -3));
+    const lamp = this.pal.slot('#ffd6a0', 6);
+    b.add(plainStandard('#1a1a1a', 0.6, 0.6), box(0.3, 0.12, 0.4, x1 + 0.2, 2.7, -3));
+    lamp.add(b, box(0.22, 0.03, 0.3, x1 + 0.2, 2.63, -3));
 
     // vault wall with reinforced door
     const vt = 0.4;
@@ -347,23 +373,50 @@ export class GarageBuilder {
     b.add(block, box(x1 - vdw, h, vt, (x1 + vdw) / 2, h / 2, vaultZ));
     this.col((x1 + vdw) / 2, h / 2, vaultZ, (x1 - vdw) / 2, h / 2, vt / 2);
     b.add(block, box(vdw * 2, h - 2.4, vt, 0, 2.4 + (h - 2.4) / 2, vaultZ));
-    const vaultMat = rustyMetal({ base: '#8a8e90', rust: 0.25, metalness: 0.9, roughness: 0.3 });
+    const vaultMat = rustyMetal({ base: '#7f8588', rust: -0.35, metalness: 0.85, roughness: 0.38, scale: 2.5 });
     const vPivot = new THREE.Group();
     vPivot.position.set(-vdw, 0, vaultZ + vt / 2);
     const vb = new MeshBatch();
-    vb.add(vaultMat, box(vdw * 2, 2.4, 0.16, vdw, 1.2, 0.04));
-    for (let i = 0; i < 5; i++) vb.add(plainStandard('#3a3a3a', 0.4, 0.9), cyl(0.04, 0.04, 0.05, vdw - 0.6 + i * 0.3, 1.7, 0.14, 8, Math.PI / 2));
-    vb.add(rustyMetal({ base: '#d4b04a', rust: 0.15, metalness: 1, roughness: 0.25 }), cyl(0.22, 0.22, 0.08, vdw, 1.15, 0.16, 18, Math.PI / 2));
+    const vdark = rustyMetal({ base: '#3b4044', rust: 0.35, metalness: 0.75, roughness: 0.45 });
+    const brass = rustyMetal({ base: '#d4b04a', rust: 0.1, metalness: 1, roughness: 0.25 });
+    const W = vdw * 2, Hd = 2.4;
+    // slab, raised frame and inset panel
+    vb.add(vaultMat, box(W, Hd, 0.2, vdw, Hd / 2, 0));
+    vb.add(vaultMat, box(W, 0.14, 0.06, vdw, Hd - 0.07, 0.12), box(W, 0.14, 0.06, vdw, 0.07, 0.12), box(0.14, Hd - 0.28, 0.06, 0.07, Hd / 2, 0.12), box(0.14, Hd - 0.28, 0.06, W - 0.07, Hd / 2, 0.12));
+    vb.add(vaultMat, box(W - 0.5, Hd - 0.55, 0.03, vdw, Hd / 2, 0.115));
+    for (let i = 0; i < 7; i++) {
+      for (const [rx, ry] of [[0.2 + i * 0.27, Hd - 0.07], [0.2 + i * 0.27, 0.07]]) vb.add(vdark, cyl(0.022, 0.022, 0.03, rx, ry, 0.16, 6, Math.PI / 2));
+    }
+    for (let i = 0; i < 8; i++) for (const rx of [0.07, W - 0.07]) vb.add(vdark, cyl(0.022, 0.022, 0.03, rx, 0.3 + i * 0.26, 0.16, 6, Math.PI / 2));
+    // spoked locking wheel with hub and grips
+    const wy = 1.22, wz = 0.25;
+    vb.add(brass, place(new THREE.TorusGeometry(0.36, 0.03, 8, 32), vdw, wy, wz));
+    vb.add(brass, cyl(0.09, 0.11, 0.14, vdw, wy, wz - 0.06, 16, Math.PI / 2));
+    for (let k = 0; k < 3; k++) {
+      const a = (k / 3) * Math.PI;
+      vb.add(brass, cyl(0.018, 0.018, 0.72, vdw, wy, wz, 6, 0, 0, a));
+      for (const sgn of [-1, 1]) vb.add(vdark, cyl(0.03, 0.03, 0.09, vdw - Math.sin(a) * 0.38 * sgn, wy + Math.cos(a) * 0.38 * sgn, wz + 0.04, 8, Math.PI / 2));
+    }
+    // combination dial + status lamp
+    vb.add(brass, cyl(0.09, 0.09, 0.04, vdw + 0.55, 1.78, 0.15, 18, Math.PI / 2));
+    vb.add(vdark, cyl(0.06, 0.06, 0.05, vdw + 0.55, 1.78, 0.16, 12, Math.PI / 2));
+    // hinge barrels on the pivot side, locking bolts on the free edge
+    for (const hy of [0.35, 1.2, 2.05]) {
+      vb.add(vdark, cyl(0.075, 0.075, 0.34, -0.02, hy, 0.13, 12));
+      vb.add(vdark, box(0.2, 0.26, 0.04, 0.08, hy, 0.12));
+    }
+    for (const by of [0.45, 1.2, 1.95]) vb.add(brass, cyl(0.05, 0.05, 0.3, W + 0.1, by, 0, 10, 0, 0, Math.PI / 2));
     vPivot.add(vb.build('vaultDoor'));
     this.group.add(vPivot);
     const vdPos = this.w(0, 1.2, vaultZ);
     const vdHalf = new THREE.Vector3(vdw, 1.2, 0.2);
     this.doors.vault = { pivot: vPivot, open: 0, target: 0, collider: this.physics.addBox(vdPos, vdHalf), axis: 'y', amount: -1.6, colliderSpec: { pos: vdPos, half: vdHalf } };
     this.points.vaultDoor = this.w(0.0, 1.2, vaultZ + 0.9);
-    const vk = glow('#ff3a3a', 2.5);
-    b.add(plainStandard('#1c1e20', 0.4, 0.6), box(0.24, 0.34, 0.06, 1.35, 1.35, vaultZ + vt / 2 + 0.03));
-    b.add(vk.material, box(0.16, 0.06, 0.02, 1.35, 1.45, vaultZ + vt / 2 + 0.07));
-    this.blinkers.push({ u: vk.intensity, period: 1.4, offset: 0, on: 2.5 });
+    const vk = this.pal.slot('#ff3a3a', 2.5);
+    b.add(plainStandard('#202326', 0.4, 0.6), box(0.24, 0.34, 0.06, 1.35, 1.35, vaultZ + vt / 2 + 0.03));
+    vk.add(b, box(0.16, 0.06, 0.02, 1.35, 1.45, vaultZ + vt / 2 + 0.07));
+    for (let r = 0; r < 4; r++) for (let c = 0; c < 3; c++) b.add(rustyMetal({ base: '#5c6266', rust: 0.35 }), box(0.04, 0.035, 0.015, 1.3 + c * 0.05, 1.33 - r * 0.045, vaultZ + vt / 2 + 0.065));
+    this.halos.add(new THREE.Vector3(1.35, 1.45, vaultZ + vt / 2 + 0.1), '#ff3a3a', 0.3, this.blink(vk.intensity, 1.4, 0, 2.5), 1.5);
 
     // roof (hidden when the player is inside)
     const roofMat = corrugated('#8d8a82', 0.75, 'x');
@@ -377,10 +430,11 @@ export class GarageBuilder {
     dg.rotateY(0.7);
     dg.translate(-5, h + 1.4, -9);
     rb.add(dishMat, norm(dg), cyl(0.05, 0.05, 1.2, -5, h + 0.7, -9, 6));
-    const antenna = glow('#ff3030', 0);
-    rb.add(plainStandard('#333', 0.5, 0.8), cyl(0.03, 0.03, 3, 6, h + 1.5, -10, 5));
-    rb.add(antenna.material, place(new THREE.SphereGeometry(0.08, 8, 6), 6, h + 3.05, -10));
-    this.blinkers.push({ u: antenna.intensity, period: 2, offset: 0.5, on: 12 });
+    const antenna = this.pal.slot('#ff3030', 0);
+    rb.add(plainStandard('#1a1a1a', 0.6, 0.6), cyl(0.03, 0.03, 3, 6, h + 1.5, -10, 5));
+    antenna.add(rb, place(new THREE.SphereGeometry(0.08, 8, 6), 6, h + 3.05, -10));
+    this.halos.add(new THREE.Vector3(6, h + 3.05, -10), '#ff3030', 0.9, this.blink(antenna.intensity, 2, 0.5, 12), 2.5);
+    dressRoof(rb, HOUSE);
     this.roof.add(rb.build('roof'));
   }
 
@@ -415,9 +469,14 @@ export class GarageBuilder {
     const genMat = rustyMetal({ base: '#c4952a', rust: 0.45 });
     b.add(genMat, box(1.8, 1.1, 1.0, 12, 0.6, -9));
     b.add(plainStandard('#1a1a1a', 0.6, 0.6), cyl(0.08, 0.08, 0.8, 12.6, 1.4, -9, 6));
-    const genLed = glow('#4bff5a', 3);
-    b.add(genLed.material, box(0.06, 0.06, 0.02, 11.4, 0.9, -8.49));
-    this.blinkers.push({ u: genLed.intensity, period: 1.0, offset: 0.2, on: 3 });
+    const genLed = this.pal.slot('#4bff5a', 3);
+    genLed.add(b, box(0.06, 0.06, 0.02, 11.4, 0.9, -8.49));
+    this.halos.add(new THREE.Vector3(11.4, 0.9, -8.45), '#4bff5a', 0.25, this.blink(genLed.intensity, 1.0, 0.2, 3), 1.5);
+    // generator detail: control panel, fuel cap, vents, exhaust soot
+    b.add(plainStandard('#202326', 0.4, 0.6), box(0.5, 0.35, 0.03, 11.6, 0.85, -8.49), box(1.82, 0.06, 1.02, 12, 1.16, -9));
+    for (let i = 0; i < 6; i++) b.add(plainStandard('#1a1a1a', 0.6, 0.6), box(0.6, 0.025, 0.02, 12.45, 0.4 + i * 0.09, -8.495));
+    b.add(rustyMetal({ base: '#c4952a', rust: 0.45 }), cyl(0.07, 0.07, 0.06, 11.4, 1.2, -9.3, 10));
+    for (const [wx, wz] of [[11.3, -8.6], [12.7, -8.6], [11.3, -9.4], [12.7, -9.4]]) b.add(plainStandard('#161412', 0.95), cyl(0.12, 0.12, 0.08, wx, 0.12, wz, 10, Math.PI / 2));
     this.col(12, 0.6, -9, 0.9, 0.6, 0.5);
     this.points.generator = this.w(12, 0.8, -9);
     // sandbags along the front
@@ -451,12 +510,19 @@ export class GarageBuilder {
     this.col(13, 0.9, 1.5, 2.5, 0.9, 1.15);
 
     // floodlight poles at the front corners + megaphone pole
-    const poleMat = rustyMetal({ base: '#5a5a58', rust: 0.6 });
+    const poleMat = rustyMetal({ base: '#7b7a74', rust: 0.6, metalness: 0.7 });
     for (const [fx, fz] of [[-20, 18], [20, 18]] as const) {
       b.add(poleMat, cyl(0.1, 0.12, 6, fx, 3, fz, 8));
-      b.add(plainStandard('#222', 0.5, 0.7), box(0.6, 0.35, 0.4, fx, 6, fz));
-      const lightMat = glow('#fff2d0', 0);
-      b.add(lightMat.material, box(0.5, 0.25, 0.04, fx, 5.95, fz - 0.21));
+      // yoke, finned housing with a visor, junction box and conduit down the pole
+      const housing = plainStandard('#202326', 0.4, 0.6);
+      b.add(poleMat, box(0.7, 0.05, 0.05, fx, 5.72, fz), box(0.05, 0.4, 0.05, fx - 0.33, 5.9, fz), box(0.05, 0.4, 0.05, fx + 0.33, 5.9, fz));
+      b.add(housing, box(0.6, 0.35, 0.4, fx, 6, fz, 0, -0.35));
+      for (let i = 0; i < 5; i++) b.add(housing, box(0.56, 0.3, 0.02, fx, 6.05, fz + 0.24 + i * 0.045, 0, -0.35));
+      b.add(housing, box(0.66, 0.03, 0.22, fx, 6.24, fz - 0.28, 0, -0.6));
+      b.add(poleMat, box(0.22, 0.3, 0.14, fx, 2.2, fz - 0.14), cyl(0.025, 0.025, 3.4, fx + 0.06, 3.9, fz - 0.12, 5));
+      const lightMat = this.pal.slot('#fff2d0', 0);
+      lightMat.add(b, box(0.5, 0.25, 0.04, fx, 5.93, fz - 0.2, 0, -0.35));
+      this.halos.add(new THREE.Vector3(fx, 5.94, fz - 0.3), '#fff0d0', 2.6, CH.NIGHT, 3);
       const spot = new THREE.SpotLight(0xffe6c0, 0, 40, 0.65, 0.5, 1.4);
       spot.position.copy(this.w(fx, 6, fz));
       spot.target.position.copy(this.w(fx * 0.3, 0, fz - 14));
@@ -473,15 +539,18 @@ export class GarageBuilder {
     const horn = new THREE.CylinderGeometry(0.35, 0.08, 0.6, 12, 1, true);
     horn.rotateX(Math.PI / 2);
     horn.translate(-4.5, 4.8, 17.85);
-    b.add(rustyMetal({ base: '#c8c2b0', rust: 0.5 }), norm(horn));
+    b.add(rustyMetal({ base: '#9a9a96', rust: 0.4 }), norm(horn));
     this.points.megaphone = this.w(-4.5, 4.8, 18);
     this.col(-4.5, 2.5, 17.5, 0.1, 2.5, 0.1);
 
+    dressYard(this.D);
+
     // drone charging dock pad
-    const padGlow = glow('#3ff2e0', 1.5);
+    const padGlow = this.pal.slot('#3ff2e0', 1.5);
     b.add(conc, cyl(1.2, 1.3, 0.2, -12, 0.1, 4, 20));
-    b.add(padGlow.material, place(new THREE.TorusGeometry(0.9, 0.04, 6, 32), -12, 0.22, 4, Math.PI / 2));
+    padGlow.add(b, place(new THREE.TorusGeometry(0.9, 0.04, 6, 32), -12, 0.22, 4, Math.PI / 2));
     this.points.dock = this.w(-12, 0.5, 4);
+    this.halos.add(new THREE.Vector3(-13.7, 1.38, 4.0), '#3ff2e0', 0.5, CH.ON, 1.2);
     void z1;
   }
 
@@ -500,12 +569,14 @@ export class GarageBuilder {
     // fuse box on west wall
     const fuse = rustyMetal({ base: '#8c8a5a', rust: 0.4 });
     b.add(fuse, box(0.15, 0.6, 0.45, x0 + 0.38, 1.6, -0.9));
-    const fuseLed = glow('#ff3030', 3);
-    b.add(fuseLed.material, box(0.02, 0.04, 0.04, x0 + 0.46, 1.8, -0.75));
-    this.blinkers.push({ u: fuseLed.intensity, period: 0.8, offset: 0, on: 3 });
+    const fuseLed = this.pal.slot('#ff3030', 3);
+    fuseLed.add(b, box(0.02, 0.04, 0.04, x0 + 0.46, 1.8, -0.75));
+    this.halos.add(new THREE.Vector3(x0 + 0.49, 1.8, -0.75), '#ff3030', 0.22, this.blink(fuseLed.intensity, 0.8, 0, 3), 1.5);
+    b.add(plainStandard('#202326', 0.4, 0.6), box(0.03, 0.5, 0.36, x0 + 0.465, 1.55, -0.9)); // door seam/panel
+    b.add(rustyMetal({ base: '#5c6266', rust: 0.35 }), box(0.04, 0.08, 0.03, x0 + 0.48, 1.55, -1.07));
     this.points.fuseBox = this.w(x0 + 0.9, 1.4, -0.9);
     // conduit from fuse box to laser emitters
-    b.add(plainStandard('#3a3a3a', 0.5, 0.6), box(0.05, 0.05, 4.5, x0 + 0.33, 3.6, -3.2));
+    b.add(plainStandard('#1a1a1a', 0.6, 0.6), box(0.05, 0.05, 4.5, x0 + 0.33, 3.6, -3.2));
 
     // whiteboard with startup OKRs
     const wbTex = canvasTexture(1024, 600, (ctx, w, h) => {
@@ -562,7 +633,7 @@ export class GarageBuilder {
     b.add(bean, place(bg.clone(), -2.5, 0.33, -1.5), place(bg.clone(), -1.3, 0.33, -1.0, 0, 1));
 
     // server rack with blinking LEDs (vault side)
-    const rack = plainStandard('#111317', 0.5, 0.6);
+    const rack = plainStandard('#202326', 0.4, 0.6);
     b.add(rack, box(0.8, 2.0, 0.9, x1 - 0.6, 1.0, -8.2));
     this.col(x1 - 0.6, 1.0, -8.2, 0.4, 1.0, 0.45);
     const leds = new THREE.MeshBasicNodeMaterial();
@@ -575,26 +646,55 @@ export class GarageBuilder {
     ledPanel.rotation.y = -Math.PI / 2;
     this.group.add(ledPanel);
 
-    // laser tripwires across the workshop
-    const emitterMat = plainStandard('#2a2a2a', 0.4, 0.8);
+    // laser tripwires across the workshop: one additive mesh per beam holding a soft cylinder
+    // (bright core + glow by view angle, shimmer and dust glints along it) and a red line of light
+    // on the floor beneath it, so the beam reads in the room and switches off as one piece
+    const emitterMat = plainStandard('#202326', 0.4, 0.6);
+    const lens = this.pal.slot('#ff2010', 6);
     const laserDefs: [string, number, number][] = [['laser_low', -1.6, 0.32], ['laser_high', -4.6, 1.3]];
+    const len = x1 - x0 - 0.6;
+    const uLen = uniform(len);
     for (const [id, lz, ly] of laserDefs) {
       const u = uniform(7);
-      const lm = new THREE.MeshBasicNodeMaterial({ transparent: true, depthWrite: false, blending: THREE.AdditiveBlending });
-      const pulse = sin(time.mul(12)).mul(0.15).add(0.85);
-      mat2(lm, vec4(vec3(1.0, 0.05, 0.03).mul(u).mul(pulse), 1));
-      const len = x1 - x0 - 0.6;
-      const lg = new THREE.CylinderGeometry(0.012, 0.012, len, 6, 1, true);
+      const uLy = uniform(ly), uSeed = uniform(lz); // uniforms, not literals: both beams share a program
+      const lm = new THREE.MeshBasicNodeMaterial({ transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide });
+      lm.colorNode = Fn(() => {
+        const isFloor = step(1.5, uv().y);
+        const along = uv().x.mul(uLen);
+        const vdir = normalize(cameraPosition.sub(positionWorld));
+        const facing = abs(dot(normalWorld, vdir));
+        const shimmer = noise(vec2(along.mul(0.35).sub(time.mul(0.9)), time.mul(0.23))).r.mul(1.1).add(0.45);
+        const glints = smoothstep(0.62, 0.8, noise(vec2(along.mul(1.7).add(time.mul(0.35)), time.mul(0.6).add(uSeed))).r);
+        const core = smoothstep(0.9, 0.995, facing).mul(1.3).add(pow(facing, 10).mul(0.35));
+        const halo = pow(facing, 2.5).mul(0.16).mul(shimmer).add(pow(facing, 6).mul(glints).mul(0.9));
+        const beamC = vec3(1.0, 0.08, 0.04).mul(core.add(halo)).add(vec3(1.0, 0.75, 0.6).mul(core.mul(0.25)));
+        const across = abs(uv().y.sub(2.5)).mul(2);
+        const floorC = vec3(1.0, 0.05, 0.02).mul(pow(clamp(float(1).sub(across), 0, 1), 3).mul(float(0.08).div(uLy.mul(1.6).add(0.2)))).mul(shimmer.mul(0.5).add(0.5));
+        const pulse = sin(time.mul(12)).mul(0.1).add(0.9);
+        return mix(beamC, floorC, isFloor).mul(u).mul(pulse);
+      })();
+      lm.opacityNode = float(1);
+      const lg = new THREE.CylinderGeometry(0.05, 0.05, len, 12, 1, true);
       lg.rotateZ(Math.PI / 2);
-      const laser = new THREE.Mesh(lg, lm);
+      // cylinder uv.x runs around the circumference; make it run along the beam instead
+      const cu = lg.attributes.uv as THREE.BufferAttribute, cp = lg.attributes.position as THREE.BufferAttribute;
+      for (let i = 0; i < cu.count; i++) cu.setXY(i, cp.getX(i) / len + 0.5, 0.5);
+      const fg = new THREE.PlaneGeometry(len, 1.1);
+      const fu = fg.attributes.uv as THREE.BufferAttribute;
+      for (let i = 0; i < fu.count; i++) fu.setXY(i, fu.getX(i), fu.getY(i) + 2);
+      fg.rotateX(-Math.PI / 2);
+      fg.translate(0, -ly + 0.112, 0);
+      const laser = new THREE.Mesh(merge([lg, fg]), lm);
       laser.position.set(0, ly, lz);
+      laser.renderOrder = 21;
       this.group.add(laser);
-      const glowG = new THREE.CylinderGeometry(0.05, 0.05, len, 8, 1, true);
-      glowG.rotateZ(Math.PI / 2);
-      const gm = new THREE.MeshBasicNodeMaterial({ transparent: true, depthWrite: false, blending: THREE.AdditiveBlending });
-      mat2(gm, vec4(vec3(1.0, 0.1, 0.05).mul(u).mul(0.08), 1));
-      laser.add(new THREE.Mesh(glowG, gm));
-      b.add(emitterMat, box(0.12, 0.14, 0.14, x0 + 0.36, ly, lz), box(0.12, 0.14, 0.14, x1 - 0.36, ly, lz));
+      // emitter housings with a lens, mounting plate and a cable drop
+      for (const [ex, dir] of [[x0 + 0.36, 1], [x1 - 0.36, -1]] as const) {
+        b.add(emitterMat, box(0.12, 0.14, 0.14, ex, ly, lz), box(0.03, 0.26, 0.22, ex - dir * 0.06, ly, lz));
+        lens.add(b, cyl(0.03, 0.03, 0.02, ex + dir * 0.065, ly, lz, 10, 0, 0, Math.PI / 2));
+        b.add(plainStandard('#1a1a1a', 0.6, 0.6), cyl(0.012, 0.012, 3.7 - ly - 0.1, ex - dir * 0.03, ly + (3.7 - ly) / 2 + 0.04, lz + 0.05, 4));
+        this.halos.add(new THREE.Vector3(ex + dir * 0.09, ly, lz), '#ff2a14', 0.35, CH.LASER, 2.5);
+      }
       this.lasers.push({ id, a: this.w(x0 + 0.3, ly, lz), b: this.w(x1 - 0.3, ly, lz), mesh: laser, intensity: u as unknown as { value: number } });
     }
 
@@ -653,11 +753,11 @@ export class GarageBuilder {
       grime(ctx, w, h, 0.4, 2);
     });
     const cover = new THREE.Mesh(new THREE.PlaneGeometry(0.7, 0.95), new THREE.MeshStandardNodeMaterial({ map: coverTex, roughness: 0.4 }));
-    cover.position.set(0.2, 2.0, z0 + 0.32);
+    cover.position.set(0.2, 2.0, z0 + 0.39);
     this.group.add(cover);
-    b.add(wood('#3a2616'), box(0.82, 1.07, 0.04, 0.2, 2.0, z0 + 0.3));
-    const ring = glow('#ffffff', 5);
-    b.add(ring.material, place(new THREE.TorusGeometry(0.35, 0.03, 8, 32), 1.6, 1.7, z0 + 0.9, 0, 0.4));
+    b.add(wood('#3a2616'), box(0.82, 1.07, 0.04, 0.2, 2.0, z0 + 0.37));
+    const ring = this.pal.slot('#ffffff', 5);
+    ring.add(b, place(new THREE.TorusGeometry(0.35, 0.03, 8, 32), 1.6, 1.7, z0 + 0.9, 0, 0.4));
     b.add(metal, cyl(0.02, 0.02, 1.5, 1.6, 0.75, z0 + 0.9, 5));
     const hoodie = fabric('#20242a');
     b.add(hoodie, place(new THREE.CapsuleGeometry(0.28, 0.6, 4, 10), -1.2, 1.15, z0 + 0.8), place(new THREE.SphereGeometry(0.17, 10, 8), -1.2, 1.78, z0 + 0.8));
@@ -669,7 +769,11 @@ export class GarageBuilder {
     this.interiorLight.position.copy(this.w(0, 3.6, -3.2));
     this.vaultLight = new THREE.PointLight(0xffc070, 10, 10, 1.8);
     this.vaultLight.position.copy(this.w(0, 3.4, -9.5));
-    b.add(glow('#ffd4a0', 4).material, box(1.2, 0.05, 0.2, 0, 4.1, -3.2), box(1.2, 0.05, 0.2, 0, 4.1, -9.5));
+    const tube = this.pal.slot('#ffe2b8', 5);
+    this.tubeGlow = tube.intensity as unknown as { value: number };
+    this.tubeColor = tube.color as unknown as { value: THREE.Color };
+    dressWorkshop(this.D, HOUSE, tube);
+    dressVault(this.D, HOUSE);
     this.points.interior = this.w(0, 1, -3);
     this.points.vaultCenter = this.w(0, 1, -9.5);
     void neon;
