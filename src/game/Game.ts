@@ -688,7 +688,7 @@ export class Game {
         this.scene.remove(g.mesh);
         this.physics.world.removeRigidBody(g.body);
         this.grenades.splice(this.grenades.indexOf(g), 1);
-        const sw = new Shockwave(g.mesh.position, 8);
+        const sw = new Shockwave(g.mesh.position, 8, this.garage.sparks);
         this.scene.add(sw.mesh);
         this.shockwaves.push(sw);
         this.flash.position.copy(g.mesh.position).y += 0.3;
@@ -703,7 +703,7 @@ export class Game {
       }
     }
     for (const sw of [...this.shockwaves]) {
-      sw.update(dt);
+      sw.update(dt, this.camera.position);
       if (sw.done) { this.scene.remove(sw.mesh); this.shockwaves.splice(this.shockwaves.indexOf(sw), 1); }
     }
     this.flash.intensity = damp(this.flash.intensity, 0, 6, dt);

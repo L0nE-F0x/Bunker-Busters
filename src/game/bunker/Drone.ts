@@ -1,8 +1,8 @@
 import * as THREE from 'three/webgpu';
-import { Fn, uv, vec3, float, length, smoothstep, atan, time, sin, uniform } from 'three/tsl';
+import { Fn, uv, vec3, float, length, smoothstep, atan, time, sin, uniform, sign, positionLocal, mix, step } from 'three/tsl';
 import { rustyMetal, glow, plainStandard } from '../world/materials';
-import { lightCone } from '../world/effects';
-import { canvasTexture, MeshBatch, merge, norm } from '../world/kit';
+import { lightCone, GlowSprites, type Sparks, type DustPuffs } from '../world/effects';
+import { canvasTexture, MeshBatch, merge } from '../world/kit';
 import { damp, dampAngle } from '@/engine/noise';
 import type { Physics } from '@/engine/physics';
 
@@ -39,8 +39,7 @@ export interface DroneEvents {
 export class Drone {
   group = new THREE.Group();
   private body = new THREE.Group();
-  private rotors!: THREE.Mesh;
-  private rotorAngle = uniform(0);
+  private rotors: THREE.Mesh[] = [];
   private eye: ReturnType<typeof glow>;
   private spot: THREE.SpotLight;
   private cone: ReturnType<typeof lightCone>;
@@ -68,7 +67,13 @@ export class Drone {
   readonly range = 15;
   readonly halfAngle = THREE.MathUtils.degToRad(38);
   canSee = false;
-  sparks: THREE.Points | null = null;
+  /** shared FX (set by the owner): sparks for brown-outs / crashes / EMP, puffs for smoke */
+  fx: { sparks?: Sparks; puffs?: DustPuffs } = {};
+  private halos = new GlowSprites(6);
+  private eyeW = [1, 0, 0];
+  private uNav = uniform(new THREE.Vector2(1, 0));
+  private fxTimer = 0;
+  private empFlash = 0;
 
   constructor(
     private physics: Physics,
@@ -83,49 +88,77 @@ export class Drone {
     const shell = rustyMetal({ base: '#e8e4da', rust: 0.18, metalness: 0.3, roughness: 0.4, rim: 0.6 });
     const orange = rustyMetal({ base: '#ff6a1a', rust: 0.15, metalness: 0.3, roughness: 0.4 });
     const dark = plainStandard('#1a1c1f', 0.4, 0.7);
-    // every rigid part of the body goes into one batch (a handful of draws instead of ~15)
-    const parts = new MeshBatch();
-    const add = (geo: THREE.BufferGeometry, mat: THREE.Material, x = 0, y = 0, z = 0, sx = 1, sy = 1, sz = 1, rx = 0, ry = 0) => {
-      geo.applyMatrix4(_m.compose(_p.set(x, y, z), _q.setFromEuler(_e.set(rx, ry, 0)), _s.set(sx, sy, sz)));
-      parts.add(mat, norm(geo));
-    };
-    add(new THREE.SphereGeometry(0.42, 24, 16), shell, 0, 0, 0, 1, 0.42, 1.15);
-    add(new THREE.TorusGeometry(0.42, 0.035, 8, 32), orange, 0, 0, 0, 1, 1, 1.15, Math.PI / 2);
-    add(new THREE.CylinderGeometry(0.18, 0.24, 0.12, 16), dark, 0, -0.17, 0.05);
-    // eye (its own mesh: the colour animates, so it can't be baked into a batch)
+    // static parts are merged per material (one draw call each instead of ~20 meshes)
+    const mb = new MeshBatch();
+    const P = (g: THREE.BufferGeometry, x = 0, y = 0, z = 0, sx = 1, sy = 1, sz = 1, rx = 0, ry = 0, rz = 0) =>
+      g.applyMatrix4(new THREE.Matrix4().compose(new THREE.Vector3(x, y, z), new THREE.Quaternion().setFromEuler(new THREE.Euler(rx, ry, rz)), new THREE.Vector3(sx, sy, sz)));
+    mb.add(shell, P(new THREE.SphereGeometry(0.42, 24, 16), 0, 0, 0, 1, 0.42, 1.15));
+    mb.add(orange, P(new THREE.TorusGeometry(0.42, 0.035, 8, 32), 0, 0, 0, 1, 1, 1.15, Math.PI / 2));
+    mb.add(dark, P(new THREE.CylinderGeometry(0.18, 0.24, 0.12, 16), 0, -0.17, 0.05));
+    // canopy seam + a sensor dome on top
+    mb.add(dark, P(new THREE.TorusGeometry(0.3, 0.008, 4, 28), 0, 0.105, 0, 1, 1, 1.15, Math.PI / 2));
+    mb.add(dark, P(new THREE.SphereGeometry(0.07, 12, 8, 0, Math.PI * 2, 0, Math.PI / 2), 0.12, 0.16, 0.12));
+    // eye socket (the glowing eye itself is a separate mesh: its colour follows the state)
+    mb.add(dark, P(new THREE.SphereGeometry(0.11, 16, 12), 0, -0.06, 0.42));
+    mb.add(orange, P(new THREE.TorusGeometry(0.1, 0.012, 6, 20), 0, -0.06, 0.49));
     this.eye = glow('#3ff2e0', 8);
-    add(new THREE.SphereGeometry(0.11, 16, 12), dark, 0, -0.06, 0.42);
-    const eye = new THREE.Mesh(new THREE.SphereGeometry(0.075, 16, 12), this.eye.material);
-    eye.position.set(0, -0.06, 0.47);
-    eye.castShadow = true;
-    this.body.add(eye);
-    // arms + motors + rotors
-    // flat discs: each triangle faces one way, so the default back-then-front double pass only ever
-    // drew it once anyway; a single pass is the same picture for half the draws
-    const rotorMat = new THREE.MeshBasicNodeMaterial({ transparent: true, depthWrite: false, side: THREE.DoubleSide, forceSinglePass: true });
+    const eyeMesh = new THREE.Mesh(new THREE.SphereGeometry(0.075, 16, 12), this.eye.material);
+    eyeMesh.position.set(0, -0.06, 0.47);
+    this.body.add(eyeMesh);
+    // landing skids
+    for (const sx of [-0.22, 0.22]) {
+      mb.add(dark, P(new THREE.CylinderGeometry(0.015, 0.015, 0.62, 6), sx, -0.36, 0, 1, 1, 1, Math.PI / 2));
+      for (const sz of [-0.16, 0.16]) mb.add(dark, P(new THREE.CylinderGeometry(0.012, 0.012, 0.2, 5), sx * 0.8, -0.27, sz, 1, 1, 1, 0, 0, sx > 0 ? 0.35 : -0.35));
+    }
+    // arms, motors, rotor guards; the four rotor discs are one mesh animated in the shader
+    const rotorMat = new THREE.MeshBasicNodeMaterial({ transparent: true, depthWrite: false, side: THREE.DoubleSide });
     const spin = this.rotorSpin;
-    const turn = this.rotorAngle;
     rotorMat.colorNode = vec3(0.08, 0.08, 0.09);
     rotorMat.opacityNode = Fn(() => {
       const p = uv().sub(0.5).mul(2);
       const r = length(p);
-      // the four discs are one static mesh; their shared spin angle is applied here instead
-      const a = atan(p.y, p.x).sub(turn);
-      const blades = smoothstep(0.6, 1.0, sin(a.mul(2).add(time.mul(spin).mul(70))).abs()).mul(0.5).add(0.18);
+      const a = atan(p.y, p.x);
+      // neighbouring props counter-rotate
+      const dir = sign(positionLocal.x.mul(positionLocal.z));
+      const blades = smoothstep(0.6, 1.0, sin(a.mul(2).add(time.mul(spin).mul(70).mul(dir))).abs()).mul(0.5).add(0.18);
       return blades.mul(smoothstep(1.0, 0.92, r)).mul(smoothstep(0.08, 0.15, r)).mul(float(0.35).add(spin.mul(0.65)));
     })();
     const discs: THREE.BufferGeometry[] = [];
     for (const [x, z] of [[0.62, 0.52], [-0.62, 0.52], [0.62, -0.52], [-0.62, -0.52]]) {
-      add(new THREE.BoxGeometry(0.06, 0.05, 0.72), shell, x / 2, 0.02, z / 2, 1, 1, 1, 0, Math.atan2(x, z));
-      add(new THREE.CylinderGeometry(0.07, 0.08, 0.12, 12), dark, x, 0.05, z);
-      // same colour everywhere, so blending order between overlapping discs doesn't matter
-      discs.push(norm(new THREE.CircleGeometry(0.34, 24).rotateX(-Math.PI / 2).translate(x, 0.12, z)));
+      mb.add(shell, P(new THREE.BoxGeometry(0.06, 0.05, 0.72), x / 2, 0.02, z / 2, 1, 1, 1, 0, Math.atan2(x, z)));
+      mb.add(dark, P(new THREE.CylinderGeometry(0.07, 0.08, 0.12, 12), x, 0.05, z));
+      mb.add(orange, P(new THREE.TorusGeometry(0.37, 0.012, 4, 32), x, 0.12, z, 1, 1, 1, Math.PI / 2));
+      mb.add(dark, P(new THREE.CylinderGeometry(0.02, 0.02, 0.04, 6), x, 0.12, z));
+      discs.push(P(new THREE.CircleGeometry(0.34, 24), x, 0.12, z, 1, 1, 1, -Math.PI / 2));
     }
-    this.rotors = new THREE.Mesh(merge(discs), rotorMat);
-    this.body.add(this.rotors);
-    // antenna + battery screen
-    add(new THREE.CylinderGeometry(0.008, 0.008, 0.35, 4), dark, -0.15, 0.3, -0.2);
-    this.body.add(parts.build('droneBody', true, false));
+    const rotors = new THREE.Mesh(merge(discs), rotorMat);
+    this.body.add(rotors);
+    this.rotors.push(rotors);
+    // navigation lights: red port, green starboard, white tail strobe (one material, colour by side)
+    const navMat = new THREE.MeshBasicNodeMaterial();
+    const uNav = this.uNav;
+    navMat.colorNode = Fn(() => {
+      const pl = positionLocal;
+      const side = mix(vec3(1.0, 0.05, 0.03), vec3(0.1, 1.0, 0.25), step(0, pl.x));
+      const tail = step(pl.z, -0.3);
+      return mix(side.mul(uNav.x), vec3(1, 1, 1).mul(uNav.y), tail).mul(6);
+    })();
+    const navGeo = [P(new THREE.SphereGeometry(0.025, 8, 6), -0.68, 0.05, 0.58), P(new THREE.SphereGeometry(0.025, 8, 6), 0.68, 0.05, 0.58), P(new THREE.SphereGeometry(0.022, 8, 6), 0, 0.1, -0.46)];
+    const nav = new THREE.Mesh(merge(navGeo), navMat);
+    this.body.add(nav);
+    this.halos.add(new THREE.Vector3(-0.7, 0.05, 0.6), '#ff2010', 0.35, 1, 2.5);
+    this.halos.add(new THREE.Vector3(0.7, 0.05, 0.6), '#20ff50', 0.35, 1, 2.5);
+    this.halos.add(new THREE.Vector3(0, 0.1, -0.5), '#ffffff', 0.6, 2, 3);
+    // eye halo: one per state colour, cross-faded through their channels
+    this.halos.add(new THREE.Vector3(0, -0.06, 0.56), COLORS.calm, 0.8, 3, 1.8);
+    this.halos.add(new THREE.Vector3(0, -0.06, 0.56), COLORS.sus, 0.8, 4, 1.8);
+    this.halos.add(new THREE.Vector3(0, -0.06, 0.56), COLORS.alert, 0.9, 5, 2.2);
+    mb.add(dark, P(new THREE.CylinderGeometry(0.008, 0.008, 0.35, 4), -0.15, 0.3, -0.2)); // antenna
+    const parts = mb.build('seedbot');
+    for (const m of parts.children) m.castShadow = true;
+    this.body.add(parts);
+    this.body.add(this.halos.build());
+    // battery screen
     const tex = canvasTexture(256, 128, (ctx, w, h) => {
       ctx.fillStyle = '#050505';
       ctx.fillRect(0, 0, w, h);
@@ -168,6 +201,8 @@ export class Drone {
   }
 
   emp(duration: number) {
+    this.empFlash = 1.6;
+    this.fx.sparks?.emit(this.position, 40, 4, { up: 1.5, electric: true, size: 0.03, life: 0.6, floorY: this.groundY + 0.02, spread: 0.6 });
     this.setState('disabled');
     this.disabledFor = duration;
     this.detection = 0;
@@ -209,6 +244,7 @@ export class Drone {
       this.position.y = floor;
       if (this.vy < -1.5) {
         this.events.onCrash?.(Math.min(1, -this.vy / 8));
+        this.fx.sparks?.emit(this.position.clone().setY(this.groundY + 0.1), 18 + Math.round(-this.vy * 4), 3.5, { up: 1.2, floorY: this.groundY + 0.02, size: 0.025, life: 0.8, spread: 0.5 });
         // land on one skid: lean over a little, more for a harder hit
         const k = Math.min(1, -this.vy / 8);
         this.crashTilt.set((Math.random() - 0.5) * 0.5 * k, (Math.random() < 0.5 ? -1 : 1) * (0.15 + 0.25 * k));
@@ -402,11 +438,50 @@ export class Drone {
     const dusty = 1 + (1 - (s.visibility ?? 1)) * 0.8;
     this.cone.intensity.value = (0.18 + s.night * 0.4 + (this.state === 'alert' ? 0.25 : 0)) * power * dusty;
     this.rotorSpin.value = damp(this.rotorSpin.value as number, this.state === 'disabled' ? 0.02 : this.state === 'sputter' ? 0.7 : 1, 3, dt);
-    this.rotorAngle.value = ((this.rotorAngle.value as number) + dt * 40 * (this.rotorSpin.value as number)) % (Math.PI * 2);
     (this.screen.material as THREE.MeshStandardNodeMaterial).emissiveIntensity = Math.sin(t * 4) > 0 ? 1 : 0.25;
+    // nav lights, strobe and the eye halo
+    const navOn = this.state === 'disabled' ? (this.disabledFor < 1 ? power : 0) : power > 0.1 ? 1 : 0.15;
+    const strobe = (t % 1.3) < 0.07 ? navOn : 0;
+    (this.uNav.value as THREE.Vector2).set(navOn * (0.75 + 0.25 * Math.sin(t * 3)), strobe);
+    const ch = this.halos.channels;
+    ch[1] = navOn;
+    ch[2] = strobe;
+    const target = colorKey === 'calm' ? 0 : colorKey === 'sus' ? 1 : 2;
+    for (let i = 0; i < 3; i++) this.eyeW[i] = damp(this.eyeW[i], i === target ? 1 : 0, 8, dt);
+    const eyeK = Math.max(0, this.eye.intensity.value as number) / 8;
+    for (let i = 0; i < 3; i++) ch[3 + i] = this.eyeW[i] * eyeK;
+    this.emitFx(dt);
     void this.home;
+  }
+
+  /** Sparks from a shorting motor during brown-outs, smoke + crackle while knocked out. */
+  private emitFx(dt: number) {
+    const { sparks, puffs } = this.fx;
+    this.fxTimer -= dt;
+    this.empFlash = Math.max(0, this.empFlash - dt);
+    if (this.fxTimer > 0) return;
+    this.group.updateMatrixWorld();
+    const motor = () => {
+      const m = MOTORS[Math.floor(Math.random() * 4)];
+      return this.body.localToWorld(new THREE.Vector3(m[0], 0.06, m[1]));
+    };
+    if (this.state === 'sputter') {
+      this.fxTimer = 0.08 + Math.random() * 0.3;
+      if (Math.random() < 0.7) sparks?.emit(motor(), 6 + Math.floor(Math.random() * 8), 2.2, { up: 0.6, floorY: this.groundY + 0.02, size: 0.022, life: 0.55 });
+      if (Math.random() < 0.25) puffs?.emit(motor(), 1, 0.15, 0.4, 0.25);
+    } else if (this.state === 'disabled') {
+      this.fxTimer = this.empFlash > 0 ? 0.07 : 0.28;
+      const onGround = this.position.y < this.groundY + 0.6;
+      if (this.empFlash > 0) {
+        const p = this.position.clone().add(new THREE.Vector3((Math.random() - 0.5) * 0.9, (Math.random() - 0.3) * 0.3, (Math.random() - 0.5) * 0.9));
+        sparks?.emit(p, 4 + Math.floor(Math.random() * 4), 1.6, { up: 0.5, electric: true, floorY: this.groundY + 0.02, size: 0.02, life: 0.35 });
+      } else if (onGround && Math.random() < 0.15) {
+        sparks?.emit(motor(), 3, 1.2, { up: 0.4, floorY: this.groundY + 0.02, size: 0.018, life: 0.4 });
+      }
+      if (onGround) puffs?.emit(this.position.clone().add(new THREE.Vector3(0, 0.15, 0)), 1, 0.08, 0.55, 0.3);
+    } else this.fxTimer = 0.3;
   }
 }
 
+const MOTORS = [[0.62, 0.52], [-0.62, 0.52], [0.62, -0.52], [-0.62, -0.52]];
 const _a = new THREE.Vector3(), _b = new THREE.Vector3(), _up = new THREE.Vector3(0, 1, 0);
-const _m = new THREE.Matrix4(), _p = new THREE.Vector3(), _q = new THREE.Quaternion(), _e = new THREE.Euler(), _s = new THREE.Vector3();
