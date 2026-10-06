@@ -1,6 +1,7 @@
 import * as THREE from 'three/webgpu';
 import { fabric, fabricUnique, leather, rustyMetal, glow, plainStandard } from '../world/materials';
 import { damp } from '@/engine/noise';
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 
 export interface Look {
   coat: string;
@@ -196,6 +197,50 @@ export class CharacterModel {
 
   setAccent(c: string) {
     void c;
+  }
+
+  /**
+   * First person: the body only renders into the sun's shadow map (layer 1), where materials don't
+   * matter. Merge the rigid parts of each animated joint into one shadow caster (per face side), so
+   * the walking shadow costs ~15 draws instead of ~45. Parts under `minRadius` (straps, buckles,
+   * goggles) don't change the silhouette and are dropped.
+   */
+  bakeShadowProxy(minRadius = 0.07) {
+    const shadowMat = new Map<THREE.Side, THREE.Material>();
+    const matFor = (side: THREE.Side) => {
+      let m = shadowMat.get(side);
+      if (!m) shadowMat.set(side, (m = new THREE.MeshStandardNodeMaterial({ side })));
+      return m;
+    };
+    const joints: THREE.Object3D[] = [];
+    this.root.traverse((o) => { if (!(o as THREE.Mesh).isMesh) joints.push(o); });
+    for (const joint of joints) {
+      const bySide = new Map<THREE.Side, THREE.BufferGeometry[]>();
+      for (const child of [...joint.children]) {
+        const mesh = child as THREE.Mesh;
+        if (!mesh.isMesh) continue;
+        joint.remove(mesh);
+        mesh.geometry.computeBoundingSphere();
+        if ((mesh.geometry.boundingSphere?.radius ?? 0) <= minRadius) continue;
+        mesh.updateMatrix();
+        const g = mesh.geometry.index ? mesh.geometry.toNonIndexed() : mesh.geometry.clone();
+        for (const key of Object.keys(g.attributes)) if (key !== 'position' && key !== 'normal') g.deleteAttribute(key);
+        g.applyMatrix4(mesh.matrix);
+        const side = (mesh.material as THREE.Material).side;
+        let list = bySide.get(side);
+        if (!list) bySide.set(side, (list = []));
+        list.push(g);
+      }
+      for (const [side, list] of bySide) {
+        const geo = list.length === 1 ? list[0] : mergeGeometries(list, false);
+        if (!geo) continue;
+        const proxy = new THREE.Mesh(geo, matFor(side));
+        proxy.castShadow = true;
+        proxy.layers.set(1);
+        joint.add(proxy);
+      }
+      joint.layers.set(1);
+    }
   }
 
   update(dt: number, s: AnimState) {

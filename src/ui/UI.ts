@@ -47,6 +47,7 @@ export class UI implements UIBridge {
   minigameOpen = false;
   private subtitleTimer = 0;
   private lastClock = '';
+  private detCache: { show: boolean | null; color: string; width: string; text: string } = { show: null, color: '', width: '', text: '' };
   private minimapT = 0;
   private lastObjective = '';
   private loadingEl: HTMLElement;
@@ -189,6 +190,7 @@ export class UI implements UIBridge {
     this.state = state;
     this.map = map;
     this.minimap = new Minimap(map);
+    this.detCache = { show: null, color: '', width: '', text: '' };
     this.hud?.remove();
     const hud = (this.hud = h('div', ''));
     hud.id = 'hud';
@@ -302,15 +304,19 @@ export class UI implements UIBridge {
       void this.els.objective.offsetWidth;
       this.els.objective.classList.add('flash');
     }
-    // detection
+    // detection (only touch the DOM when something visible changed: every write costs a style pass
+    // and a recomposite of the overlay, which is what hurts in WebKitGTK)
     const det = this.els.detect;
     const show = f.detection > 0.02 || f.droneState === 'alert';
-    det.style.opacity = show ? '1' : '0';
+    const dc = this.detCache;
+    if (show !== dc.show) { dc.show = show; det.style.opacity = show ? '1' : '0'; }
     if (show) {
       const col = f.droneState === 'alert' ? '#ff3b3b' : f.detection > 0.3 ? '#ffb347' : '#f3e9d8';
-      det.style.color = col;
-      (det.querySelector('.m i') as HTMLElement).style.width = `${f.detection * 100}%`;
-      det.querySelector('.t')!.textContent = f.droneState === 'alert' ? 'DETECTED' : f.canSee ? 'BEING WATCHED' : f.droneState === 'search' ? 'SEARCHING' : 'SUSPICIOUS';
+      if (col !== dc.color) { dc.color = col; det.style.color = col; }
+      const w = `${Math.round(f.detection * 400) / 4}%`; // quarter-percent steps: sub-pixel on any meter
+      if (w !== dc.width) { dc.width = w; (det.querySelector('.m i') as HTMLElement).style.width = w; }
+      const text = f.droneState === 'alert' ? 'DETECTED' : f.canSee ? 'BEING WATCHED' : f.droneState === 'search' ? 'SEARCHING' : 'SUSPICIOUS';
+      if (text !== dc.text) { dc.text = text; det.querySelector('.t')!.textContent = text; }
     }
     // prompts
     const pr = this.els.prompt;

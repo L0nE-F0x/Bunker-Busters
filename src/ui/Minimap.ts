@@ -158,16 +158,43 @@ function drawMarker(ctx: CanvasRenderingContext2D, m: MapMarker, x: number, y: n
   }
 }
 
+/**
+ * A glowing piece of minimap art rendered once. Canvas `shadowBlur` is a CPU blur in WebKitGTK and
+ * the minimap used ~15 of them per redraw (markers, arrow, compass letters), so the glows are baked
+ * into small sprites and blitted. Shadows ignore the transform, so baking them unrotated is exact.
+ */
+function sprite(size: number, draw: (ctx: CanvasRenderingContext2D) => void) {
+  const c = document.createElement('canvas');
+  c.width = c.height = size;
+  const ctx = c.getContext('2d')!;
+  ctx.translate(size / 2, size / 2);
+  draw(ctx);
+  return c;
+}
+// sprite sizes ≥ 2 × (shape extent + ~3σ of its glow), centred on the anchor
+const SPRITE = 80; // markers (≤ 13 px + blur 14) and compass letters
+const ARROW = 112; // player arrow (16 px + blur 16)
+const COMPASS_FONT = '700 22px "JetBrains Mono", monospace';
+
 /** Rotating circular minimap. */
 export class Minimap {
   canvas: HTMLCanvasElement;
   private ctx: CanvasRenderingContext2D;
   range = 150; // metres radius
+  private sprites = new Map<string, HTMLCanvasElement>();
+  private ring: HTMLCanvasElement | null = null;
+  private fontReady = false;
 
   constructor(private data: MapData) {
     this.canvas = document.createElement('canvas');
     this.canvas.width = this.canvas.height = 392;
     this.ctx = this.canvas.getContext('2d')!;
+  }
+
+  private cached(key: string, make: () => HTMLCanvasElement) {
+    let s = this.sprites.get(key);
+    if (!s) this.sprites.set(key, (s = make()));
+    return s;
   }
 
   draw(px: number, pz: number, heading: number, playerYaw: number, markers: MapMarker[]) {
@@ -195,44 +222,58 @@ export class Minimap {
       const d = Math.hypot(mx, mz);
       let x = mx, y = mz;
       if (d > R - 14) { x = (mx / d) * (R - 14); y = (mz / d) * (R - 14); }
+      const spr = this.cached(`m:${m.kind}:${m.color}`, () => sprite(SPRITE, (c) => drawMarker(c, m, 0, 0, 1.4, false)));
       ctx.save();
       ctx.translate(x, y);
       ctx.rotate(-heading);
-      drawMarker(ctx, m, 0, 0, 1.4, false);
+      ctx.drawImage(spr, -SPRITE / 2, -SPRITE / 2);
       ctx.restore();
     }
     ctx.restore();
     // player arrow (points along body yaw relative to camera heading)
+    const arrow = this.cached('arrow', () => sprite(ARROW, (c) => {
+      c.fillStyle = '#3ff2e0';
+      c.shadowColor = '#3ff2e0';
+      c.shadowBlur = 16;
+      c.beginPath();
+      c.moveTo(0, -16); c.lineTo(11, 12); c.lineTo(0, 6); c.lineTo(-11, 12); c.closePath();
+      c.fill();
+    }));
     ctx.save();
     ctx.translate(R, R);
     ctx.rotate(-(playerYaw) + Math.PI + heading);
-    ctx.fillStyle = '#3ff2e0';
-    ctx.shadowColor = '#3ff2e0';
-    ctx.shadowBlur = 16;
-    ctx.beginPath();
-    ctx.moveTo(0, -16); ctx.lineTo(11, 12); ctx.lineTo(0, 6); ctx.lineTo(-11, 12); ctx.closePath();
-    ctx.fill();
+    ctx.drawImage(arrow, -ARROW / 2, -ARROW / 2);
     ctx.restore();
-    // vignette ring
-    const g = ctx.createRadialGradient(R, R, R * 0.7, R, R, R);
-    g.addColorStop(0, 'rgba(0,0,0,0)');
-    g.addColorStop(1, 'rgba(0,0,0,0.65)');
-    ctx.fillStyle = g;
-    ctx.fillRect(0, 0, S, S);
+    // vignette ring (static: drawn once)
+    if (!this.ring) {
+      this.ring = document.createElement('canvas');
+      this.ring.width = this.ring.height = S;
+      const rc = this.ring.getContext('2d')!;
+      const g = rc.createRadialGradient(R, R, R * 0.7, R, R, R);
+      g.addColorStop(0, 'rgba(0,0,0,0)');
+      g.addColorStop(1, 'rgba(0,0,0,0.65)');
+      rc.fillStyle = g;
+      rc.fillRect(0, 0, S, S);
+    }
+    ctx.drawImage(this.ring, 0, 0);
     // compass letters just inside the rim (world north = -z)
-    ctx.font = '700 22px "JetBrains Mono", monospace';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
+    // (don't bake a fallback font into the cache: until the webfont is in, re-render each time)
+    const fontReady = this.fontReady || (this.fontReady = document.fonts?.check(COMPASS_FONT) ?? true);
     ['N', 'E', 'S', 'W'].forEach((l, i) => {
       const a = heading + (i * Math.PI) / 2 - Math.PI / 2;
-      ctx.fillStyle = l === 'N' ? '#ffb347' : 'rgba(243,233,216,0.75)';
-      ctx.shadowColor = '#000';
-      ctx.shadowBlur = 6;
-      ctx.fillText(l, R + Math.cos(a) * (R - 18), R + Math.sin(a) * (R - 18));
+      const key = `c:${l}`;
+      if (!fontReady) this.sprites.delete(key);
+      const spr = this.cached(key, () => sprite(SPRITE, (c) => {
+        c.font = COMPASS_FONT;
+        c.textAlign = 'center';
+        c.textBaseline = 'middle';
+        c.fillStyle = l === 'N' ? '#ffb347' : 'rgba(243,233,216,0.75)';
+        c.shadowColor = '#000';
+        c.shadowBlur = 6;
+        c.fillText(l, 0, 0);
+      }));
+      ctx.drawImage(spr, R + Math.cos(a) * (R - 18) - SPRITE / 2, R + Math.sin(a) * (R - 18) - SPRITE / 2);
     });
-    ctx.shadowBlur = 0;
-    ctx.textAlign = 'left';
-    ctx.textBaseline = 'alphabetic';
   }
 }
 

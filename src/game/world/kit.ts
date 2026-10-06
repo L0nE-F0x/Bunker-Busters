@@ -1,5 +1,6 @@
 import * as THREE from 'three/webgpu';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
+import { batchSpec, familyMaterial, GLOW_SLOTS, type BatchSpec, type Family } from './materials';
 
 /**
  * Geometry kit: helpers that produce transformed, attribute-normalised (position/normal/uv, non-indexed)
@@ -58,6 +59,9 @@ export function merge(parts: THREE.BufferGeometry[]) {
   return g;
 }
 
+/** Debug: ?nofam disables family merging (A/B the draw-call savings against identical visuals). */
+const NOFAM = typeof location !== 'undefined' && new URLSearchParams(location.search).has('nofam');
+
 /** Builds a group from {material → geometry parts} with one mesh per material. */
 export class MeshBatch {
   private parts = new Map<THREE.Material, THREE.BufferGeometry[]>();
@@ -70,12 +74,47 @@ export class MeshBatch {
   build(name = 'batch', castShadow = true, receiveShadow = true) {
     const group = new THREE.Group();
     group.name = name;
-    for (const [mat, list] of this.parts) {
-      if (!list.length) continue;
-      const mesh = new THREE.Mesh(merge(list), mat);
+    const add = (geo: THREE.BufferGeometry, mat: THREE.Material) => {
+      const mesh = new THREE.Mesh(geo, mat);
       mesh.castShadow = castShadow;
       mesh.receiveShadow = receiveShadow;
       group.add(mesh);
+    };
+    // variants of one material family (see materials.ts) collapse into a single mesh
+    const families = new Map<Family, [THREE.Material, THREE.BufferGeometry[]][]>();
+    for (const [mat, list] of this.parts) {
+      if (!list.length) continue;
+      const spec = NOFAM ? undefined : batchSpec(mat);
+      if (!spec) { add(merge(list), mat); continue; }
+      let f = families.get(spec.family);
+      if (!f) families.set(spec.family, (f = []));
+      f.push([mat, list]);
+    }
+    for (const [family, entries] of families) {
+      if (entries.length === 1) { add(merge(entries[0][1]), entries[0][0]); continue; }
+      for (let i = 0; i < entries.length; i += family === 'glow' ? GLOW_SLOTS : entries.length) {
+        const chunk = entries.slice(i, i + (family === 'glow' ? GLOW_SLOTS : entries.length));
+        const geos: THREE.BufferGeometry[] = [];
+        const ranges: [BatchSpec, number][] = [];
+        for (const [mat, list] of chunk) {
+          const g = merge(list);
+          geos.push(g);
+          ranges.push([batchSpec(mat)!, g.attributes.position.count]);
+        }
+        const geo = mergeGeometries(geos, false);
+        if (!geo) throw new Error('family merge failed');
+        const n = geo.attributes.position.count;
+        const col = new Float32Array(n * 4), par = new Float32Array(n * 4);
+        let o = 0;
+        ranges.forEach(([s, count], slot) => {
+          const p = family === 'glow' ? [slot, 0, 0, 0] : s.p;
+          for (let v = 0; v < count; v++, o++) { col.set(s.c, o * 4); par.set(p, o * 4); }
+        });
+        geo.setAttribute('bColor', new THREE.BufferAttribute(col, 4));
+        geo.setAttribute('bParam', new THREE.BufferAttribute(par, 4));
+        geo.computeBoundingSphere();
+        add(geo, familyMaterial(family, ranges.map(([s]) => s.glow!)));
+      }
     }
     return group;
   }

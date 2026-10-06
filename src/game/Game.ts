@@ -273,7 +273,8 @@ export class Game {
       paper.rotation.x = -1.2;
       g.add(paper);
       // vertical light beam
-      const beamMat = new THREE.MeshBasicNodeMaterial({ transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide });
+      // additive, so one pass over both faces matches the default two-pass DoubleSide transparency
+      const beamMat = new THREE.MeshBasicNodeMaterial({ transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide, forceSinglePass: true });
       beamMat.colorNode = Fn(() => {
         const v = uv();
         const edge = smoothstep(0.5, 0.0, length(v.x.sub(0.5)));
@@ -425,16 +426,8 @@ export class Game {
     this.player.yaw = state.data.yaw;
     this.player.speedMult = state.archetype.stats.speed;
     this.scene.add(this.player.model.root);
-    this.player.model.root.traverse((o) => {
-      o.layers.set(1); // shadow-only body in first person
-      const mesh = o as THREE.Mesh;
-      if (mesh.isMesh) {
-        mesh.geometry.computeBoundingSphere();
-        // straps, buckles, goggles etc. don't change the silhouette — skip them in the shadow pass
-        mesh.castShadow = (mesh.geometry.boundingSphere?.radius ?? 0) > 0.07;
-        mesh.visible = mesh.castShadow;
-      }
-    });
+    // shadow-only body in first person (layer 1): one merged caster per animated joint
+    this.player.model.bakeShadowProxy(0.07);
     this.hands?.dispose();
     this.hands = new Hands(HAND_LOOKS[state.data.archetype] ?? HAND_LOOKS.infiltrator);
     this.hands.attach(this.camera);

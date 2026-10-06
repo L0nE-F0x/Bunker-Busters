@@ -1,9 +1,10 @@
 import * as THREE from 'three/webgpu';
 import {
   float, vec3, positionLocal, normalLocal, smoothstep, mix, uniform, positionWorld, cameraPosition, normalize, dot,
-  normalWorld, pow, max,
+  normalWorld, pow, max, attribute, step,
 } from 'three/tsl';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { noise } from '@/engine/noiseTex';
 import { bumpFromHeight } from '../world/Terrain';
 import { rimColor, rimStrength, glow } from '../world/materials';
@@ -35,21 +36,40 @@ const rim = (k: number): N => {
   return rimColor.mul(pow(float(1).sub(max(dot(normalWorld, v), 0)), 3)).mul(rimStrength).mul(k);
 };
 
+// Every hand material exists twice: a plain version (uniforms, positionLocal/normalLocal of its own
+// mesh) and a merged version where the same parameters and the part's original local position and
+// normal come from vertex attributes. The rig's parts are baked into one skinned mesh per kind (see
+// bakeParts), which samples exactly what each separate part sampled: same look, a fraction of the draws.
+type HandKind = 'glove' | 'fabric' | 'hard' | 'steel';
+interface HandSpec { kind: HandKind; a: [number, number, number, number]; b: [number, number, number, number] }
+const _handSpec = new WeakMap<THREE.Material, HandSpec>();
+const rgb = (c: string) => { const k = new THREE.Color(c); return [k.r, k.g, k.b] as const; };
+/** merged-mesh inputs: original local position/normal and two parameter vec4s */
+const mP = (): N => attribute('lpos', 'vec3');
+const mN = (): N => attribute('lnrm', 'vec3');
+const mA = (): N => attribute('hA', 'vec4');
+const mB = (): N => attribute('hB', 'vec4');
+
 /** Glove leather: fine pebbled grain, darker creases at segment ends, scuffed lighter on the back. */
 function gloveMaterial(base: string, wear: string, segLen = 0) {
   const m = new THREE.MeshStandardNodeMaterial({ roughness: 0.6, metalness: 0 });
-  const b = uniform(new THREE.Color(base));
-  const w = uniform(new THREE.Color(wear));
-  const g = noise(positionLocal.xz.add(positionLocal.y).mul(9)).r; // broad tone variation (local units are metres)
-  const grain = noise(positionLocal.xy.sub(positionLocal.z).mul(60)).g; // pebble grain, bump only
+  gloveSetup(m, positionLocal, normalLocal, uniform(new THREE.Color(base)), uniform(new THREE.Color(wear)), segLen > 0 ? uniform(segLen) : null);
+  _handSpec.set(m, { kind: 'glove', a: [...rgb(base), segLen], b: [...rgb(wear), 0] });
+  return m;
+}
+
+function gloveSetup(m: THREE.MeshStandardNodeMaterial, P: N, Nl: N, b: N, w: N, segLen: N | null, creaseMask: N = null) {
+  const g = noise(P.xz.add(P.y).mul(9)).r; // broad tone variation (local units are metres)
+  const grain = noise(P.xy.sub(P.z).mul(60)).g; // pebble grain, bump only
   // scuffs on the back of the hand / tops of knuckles (local +Y faces up for palm-down segments)
-  const back = smoothstep(0.3, 0.95, normalLocal.y);
+  const back = smoothstep(0.3, 0.95, Nl.y);
   let col: N = mix(b, w, back.mul(smoothstep(0.4, 0.8, g)).mul(0.3));
   let rough: N = float(0.62).sub(back.mul(0.14));
-  if (segLen > 0) {
+  if (segLen) {
     // segment runs along local -Z from 0 to -segLen: creases at both ends
-    const t = positionLocal.z.negate().div(uniform(segLen));
-    const crease = smoothstep(0.16, 0.0, t).add(smoothstep(0.84, 1.0, t)).clamp(0, 1);
+    const t = P.z.negate().div(segLen);
+    let crease: N = smoothstep(0.16, 0.0, t).add(smoothstep(0.84, 1.0, t)).clamp(0, 1);
+    if (creaseMask) crease = crease.mul(creaseMask); // merged mesh: parts without a segment length get none
     col = col.mul(float(1).sub(crease.mul(0.3)));
     rough = rough.add(crease.mul(0.12));
   }
@@ -57,38 +77,137 @@ function gloveMaterial(base: string, wear: string, segLen = 0) {
   m.roughnessNode = rough;
   m.normalNode = bumpFromHeight(grain.mul(0.25).add(g.mul(0.15)), float(0.0012));
   m.emissiveNode = rim(0.08);
-  return m;
 }
 
 function fabricMat(c: string, rough = 0.95) {
   const m = new THREE.MeshStandardNodeMaterial({ roughness: rough });
-  const base = uniform(new THREE.Color(c));
-  const n = noise(positionLocal.xy.add(positionLocal.z).mul(14)).r;
-  const weave = noise(positionLocal.xz.mul(vec3(260, 90, 1).xy)).g;
-  const fold = noise(vec3(positionLocal.z.mul(16), positionLocal.x.mul(5), 0).xy).g; // soft sleeve creases
+  fabricSetup(m, positionLocal, uniform(new THREE.Color(c)));
+  _handSpec.set(m, { kind: 'fabric', a: [...rgb(c), rough], b: [0, 0, 0, 0] });
+  return m;
+}
+
+function fabricSetup(m: THREE.MeshStandardNodeMaterial, P: N, base: N) {
+  const n = noise(P.xy.add(P.z).mul(14)).r;
+  const weave = noise(P.xz.mul(vec3(260, 90, 1).xy)).g;
+  const fold = noise(vec3(P.z.mul(16), P.x.mul(5), 0).xy).g; // soft sleeve creases
   m.colorNode = base.mul(float(0.82).add(n.mul(0.2)).sub(fold.mul(0.1)).add(weave.mul(0.06)));
   m.normalNode = bumpFromHeight(n.mul(0.2).add(fold.mul(0.5)).add(weave.mul(0.08)), float(0.004));
   m.emissiveNode = rim(0.08);
-  return m;
 }
 
 function hardMat(c: string, rough = 0.45, metal = 0.1) {
   const m = new THREE.MeshStandardNodeMaterial({ roughness: rough, metalness: metal });
-  const base = uniform(new THREE.Color(c));
-  const n = noise(positionLocal.xy.mul(40)).r;
+  hardSetup(m, positionLocal, uniform(new THREE.Color(c)));
+  _handSpec.set(m, { kind: 'hard', a: [...rgb(c), rough], b: [metal, 0, 0, 0] });
+  return m;
+}
+
+function hardSetup(m: THREE.MeshStandardNodeMaterial, P: N, base: N) {
+  const n = noise(P.xy.mul(40)).r;
   m.colorNode = base.mul(float(0.85).add(n.mul(0.25)));
   m.emissiveNode = rim(0.08);
-  return m;
 }
 
 function steelMat(c = '#b9bec4', rough = 0.25) {
   const m = new THREE.MeshStandardNodeMaterial({ roughness: rough, metalness: 1 });
-  const base = uniform(new THREE.Color(c));
-  const scratches = noise(positionLocal.xy.mul(vec3(3, 80, 1).xy)).r;
-  m.colorNode = base.mul(float(0.85).add(scratches.mul(0.2)));
-  m.roughnessNode = float(rough).add(scratches.mul(0.2));
+  steelSetup(m, positionLocal, uniform(new THREE.Color(c)), float(rough));
+  _handSpec.set(m, { kind: 'steel', a: [...rgb(c), rough], b: [0, 0, 0, 0] });
   return m;
 }
+
+function steelSetup(m: THREE.MeshStandardNodeMaterial, P: N, base: N, rough: N) {
+  const scratches = noise(P.xy.mul(vec3(3, 80, 1).xy)).r;
+  m.colorNode = base.mul(float(0.85).add(scratches.mul(0.2)));
+  m.roughnessNode = rough.add(scratches.mul(0.2));
+}
+
+/** The attribute-driven twin of each hand material kind (one shared instance per kind). */
+const _merged = new Map<HandKind, THREE.MeshStandardNodeMaterial>();
+function mergedMaterial(kind: HandKind) {
+  let m = _merged.get(kind);
+  if (m) return m;
+  m = new THREE.MeshStandardNodeMaterial({ metalness: 0 });
+  if (kind === 'glove') {
+    // segLen 0 (palm, wrist, gauntlet…) → no crease; max() keeps the unused division finite
+    gloveSetup(m, mP(), mN(), mA().xyz, mB().xyz, mA().w.max(1e-4), step(1e-6, mA().w));
+  } else if (kind === 'fabric') {
+    fabricSetup(m, mP(), mA().xyz);
+    m.roughnessNode = mA().w;
+  } else if (kind === 'hard') {
+    hardSetup(m, mP(), mA().xyz);
+    m.roughnessNode = mA().w;
+    m.metalnessNode = mB().x;
+  } else {
+    m.metalness = 1;
+    steelSetup(m, mP(), mA().xyz, mA().w);
+  }
+  _merged.set(kind, m);
+  return m;
+}
+
+/**
+ * Merge the tagged meshes under `root` into one mesh per material kind. Rigid parts on several
+ * joints become a SkinnedMesh whose bones are those joints (one bone per vertex, weight 1), so the
+ * articulated fingers keep moving exactly as before. Untagged meshes (glow screens) are left alone.
+ */
+function bakeParts(root: THREE.Object3D, skinned: boolean) {
+  root.updateMatrixWorld(true);
+  const meshes: THREE.Mesh[] = [];
+  root.traverse((o) => { const m = o as THREE.Mesh; if (m.isMesh && _handSpec.has(m.material as THREE.Material)) meshes.push(m); });
+  const bones: THREE.Object3D[] = [];
+  const byKind = new Map<HandKind, { g: THREE.BufferGeometry; spec: HandSpec; bone: number }[]>();
+  const rootInv = new THREE.Matrix4().copy(root.matrixWorld).invert();
+  for (const mesh of meshes) {
+    const spec = _handSpec.get(mesh.material as THREE.Material)!;
+    const parent = mesh.parent!;
+    let bone = bones.indexOf(parent);
+    if (bone < 0) { bone = bones.length; bones.push(parent); }
+    const g = mesh.geometry.index ? mesh.geometry.toNonIndexed() : mesh.geometry.clone();
+    for (const key of Object.keys(g.attributes)) if (key !== 'position' && key !== 'normal') g.deleteAttribute(key);
+    g.setAttribute('lpos', g.attributes.position.clone());
+    g.setAttribute('lnrm', g.attributes.normal.clone());
+    // skinned: vertices live in their joint's space; rigid: in root space
+    mesh.updateMatrix();
+    g.applyMatrix4(skinned ? mesh.matrix : _bm.multiplyMatrices(rootInv, mesh.matrixWorld));
+    parent.remove(mesh);
+    let list = byKind.get(spec.kind);
+    if (!list) byKind.set(spec.kind, (list = []));
+    list.push({ g, spec, bone });
+  }
+  const skeleton = skinned ? new THREE.Skeleton(bones as THREE.Bone[], bones.map(() => new THREE.Matrix4())) : null;
+  for (const [kind, list] of byKind) {
+    const geo = mergeGeometries(list.map((x) => x.g), false)!;
+    const n = geo.attributes.position.count;
+    const A = new Float32Array(n * 4), B = new Float32Array(n * 4);
+    const si = new Uint16Array(n * 4), sw = new Float32Array(n * 4);
+    let o = 0;
+    for (const { g, spec, bone } of list) {
+      for (let v = 0; v < g.attributes.position.count; v++, o++) {
+        A.set(spec.a, o * 4); B.set(spec.b, o * 4);
+        si[o * 4] = bone; sw[o * 4] = 1;
+      }
+    }
+    geo.setAttribute('hA', new THREE.BufferAttribute(A, 4));
+    geo.setAttribute('hB', new THREE.BufferAttribute(B, 4));
+    let mesh: THREE.Mesh;
+    if (skeleton) {
+      geo.setAttribute('skinIndex', new THREE.Uint16BufferAttribute(si, 4));
+      geo.setAttribute('skinWeight', new THREE.BufferAttribute(sw, 4));
+      const sm = new THREE.SkinnedMesh(geo, mergedMaterial(kind));
+      sm.bind(skeleton, new THREE.Matrix4()); // attached mode: world = joint.matrixWorld · vertex
+      sm.frustumCulled = false; // always right in front of the lens when visible
+      mesh = sm;
+    } else {
+      mesh = new THREE.Mesh(geo, mergedMaterial(kind));
+    }
+    mesh.castShadow = false;
+    mesh.receiveShadow = true;
+    root.add(mesh);
+  }
+}
+const _bm = new THREE.Matrix4();
+/** Debug: ?nofam also keeps the hands as separate part meshes (A/B the merge). */
+const NO_HAND_BAKE = typeof location !== 'undefined' && new URLSearchParams(location.search).has('nofam');
 
 // ------------------------------------------------------------------ geometry helpers
 /**
@@ -388,6 +507,8 @@ export class HandRig {
     // FP convention: hands read ~30% larger than life
     this.root.scale.setScalar(1.3);
     this.cur = clonePose(DOWN);
+    // ~25 part meshes → one skinned mesh per material kind (the joints above are its bones)
+    if (!NO_HAND_BAKE) bakeParts(this.root, true);
   }
 
   apply(p: HandPose) {
@@ -520,6 +641,7 @@ function buildItems(look: HandLook) {
   torch.position.set(0, 0.004, 0.02);
   torch.userData.lens = lensG.intensity;
   for (const it of Object.values(items)) it.traverse((o) => { if ((o as THREE.Mesh).isMesh) { o.castShadow = false; o.receiveShadow = true; } });
+  if (!NO_HAND_BAKE) for (const it of Object.values(items)) bakeParts(it, false);
   return items;
 }
 
