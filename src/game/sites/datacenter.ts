@@ -508,6 +508,7 @@ export class DataCenterSite extends Site {
     if (s && s !== this.synced) this.sync(s);
     this.t += dt;
     this.doors(dt);
+    this.sparks.update(dt);
     const B = this.b;
     const far = !B.near.visible;
     const night = THREE.MathUtils.smoothstep(this.ctx.atmo.uNight.value as number, 0.2, 0.45);
@@ -597,7 +598,6 @@ export class DataCenterSite extends Site {
     S.spark.intensity.value = f * 16;
     ch[CH.SPARK] = f;
     B.lights.spark.intensity = f * 22;
-    this.sparks.update(dt);
 
     // dry-cooler fans: spin on the sun by day, all the time once the hall has power
     const solar = this.ctx.atmo.sunElevation > 0.04 ? 1 : 0;

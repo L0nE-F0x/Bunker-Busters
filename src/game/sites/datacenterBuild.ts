@@ -395,6 +395,10 @@ export class ColdStorageBuild {
     b.add(M.galv(), box(0.04, 1.6, 3.1, x1 - 0.31, 1.75, 7.0));
     b.add(M.galv(), box(0.12, 0.05, 1.2, x1 - 0.38, 0.98, 7.0));
     this.b.add(this.A.paint(), A.quad('posterCloud', 0.8, 1.12, x0 + 1.4, 1.9, HALL.z1 + 0.02), A.quad('posterUptime', 0.8, 1.12, x1 - 1.2, 1.9, HALL.z1 + 0.02));
+    // reception logo wall: a dark panel on the west wall, the mark backlit
+    b.add(M.fascia(), box(0.06, 1.6, 3.6, x0 + 0.33, 2.35, 6.6));
+    this.d.add(this.screenOn.m, A.quad('logo', 3.2, 0.8, x0 + 0.37, 2.4, 6.6, 0, Math.PI / 2, 0));
+    this.halo(x0 + 0.6, 2.4, 6.6, '#5ff4ec', 2.4, CH.ON, 0.18);
     const couch = M.couch();
     this.solid(couch, 2.0, 0.42, 0.85, -0.6, 0.36, z1 - 0.75);
     b.add(couch, box(2.0, 0.55, 0.2, -0.6, 0.75, z1 - 0.32), box(0.22, 0.6, 0.85, -1.6, 0.5, z1 - 0.75), box(0.22, 0.6, 0.85, 0.4, 0.5, z1 - 0.75));

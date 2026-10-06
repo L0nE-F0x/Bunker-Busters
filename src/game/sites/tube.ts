@@ -387,6 +387,8 @@ export class TubeSite extends Site {
   override update(dt: number, cam: THREE.Vector3) {
     super.update(dt, cam);
     this.line.update(cam);
+    // the running lights cost nothing until the station has power
+    if (this.powerT < 0) this.b.lights.visible = false;
     const s = this.ctx.state;
     if (s && s !== this.synced) this.sync(s);
     this.t += dt;
