@@ -6,7 +6,7 @@ import {
 import type { Physics } from '@/engine/physics';
 import type { Heightfield } from '@/game/world/Heightfield';
 import { noise } from '@/engine/noiseTex';
-import { MeshBatch, Frame, canvasTexture, grime, norm } from '@/game/world/kit';
+import { MeshBatch, Frame, canvasTexture, grime, norm, shadowProxy } from '@/game/world/kit';
 import { GlowPalette, plainStandard } from '@/game/world/materials';
 import { GlowSprites } from '@/game/world/effects';
 import { surfaces } from '@/engine/surface';
@@ -156,7 +156,10 @@ export class SiteKit {
     const near = new THREE.Group();
     near.name = name + '-near';
     const far = this.b.buildFar(name + '-far', { minSize: 0.6, colors: farColors });
-    near.add(this.b.build(name + '-static'));
+    // the static batch casts through one depth-pass draw (doors, the go bag, reels keep their own)
+    const statics = this.b.build(name + '-static');
+    shadowProxy(statics);
+    near.add(statics);
     near.add(this.nb.build(name + '-thin', false, true));
     const dec = this.d.build(name + '-decals', false, false);
     dec.traverse((o) => { o.renderOrder = 2; });

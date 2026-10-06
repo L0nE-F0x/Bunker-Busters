@@ -6,7 +6,7 @@ import type { GameContext, Interactable, Action } from '@/game/context';
 import { LANDMARKS } from '@/content/world';
 import { ITEMS } from '@/content/items';
 import { XP_REWARDS } from '@/content/progression';
-import { DistanceLod, Frame } from '@/game/world/kit';
+import { DistanceLod, Frame, shadowProxy } from '@/game/world/kit';
 import { Fire } from '@/game/world/effects';
 import { NpcCrowd, type NpcDef } from '@/game/world/npc';
 import { Site, HALO } from './townKit';
@@ -140,8 +140,11 @@ export class Settlement {
     const far = withFar ? S.b.buildFar(name + '-far') : null;
     const near = S.b.build(name);
     noGlowShadows(near);
+    // static batches cast through one depth-pass draw (doors, boards and people keep their own)
+    shadowProxy(near);
     root.add(near);
     const signs = S.s.build(name + '-signs');
+    shadowProxy(signs);
     const decals = S.d.build(name + '-decals', false, false);
     decals.traverse((o) => { o.renderOrder = 2; });
     const pools = S.p.build(name + '-pools', false, false);

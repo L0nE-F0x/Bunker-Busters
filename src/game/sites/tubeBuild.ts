@@ -1,7 +1,7 @@
 import * as THREE from 'three/webgpu';
 import type { Physics } from '@/engine/physics';
 import type { Heightfield } from '../world/Heightfield';
-import { box, cyl, beam, wire, place, norm, MeshBatch, type Frame } from '../world/kit';
+import { box, cyl, beam, wire, place, norm, MeshBatch, shadowProxy, type Frame } from '../world/kit';
 import { rustyMetal, concrete, corrugated, plainStandard, glow, GlowPalette, type GlowSlot } from '../world/materials';
 import { GlowSprites } from '../world/effects';
 import { VirtualLight } from '../world/lights';
@@ -170,7 +170,9 @@ export class TubeBuild {
 
     const far = this.b.ext.buildFar('tube-far', { minSize: 0.6, colors: new Map<THREE.Material, THREE.ColorRepresentation>([[pvMaterial(), '#1b2533']]) });
     this.far.add(far, this.farGlow.build('tube-far-glow', false, false));
-    this.near.add(this.b.near.build('tube-static'));
+    const statics = this.b.near.build('tube-static');
+    shadowProxy(statics); // one depth-pass draw; the pod, airlock and locker keep their own
+    this.near.add(statics);
     const decals = this.d.build('tube-decals', false, false);
     decals.traverse((o) => { o.renderOrder = 2; });
     this.near.add(decals, this.halos.build(), this.pod);

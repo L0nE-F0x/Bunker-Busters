@@ -1,7 +1,7 @@
 import * as THREE from 'three/webgpu';
 import type { Physics } from '@/engine/physics';
 import type { Heightfield } from '../world/Heightfield';
-import { box, cyl, beam, wire, place, norm, merge, MeshBatch, type Frame } from '../world/kit';
+import { box, cyl, beam, wire, place, norm, merge, MeshBatch, shadowProxy, type Frame } from '../world/kit';
 import { rustyMetal, concrete, corrugated, plainStandard, chainLink, fabric, glow, GlowPalette, type GlowSlot } from '../world/materials';
 import { GlowSprites, lightCone } from '../world/effects';
 import { VirtualLight } from '../world/lights';
@@ -184,7 +184,9 @@ export class ColdStorageBuild {
     this.far.add(far);
     this.far.add(this.farGlow.build('dc-far-glow', false, false));
     this.far.add(this.farHalos.build());
-    this.near.add(this.b.near.build('dc-static'));
+    const statics = this.b.near.build('dc-static');
+    shadowProxy(statics); // one depth-pass draw; the doors and gate keep their own
+    this.near.add(statics);
     const decals = this.d.build('dc-decals', false, false);
     decals.traverse((o) => { o.renderOrder = 2; });
     this.near.add(decals);
