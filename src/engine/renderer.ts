@@ -1,4 +1,5 @@
 import * as THREE from 'three/webgpu';
+import { isMobile } from './device';
 
 export type QualityLevel = 'low' | 'medium' | 'high' | 'ultra';
 
@@ -24,9 +25,19 @@ export const QUALITY_PRESETS: Record<QualityLevel, Omit<QualitySettings, 'level'
 /** Debug: ?pr=1.25 caps the device pixel ratio the canvas renders at. */
 const PR_CAP = Number(new URLSearchParams(location.search).get('pr')) || Infinity;
 
+/**
+ * Phones have 2.5–3.5× screens and a fraction of a desktop GPU's fill rate, so render well under
+ * native resolution there; the post stack (SMAA, grain) hides the upscale.
+ */
+const MOBILE_PR: Record<QualityLevel, number> = { low: 1.25, medium: 1.5, high: 2, ultra: 2.5 };
+
 export function makeQuality(level: QualityLevel): QualitySettings {
   const p = QUALITY_PRESETS[level];
   const dpr = Math.min(window.devicePixelRatio || 1, PR_CAP);
+  if (isMobile) {
+    const mobile = { ...p, smaa: true, shadowMapSize: Math.min(p.shadowMapSize, 2048), dustCount: Math.round(p.dustCount * 0.6), grassDensity: p.grassDensity * 0.7 };
+    return { level, ...mobile, pixelRatio: Math.min(dpr, MOBILE_PR[level]) };
+  }
   return { level, ...p, pixelRatio: Math.min(dpr, p.pixelRatio * Math.max(1, dpr)) };
 }
 

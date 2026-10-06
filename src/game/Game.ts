@@ -2,6 +2,8 @@ import * as THREE from 'three/webgpu';
 import { Fn, vec4, vec3, uv, length, smoothstep, time, sin, float, color } from 'three/tsl';
 import type { QualitySettings } from '@/engine/renderer';
 import { makeQuality, fitCanvas } from '@/engine/renderer';
+import { isTouch } from '@/engine/device';
+import { TouchControls } from '@/ui/TouchControls';
 import { PostFX } from '@/engine/postfx';
 import { Physics } from '@/engine/physics';
 import { Input } from '@/engine/input';
@@ -48,6 +50,8 @@ export class Game {
   audio = new AudioEngine();
   input: Input;
   ui: UI;
+  /** On-screen controls (phones/tablets only). */
+  touch: TouchControls | null = null;
   settings: Settings = loadSettings();
   quality: QualitySettings;
   post!: PostFX;
@@ -102,6 +106,7 @@ export class Game {
   constructor(private renderer: THREE.WebGPURenderer, public isWebGPU: boolean, private canvas: HTMLCanvasElement) {
     this.input = new Input(canvas);
     this.ui = new UI(this.audio);
+    if (isTouch) this.touch = new TouchControls(this.input);
     const qOverride = new URLSearchParams(location.search).get('q') as Settings['quality'] | null;
     this.quality = makeQuality(qOverride ?? this.settings.quality);
     // WebGL: skip the GTAO pre-pass — it renders the whole scene a second time and draw calls are
@@ -819,6 +824,8 @@ export class Game {
       this.playFrame(dt);
     }
 
+    this.touch?.setActive(this.mode === 'playing' && this.input.locked && !this.ui.modalOpen && !this.ui.minigameOpen && !this.busy);
+
     // world systems
     this.atmo.follow(this.camera);
     this.landmarks.update(dt, this.t);
@@ -890,7 +897,7 @@ export class Game {
     }
     player.update(dt, input, this.cam.yaw, true);
     this.garage.update(dt);
-    const strafe = blocked ? 0 : (input.isDown('KeyD') ? 1 : 0) - (input.isDown('KeyA') ? 1 : 0);
+    const strafe = blocked ? 0 : (input.isDown('KeyD') ? 1 : 0) - (input.isDown('KeyA') ? 1 : 0) + input.moveX;
     const hs = Math.hypot(player.velocity.x, player.velocity.z);
     this.cam.update(dt, input, { feet: player.position, crouch: player.crouching, sprint: player.sprinting, speed: hs, grounded: player.grounded, strafe, exertion: player.exertion });
     this.audio.breathe(dt, player.exertion);
@@ -922,6 +929,15 @@ export class Game {
         const sec = f.secondary;
         if (sec.available() === true) { if (this.hands) this.hands.press(() => void sec.run()); else void sec.run(); } else this.audio.play('deny');
       }
+    }
+
+    if (this.touch) {
+      const f = this.focus;
+      this.touch.update({
+        use: !!f, useNA: !!f && f.primary.available() !== true,
+        alt: f?.secondary ? f.secondary.label : null,
+        crouch: player.crouching, torch: !!this.hands?.flashlightOn,
+      });
     }
 
     // fog of war + landmark discovery

@@ -3,6 +3,12 @@
 Each `## vX.Y.Z` section becomes the GitHub release notes and the "what's new" list in the in-app
 update notice (the first few bullets). `scripts/release.sh` refuses to release a version without one.
 
+## v0.1.9
+- **Play on your phone.** Open the site on a phone and tap Play: the game goes full screen in landscape with touch controls. Drag on the left to walk (push past the ring to sprint), drag on the right to look, plus buttons for jump, crouch, use, flashlight, kit, map and pause. Prompts and hotbar items are tappable too
+- Lockpicking, the oscilloscope and keypads all work by touch (press and hold a pin to lift it)
+- Phones start on Low graphics and render below native resolution to keep the frame rate up. On iPhone, use Share → Add to Home Screen for full screen
+- Menus, the kit, the map and the minigames fit short landscape screens; panels have a close (✕) button
+
 ## v0.1.8
 - **Fixed: invisible walls in the open desert.** Walking up even a gentle dune could slow you to a dead stop with nothing in the way (worse at high frame rates). You now walk and sprint freely over the sand, and only real obstacles stop you
 - **Fixed: jumping did nothing at high frame rates** (100+ fps, e.g. the browser build on a 144 Hz screen)

@@ -93,7 +93,7 @@ src/game/bunker/            GarageBuilder (Tier 1 geometry), Garage (locks, haza
 src/game/player/            Player (Rapier controller), FirstPersonCamera, Hands (procedural viewmodel + poses),
                             CharacterModel (third-person body, now a shadow-only caster), ThirdPersonCamera (unused)
 src/content/                data: items, skills, archetypes, world layout, bunkers/garage.ts (data-driven)
-src/ui/                     DOM HUD/menus (UI.ts), Lockpick/Circuit/Keypad minigames, Minimap, styles.css
+src/ui/                     DOM HUD/menus (UI.ts), Lockpick/Circuit/Keypad minigames, Minimap, TouchControls (phones), styles.css
 src/site/ + index.html      marketing page.   play/index.html: game page.   public/media + og.jpg: site art
 src-tauri/                  desktop shell. main.rs: auto NVIDIA selection on hybrid Linux laptops, dev hooks. update.rs: in-app updater
 scripts/                    release.sh, changelog.mjs, update-manifest.mjs, install-linux.sh, run-nvidia.sh, dev/* (test harness, below)
@@ -111,6 +111,7 @@ node scripts/dev/shot.mjs "http://localhost:5173/play/?webgl&autostart" out.png 
 node scripts/dev/hands-lab.mjs sheet.png "pose=reach" "pose=lockpick&look=engineer" "pose=idle&torch" "pose=flat&view=palm"
 node scripts/dev/marketing-shots.mjs [hero night interior camp lockpick]   # regenerate site screenshots
 node scripts/dev/og-card.mjs                                               # regenerate public/og.jpg
+node scripts/dev/mobile-shot.mjs "http://localhost:5173/play/?webgl" out.png --tap 230,207 --twin "150,250,150,150;600,200,700,200"   # phone emulation + touch gestures
 node scripts/dev/walk-probe.mjs 150 [--sprint]   # movement regression: logs every stall + contacts (FPS=144 env)
 scripts/dev/bench-desktop.sh [high|medium]   # real desktop-app perf: opens a window ~40 s, self-closes
 ```
@@ -124,6 +125,7 @@ Game URL flags:
 - `?autostart`: skip menus into a fresh run
 - `?bench`: log fps and update/physics/render ms every 2 s
 - `?q=low|medium|high|ultra`
+- `?touch=1|0`: force the phone/touch build on or off (on-screen controls, compact layout, mobile quality caps)
 - `?webgl`, `?gpu=high|low|reset`: backend override
 - `?skip=ui,post,env,dust,haze,props,landmarks,scrub,garage,terrain,sky,shadows,fog`: subsystem bisecting
 

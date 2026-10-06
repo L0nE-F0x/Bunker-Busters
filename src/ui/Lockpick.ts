@@ -1,5 +1,6 @@
 import type { AudioEngine } from '@/engine/audio';
 import type { LockResult } from '@/game/context';
+import { isTouch } from '@/engine/device';
 
 interface Pin { target: number; lift: number; vel: number; set: boolean; jitter: number; flash: number }
 
@@ -47,10 +48,12 @@ export class LockpickGame {
         <div class="scan"></div>
         <header><h3>${opts.title}</h3><span class="sub">${n}-PIN TUMBLER · LOCKPICKING ${opts.skill}</span><span class="msg" style="margin-left:auto;color:var(--amber);font-size:14px;letter-spacing:.06em;text-align:right"></span></header>
         <canvas width="1720" height="760"></canvas>
-        <footer>
+        <footer>${isTouch ? `
+          <span>Press and hold a pin to lift it · let go to set</span>
+          <button class="btn back">Back off</button>` : `
           <span><span class="kbd">A</span> <span class="kbd">D</span> / mouse — choose pin</span>
           <span><span class="kbd">W</span> / hold <span class="kbd">LMB</span> — lift · release to set</span>
-          <span><span class="kbd">Esc</span> — back off</span>
+          <span><span class="kbd">Esc</span> — back off</span>`}
           <span class="right">PICKS <b class="picks"></b> · STRAIN <b class="strain"></b></span>
         </footer>
       </div>`;
@@ -60,6 +63,8 @@ export class LockpickGame {
     this.strainEl = this.root.querySelector('.strain')!;
     this.msgEl = this.root.querySelector('.msg')!;
     this.msgEl.textContent = 'One pin binds first. It will feel stiff.';
+    const back = this.root.querySelector('.back') as HTMLElement | null;
+    if (back) back.onclick = () => { if (!this.done) this.finish('abort'); };
   }
 
   run(): Promise<LockResult> {
@@ -68,9 +73,10 @@ export class LockpickGame {
       this.resolve = res;
       window.addEventListener('keydown', this.onKey);
       window.addEventListener('keyup', this.onKeyUp);
-      this.canvas.addEventListener('mousemove', this.onMouse);
-      this.canvas.addEventListener('mousedown', this.onDown);
-      window.addEventListener('mouseup', this.onUp);
+      this.canvas.addEventListener('pointermove', this.onMouse);
+      this.canvas.addEventListener('pointerdown', this.onDown);
+      window.addEventListener('pointerup', this.onUp);
+      window.addEventListener('pointercancel', this.onUp);
       this.loop();
     });
   }
@@ -80,7 +86,8 @@ export class LockpickGame {
     cancelAnimationFrame(this.raf);
     window.removeEventListener('keydown', this.onKey);
     window.removeEventListener('keyup', this.onKeyUp);
-    window.removeEventListener('mouseup', this.onUp);
+    window.removeEventListener('pointerup', this.onUp);
+    window.removeEventListener('pointercancel', this.onUp);
     this.root.remove();
     this.resolve(r);
   }
@@ -96,15 +103,23 @@ export class LockpickGame {
   private onKeyUp = (e: KeyboardEvent) => {
     if (e.code === 'KeyW' || e.code === 'ArrowUp' || e.code === 'Space') this.release();
   };
-  private onMouse = (e: MouseEvent) => {
+  private onMouse = (e: PointerEvent) => {
     if (this.lifting || this.done) return;
+    this.pickAt(e);
+  };
+  private pickAt(e: PointerEvent) {
     const r = this.canvas.getBoundingClientRect();
     const x = ((e.clientX - r.left) / r.width) * this.canvas.width;
     let best = 0, bd = Infinity;
     this.pins.forEach((_, i) => { const d = Math.abs(this.pinX(i) - x); if (d < bd) { bd = d; best = i; } });
     if (best !== this.sel) this.select(best);
+  }
+  private onDown = (e: PointerEvent) => {
+    if (e.button !== 0 || this.done) return;
+    e.preventDefault();
+    if (e.pointerType !== 'mouse') this.pickAt(e); // no hover on touch: the press chooses the pin
+    this.lifting = true;
   };
-  private onDown = (e: MouseEvent) => { if (e.button === 0 && !this.done) this.lifting = true; };
   private onUp = () => this.release();
 
   private select(i: number) {

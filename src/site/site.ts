@@ -5,9 +5,11 @@ const REPO = 'L0nE-F0x/Bunker-Busters';
 document.getElementById('site-version')!.textContent = `v${__APP_VERSION__} early access`;
 const dl = (asset: string) => `https://github.com/${REPO}/releases/latest/download/${asset}`;
 
-type OS = 'linux' | 'windows' | 'mac' | 'other';
+type OS = 'linux' | 'windows' | 'mac' | 'mobile' | 'other';
 function detectOS(): OS {
   const ua = navigator.userAgent.toLowerCase();
+  // phones first: Android says "Linux", iPhone says "Mac OS X", and neither can run a desktop build
+  if (/android|iphone|ipad|ipod|mobile/.test(ua) || (ua.includes('macintosh') && navigator.maxTouchPoints > 1)) return 'mobile';
   const plat = ((navigator as unknown as { userAgentData?: { platform?: string } }).userAgentData?.platform ?? navigator.platform ?? '').toLowerCase();
   if (plat.includes('win') || ua.includes('windows')) return 'windows';
   if (plat.includes('mac') || ua.includes('mac os')) return 'mac';
@@ -25,6 +27,7 @@ const PRIMARY: Record<OS, { asset?: string; label: string; sub: string; icon: st
   linux: { asset: 'BunkerBusters-linux-x86_64.tar.gz', label: 'Download for Linux', sub: 'Omarchy / Arch · AppImage & .deb below', icon: 'linux' },
   windows: { asset: 'BunkerBusters-windows-x64-setup.exe', label: 'Download for Windows', sub: 'Installer · Windows 10 / 11', icon: 'windows' },
   mac: { label: 'Play in your browser', sub: 'No macOS build yet', icon: 'web' },
+  mobile: { label: 'Play on your phone', sub: 'In the browser · touch controls · landscape', icon: 'web' },
   other: { label: 'Play in your browser', sub: 'Desktop builds for Linux & Windows', icon: 'web' },
 };
 
@@ -33,6 +36,7 @@ label.textContent = p.label;
 sub.textContent = p.sub;
 icon.classList.add(p.icon);
 if (!p.asset) primary.href = '/play/';
+if (os === 'mobile') document.querySelector<HTMLElement>('.play-link')!.style.display = 'none'; // the main button already plays
 document.querySelectorAll<HTMLElement>(`.dl-card[data-os="${os}"]`).forEach((c) => c.classList.add('yours'));
 
 // Wire download buttons, then ask GitHub what the latest release actually contains.

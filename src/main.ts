@@ -1,5 +1,6 @@
 import './fonts';
 import { createRenderer } from '@/engine/renderer';
+import { isMobile } from '@/engine/device';
 import { Game } from '@/game/Game';
 
 // Uncaught errors → console, so the desktop app (whose console goes to stdout) shows them in a terminal.
@@ -46,12 +47,13 @@ if (TRACE !== null) {
 
 // Linux desktop app (WebKitGTK): blur/backdrop filters and blend modes over the live WebGL canvas are
 // re-rasterised every frame on the CPU, which took menus down to a few fps. Cheap look there.
-// Override with ?lowfx=0|1.
+// Phones get the same. Override with ?lowfx=0|1.
 {
   const q = new URLSearchParams(location.search).get('lowfx');
   const ua = navigator.userAgent;
   const webkitGtk = /Linux/.test(ua) && /AppleWebKit/.test(ua) && !/Chrome|Chromium|Android/.test(ua);
-  if (q === '1' || (q === null && webkitGtk)) document.documentElement.classList.add('lowfx');
+  // phones too: blur over a canvas that redraws every frame is a big fill-rate cost on a mobile GPU
+  if (q === '1' || (q === null && (webkitGtk || isMobile))) document.documentElement.classList.add('lowfx');
 }
 
 async function boot() {

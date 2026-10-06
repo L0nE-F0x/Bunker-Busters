@@ -1,4 +1,5 @@
 import type { AudioEngine } from '@/engine/audio';
+import { isTouch } from '@/engine/device';
 
 /** Oscilloscope "signal match": tune amplitude + frequency to the target trace and hold it. */
 export class CircuitGame {
@@ -32,13 +33,17 @@ export class CircuitGame {
         <div class="scan"></div>
         <header><h3>${opts.title}</h3><span class="sub">SIGNAL INJECTION · ELECTRONICS ${opts.skill}</span></header>
         <canvas width="1720" height="700"></canvas>
-        <footer>
+        <footer>${isTouch ? `
+          <span>Drag on the scope: up/down is amplitude, left/right is frequency. Match the green trace and hold it.</span>
+          <button class="btn back">Abort</button>` : `
           <span>Move the mouse (or <span class="kbd">W</span><span class="kbd">S</span> amplitude, <span class="kbd">A</span><span class="kbd">D</span> frequency) to match the green trace</span>
-          <span><span class="kbd">Esc</span> — abort</span>
+          <span><span class="kbd">Esc</span> — abort</span>`}
         </footer>
       </div>`;
     this.canvas = this.root.querySelector('canvas')!;
     this.ctx = this.canvas.getContext('2d')!;
+    const back = this.root.querySelector('.back') as HTMLElement | null;
+    if (back) back.onclick = () => { if (!this.done) this.finish(false); };
   }
 
   run(): Promise<boolean> {
@@ -47,7 +52,8 @@ export class CircuitGame {
       this.resolve = res;
       window.addEventListener('keydown', this.onKey);
       window.addEventListener('keyup', this.onKeyUp);
-      this.canvas.addEventListener('mousemove', this.onMouse);
+      this.canvas.addEventListener('pointermove', this.onMouse);
+      this.canvas.addEventListener('pointerdown', this.onMouse);
       this.loop();
     });
   }
@@ -65,8 +71,9 @@ export class CircuitGame {
     this.keys.add(e.code);
   };
   private onKeyUp = (e: KeyboardEvent) => this.keys.delete(e.code);
-  private onMouse = (e: MouseEvent) => {
+  private onMouse = (e: PointerEvent) => {
     if (this.done) return;
+    if (e.pointerType !== 'mouse') e.preventDefault();
     const r = this.canvas.getBoundingClientRect();
     const x = (e.clientX - r.left) / r.width;
     const y = (e.clientY - r.top) / r.height;
@@ -178,10 +185,12 @@ export class KeypadGame {
         <div class="screen">····</div>
         <div class="keys">${keys.map((k) => `<button class="btn" data-k="${k}">${k}</button>`).join('')}</div>
         <div class="hint">${opts.hint}</div>
-        <div class="hint">Type digits · <span class="kbd">Enter</span> submit · <span class="kbd">Esc</span> leave</div>
+        ${isTouch ? '<button class="btn leave">Leave</button>' : '<div class="hint">Type digits · <span class="kbd">Enter</span> submit · <span class="kbd">Esc</span> leave</div>'}
       </div>`;
     this.screen = this.root.querySelector('.screen')!;
-    this.root.querySelectorAll('button').forEach((b) => b.addEventListener('click', () => this.press((b as HTMLButtonElement).dataset.k!)));
+    this.root.querySelectorAll('button[data-k]').forEach((b) => b.addEventListener('click', () => this.press((b as HTMLButtonElement).dataset.k!)));
+    const leave = this.root.querySelector('.leave') as HTMLElement | null;
+    if (leave) leave.onclick = () => { if (!this.locked) this.finish('abort'); };
   }
 
   run(): Promise<'ok' | 'wrong' | 'abort'> {

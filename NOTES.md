@@ -301,3 +301,29 @@ Owner feedback: the hands looked like "zombie hook hands", and falling and other
 - Hacking minigame v2, a proper stealth model (light and shadow sampling, noise propagation), crafting from scrap.
 - Extract the generic bunker runtime (layers, obstacles and solutions) from `Garage.ts` so new bunkers are mostly data.
 - Performance: chunk the terrain into LODs, impostor far props, GPU-instanced scrub via compute.
+
+## Mobile / touch pass (2026-10-06, v0.1.9)
+
+**What works**
+- `src/engine/device.ts` detects phones and tablets (mobile UA or coarse pointer with touch; `?touch=1|0` overrides) and sets `html.touch`. Touch devices get:
+  - fullscreen + landscape lock on the first tap (`pointerup` is the gesture that counts for touch; `pointerdown` isn't)
+  - a "turn your phone sideways" screen in portrait
+  - `lowfx` CSS
+- **Input:** on touch, "locked" means "touch controls live". `requestLock`/`exitLock` flip it synchronously, so the pause/modal flow is unchanged.
+  - `bb-lockchange` is now dispatched in a microtask, for every capture kind. Callers like `exitLock(); openInventory()` get the panel up before `onLockChange` decides whether to open the pause menu. Native capture on Linux used to dispatch synchronously.
+  - `Input.moveX/moveZ` carry the analog stick. `Player` scales speed by how far the stick is pushed.
+- **`src/ui/TouchControls.ts`:**
+  - a floating move stick on the left 42% (dragging past 1.4× the ring, forward, sprints) and drag-to-look on the right
+  - buttons for jump, crouch (a toggle), use (lit when there's a prompt), ALT (the secondary action), torch, pause, kit and map
+  - Any element with `data-key` acts as a button: the HUD prompts and hotbar slots on touch.
+- **Minigames** use pointer events: press on a pin to choose and lift it. The scope follows a drag. Lockpick, circuit and keypad have on-screen Back/Abort/Leave buttons on touch.
+- **Layout:** a `@media (max-height: 560px)` block compacts the title, character select, modals, settings and minigames for phones in landscape (also short desktop windows). Every modal header now has a ✕.
+- **Rendering on phones:** quality defaults to Low. Pixel ratio is capped per preset (`MOBILE_PR`: 1.25/1.5/2/2.5), with SMAA forced on, shadow maps ≤ 2048, and dust and grass cut by 30–40%.
+- **iPhone:** Safari has no element fullscreen, so the title shows an "Add to Home Screen" tip. `play/index.html` links `play.webmanifest` (`display: fullscreen`, `orientation: landscape`, scope `/play/`), so the installed icon opens fullscreen. Android's "Install app" uses the same manifest.
+- **Site:** phones were detected as Linux (Android) or Mac (iPhone). They're now `mobile`, and the main button reads "Play on your phone".
+- **Harness:** `scripts/dev/mobile-shot.mjs` emulates a phone in landscape (844×390 @3x, touch, Android UA) and drives taps, drags, holds and two-finger gestures through CDP.
+
+**Not verified:** real-phone frame rates. Headless emulation renders on the 4050, so its fps means nothing for a phone. If a phone struggles, the next levers are:
+- a lower `MOBILE_PR` for Low
+- skipping godrays/bloom on mobile
+- fewer scrub instances

@@ -11,6 +11,7 @@ import { LockpickGame } from './Lockpick';
 import { CircuitGame, KeypadGame } from './Circuit';
 import { Minimap, MapData, drawWorldMap, type MapMarker } from './Minimap';
 import { mountUpdateNotice } from './Updater';
+import { isTouch, isIOS, isStandalone, canFullscreen, isFullscreen, enterFullscreen } from '@/engine/device';
 
 const h = <K extends keyof HTMLElementTagNameMap>(tag: K, cls = '', html = '') => {
   const el = document.createElement(tag);
@@ -91,6 +92,7 @@ export class UI implements UIBridge {
       </div>
       <div class="tagline">They built bunkers. <b>You brought lockpicks.</b></div>
       <div class="menu interactive"></div>
+      ${isTouch && isIOS && !isStandalone() ? '<div class="ios-tip">For full screen: tap <b>Share</b> → <b>Add to Home Screen</b>, then play from the icon.</div>' : ''}
       <div class="title-foot"><span>v${__APP_VERSION__} · VERTICAL SLICE · ${opts.backend.toUpperCase()}</span><span class="press">THE WASTELAND IS OPEN</span></div>`);
     el.id = 'title';
     const menu = el.querySelector('.menu')!;
@@ -114,6 +116,27 @@ export class UI implements UIBridge {
 
   showControls() {
     const ov = h('div', 'overlay');
+    if (isTouch) {
+      ov.innerHTML = `
+      <div class="panel pause interactive">
+        <div class="scan"></div>
+        <h3>CONTROLS</h3>
+        <div class="controls">
+          <span><b>Left thumb</b></span><span>Drag anywhere on the left to walk. Push past the ring to sprint.</span>
+          <span><b>Right thumb</b></span><span>Drag anywhere on the right to look around</span>
+          <span><b>Hand</b></span><span>Use what you're looking at (or tap the prompt). ALT is the other action</span>
+          <span><b>Arrows</b></span><span>Jump · crouch (toggle: quiet, steps over tripwires)</span>
+          <span><b>Torch</b></span><span>Flashlight (SeedBot spots you more easily)</span>
+          <span><b>Hotbar</b></span><span>Tap an item to throw the EMP, eat or drink</span>
+          <span><b>Top right</b></span><span>Pause · kit & skills · map & intel</span>
+          <span><b>Lockpicking</b></span><span>Press and hold on a pin to lift it, let go to set it</span>
+        </div>
+        <button class="btn">Back</button>
+      </div>`;
+      ov.querySelector('button')!.onclick = () => ov.remove();
+      this.root.appendChild(ov);
+      return;
+    }
     ov.innerHTML = `
       <div class="panel pause interactive">
         <div class="scan"></div>
@@ -246,20 +269,20 @@ export class UI implements UIBridge {
     (this.hud.querySelector('.xpbar i') as HTMLElement).style.width = `${(d.xp / this.state.xpToNext) * 100}%`;
     this.hud.querySelector('.arch')!.innerHTML = `${this.state.archetype.name.replace('The ', '')}`;
     this.hud.querySelector('.xptext')!.innerHTML = `<b>${d.xp}</b> / ${this.state.xpToNext} XP`;
-    this.hud.querySelector('.spwrap')!.innerHTML = d.skillPoints > 0 ? `<span class="sp-badge">${d.skillPoints} SKILL POINT${d.skillPoints > 1 ? 'S' : ''} · TAB</span>` : '';
+    this.hud.querySelector('.spwrap')!.innerHTML = d.skillPoints > 0 ? `<span class="sp-badge">${d.skillPoints} SKILL POINT${d.skillPoints > 1 ? 'S' : ''} · ${isTouch ? 'KIT' : 'TAB'}</span>` : '';
   }
 
   refreshHotbar() {
     if (!this.state) return;
     this.els.hotbar.innerHTML = HOTBAR_ITEMS.map((id, i) => {
       const q = this.state!.count(id);
-      return `<div class="slot ${q ? '' : 'empty'}"><span class="k">${i + 1}</span>${ICONS[ITEMS[id].icon]}<span class="q">${q}</span></div>`;
+      return `<div class="slot ${q ? '' : 'empty'}" data-key="Digit${i + 1}"><span class="k">${i + 1}</span>${ICONS[ITEMS[id].icon]}<span class="q">${q}</span></div>`;
     }).join('');
   }
 
   levelUp(level: number) {
     this.audio.play('levelUp');
-    const el = h('div', 'levelup', `<div class="ring">${level}</div><div class="t">LEVEL UP</div><div class="s">+1 skill point — press <span class="kbd">Tab</span> to spend</div>`);
+    const el = h('div', 'levelup', `<div class="ring">${level}</div><div class="t">LEVEL UP</div><div class="s">+1 skill point — ${isTouch ? 'open your kit' : 'press <span class="kbd">Tab</span>'} to spend</div>`);
     this.hud.appendChild(el);
     setTimeout(() => el.remove(), 4300);
     this.refreshVitals();
@@ -320,7 +343,10 @@ export class UI implements UIBridge {
     }
     // prompts
     const pr = this.els.prompt;
-    const html = f.prompt.map((p) => `<div class="p ${p.na ? 'na' : ''}"><span class="kbd">${p.key}</span>${p.label}${p.na ? `<small>${p.na}</small>` : ''}</div>`).join('');
+    // on touch the prompts are buttons themselves (data-key → TouchControls)
+    const html = f.prompt.map((p) => isTouch
+      ? `<div class="p ${p.na ? 'na' : ''}" data-key="Key${p.key}"><span class="kbd">${p.key === 'E' ? 'USE' : 'ALT'}</span>${p.label}${p.na ? `<small>${p.na}</small>` : ''}</div>`
+      : `<div class="p ${p.na ? 'na' : ''}"><span class="kbd">${p.key}</span>${p.label}${p.na ? `<small>${p.na}</small>` : ''}</div>`).join('');
     if (pr.dataset.html !== html) { pr.innerHTML = html; pr.dataset.html = html; }
     // stance
     this.els.stance.querySelector('.crouch')!.classList.toggle('on', f.crouch);
@@ -363,7 +389,15 @@ export class UI implements UIBridge {
       }
     };
     setTimeout(() => window.addEventListener('keydown', keyClose, true), 50);
-    ov.appendChild(build(close));
+    const panel = build(close);
+    const header = panel.querySelector('header');
+    if (header) {
+      const x = h('button', 'btn close-x', '✕');
+      x.setAttribute('aria-label', 'Close');
+      x.onclick = () => { this.audio.play('ui'); close(); };
+      header.appendChild(x);
+    }
+    ov.appendChild(panel);
     this.root.appendChild(ov);
     return close;
   }
@@ -406,7 +440,7 @@ export class UI implements UIBridge {
               </div>
             </div>
           </div>
-          <footer><span><span class="kbd">Tab</span> close</span><span>Stats: ${d.stats.picks} locks picked · caught ${d.stats.caught}× · ${d.stats.busted} bunkers busted</span></footer>`;
+          <footer><span class="kb"><span class="kbd">Tab</span> close</span><span>Stats: ${d.stats.picks} locks picked · caught ${d.stats.caught}× · ${d.stats.busted} bunkers busted</span></footer>`;
         m.querySelectorAll('.cell[data-id]').forEach((c) => (c as HTMLElement).onclick = () => { selected = (c as HTMLElement).dataset.id!; this.audio.play('ui'); render(); });
         m.querySelectorAll('.up').forEach((b) => (b as HTMLElement).onclick = () => { if (s.spendPoint((b as HTMLElement).dataset.skill as never)) { this.audio.play('uiConfirm'); this.refreshVitals(); render(); } });
         const use = m.querySelector('.use') as HTMLElement | null;
@@ -438,7 +472,7 @@ export class UI implements UIBridge {
             <div class="intel-list">${intel.length ? intel.map((i) => `<div class="intel-item"><b>${i.title}</b><span>${i.body}</span></div>`).join('') : '<div class="intel-item"><span>Nothing yet. Rumour has it the old gas station has a note pinned up.</span></div>'}</div>
           </div>
         </div>
-        <footer><span><span class="kbd">M</span> close</span></footer>`;
+        <footer><span class="kb"><span class="kbd">M</span> close</span></footer>`;
       drawWorldMap(m.querySelector('canvas')!, this.map!, px, pz, yaw, markers);
       return m;
     }, onClose);
@@ -471,6 +505,7 @@ export class UI implements UIBridge {
       add('Save game', () => { opts.onSave(); });
       add('Settings', () => { opts.onSettings(); });
       add('Controls', () => this.showControls());
+      if (isTouch && canFullscreen() && !isFullscreen() && !isStandalone()) add('Full screen', () => enterFullscreen());
       add('Quit to title', () => { close(); opts.onQuit(); });
       return m;
     }, opts.onResume);
@@ -488,7 +523,7 @@ export class UI implements UIBridge {
           <span>Master volume</span><input type="range" min="0" max="1" step="0.05" data-k="master" value="${settings.master}">
           <span>Music</span><input type="range" min="0" max="1" step="0.05" data-k="music" value="${settings.music}">
           <span>Effects</span><input type="range" min="0" max="1" step="0.05" data-k="sfx" value="${settings.sfx}">
-          <span>Mouse sensitivity</span><input type="range" min="0.3" max="2.5" step="0.05" data-k="sensitivity" value="${settings.sensitivity}">
+          <span>${isTouch ? 'Look sensitivity' : 'Mouse sensitivity'}</span><input type="range" min="0.3" max="2.5" step="0.05" data-k="sensitivity" value="${settings.sensitivity}">
           <span>Voiced taunts</span><select data-k="voice"><option value="1" ${settings.voice ? 'selected' : ''}>ON (speech synthesis)</option><option value="0" ${settings.voice ? '' : 'selected'}>OFF (subtitles only)</option></select>
         </div>
         <button class="btn primary">Done</button>
@@ -513,7 +548,7 @@ export class UI implements UIBridge {
   resumeHint(show: boolean) {
     let el = document.querySelector('.resume-hint') as HTMLElement | null;
     if (show && !el) {
-      el = h('div', 'resume-hint', 'Click to resume');
+      el = h('div', 'resume-hint', isTouch ? 'Tap to resume' : 'Click to resume');
       this.root.appendChild(el);
     } else if (!show && el) el.remove();
   }

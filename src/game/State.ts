@@ -1,3 +1,4 @@
+import { isMobile } from '@/engine/device';
 import { ITEMS } from '@/content/items';
 import { ARCHETYPES } from '@/content/archetypes';
 import { SKILLS } from '@/content/skills';
@@ -198,7 +199,8 @@ export interface Settings {
   voice: boolean;
 }
 
-export const DEFAULT_SETTINGS: Settings = { quality: 'high', master: 0.8, music: 0.5, sfx: 0.9, sensitivity: 1, voice: true };
+// phones start on Low: a phone GPU at native resolution under the full post stack crawls
+export const DEFAULT_SETTINGS: Settings = { quality: isMobile ? 'low' : 'high', master: 0.8, music: 0.5, sfx: 0.9, sensitivity: 1, voice: true };
 
 export function loadSettings(): Settings {
   try {

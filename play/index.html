@@ -2,7 +2,12 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+    <!-- phones: "Add to Home Screen" runs the game fullscreen in landscape (play.webmanifest) -->
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Bunker Busters" />
     <title>Play Bunker Busters in your browser</title>
     <meta name="description" content="Play Bunker Busters free in your browser: no install. They built bunkers. You brought lockpicks." />
     <link rel="canonical" href="https://bunker-busters.netlify.app/play/" />
@@ -33,7 +38,7 @@
     <link rel="icon" href="/favicon.ico" sizes="any" />
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
-    <link rel="manifest" href="/site.webmanifest" />
+    <link rel="manifest" href="/play.webmanifest" />
   </head>
   <body>
     <canvas id="game"></canvas>

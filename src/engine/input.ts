@@ -1,3 +1,5 @@
+import { isTouch, enterFullscreen } from './device';
+
 /* eslint-disable @typescript-eslint/no-explicit-any */
 const ipc = (window as any).__TAURI_INTERNALS__ as { invoke: (cmd: string, args?: object) => Promise<any> } | undefined;
 
@@ -14,6 +16,11 @@ export class Input {
   locked = false;
   enabled = true;
   sensitivity = 1;
+  /** Analog movement from the touch stick, -1..1 (x right, z forward). Keys still work alongside. */
+  moveX = 0;
+  moveZ = 0;
+  /** Touch device: there is no pointer to capture; "locked" just means the touch controls are live. */
+  readonly touch = isTouch;
 
   constructor(private el: HTMLElement) {
     window.addEventListener('keydown', (e) => {
@@ -62,7 +69,10 @@ export class Input {
     if (v === this.locked) return;
     this.locked = v;
     if (v) this.rawFlush = true; // drop motion gathered while the cursor was free
-    document.dispatchEvent(new Event('bb-lockchange'));
+    if (!v) { this.moveX = this.moveZ = 0; }
+    // deferred: callers that release the mouse to open a panel (exitLock(); openInventory()) must get
+    // the panel up before listeners decide whether to show the pause menu
+    queueMicrotask(() => document.dispatchEvent(new Event('bb-lockchange')));
   }
 
   // Linux desktop app (X11/XWayland): WebKitGTK's pointer lock barely reports motion there, so
@@ -89,6 +99,11 @@ export class Input {
   }
 
   requestLock() {
+    if (this.touch) {
+      enterFullscreen(); // only succeeds inside a tap; harmless otherwise
+      this.setLocked(true);
+      return;
+    }
     if (this.locked) return;
     if (this.native) {
       if (this.capturing) return;
@@ -103,12 +118,22 @@ export class Input {
   }
   exitLock() {
     if (!this.locked) return;
+    if (this.touch) { this.setLocked(false); return; }
     if (this.native) {
       ipc!.invoke('mouse_capture', { on: false }).catch(() => {});
       this.setLocked(false);
       return;
     }
     document.exitPointerLock();
+  }
+
+  /** On-screen button pressed (touch): a key press for this frame, held until `release`. */
+  press(code: string) {
+    if (!this.down.has(code)) this.pressedThisFrame.add(code);
+    this.down.add(code);
+  }
+  release(code: string) {
+    if (this.down.delete(code)) this.releasedThisFrame.add(code);
   }
 
   isDown(code: string) {

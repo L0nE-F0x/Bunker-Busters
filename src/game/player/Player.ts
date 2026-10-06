@@ -123,22 +123,26 @@ export class Player {
       if (input.isDown('KeyS') || input.isDown('ArrowDown')) mz -= 1;
       if (input.isDown('KeyA') || input.isDown('ArrowLeft')) mx -= 1;
       if (input.isDown('KeyD') || input.isDown('ArrowRight')) mx += 1;
+      if (input.enabled) { mx += input.moveX; mz += input.moveZ; } // touch stick (analog)
     }
     const wantCrouch = !this.frozen && (input.isDown('KeyC') || input.isDown('ControlLeft'));
     this.setCrouch(wantCrouch);
     const moving = mx !== 0 || mz !== 0;
     this.sprinting = moving && !this.crouching && input.isDown('ShiftLeft') && mz > 0 && this.stumble < 0.3 && !this.winded;
 
-    const len = Math.hypot(mx, mz) || 1;
+    // keys give full speed; a half-pushed stick walks slower (but never crawls)
+    const push = Math.hypot(mx, mz);
+    const len = push || 1;
     mx /= len; mz /= len;
+    const analog = push > 0 && push < 1 ? 0.45 + 0.55 * push : 1;
     // camera-relative: camYaw is the camera's heading (0 = looking -z)
     const sin = Math.sin(camYaw), cos = Math.cos(camYaw);
     const dirX = mx * cos - mz * sin;
     const dirZ = -mx * sin - mz * cos;
     // backpedalling and strafing are slower than walking forward; uphill is slower, downhill a touch faster
-    const dirMult = mz < 0 ? 0.7 : mz === 0 ? 0.88 : 1;
+    const dirMult = mz < -0.3 ? 0.7 : mz < 0.3 ? 0.88 : 1;
     const slopeMult = THREE.MathUtils.clamp(1 - this.grade * 0.9, 0.55, 1.1);
-    const speed = (this.crouching ? 1.8 : this.sprinting ? 6.4 : 3.4) * this.speedMult * dirMult * slopeMult * (1 - this.stumble * 0.6);
+    const speed = (this.crouching ? 1.8 : this.sprinting ? 6.4 : 3.4) * this.speedMult * analog * dirMult * slopeMult * (1 - this.stumble * 0.6);
     const tx = moving ? dirX * speed : 0, tz = moving ? dirZ * speed : 0;
 
     // acceleration-limited ground movement: a body has mass, it takes a moment to get going and to

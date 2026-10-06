@@ -331,3 +331,181 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #000; color:
 .lowfx .overlay { animation: none; }
 @keyframes lowfxBannerIn { from { transform: translate(-50%, -20px) scale(1.15); opacity: 0; } }
 .lowfx .banner { animation-name: lowfxBannerIn; }
+
+/* ---------- modal close button (all devices) ---------- */
+.modal header .close-x { margin-left: auto; width: 40px; height: 40px; padding: 0; text-align: center; font-size: 18px; flex: none; }
+.modal header .close-x:hover:not(:disabled) { padding-left: 0; }
+.modal header .close-x:hover::before { content: none; }
+.ios-tip { margin-top: 14px; max-width: 340px; font-size: 12px; color: var(--ink-faint); line-height: 1.45; }
+.ios-tip b { color: var(--ink-dim); }
+
+/* ---------- touch devices (phones, tablets): html.touch, set by src/engine/device.ts ---------- */
+#touch, #rotate { display: none; }
+.touch, .touch body { overscroll-behavior: none; -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent; }
+.touch #game { touch-action: none; }
+.touch .btn, .touch .card, .touch .cell, .touch .tab, .touch select, .touch input { touch-action: manipulation; }
+.touch .mg canvas { touch-action: none; }
+/* no hover on touch: the "selected" slide-in would stick after a tap */
+.touch .btn:hover:not(:disabled):not(.primary) { background: rgba(255, 179, 71, 0.06); border-color: var(--line); color: var(--ink); padding-left: 22px; }
+.touch .btn:hover:not(:disabled)::before { content: none; }
+.touch .btn:active:not(:disabled):not(.primary) { background: linear-gradient(90deg, rgba(255,138,42,0.35), rgba(255,138,42,0.05)); border-color: var(--amber); color: #fff; }
+.touch .kb { display: none; }
+
+.touch {
+  --sl: max(18px, env(safe-area-inset-left));
+  --sr: max(18px, env(safe-area-inset-right));
+  --sb: max(14px, env(safe-area-inset-bottom));
+  --st: max(12px, env(safe-area-inset-top));
+}
+.touch #touch { display: block; position: fixed; inset: 0; z-index: 15; pointer-events: none; opacity: 0; transition: opacity 0.25s; }
+.touch #touch.on { opacity: 1; }
+.touch #touch:not(.on) .tb { pointer-events: none; }
+#touch .tb {
+  position: absolute; pointer-events: auto; touch-action: none; display: grid; place-items: center; border-radius: 50%;
+  color: var(--ink); background: rgba(10, 7, 5, 0.42); border: 1.5px solid rgba(255, 220, 170, 0.32);
+  box-shadow: 0 2px 10px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,220,170,0.08);
+  transition: transform 0.08s, background 0.15s, border-color 0.15s, opacity 0.2s;
+}
+#touch .tb svg { width: 52%; height: 52%; }
+#touch .tb span { font-family: var(--mono); font-size: 12px; font-weight: 700; letter-spacing: 0.08em; }
+#touch .tb.down { transform: scale(0.9); background: rgba(255, 138, 42, 0.45); border-color: var(--amber); }
+#touch .tb.lit { color: #1a0d05; background: linear-gradient(135deg, #ffcf7a, #ff7a1a); border-color: #ffd28a; }
+#touch .tb.dim { opacity: 0.35; }
+#touch .tb.hide { opacity: 0; pointer-events: none; }
+/* right-thumb cluster, anchored bottom-right */
+#touch .cluster { position: absolute; right: var(--sr); bottom: var(--sb); width: 216px; height: 196px; }
+#touch .t-jump { right: 0; bottom: 4px; width: 84px; height: 84px; }
+#touch .t-crouch { right: 96px; bottom: 0; width: 64px; height: 64px; }
+#touch .t-use { right: 8px; bottom: 100px; width: 70px; height: 70px; }
+#touch .t-use.lit { box-shadow: 0 0 22px rgba(255, 138, 42, 0.6); animation: useGlow 1.4s ease-in-out infinite; }
+@keyframes useGlow { 50% { box-shadow: 0 0 8px rgba(255, 138, 42, 0.3); } }
+#touch .t-alt { right: 88px; bottom: 120px; width: 50px; height: 50px; }
+#touch .t-torch { right: 160px; bottom: 76px; width: 52px; height: 52px; }
+/* system buttons, top right, left of the minimap */
+#touch .tbar { position: absolute; top: var(--st); right: calc(var(--sr) + 132px); display: flex; gap: 10px; }
+#touch .tbar .tb { position: relative; width: 44px; height: 44px; border-radius: 10px; }
+/* floating move stick: positioned at the touch point by TouchControls */
+#touch .stick { position: absolute; left: 0; top: 0; width: 0; height: 0; opacity: 0; transition: opacity 0.15s; }
+#touch .stick.held { opacity: 1; transition: none; }
+#touch .stick .ring { position: absolute; left: -54px; top: -54px; width: 108px; height: 108px; border-radius: 50%; border: 2px solid rgba(255,220,170,0.4); background: radial-gradient(circle, rgba(10,7,5,0.1), rgba(10,7,5,0.4)); }
+#touch .stick .knob { position: absolute; left: -24px; top: -24px; width: 48px; height: 48px; border-radius: 50%; background: radial-gradient(circle at 40% 35%, rgba(255,230,190,0.9), rgba(255,170,80,0.65)); box-shadow: 0 0 14px rgba(255,138,42,0.45); }
+#touch .stick .run { position: absolute; left: -40px; top: -96px; width: 80px; text-align: center; font-family: var(--mono); font-size: 10px; letter-spacing: 0.2em; color: var(--ink-faint); opacity: 0.7; }
+#touch .stick.sprint .ring { border-color: var(--teal); }
+#touch .stick.sprint .knob { background: radial-gradient(circle at 40% 35%, #c8fff6, #2ad6c4); box-shadow: 0 0 18px rgba(63,242,224,0.6); }
+#touch .stick.sprint .run { color: var(--teal); opacity: 1; }
+
+/* portrait: ask for landscape */
+@media (orientation: portrait) {
+  .touch #rotate {
+    display: flex; position: fixed; inset: 0; z-index: 60; flex-direction: column; align-items: center; justify-content: center; gap: 10px;
+    background: radial-gradient(ellipse at 50% 60%, #2a160a 0%, #090605 75%); color: var(--ink); text-align: center; padding: 24px;
+  }
+  .touch #rotate svg { width: 88px; height: 88px; color: var(--ink-dim); animation: rot 2.4s ease-in-out infinite; }
+  .touch #rotate b { font-family: var(--display); font-size: 34px; letter-spacing: 0.03em; color: var(--amber); font-weight: 900; }
+  .touch #rotate span { color: var(--ink-dim); font-size: 14px; }
+}
+@keyframes rot { 0%, 30% { transform: rotate(0); } 60%, 100% { transform: rotate(-90deg); } }
+
+/* HUD on touch: compact, clear of both thumbs */
+.touch .objective { top: var(--st); left: var(--sl); max-width: min(380px, 40vw); padding: 8px 12px; }
+.touch .objective .text { font-size: 14px; }
+.touch .toasts { top: calc(var(--st) + 84px); left: var(--sl); width: min(330px, 36vw); }
+.touch .toast { font-size: 12.5px; padding: 6px 10px; }
+.touch .toasts .toast:nth-last-child(n+4) { display: none; }
+.touch .minimap { top: var(--st); right: var(--sr); width: 112px; height: 112px; }
+.touch .minimap .ring { inset: -5px; }
+.touch .minimap .compass { inset: -16px; }
+.touch .clock { top: calc(var(--st) + 122px); right: var(--sr); width: 160px; text-align: right; font-size: 10px; letter-spacing: 0.08em; white-space: nowrap; }
+.touch .vitals { left: var(--sl); bottom: var(--sb); width: 230px; }
+.touch .lvl { width: 40px; height: 40px; font-size: 22px; }
+.touch .hp { height: 10px; }
+.touch .vitals .meta { font-size: 10px; }
+.touch .stance { display: none; }
+.touch .hotbar { left: 50%; right: auto; bottom: var(--sb); transform: translateX(-50%); gap: 10px; }
+.touch #hud .hotbar .slot { width: 52px; height: 52px; pointer-events: auto; touch-action: none; }
+.touch .slot .k { display: none; }
+.touch .prompt { bottom: 84px; }
+.touch #hud .prompt .p { pointer-events: auto; touch-action: none; font-size: 14px; padding: 9px 14px 9px 8px; }
+.touch .prompt .p { white-space: normal; flex-wrap: wrap; max-width: min(420px, 40vw); row-gap: 2px; }
+.touch .prompt .p small { flex-basis: 100%; margin-left: 0; font-size: 11px; line-height: 1.3; }
+.touch .prompt .p .kbd { font-size: 10px; letter-spacing: 0.08em; background: var(--amber); color: #1a0d05; border-color: #ffd28a; }
+.touch .prompt .p.na .kbd { background: rgba(0,0,0,0.45); color: var(--ink-dim); border-color: rgba(255,220,170,0.4); }
+.touch .subtitle { bottom: 160px; font-size: 14px; max-width: min(620px, 60vw); padding: 8px 14px; }
+.touch .detect { top: calc(var(--st) + 4px); }
+.touch .detect svg { width: 48px; height: 30px; }
+.touch .banner { top: 20vh; }
+.touch .banner .big { font-size: clamp(34px, 7vw, 72px); }
+.touch .banner .sub { font-size: 13px; }
+.touch .levelup .ring { width: 100px; height: 100px; font-size: 50px; }
+.touch .levelup .t { font-size: 30px; }
+.touch .resume-hint { top: 50%; font-size: 16px; padding: 14px 24px; }
+
+/* ---------- short screens (phones in landscape, small windows) ---------- */
+@media (max-height: 560px) {
+  #title { padding: 0 max(6vw, env(safe-area-inset-left)); }
+  .logo .l1, .logo .l2, .logo .glitch span { font-size: clamp(44px, 15vh, 120px); }
+  .tagline { font-size: 11px; letter-spacing: 0.3em; margin: 10px 0 16px 4px; }
+  .menu { gap: 6px; width: min(300px, 70vw); }
+  .menu .btn { padding: 9px 18px; font-size: 13px; }
+  .title-foot { bottom: 12px; font-size: 9px; }
+  .ios-tip { margin-top: 8px; }
+  .update-card { bottom: 36px; }
+  #loading .logo-sm { font-size: 44px; }
+  #loading .tip { bottom: 16px; font-size: 11px; }
+
+  #charselect .side { width: min(440px, 60vw); padding: max(10px, env(safe-area-inset-top)) 18px max(10px, env(safe-area-inset-bottom)) max(18px, env(safe-area-inset-left)); gap: 8px; min-height: 0; }
+  #charselect h2 { font-size: 32px; }
+  #charselect .label { font-size: 10px; }
+  .cards { flex-direction: row; gap: 8px; }
+  .card { flex: 1; padding: 10px 12px; }
+  .card .name { font-size: 16px; }
+  .card .tag { font-size: 11px; }
+  #charselect .detail { padding: 10px 14px; flex: 1 1 auto; min-height: 0; overflow-y: auto; touch-action: pan-y; }
+  #charselect h2 { line-height: 1; }
+  .detail p { font-size: 12.5px; line-height: 1.45; margin-bottom: 8px; }
+  .stat { grid-template-columns: 96px 1fr 30px; font-size: 12px; margin: 4px 0; }
+  .sig { margin-top: 8px; padding: 7px 10px; font-size: 12px; }
+  #charselect .btn { padding: 10px 16px; font-size: 13px; }
+
+  .modal { max-height: 94vh; max-height: 94dvh; width: min(1100px, 96vw); }
+  .modal header { padding: 8px 14px; gap: 14px; }
+  .modal header h3 { font-size: 26px; }
+  .modal .body { padding: 12px 14px; touch-action: pan-y; }
+  .modal footer { padding: 6px 14px; font-size: 11px; }
+  .inv { grid-template-columns: 1fr minmax(240px, 300px); gap: 14px; }
+  .grid { grid-template-columns: repeat(8, 1fr); gap: 6px; }
+  .info { padding: 12px; min-height: 0; }
+  .info h4 { font-size: 18px; }
+  .info p { font-size: 12.5px; margin: 6px 0; }
+  .skills { margin-top: 10px; }
+  .skill { padding: 8px 0; }
+  .mapwrap { grid-template-columns: minmax(0, 1fr) 260px; gap: 14px; }
+  .mapwrap canvas { max-width: calc(94vh - 110px); max-width: calc(94dvh - 110px); }
+  .legend { font-size: 12px; }
+  .legend .it { margin: 4px 0; }
+
+  .pause { padding: 16px 20px; gap: 6px; max-height: 96vh; max-height: 96dvh; overflow-y: auto; touch-action: pan-y; }
+  .pause h3 { font-size: 30px; margin-bottom: 4px; }
+  .pause .btn { padding: 9px 18px; font-size: 13px; }
+  .pause:has(.controls) { width: min(640px, 94vw); }
+  .controls { font-size: 12.5px; gap: 6px 14px; margin-bottom: 8px; }
+  .settings { grid-template-columns: 140px 1fr; gap: 8px 16px; font-size: 13px; margin: 4px 0 10px; }
+  .intel-reader { padding: 18px 22px; max-height: 94vh; max-height: 94dvh; overflow-y: auto; touch-action: pan-y; }
+  .intel-reader h3 { font-size: 20px; margin: 8px 0; }
+  .intel-reader p { font-size: 12.5px; line-height: 1.55; }
+
+  /* minigames: fit the canvas to the height that's there */
+  .mg { width: min(860px, 96vw, calc((100vh - 100px) * 2.26)); width: min(860px, 96vw, calc((100dvh - 100px) * 2.26)); }
+  .mg header { padding: 8px 14px; }
+  .mg header h3 { font-size: 22px; }
+  .mg header .sub { font-size: 11px; }
+  .mg footer { padding: 6px 14px; gap: 12px; font-size: 12px; }
+  .mg footer .btn { padding: 7px 14px; font-size: 12px; }
+  .keypad { padding: 14px 18px; width: min(560px, 92vw); display: grid; grid-template-columns: 1fr 1fr; gap: 0 16px; align-items: start; }
+  .keypad .label { grid-column: 1 / -1; margin-bottom: 8px; }
+  .keypad .screen { font-size: 28px; padding: 8px; min-height: 0; margin-bottom: 8px; }
+  .keypad .keys { grid-column: 2; grid-row: 2 / span 3; gap: 6px; }
+  .keypad .keys button { font-size: 18px; padding: 8px 0; }
+  .keypad .hint { margin-top: 6px; }
+  .keypad .leave { margin-top: 10px; text-align: center; }
+}

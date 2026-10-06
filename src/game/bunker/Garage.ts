@@ -8,6 +8,9 @@ import { GARAGE } from '@/content/bunkers/garage';
 import { ITEMS } from '@/content/items';
 import { XP_REWARDS } from '@/content/progression';
 import type { GameContext, Interactable } from '../context';
+import { isTouch } from '@/engine/device';
+
+const CROUCH_KEY = isTouch ? 'crouch' : 'crouch [C]';
 import type { LoopHandle } from '@/engine/audio';
 
 const F = {
@@ -201,7 +204,7 @@ export class Garage {
         visible: () => tw.armed,
         primary: {
           label: 'Disarm tripwire',
-          available: () => (this.s.skill('electronics') >= 1 ? true : 'Requires Electronics 1 — or crouch [C] to step over'),
+          available: () => (this.s.skill('electronics') >= 1 ? true : `Requires Electronics 1 — or ${CROUCH_KEY} to step over`),
           run: () => {
             tw.armed = false;
             tw.mesh.visible = false;
@@ -443,7 +446,7 @@ export class Garage {
         }
       } else if (!this.shownCrouchHint && feet2.distanceTo(a.clone().lerp(b, 0.5)) < 4.5) {
         this.shownCrouchHint = true;
-        this.s.events.emit('toast', { text: 'Tripwire ahead — crouch [C] to step over it.', kind: 'info' });
+        this.s.events.emit('toast', { text: `Tripwire ahead — ${CROUCH_KEY} to step over it.`, kind: 'info' });
       }
     }
 
