@@ -487,3 +487,44 @@ Places should sound like places. Every reserved `AmbientKind` now has a voice, f
 **Next**
 - The owner's ear: voice taste (the radio and crowd babble especially), the night chorus level, the generator cut.
 - Sites can tag exact floors with `surfaces.zone(...)` and place spots by kind. Nothing else is needed.
+
+## Graphics pass (2026-10-06)
+
+The baseline looked milky by day, one-note orange at golden hour, and flat on the ground. Most of that was the air, not the models. This pass changes shaders, the sky, the fog and the post chain. It adds no draw calls, no lights and no passes.
+
+**What changed** (headless WebGL on the dev server, same cameras before and after; WebGPU on the Intel iGPU spot-checked):
+- **Godrays had no phase function.** The raw march is "how much lit air is on this ray", so it laid an even veil over every view, noon included. It is now weighted toward the light direction, so shafts gather toward a low sun and the rest of the frame stays clear.
+- **Fog:** a clear near zone (the first tens of metres stay crisp, except in storms), aerial perspective that tints far ridges with the horizon colour, lighter day haze. At golden hour the haze is golden only on the sun's side and cools to rose-blue away from it.
+- **Grade** (`gradeU` in `postfx.ts`, keyed on sun elevation in `Atmosphere.GRADE`): a split tone in scene-linear light, a contrast pivot at mid grey, ACES, then saturation. Teal shadows and amber light at golden hour. Blue, desaturated moonlit darks at night, while lamps, neon and fire keep their colour (saturation follows luminance). Storms grade to one warm murk. Exposure is applied before bloom, so the threshold means the same at noon and at night. AgX was tried: neon and sunsets went grey, so ACES stays.
+- **Lens:** chromatic aberration falls off with r², so the centre is clean. The vignette is neutral; its warm tint was what turned the moon peach.
+- **Sky:** white sunlit cirrus. A milky way with a bright core, dust lanes and a warm centre. Round, anti-aliased stars with a real magnitude spread (the old ones were square cells, too many and fringed). A crisp silver moon. The whole night block sits behind a uniform branch, so it costs nothing by day.
+- **Terrain** (material code only):
+  - Rock reads as rock: an irregular stack of sediment layers from the atlas instead of sine stripes, plus desert varnish streaking down the cliffs.
+  - A baked cavity texture (height minus its blur at two radii) darkens and dampens hollows, bleaches ridges, and occludes sky light in folds through `aoNode`.
+  - Sand: ripples are anti-aliased (they made moiré bands mid-ground). A broader ripple field catches low sun. Wind streaks, and a soft sheen.
+  - The highway is grey, sun-bleached asphalt with alligator cracking in patches, tar repairs, wheel paths and oil. The old crack network everywhere read as paving tiles.
+- **Materials** (`settle()` in `materials.ts`, every family):
+  - Sand settles on upward faces. There is more after a storm (`atmo.dustCover`), and it blows off over minutes.
+  - The sides of anything standing on the ground get a grimy, sand-stained foot and contact occlusion. This uses the terrain height texture, which `heightTexture()` now memoizes and registers. WebGL has no GTAO, so this is the fake AO.
+  - Concrete has bug holes and a few hairline cracks instead of a cell mosaic.
+  - The fake sun rim switches off at night. It was the blue glow on fabric indoors.
+  - At golden hour, backlit silhouettes get a thin warm rim.
+- **VFX:**
+  - `lightCone` now falls off from the lamp, carries two layers of dust, and fades softly where it meets geometry. All its parameters are uniforms, so it is one program instead of four. SeedBot's beam is a readable volume, not a blown-out disc, and it sends sonar rings (slow on patrol, fast when it is looking for you).
+  - The campfire is a turbulent teardrop with tongues and a heat ramp, instead of a white streak.
+  - Heat shimmer over distant ground on clear afternoons. It is folded into the lens pass's existing taps.
+- **Storms:** the dome uses exactly the fog colour, so far ridges melt into it. The storm fog term no longer follows the lighter day density.
+
+**Cost** (`ab.mjs`, Intel iGPU, 1600×900 High, 7 spots, main vs this branch):
+- Draw calls are identical at every spot, and render CPU ms is within noise.
+- GPU time is about +1–2 ms on the iGPU (fps noise is about ±1.5). That is after merging taps: terrain masks share fetches, the dust layer takes its grain from one tap, and the stars use two hashes per cell.
+- The desktop target (4050 in WebKitGTK) is bound by draw-call submission, so this should not move it.
+
+**Not done:**
+- The Garage lasers live in `GarageBuilder.ts` (perf agent's file) and are unchanged. A heat-shimmer or dust-glint upgrade belongs there.
+- No edge wear: flat-shaded boxes give the shader no curvature to find edges with.
+- Sand glints in sunlight were skipped: emissive can't know the shadow, so they would sparkle in shade.
+
+**Next:**
+- Look at it in the desktop app: the grade, the night exposure and the shimmer at 144 Hz.
+- Tune the `GRADE` keys with the owner. Each is a one-line edit.
