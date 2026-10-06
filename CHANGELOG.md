@@ -3,6 +3,13 @@
 Each `## vX.Y.Z` section becomes the GitHub release notes and the "what's new" list in the in-app
 update notice (the first few bullets). `scripts/release.sh` refuses to release a version without one.
 
+## v0.3.0
+- **Act I has a real ending.** Find out who Tanner actually pays, why Dry Creek went dry, and whose name is on the last page of the Seed Manifest. Then Vesper Kade cuts into the debrief with an offer, and you decide what the camp does with the ledger
+- **A quest log.** The journal (J) tracks the main story and ten favours: one for each person in Dry Creek and the Cut, one for each new place on the map, and Pip's water ledger at the camp. Track one and the corner of the screen follows it
+- **People remember.** Every favour ends on a choice, and the town keeps score: a free plate at the diner, house calls, cheaper water, a better pick recipe, and who says yes when you ask them to walk west with you
+- **Two new people can take the radio.** Juno Reyes, a county ranger who walks far on very little, and Theo Vance, a founder who gave his bunker seat back. Character select now shows all six at once
+- **Skill trees.** Skills get their own screen (K). Every skill branches at rank 2 (a focus) and again at rank 4 (a capstone, such as a bump key that opens any three-pin lock, or an exit plan that makes getting tased free)
+
 ## v0.2.0
 - **Dry Creek.** West of the highway: a diner, a clinic, a store, and a motel, with people who are not the job. Nia, Doc, Inez, Sol, and Ren each ask for a different skill
 - **The closet is a stair.** In the Till, lockpicking 3, a charge, or enough conversation that Inez admits to the key. The page at the top cannot be read from the ground floor
