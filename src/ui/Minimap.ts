@@ -9,6 +9,8 @@ const FOG_RES = 128;
 export class MapData {
   terrain: HTMLCanvasElement;
   fog = new Uint8Array(FOG_RES * FOG_RES);
+  /** Bumped whenever the fog of war changes (the minimap skips redraws while nothing moved). */
+  version = 0;
   private fogCanvas: HTMLCanvasElement;
   private fogDirty = true;
 
@@ -73,7 +75,7 @@ export class MapData {
         if (v > this.fog[k]) { this.fog[k] = v; changed = true; }
       }
     }
-    if (changed) this.fogDirty = true;
+    if (changed) { this.fogDirty = true; this.version++; }
   }
 
   revealedAt(x: number, z: number) {
@@ -184,6 +186,9 @@ export class Minimap {
   private sprites = new Map<string, HTMLCanvasElement>();
   private ring: HTMLCanvasElement | null = null;
   private fontReady = false;
+  /** What the canvas currently shows: [px, pz, heading, yaw, fog version], plus the markers. */
+  private shown = [NaN, NaN, NaN, NaN, -1];
+  private shownMarkers: number[] = [];
 
   constructor(private data: MapData) {
     this.canvas = document.createElement('canvas');
@@ -197,7 +202,24 @@ export class Minimap {
     return s;
   }
 
+  /** True when the last drawn frame already shows this (every redraw re-uploads + recomposites the canvas). */
+  private unchanged(px: number, pz: number, heading: number, playerYaw: number, markers: MapMarker[]) {
+    const s = this.shown, m = this.shownMarkers;
+    let same = Math.abs(px - s[0]) < 0.05 && Math.abs(pz - s[1]) < 0.05 && Math.abs(heading - s[2]) < 0.002
+      && Math.abs(playerYaw - s[3]) < 0.002 && this.data.version === s[4] && m.length === markers.length * 3 && this.fontReady;
+    for (let i = 0; same && i < markers.length; i++) {
+      const k = markers[i];
+      same = m[i * 3] === k.x && m[i * 3 + 1] === k.z && m[i * 3 + 2] === hashStr(k.kind + k.color);
+    }
+    if (same) return true;
+    s[0] = px; s[1] = pz; s[2] = heading; s[3] = playerYaw; s[4] = this.data.version;
+    m.length = 0;
+    for (const k of markers) m.push(k.x, k.z, hashStr(k.kind + k.color));
+    return false;
+  }
+
   draw(px: number, pz: number, heading: number, playerYaw: number, markers: MapMarker[]) {
+    if (this.unchanged(px, pz, heading, playerYaw, markers)) return;
     const { ctx, canvas, data } = this;
     const S = canvas.width, R = S / 2;
     ctx.clearRect(0, 0, S, S);
@@ -275,6 +297,12 @@ export class Minimap {
       ctx.drawImage(spr, R + Math.cos(a) * (R - 18) - SPRITE / 2, R + Math.sin(a) * (R - 18) - SPRITE / 2);
     });
   }
+}
+
+function hashStr(s: string) {
+  let h = 0;
+  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0;
+  return h;
 }
 
 /** Full-screen map. */
