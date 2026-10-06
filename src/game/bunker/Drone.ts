@@ -454,6 +454,8 @@ export class Drone {
     // airborne dust scatters the beam: the cone glows brighter (and reads as "blinded") in a storm
     const dusty = 1 + (1 - (s.visibility ?? 1)) * 0.8;
     this.cone.intensity.value = (0.18 + s.night * 0.4 + (this.state === 'alert' ? 0.25 : 0)) * power * dusty;
+    // sonar rings down the beam: a slow sweep on patrol, insistent once it's looking for you
+    this.cone.scan.value = damp(this.cone.scan.value as number, (colorKey === 'calm' ? 0.35 : 1) * (power > 0.1 ? 1 : 0), 4, dt);
     this.rotorSpin.value = damp(this.rotorSpin.value as number, this.state === 'disabled' ? 0.02 : this.state === 'sputter' ? 0.7 : 1, 3, dt);
     (this.screen.material as THREE.MeshStandardNodeMaterial).emissiveIntensity = Math.sin(t * 4) > 0 ? 1 : 0.25;
     // nav lights, strobe and the eye halo

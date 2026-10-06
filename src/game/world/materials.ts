@@ -1,7 +1,8 @@
 import * as THREE from 'three/webgpu';
 import {
   Fn, vec2, float, positionWorld, positionLocal, normalWorld, mix, smoothstep, abs, sin, uniform, time, pow, max,
-  fract, step, uv, cameraPosition, normalize, dot, attribute, uniformArray, int, vertexStage, varying,
+  fract, step, uv, cameraPosition, normalize, dot, attribute, uniformArray, int, vertexStage, varying, texture,
+  renderGroup, materialColor,
 } from 'three/tsl';
 import { bumpFromHeight } from './Terrain';
 import { noise } from '@/engine/noiseTex';
@@ -82,8 +83,9 @@ export function familyMaterial(f: Family, glowSources: { value: number }[] = [])
       }
       case 'plain': {
         const m = new THREE.MeshStandardNodeMaterial();
-        m.colorNode = bC().xyz;
-        m.roughnessNode = bP().x;
+        const sd = settle(m, bC().xyz, float(0.8));
+        m.colorNode = sd.color;
+        m.roughnessNode = mix(bP().x, float(0.95), sd.dust);
         m.metalnessNode = bP().y;
         return m;
       }
@@ -121,6 +123,56 @@ const triCoord = (): N => {
 
 const vec3c = (r: number, g: number, b: number): N => uniform(new THREE.Color(r, g, b));
 
+// ------------------------------------------------------------------ world cohesion
+// One world, one dust: sand settles on everything that faces up, and everything standing on the
+// ground gets a grimy, sand-splashed foot plus contact occlusion (WebGL has no GTAO). All shared
+// uniforms; the Atmosphere drives them.
+
+/** Sand albedo the settled dust takes (matches the terrain's sand). */
+export const uDustColor = uniform(new THREE.Color(0.6, 0.41, 0.24)).setGroup(renderGroup);
+/** How dusty the world is, 0..1 (a calm baseline; rises after a dust storm and slowly settles back). */
+export const uDustCover = uniform(0.35).setGroup(renderGroup);
+/** 0 at night, 1 by day (fades the fake sun rim light). */
+export const uDaylight = uniform(1).setGroup(renderGroup);
+
+const _flatGround = new THREE.DataTexture(new Uint16Array([0]), 1, 1, THREE.RedFormat, THREE.HalfFloatType);
+_flatGround.needsUpdate = true;
+const groundTex: N = texture(_flatGround);
+const uGroundSize = uniform(840);
+/** Terrain height texture (R = height, world square of `size` m) for the contact layer. */
+export function setGroundHeight(tex: THREE.Texture, size: number) {
+  groundTex.value = tex;
+  uGroundSize.value = size;
+}
+
+/**
+ * Dust on top, grime at the foot, occlusion where it meets the ground. Returns the new albedo and a
+ * dust mask (for roughness); writes the material's aoNode. `amount` scales the whole layer.
+ */
+function settle(m: THREE.MeshStandardNodeMaterial, base: N, amount: N = float(1)): { color: N; dust: N } {
+  const wp = positionWorld;
+  const ground = groundTex.sample(wp.xz.div(uGroundSize).add(0.5)).r;
+  const above = wp.y.sub(ground);
+  const patch = noise(wp.xz.mul(0.43).add(wp.y.mul(0.13))).r;
+  const speck = noise(wp.xz.mul(3.1).add(wp.y.mul(0.9))).g;
+  const ny = normalWorld.y;
+  const up = smoothstep(0.4, 0.95, ny);
+  // a fine, even dusting everywhere that faces up, heavier in drifts (and after a storm)
+  const drift = smoothstep(0.45, 0.8, patch.add(uDustCover.mul(0.35)));
+  const dust = up.mul(speck.mul(0.25).add(0.2).add(drift.mul(0.45))).mul(uDustCover.mul(0.6).add(0.4)).mul(amount);
+  const dustCol = uDustColor.mul(speck.mul(0.2).add(0.9));
+  let color: N = mix(base, dustCol, dust.mul(0.7));
+  // splash zone on the sides of things: a darker, sand-stained bottom ~0.8 m, ragged with the noise.
+  // Floors and tops are left alone (they sit at ground level but aren't "the foot" of anything).
+  const side = smoothstep(0.75, 0.3, abs(ny));
+  const near = smoothstep(0.0, 0.85, above.add(patch.sub(0.5).mul(0.3)));
+  const foot = float(1).sub(near).mul(side).mul(amount);
+  color = mix(color, mix(color.mul(0.66), uDustColor.mul(0.5), 0.35), foot.mul(0.5));
+  // contact occlusion: the ground blocks half the sky at the very foot of a wall
+  m.aoNode = float(1).sub(float(1).sub(smoothstep(0.0, 1.0, above)).mul(side).mul(0.5));
+  return { color, dust };
+}
+
 /** Global rim-light uniform tinted by the atmosphere each frame. */
 export const rimColor = uniform(new THREE.Color(1, 0.6, 0.3));
 export const rimStrength = uniform(0.6);
@@ -129,7 +181,7 @@ const rim = (power = 3): N =>
   Fn(() => {
     const v = normalize(cameraPosition.sub(positionWorld));
     const f = pow(float(1).sub(max(dot(normalWorld, v), 0)), power);
-    return rimColor.mul(f).mul(rimStrength);
+    return rimColor.mul(f).mul(rimStrength).mul(uDaylight);
   })();
 
 export interface RustOpts { base: THREE.ColorRepresentation; rust?: number; roughness?: number; metalness?: number; scale?: number; paintChips?: boolean; rim?: number }
@@ -160,8 +212,9 @@ function rustSetup(m: THREE.MeshStandardNodeMaterial, P: { base: N; rustAmt: N; 
   const field = t1.r.add(streak.sub(0.5).mul(0.5)).add(t2.g.sub(0.5).mul(0.3));
   const rustMask = smoothstep(float(0.62).sub(rustAmt.mul(0.4)), float(0.72).sub(rustAmt.mul(0.3)), field);
   const rustCol = mix(vec3c(0.30, 0.11, 0.05), vec3c(0.62, 0.30, 0.12), t2.r);
-  m.colorNode = mix(base.mul(float(0.85).add(t2.g.mul(0.2))), rustCol, rustMask);
-  m.roughnessNode = mix(rough, float(0.95), rustMask);
+  const sd = settle(m, mix(base.mul(float(0.85).add(t2.g.mul(0.2))), rustCol, rustMask));
+  m.colorNode = sd.color;
+  m.roughnessNode = mix(mix(rough, float(0.95), rustMask), float(0.95), sd.dust);
   m.metalnessNode = mix(metal, float(0.1), rustMask);
   m.normalNode = bumpFromHeight(rustMask.mul(0.6).add(t2.r.mul(0.25)), float(0.05));
   m.emissiveNode = rim(3).mul(rimK);
@@ -188,9 +241,13 @@ function concreteSetup(m: THREE.MeshStandardNodeMaterial, base: N, s: N, stainAm
   const blotch = noise(c.mul(0.23).add(vec2(0.37, 0.11))).g;
   const stainSrc = mix(streaks.add(t1.r.mul(0.4)), blotch.mul(0.9).add(t1.r.mul(0.45)), upness);
   const stain = smoothstep(0.45, 0.8, stainSrc.sub(0.2)).mul(stainAmt);
-  const pits = smoothstep(0.1, 0.0, t2.b);
-  m.colorNode = base.mul(float(0.8).add(t1.r.mul(0.3))).mul(float(1).sub(stain.mul(0.45))).mul(float(1).sub(pits.mul(0.3)));
-  m.normalNode = bumpFromHeight(t1.r.mul(0.3).add(t2.a.mul(0.1)).sub(pits.mul(0.5)), float(0.04));
+  // bug holes (small air pockets) and a few hairline cracks; a crack network everywhere read as tiles
+  const pits = smoothstep(0.84, 0.95, noise(c.mul(0.37).add(0.19)).a);
+  const crackLine = smoothstep(0.045, 0.0, noise(c.mul(0.11).add(0.6)).b).mul(smoothstep(0.6, 0.75, noise(c.mul(0.05).add(0.3)).g));
+  const sd = settle(m, base.mul(float(0.8).add(t1.r.mul(0.3))).mul(float(1).sub(stain.mul(0.45)))
+    .mul(float(1).sub(pits.mul(0.35))).mul(float(1).sub(crackLine.mul(0.5))));
+  m.colorNode = sd.color;
+  m.normalNode = bumpFromHeight(t1.r.mul(0.3).add(t2.a.mul(0.1)).sub(pits.mul(0.4)).sub(crackLine.mul(0.3)), float(0.04));
 }
 
 /** Corrugated sheet metal: ridges via sin along a local axis, with rust. */
@@ -214,7 +271,12 @@ export function plainStandard(c: THREE.ColorRepresentation, roughness = 0.8, met
   return memo(k('plain', c, roughness, metalness, extra), () => {
     const m = new THREE.MeshStandardNodeMaterial({ color: c, roughness, metalness, ...extra });
     // only plain opaque variants batch together (extras like side/transparent change the pipeline)
-    return Object.keys(extra).length ? m : tag(m, 'plain', c, 0, [roughness, metalness]);
+    if (Object.keys(extra).length) return m;
+    // same look as the batched 'plain' family (dust + contact layer); the colour stays m.color
+    const sd = settle(m, materialColor, float(0.8));
+    m.colorNode = sd.color;
+    m.roughnessNode = mix(uniform(roughness), float(0.95), sd.dust);
+    return tag(m, 'plain', c, 0, [roughness, metalness]);
   });
 }
 
@@ -271,9 +333,9 @@ export function fabricUnique(c: THREE.ColorRepresentation, roughness = 0.95) {
 function fabricSetup(m: THREE.MeshStandardNodeMaterial, base: N) {
   const t = noise(positionLocal.xy.add(positionLocal.z).mul(1.5));
   const fine = noise(positionLocal.xy.sub(positionLocal.z).mul(9)).g;
-  m.colorNode = base.mul(float(0.72).add(t.r.mul(0.4)).add(fine.mul(0.1)));
+  m.colorNode = settle(m, base.mul(float(0.72).add(t.r.mul(0.4)).add(fine.mul(0.1))), float(0.6)).color;
   m.normalNode = bumpFromHeight(t.r.mul(0.5).add(fine.mul(0.15)), float(0.012));
-  m.emissiveNode = rim(2.5).mul(0.6);
+  m.emissiveNode = rim(2.5).mul(0.35);
 }
 
 /** Leather / skin with fine grain and rim light. */
@@ -287,9 +349,9 @@ function leatherUnique(c: THREE.ColorRepresentation) {
 
 function leatherSetup(m: THREE.MeshStandardNodeMaterial, base: N) {
   const n = noise(positionLocal.xy.add(positionLocal.z).mul(6)).r;
-  m.colorNode = base.mul(float(0.8).add(n.mul(0.3)));
+  m.colorNode = settle(m, base.mul(float(0.8).add(n.mul(0.3))), float(0.5)).color;
   m.normalNode = bumpFromHeight(n.mul(0.4), float(0.015));
-  m.emissiveNode = rim(2.5).mul(0.6);
+  m.emissiveNode = rim(2.5).mul(0.35);
 }
 
 /** Window glass that glows faintly from inside. */
@@ -318,7 +380,7 @@ function woodUnique(c: THREE.ColorRepresentation) {
 
 function woodSetup(m: THREE.MeshStandardNodeMaterial, base: N) {
   const grain = noise(vec2(positionLocal.x.add(positionLocal.z).mul(0.15), positionLocal.y.mul(4))).r;
-  m.colorNode = base.mul(float(0.7).add(grain.mul(0.45)));
+  m.colorNode = settle(m, base.mul(float(0.7).add(grain.mul(0.45)))).color;
   m.normalNode = bumpFromHeight(grain.mul(0.5), float(0.02));
 }
 
