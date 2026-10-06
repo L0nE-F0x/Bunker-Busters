@@ -78,7 +78,7 @@ function questDetail(q: QuestDef, s: GameState, v: QuestView, focus: QuestDef | 
     const glyph = ok ? '✓' : state === 'cur' ? '▸' : state === 'lockd' ? '◇' : '○';
     const hint = (state === 'cur' || (st.optional && !ok)) && st.hint ? `<small>${esc(st.hint)}</small>` : '';
     const tag = st.optional ? '<em>optional</em>' : st.locked ? '<em>Act II</em>' : '';
-    return `<li class="${state}${st.optional ? ' opt' : ''}"><span class="g">${glyph}</span><div><b>${esc(st.text)}</b>${tag}${hint}</div></li>`;
+    return `<li class="${state}${st.optional ? ' optional' : ''}"><span class="g">${glyph}</span><div><b>${esc(st.text)}</b>${tag}${hint}</div></li>`;
   }).join('');
   const outcome = questOutcome(q, v);
   let end = '';
