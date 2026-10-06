@@ -12,7 +12,8 @@ import { Terrain } from './world/Terrain';
 import { Props } from './world/Props';
 import { Landmarks } from './world/Landmarks';
 import { Scrub } from './world/Scrub';
-import { DustMotes, GroundHaze, DustPuffs, Shockwave, heightTexture } from './world/effects';
+import { DustMotes, GroundHaze, DustPuffs, SandStreaks, DustDevils, Shockwave, heightTexture } from './world/effects';
+import { Weather } from './world/Weather';
 import { updateRim, glow } from './world/materials';
 import { Garage } from './bunker/Garage';
 import { Player } from './player/Player';
@@ -59,6 +60,9 @@ export class Game {
   dust!: DustMotes;
   haze!: GroundHaze;
   puffs!: DustPuffs;
+  streaks!: SandStreaks;
+  devils!: DustDevils;
+  weather!: Weather;
   garage!: Garage;
   map!: MapData;
   player: Player | null = null;
@@ -123,11 +127,11 @@ export class Game {
     this.atmo = new Atmosphere(this.scene);
     this.atmo.setShadowMapSize(this.quality.shadowMapSize);
     this.hf = new Heightfield();
-    this.terrain = new Terrain(this.hf);
+    this.terrain = new Terrain(this.hf, this.atmo);
     this.terrain.addToPhysics(this.physics);
     this.scene.add(this.terrain.mesh, this.terrain.far);
     await step(0.4, 'Scattering debris of a failed civilisation');
-    this.props = new Props(this.hf, this.physics);
+    this.props = new Props(this.hf, this.physics, this.atmo);
     if (!SKIP.has('props')) this.scene.add(this.props.group);
     this.landmarks = new Landmarks(this.hf, this.physics);
     if (!SKIP.has('landmarks')) this.scene.add(this.landmarks.group);
@@ -141,6 +145,17 @@ export class Game {
     if (!SKIP.has('haze')) this.scene.add(this.haze.sprite);
     this.puffs = new DustPuffs(this.atmo);
     if (!SKIP.has('dust')) this.scene.add(this.puffs.sprite);
+    this.streaks = new SandStreaks(this.atmo, this.hf, ht, Math.round(this.quality.dustCount * 0.3));
+    if (!SKIP.has('dust')) this.scene.add(this.streaks.sprite);
+    this.devils = new DustDevils(this.atmo, this.hf, ht);
+    if (!SKIP.has('haze')) this.scene.add(this.devils.sprite);
+    this.weather = new Weather(this.atmo);
+    this.weather.onPhase = (p) => {
+      if (this.mode !== 'playing') return;
+      if (p === 'front') this.ui.toast('A dust storm is rolling in. Low visibility will blind SeedBot\'s optics.', 'info');
+      else if (p === 'clearing') this.ui.toast('The dust storm is passing.', 'info');
+    };
+    this.weather.onLightning = (k) => this.audio.thunder(k);
     await step(0.62, 'Charting the wasteland');
     this.map = new MapData(this.hf);
     this.cam = new FirstPersonCamera(this.camera);
@@ -572,6 +587,7 @@ export class Game {
       this.atmo.setShadowMapSize(this.quality.shadowMapSize);
       this.post.setQuality(this.quality);
       this.dust.sprite.count = this.quality.dustCount;
+      this.streaks.sprite.count = Math.round(this.quality.dustCount * 0.3);
     }
   }
 
@@ -773,9 +789,14 @@ export class Game {
     this.frames++;
 
     const focusPos = this.player ? this.player.position : this.camera.position;
+    this.weather.update(dt, this.mode === 'playing' && !this.ui.modalOpen);
     this.atmo.update(dt, focusPos);
     updateRim(this.atmo.sunColor, 0.35 + (1 - Math.min(1, Math.max(0, this.atmo.sunElevation * 3))) * 0.5);
     (this.post.godrayColor.value as THREE.Color).copy(this.atmo.sunColor).multiplyScalar(this.atmo.isNight ? 0.25 : 1);
+    // eye adaptation follows the sun; a storm's murk opens the eye a little and adds grit
+    const st = this.weather.intensity;
+    this.post.exposure.value = this.atmo.exposure * (1 + st * 0.25);
+    this.post.grain.value = 0.045 + st * 0.025;
 
     if (this.mode === 'title') {
       this.titleT += dt;
@@ -805,6 +826,8 @@ export class Game {
     this.dust.update(dt);
     this.haze.update(dt);
     this.puffs.update(dt);
+    this.streaks.update(dt);
+    this.devils.update();
     this.updateGrenades(dt);
     this.updateEnvironment(dt);
     for (const [, g] of this.intelMeshes) {
@@ -818,7 +841,7 @@ export class Game {
     const alertTarget = this.mode === 'playing' && this.garage.drone.state === 'alert' ? 0.8 : this.mode === 'playing' ? this.garage.drone.detection * 0.4 : 0;
     this.post.alert.value = damp(this.post.alert.value as number, alertTarget, 4, dt);
     const tension = this.mode === 'playing' ? Math.max(this.garage.drone.detection, this.garage.alarm > 0 ? 1 : 0) : 0;
-    this.audio.update(dt, this.camera, this.atmo.windStrength, tension);
+    this.audio.update(dt, this.camera, this.atmo.windStrength, tension, this.weather.intensity);
     if (!this.loopsStarted && this.audio.ready && this.mode !== 'loading') this.startLoops();
 
     if (BENCH) this.bench(now);

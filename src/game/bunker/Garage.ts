@@ -463,6 +463,7 @@ export class Garage {
       playerCollider: player.collider,
       night,
       insideHouse: this.playerInside,
+      visibility: ctx.atmo.visibility,
     });
     this.droneLoop?.setPosition(this.drone.position);
     this.droneLoop?.setGain(this.drone.state === 'disabled' ? 0 : this.drone.state === 'sputter' ? 0.35 : 0.9);

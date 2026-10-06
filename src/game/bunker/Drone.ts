@@ -23,6 +23,8 @@ export interface DroneSense {
   playerCollider: unknown;
   night: number;
   insideHouse: boolean;
+  /** 0..1 how clear the air is (dust storms lower it). Shrinks sight range and slows detection. */
+  visibility?: number;
 }
 
 export interface DroneEvents {
@@ -247,8 +249,10 @@ export class Drone {
     const eye = this.position.clone().add(new THREE.Vector3(0, -0.2, 0));
     const to = s.playerChest.clone().sub(eye);
     const dist = to.length();
-    const range = this.state === 'alert' ? this.range * 1.3 : this.range;
-    if (dist > range) return false;
+    // a dust storm cuts the optics' range (to ~45% at full strength), but never below arm's length
+    const vis = s.visibility ?? 1;
+    const range = (this.state === 'alert' ? this.range * 1.3 : this.range) * (0.15 + 0.85 * vis);
+    if (dist > Math.max(range, 3)) return false;
     to.normalize();
     // horizontal cone (more forgiving than a strict 3D cone so it reads well in game)
     const flatLook = new THREE.Vector2(Math.sin(this.yaw), Math.cos(this.yaw));
@@ -272,7 +276,8 @@ export class Drone {
       const dist = this.position.distanceTo(s.playerChest);
       const closeness = THREE.MathUtils.clamp(1.25 - dist / this.range, 0.15, 1.25);
       const nightMod = 1 - s.night * 0.35;
-      const rate = closeness * s.noise * s.stealthMult * nightMod * (this.state === 'alert' ? 3 : 0.85);
+      const stormMod = 0.4 + 0.6 * (s.visibility ?? 1);
+      const rate = closeness * s.noise * s.stealthMult * nightMod * stormMod * (this.state === 'alert' ? 3 : 0.85);
       this.detection = Math.min(1, this.detection + rate * dt);
       this.lastSeen.copy(s.playerFeet);
     } else {
@@ -393,7 +398,9 @@ export class Drone {
     this.spot.color.copy(this.colorNow).lerp(new THREE.Color(1, 1, 1), 0.55);
     this.spot.intensity = 70 * power * (1 + s.night * 0.6);
     (this.cone.color.value as THREE.Color).copy(this.spot.color);
-    this.cone.intensity.value = (0.18 + s.night * 0.4 + (this.state === 'alert' ? 0.25 : 0)) * power;
+    // airborne dust scatters the beam: the cone glows brighter (and reads as "blinded") in a storm
+    const dusty = 1 + (1 - (s.visibility ?? 1)) * 0.8;
+    this.cone.intensity.value = (0.18 + s.night * 0.4 + (this.state === 'alert' ? 0.25 : 0)) * power * dusty;
     this.rotorSpin.value = damp(this.rotorSpin.value as number, this.state === 'disabled' ? 0.02 : this.state === 'sputter' ? 0.7 : 1, 3, dt);
     this.rotorAngle.value = ((this.rotorAngle.value as number) + dt * 40 * (this.rotorSpin.value as number)) % (Math.PI * 2);
     (this.screen.material as THREE.MeshStandardNodeMaterial).emissiveIntensity = Math.sin(t * 4) > 0 ? 1 : 0.25;
