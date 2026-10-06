@@ -206,16 +206,16 @@ export class CharacterModel {
    * goggles) don't change the silhouette and are dropped.
    */
   bakeShadowProxy(minRadius = 0.07) {
-    const shadowMat = new Map<THREE.Side, THREE.Material>();
-    const matFor = (side: THREE.Side) => {
-      let m = shadowMat.get(side);
-      if (!m) shadowMat.set(side, (m = new THREE.MeshStandardNodeMaterial({ side })));
-      return m;
-    };
+    // ONE skinned mesh for the whole body: the animated joints become its bones and every vertex
+    // follows exactly one of them, so the poses are unchanged. It used to be one caster per joint,
+    // 16–17 draws in every shadow pass, the most expensive thing left in a frame on the desktop.
+    this.root.updateMatrixWorld(true);
+    const toRoot = new THREE.Matrix4().copy(this.root.matrixWorld).invert();
+    const m = new THREE.Matrix4();
     const joints: THREE.Object3D[] = [];
     this.root.traverse((o) => { if (!(o as THREE.Mesh).isMesh) joints.push(o); });
-    for (const joint of joints) {
-      const bySide = new Map<THREE.Side, THREE.BufferGeometry[]>();
+    const bySide = new Map<THREE.Side, THREE.BufferGeometry[]>();
+    joints.forEach((joint, bone) => {
       for (const child of [...joint.children]) {
         const mesh = child as THREE.Mesh;
         if (!mesh.isMesh) continue;
@@ -225,22 +225,31 @@ export class CharacterModel {
         mesh.updateMatrix();
         const g = mesh.geometry.index ? mesh.geometry.toNonIndexed() : mesh.geometry.clone();
         for (const key of Object.keys(g.attributes)) if (key !== 'position' && key !== 'normal') g.deleteAttribute(key);
-        g.applyMatrix4(mesh.matrix);
+        // bind pose: joint space → root space (the skinned mesh sits on the root)
+        g.applyMatrix4(m.multiplyMatrices(toRoot, joint.matrixWorld).multiply(mesh.matrix));
+        const n = g.attributes.position.count;
+        const idx = new Uint16Array(n * 4), w = new Float32Array(n * 4);
+        for (let i = 0; i < n; i++) { idx[i * 4] = bone; w[i * 4] = 1; }
+        g.setAttribute('skinIndex', new THREE.Uint16BufferAttribute(idx, 4));
+        g.setAttribute('skinWeight', new THREE.Float32BufferAttribute(w, 4));
         const side = (mesh.material as THREE.Material).side;
         let list = bySide.get(side);
         if (!list) bySide.set(side, (list = []));
         list.push(g);
       }
-      for (const [side, list] of bySide) {
-        const geo = list.length === 1 ? list[0] : mergeGeometries(list, false);
-        if (!geo) continue;
-        const proxy = new THREE.Mesh(geo, matFor(side));
-        proxy.castShadow = true;
-        proxy.layers.set(1);
-        joint.add(proxy);
-      }
-      joint.layers.set(1);
+    });
+    const skeleton = new THREE.Skeleton(joints as THREE.Bone[]);
+    for (const [side, list] of bySide) {
+      const geo = list.length === 1 ? list[0] : mergeGeometries(list, false);
+      if (!geo) continue;
+      const body = new THREE.SkinnedMesh(geo, new THREE.MeshStandardNodeMaterial({ side }));
+      body.castShadow = true;
+      body.frustumCulled = false; // bounds don't follow the pose; it's one draw anyway
+      body.layers.set(1);
+      this.root.add(body);
+      body.bind(skeleton, this.root.matrixWorld.clone());
     }
+    for (const joint of joints) joint.layers.set(1);
   }
 
   update(dt: number, s: AnimState) {
