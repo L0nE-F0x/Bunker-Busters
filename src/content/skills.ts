@@ -78,7 +78,7 @@ export const SKILLS: Record<SkillId, SkillDef> = {
       'Untrained. Hunger, thirst and falls hit you like anyone else.',
       'Hunger and thirst come slower. You can pick through the wash behind the motel.',
       'Food and water do more. The camp can make a medkit. Wick will share.',
-      'The pack holds 4 kg more. The wash gives up a meal.',
+      'The pack holds 4 kg more. The wash gives up a meal, and Wick will shift rocks with you.',
       'Falls hurt less. You spot the crate under the water tower without crouching.',
       'A rest at the fire heals you fully. The pack holds 8 kg more.',
     ],

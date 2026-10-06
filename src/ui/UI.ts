@@ -705,7 +705,7 @@ export class UI implements UIBridge {
   private speakerHead(speaker: string) {
     const [name, channel] = speaker.split(' · ');
     const p = PEOPLE.find((x) => x.name === name || (name === 'Wick' && x.id === 'wick'));
-    if (!p) return `<div class="spk thing"><span class="mono" style="--pc:#c896ff">${esc(name.slice(0, 1))}</span><div><b>${esc(name)}</b><small>${esc(channel ?? 'Read it')}</small></div></div>`;
+    if (!p) return `<div class="spk thing"><span class="mono" style="--pc:#c896ff">${esc(name.slice(0, 1))}</span><div><b>${esc(name)}</b><small>${esc(channel ?? 'Up close')}</small></div></div>`;
     const rep = this.state?.rep(p.id) ?? 0;
     const onAir = p.id === 'mara' || p.id === 'vesper' || p.id === 'hollis' || p.id === 'pip' || p.id === 'dez';
     const radio = channel && channel !== p.role ? channel : p.id === 'mara' || p.id === 'vesper' ? 'On the air' : onAir ? 'At the fire' : p.place;
