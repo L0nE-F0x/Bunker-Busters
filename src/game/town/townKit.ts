@@ -4,6 +4,7 @@ import { box, cyl, beam, norm, wire, MeshBatch, type Frame } from '@/game/world/
 import { glow, plainStandard, rustyMetal } from '@/game/world/materials';
 import { GlowSprites } from '@/game/world/effects';
 import { VirtualLight } from '@/game/world/lights';
+import { surfaces, type Surface } from '@/engine/surface';
 import { townQuad, townFloor, townBoard, townSignMaterial, townDecalMaterial, townPoolMaterial, type TownDecal } from './townAtlas';
 
 type Mat = THREE.Material;
@@ -49,6 +50,12 @@ export class Site {
 
   pen(x = 0, y = 0, z = 0, ry = 0) {
     return new Pen(this, x, y, z, ry);
+  }
+
+  private _day: Mat | null = null;
+  /** Inside face of window glass: daylight by day, dark at night (one shared glow slot). */
+  dayPane() {
+    return (this._day ??= this.nightGlow('#c4d0d4', 0.5, 0.01));
   }
 
   /** A warm glow that is dim by day and bright at night. Returns the batched material. */
@@ -285,7 +292,7 @@ function openingTrim(site: Site, w: WallSpec, h: Hole, at: (s: number, off: numb
       const g = at(sc, 0.03, yc);
       site.b.add(h.glass, box(hw - 0.02, hh - 0.02, 0.02, g.x, g.y, g.z, ry));
       const d = at(sc, 0.005, yc);
-      site.b.add(plainStandard('#1a2226', 0.08, 0.5), box(hw - 0.03, hh - 0.03, 0.012, d.x, d.y, d.z, ry));
+      site.b.add(site.dayPane(), box(hw - 0.03, hh - 0.03, 0.012, d.x, d.y, d.z, ry));
     }
     if (h.grid && trim) {
       const [nv, nh] = h.grid;
@@ -345,11 +352,14 @@ function openingTrim(site: Site, w: WallSpec, h: Hole, at: (s: number, off: numb
 
 // ------------------------------------------------------------------ slabs, roofs, porches
 
-/** A walkable slab whose top is at `top`, with a collider. */
-export function floor(site: Site, mat: Mat, x0: number, x1: number, z0: number, z1: number, top: number, thick = 0.2, collide = true) {
+/** A walkable slab whose top is at `top`, with a collider (tagged for footsteps when `kind` is given). */
+export function floor(site: Site, mat: Mat, x0: number, x1: number, z0: number, z1: number, top: number, thick = 0.2, collide = true, kind?: Surface) {
   const xc = (x0 + x1) / 2, zc = (z0 + z1) / 2;
   site.b.add(mat, box(x1 - x0, thick, z1 - z0, xc, top - thick / 2, zc));
-  if (collide) site.col(xc, top - thick / 2, zc, (x1 - x0) / 2, thick / 2, (z1 - z0) / 2);
+  if (collide) {
+    const c = site.col(xc, top - thick / 2, zc, (x1 - x0) / 2, thick / 2, (z1 - z0) / 2);
+    if (kind) surfaces.tag(c, kind);
+  }
 }
 
 /** Plank deck (boards along X with gaps), joists hidden underneath, collider at the deck top. */

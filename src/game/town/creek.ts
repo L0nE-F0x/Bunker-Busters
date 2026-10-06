@@ -107,7 +107,7 @@ function sandRun(S: Site, ax: number, az: number, bx: number, bz: number, ry: nu
 function diner(S: Site, H: Hooks) {
   const x0 = -23.6, x1 = -12.2, zF = -4.5, zB = -11.6, t = 0.26, top = 3.55;
   const stucco = M.stucco(), red = M.red(), chrome = M.chrome();
-  const warm = S.nightGlow('#ffb066', 0.35, 2.6);
+  const warm = S.nightGlow('#ffb066', 0.35, 2.0);
   const inner = M.plaster();
   const dado = { y: FY + 1.0, mat: M.woodRed(), rail: chrome };
   const win = (a: number, b: number, y0 = FY + 0.75, y1 = FY + 2.15): Hole => ({ a, b, y0, y1, kind: 'window', glass: warm, grid: [Math.max(2, Math.round((b - a) / 1.0)), 1] });
@@ -167,8 +167,8 @@ function diner(S: Site, H: Hooks) {
   H.audio('neon', sx, sy, sz);
 
   // ---- canopy and stoop
-  floor(S, M.slab(), x0 - 0.3, x1 + 0.3, zF, zF + 1.9, FY);
-  floor(S, M.slab(), x0 - 0.3, x1 + 0.3, zF + 1.9, zF + 2.25, FY / 2);
+  floor(S, M.slab(), x0 - 0.3, x1 + 0.3, zF, zF + 1.9, FY, 0.2, true, 'concrete');
+  floor(S, M.slab(), x0 - 0.3, x1 + 0.3, zF + 1.9, zF + 2.25, FY / 2, 0.2, true, 'concrete');
   const cz = zF + 1.75;
   for (const px of [-23.4, -20.5, -16.6, -12.4]) post(S, M.chrome(), px, cz, FY, 3.0, 0.05, false);
   S.b.add(red, box(x1 - x0 + 0.6, 0.12, 2.1, (x0 + x1) / 2, 3.04, zF + 0.95, 0, -0.04));
@@ -193,7 +193,7 @@ function diner(S: Site, H: Hooks) {
   S.sign('cola', 0.9, 1.35, 0.03, -12.2 + 0.03, FY + 1.7, -9.6, Math.PI / 2);
 
   // ---- inside: floor, ceiling, light
-  floor(S, M.black(), x0 + t, x1 - t, zB + t, zF, FY + 0.01, 0.31);
+  floor(S, M.black(), x0 + t, x1 - t, zB + t, zF, FY + 0.01, 0.31, true, 'concrete');
   for (let x = x0 + t; x < x1 - t - 0.05; x += 2) for (let z = zF - t; z > zB + t + 0.05; z -= 2) {
     const w = Math.min(2, x1 - t - x), d = Math.min(2, z - zB - t);
     S.floorDecal('checker', w, d, x + w / 2, FY + 0.013, z - d / 2);
@@ -356,8 +356,8 @@ function clinic(S: Site, H: Hooks): CreekLive {
   S.sign('clinicLit', 1.7, 0.53, 0.06, 0, FY + 2.55, zF + 0.04);
   S.halo(0, FY + 2.95, zF + 0.4, '#d7fff2', 0.45, HALO.POWER, 1.2);
   // stoop, steps, handrails, porch roof
-  floor(S, M.slab(), -1.7, 1.7, zF, zF + 1.3, FY);
-  floor(S, M.slab(), -1.7, 1.7, zF + 1.3, zF + 1.62, FY / 2);
+  floor(S, M.slab(), -1.7, 1.7, zF, zF + 1.3, FY, 0.2, true, 'concrete');
+  floor(S, M.slab(), -1.7, 1.7, zF + 1.3, zF + 1.62, FY / 2, 0.2, true, 'concrete');
   for (const sx of [-1.62, 1.62]) {
     const P = S.pen();
     P.beam(M.galv(), V(sx, FY + 0.9, zF + 0.1), V(sx, FY + 0.9, zF + 1.3), 0.022, 6).beam(M.galv(), V(sx, FY + 0.9, zF + 1.3), V(sx, FY / 2 + 0.9, zF + 1.62), 0.022, 6);
@@ -404,7 +404,7 @@ function clinic(S: Site, H: Hooks): CreekLive {
   H.audio('generator', 5.6, 0.6, -7.6);
 
   // ---- inside
-  floor(S, M.slab(), x0 + t, x1 - t, zB + t, zF, FY + 0.01, 0.31);
+  floor(S, M.slab(), x0 + t, x1 - t, zB + t, zF, FY + 0.01, 0.31, true, 'concrete');
   for (let x = x0 + t; x < x1 - t - 0.05; x += 2) for (let z = zF - t; z > zB + t + 0.05; z -= 2) {
     const w = Math.min(2, x1 - t - x), d = Math.min(2, z - zB - t);
     S.floorDecal('lino', w, d, x + w / 2, FY + 0.013, z - d / 2);
@@ -503,7 +503,7 @@ function till(S: Site, H: Hooks) {
   const x0 = 10.6, x1 = 21.2, zF = -4.3, zB = -15.8, t = 0.22;
   const LOFT = 3.3, TOP = 7.4;
   const siding = M.woodGrey(), inner = M.woodPale(), trim = M.woodDark();
-  const warm = S.nightGlow('#ffb066', 0.3, 2.4);
+  const warm = S.nightGlow('#ffb066', 0.3, 1.7);
   const shop = (a: number, b: number): Hole => ({ a, b, y0: FY + 0.65, y1: FY + 2.25, kind: 'window', glass: warm, grid: [4, 2] });
   const loftWin = (a: number, b: number, shutters = false): Hole => ({ a, b, y0: 3.95, y1: 5.15, kind: 'window', glass: warm, grid: [2, 2], shutters: shutters ? M.woodRed() : undefined });
   const zf = zF - t / 2, zb = zB + t / 2, xw = x0 + t / 2, xe = x1 - t / 2;
@@ -788,7 +788,7 @@ function motel(S: Site, H: Hooks) {
   // roof, parapet, canopy over the walkway on steel posts
   floor(S, M.tar(), x0, x1, zF, zB, top + 0.18, 0.2, false);
   S.b.add(wallM, box(x1 - x0, 0.36, 0.2, (x0 + x1) / 2, top + 0.18, zB - 0.1), box(0.2, 0.36, zB - zF, x0 + 0.1, top + 0.18, (zF + zB) / 2), box(0.2, 0.36, zB - zF, x1 - 0.1, top + 0.18, (zF + zB) / 2));
-  floor(S, M.slab(), x0 - 0.2, x1 + 0.2, 5.0, zF, MY);
+  floor(S, M.slab(), x0 - 0.2, x1 + 0.2, 5.0, zF, MY, 0.2, true, 'concrete');
   S.b.add(M.found(), box(x1 - x0 + 0.4, 0.06, 0.12, (x0 + x1) / 2, MY + 0.005, 5.06));
   S.b.add(M.cream(), box(x1 - x0 + 0.5, 0.1, 2.35, (x0 + x1) / 2, 2.9, 6.0, 0, 0.03));
   S.b.add(coral, box(x1 - x0 + 0.54, 0.34, 0.06, (x0 + x1) / 2, 2.82, 4.82), box(0.06, 0.34, 2.35, x0 - 0.27, 2.82, 6.0), box(0.06, 0.34, 2.35, x1 + 0.27, 2.82, 6.0));

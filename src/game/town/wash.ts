@@ -70,7 +70,7 @@ export function buildWash(S: Site, hf: Heightfield) {
   {
     const n = Math.floor(steep.len / 3);
     const dx = (steep.b.x - steep.a.x) / steep.len, dz = (steep.b.z - steep.a.z) / steep.len;
-    const rope = M.burlap();
+    const rope = plainStandard('#8a7652', 0.95);
     let prev: THREE.Vector3 | null = null;
     for (let i = 1; i < n; i++) {
       const t = i / n;

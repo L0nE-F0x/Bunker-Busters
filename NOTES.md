@@ -528,3 +528,42 @@ The baseline looked milky by day, one-note orange at golden hour, and flat on th
 **Next:**
 - Look at it in the desktop app: the grade, the night exposure and the shimmer at 144 Hz.
 - Tune the `GRADE` keys with the owner. Each is a one-line edit.
+
+## Dry Creek rebuild (2026-10-06)
+
+Dry Creek, The Cut and the wash were grey slabs, boxes and box people. They are rebuilt to the Garage's standard. Spot, door and blocker ids are unchanged, so the story half of `Settlement.ts` did not move.
+
+**What works** (headless Chrome, screenshots by day, golden hour and night, plus a controller walk test):
+- **Town kit** (`src/game/town/townKit.ts`): a `Site` batches lit geometry, painted boards, alpha decals and additive light pools, plus halos, lights and colliders, in the site's frame. `wall()` builds walls with real openings: exterior and interior skins, a dado, casings, sills, bars, shutters, curtains, boards, and two-pane glass. The street side glows at night; the room side shows daylight by day and goes dark at night. There are also decks, sheet roofs (every slope runs along Z, so all corrugated roofs share one family draw), gutters, posts and railings.
+- **One atlas** (`townAtlas.ts`) holds every sign, menu, poster, map, grime decal, floor pattern and light pool. Three materials sample it: lit boards (the top rows glow after dark), decals, and pools.
+- **Buildings** (`creek.ts`, props in `townProps.ts`):
+  - Diner: canopy, kick band and roof sign with neon and lamps. Inside: checker floor, three booths, a counter with stools, a back bar with an urn, a griddle and a hood, the menu board, the keypad freezer, and a dead jukebox.
+  - Clinic: barred windows, a stoop with handrails, solar panels and a tank on the roof, and a generator yard with sandbags. Inside: cots, a curtain, a drip stand, a cabinet, an exam table, a sink, a desk lamp and an eye chart. The glass, tubes and light follow `creek.power`.
+  - The Till: a clapboard false front with the painted sign, a porch, and stocked shelves. Inside: a bronze till, a stove, lanterns, the back room, and a loft with a bedroll, maps and the page shelf.
+  - Motel: a canopy walkway and a pylon sign. Three rooms: A open and lived in, B locked, C boarded and trashed.
+  - Around the street: water tower, shed, fire circle, poles and wires, streetlamps, string lights, two wrecks, laundry, drifts and grime.
+- **People** (`src/game/world/npc.ts`, looks in `people.ts`): posed with IK and baked into one mesh per site. The vertex shader breathes, sways and turns head and shoulders toward you. That is 1 draw (+1 shadow) for the whole town.
+- **The Cut** (`cave.ts`):
+  - An SDF rock mass with the chamber, mouth tunnel and side pocket carved out, meshed with surface nets and smoothed.
+  - Per-vertex sky occlusion feeds `aoNode`, so the inside stays dark and the fire lights it.
+  - The collider is the same trimesh (FIX_INTERNAL_EDGES), so there are no invisible walls.
+  - Wick's camp has a log seat, a cookfire with a spit, pots on a line, a radio and a lantern, water jugs, firewood and the pocket paint.
+  - The build takes about 0.3 s at load.
+- **The wash** (`wash.ts`): lamp posts that light up at night, cairns, a rope rail on the steepest segment, and a worn-path ribbon on the heightfield.
+- **Draw calls** (`renderer.info`, 1280×720, high):
+  - Town share at the street: 37 → 33.
+  - A/B against main at 1600×900: creek-street 131 → 122, creek-out 124 → 113, render CPU 3.5 → 3.0 ms.
+  - cave-trail 101 → 106 (the wash is richer).
+  - The far LOD from 200 m: 6.
+- **Walk test** (real controller at 30/60/144 fps): every door, the street lines, the walkway, the tower, the shed, the fire ring, the cave and the pocket all pass. The closet, room B, room C and the rockfall block until opened.
+  - The stair has 0.25 m risers over a smooth 36° ramp collider. Autostep missed those risers at 144 fps.
+  - Floors are tagged for footsteps: tile and concrete in `surfaces`, wood by default.
+
+**Stubbed / known:**
+- Faces are stylized and small. They read at talking distance, but they are not portraits.
+- Windows are glow panes, not see-through interiors.
+- Loading takes about 0.6 s more: the town atlas and the cave field.
+
+**Next:**
+- Owner pass in the desktop app: night exposure of the signs and windows under the new grade.
+- Whether the pocket is easy to spot.
