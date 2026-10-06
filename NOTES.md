@@ -528,3 +528,93 @@ The baseline looked milky by day, one-note orange at golden hour, and flat on th
 **Next:**
 - Look at it in the desktop app: the grade, the night exposure and the shimmer at 144 Hz.
 - Tune the `GRADE` keys with the owner. Each is a one-line edit.
+
+## Story & systems pass 2 (2026-10-06)
+
+Act I now has a plot, a quest log, people who keep score, real skill trees, and six people to pick from. No new shaders or geometry: this pass is content, game state and UI.
+
+**What works** (headless Chrome on the dev server: scripted playthroughs as all six people, plus a v1 and a v2 save loaded through Continue):
+- **The arc.** Day 1,284. Last Chance has three days of water and SeedBot lifts the camp's jugs. *Middle:* Dry Creek's creek was signed away to Kade Holdings the summer before the Pivot (permit 7-K, a clipboard on the highway west of camp, approved "M. Voss"). A valve tag on the dirt spur, or Tanner on the intercom (Social 2/3), shows that Bunkr.ly resold seats in Vesper Kade's Apex Vault and paid her in water (waitlist #4,012). *Turn:* the manifest's last page is the Seed, the people Vesper keeps, and Mara is on it. Vesper cuts into the debrief and offers twenty jugs a week for the ledger. *End:* read every name on the open net, keep it as leverage, or take the deal. Each ending pays differently and moves standing, and all three land on the same hook: the water is on a clock and the rest of it is in Apex Vault, west of the salt.
+- **Delivery.** Mara's camp radio is progress-aware (and owns up to the permit). Tanner has new branches and taunts. Banter (`content/banter.ts`) is one-shot subtitle lines from Mara or from you, gated on places and flags, at least 40 s apart, never over another subtitle, never in menus or alarms.
+- **Quests** (`content/quests.ts`, runtime `game/Story.ts`). Steps are pure functions of flags, so fresh, loaded and migrated runs agree. Progress is stored as flags (`q:<id>`, `q:<id>:<step>`, `q:<id>:done`). A toast per step; a banner plus XP, items and standing on completion. The corner objective follows the tracked quest, else the main story; the Garage's own advice still wins while you stand at it. The current step's landmark gets a gold map marker.
+- **Ten favours.** Nia (who is drinking her water: tell her, cover with 2 bottles, or Social 3 peace), Doc (power, then a medkit for Wick: deliver it or keep it), Inez (the Till's deed: to her or to the town), Sol (his pick roll: return it or unroll it), Ren and the drive-in (tell Ren how the keynote ended, or say it was static), Wick (the rockfall, then Vesper's crate: take it or leave it), Pip's ledger at the camp, and three site quests (the jet via Wick, ColdStorage via Mara, the Tube via Inez). Site quests only read `seen:<id>`, `site.<id>.found` and `site.<id>.done`.
+- **Standing** (`content/people.ts`) for twelve people and two places (Dry Creek, the Compact). Favours unlock services: Nia's plate and Doc's house calls (once per rest), Inez's price (2, 3 or 4 scrap), Sol's lesson (the picks recipe makes 3), Wick's seep, Ren as the camp's lookout. After Act I anyone at standing 2+ joins the crew for Apex. The camp panel lists Hollis, Pip and Dez (and Ren); Dez packs an EMP from a cell and scrap.
+- **Six archetypes.** New: Juno Reyes, Scout (Survival 2, Stealth 1; Long Walk: needs drain 25% slower, falls hurt 25% less) and Theo Vance, Defector (Electronics 1, Social 1; Insider: Tanner hears one Social rank more, Dry Creek one less). Scout borrows the work gloves, Defector the thin ones (`handArchetype()`).
+- **Skill trees.** Ranks 1–5, a focus at rank 2, a capstone at rank 4 (one of two, costs a point, no rank). All twelve capstones are wired and were checked in the page: Bump Key, Master's Hands, Salvage, Overclock, Shadow, Exit Plan, Bench Chemist, Blast Proof, Camel, Pack Rat, Handler, Word of Mouth. Minigame effects live in Game's `makeContext` wrappers, so every lock and board gets them. Fixed: Hot Line made the fuse box harder (its difficulty floor was 1).
+- **Screens.** Kit, Skills (K) and Journal (J) are one modal with tabs; the key for the open tab closes it. Skills: six skills on the left, the selected tree with costs on the right. Journal: quests (track, steps, hints, how it ended), people (standing, what they think of you and of each other, favours), the story so far. Dialogue and radio cards show a monogram, role and standing; Vesper's say "unknown carrier".
+- **Character select** shows all six cards at 1280×720 and up: a 3×2 roster over one sheet (motive, playstyle, skill line, build bars, pocket, passive). Arrows and Enter work.
+- **Save v3** adds `capstones`, `rep`, `tracked`, `rests` and `marks`. v1/v2 saves load with defaults; a v2 run that already heard the debrief counts as "read the names"; Sol's roll and the deed are handed over if that room or loft was already looted; finished quests catch up quietly (XP and standing, no second pile of loot) with one toast.
+- Fixed: "info" toasts were 220 px tall (the kit card's `.info` rule matched them).
+
+**Stubbed**
+- Act II is a quest with a crew step and a locked "Reach Apex Vault" step. No Apex yet.
+- The four sites are built by other passes. Their quests trust the three flags and nothing else.
+- The camp's people have no 3D figures. Ren "walks to Last Chance" but still stands in Dry Creek.
+
+**Next**
+- Play Act I end to end as two different builds and cut any line that runs long as a subtitle.
+- Once the sites land, tune each site quest's wrap line to what its secret actually is.
+
+## Sites: Exit Strategy & Starlite (2026-10-06)
+
+Two points of interest by the same founder. Hunter Vale (Ascend, "EXIT: evacuation as a service") launched at the Starlite with a keynote, then left early in his own jet, alone, by parachute. Code: `src/game/sites/jet.ts`, `drivein.ts`, art in `jetArt.ts` / `driveinArt.ts`, shared kit in `jetKit.ts`.
+
+**What works** (headless Chrome, teleports, scripted walks, screenshots by day, golden hour and night):
+- **The Exit Strategy** (−300, 255). A business jet broken in three along a ploughed gouge: the nose dug into a sand mound (airstair down, galley, a cockpit you can see out of), the cabin (cream leather club seats, divan, credenza, oxygen masks, a roof tear and windows that let the sun in as shafts), the tail (lav, wardrobe, baggage hold, T-tail with a red ELT strobe). The right wing stands tip-down in the dune. The SafeExit airframe parachute lies half-inflated on the slope behind, gold and cream, trailing risers to the tail: it is the silhouette from the road, and you can walk under it. Debris: suitcases, champagne crates, seats, an exercise bike, the gold EXIT brochure.
+- Jet interactions: the napkin on the yoke, the flight recorder (Electronics 1 + circuit; the transcript gives the hold code), the Ascend concierge sat phone (Social 2 remote-opens the hold), the hold itself (Lockpicking 2 pick, Demolition 2 charge, or the keypad code `0000`), the go bag inside (crouch in), the raft survival kit (Survival 2), the galley, the brochure. Flags: `site.jet.found` (inside the cabin), `.note`, `.cvr`, `.code`, `.phone`, `.hold`, `.done` (go bag taken), `.raft`, `.galley`, `.brochure`.
+- **Starlite Drive-In** (−20, −132). Rotation changed 0.2 → −0.45 so the screen faces the spawn, the gas station and the west highway instead of a 22 m mesa; flatten r 38 → 46. A 30 × 14 m screen on a lattice tower with missing and hanging panels and the faded ASCEND print; four arcs of car ramps with procedural rusted cars and speaker posts; snack bar and projection booth (menu, popcorn machine, projector with reels, rewind bench); generator; ticket booth and barrier; the STARLITE marquee with missing letters, a pink/cyan neon header and a chaser-bulb star; fence, light poles, playground.
+- **The signature**: power the generator (Electronics 1 circuit, or swap in a Lithium Cell), get into the booth (Lockpicking 2, Demolition 1, or the staff key from the manager's wagon with Survival 1), start the projector. A volumetric beam (rounded frustum, dust, flicker) throws a 62 s keynote loop (film leader, slides, an APPLAUSE sign, a backstage hot mic), drawn on a 512×240 canvas at ~10 fps, onto the screen as emission. The screen tints a 90 m light over the cars, and subtitles run while you are in the lot. The hot mic points at the jet ("wheels up at eleven, north-west, one passenger").
+- Drive-in flags: `site.drivein.found` (in the rows), `.power`, `.key`, `.booth`, `.screening` (projector on; it toggles), `.started`, `.done` (heard the hot mic in the lot), `.reel`, `.note`, `.tickets`, `.snacks`.
+- New items: `exit_pass` (EXIT Platinum Pass), `keynote_reel` (Keynote Reel, Uncut).
+- Ambience: static `wind-hollow`, `radio`, `sparks` (jet) and `wind-hollow`, `neon` (drive-in). The drive-in starts its own `generator`, `projector` and `crowd` loops only while powered or screening.
+- Colliders are oriented Rapier boxes and trimeshes (sand drifts, ramps) built from the same geometry. Walks tested: every jet section in and out (ramps, airstair, crouching into the hold); the drive-in side doors, booth, ramps and entrance lane.
+- Draw calls (A/B against `?skip=sites`, same camera): jet heart +28, drive-in heart +25 (+27 at night with the projector), snack bar +31, each far stand-in ≤ 4, nothing past ~650 m.
+
+**Stubbed**
+- Doors snap to their flags on load. The keynote has no audio of its own beyond the audio agent's `crowd`/`projector` voices and the subtitles.
+
+**Next**
+- The owner's eye on the beam strength at night and on the golden-hour backlight (the sun sets behind the screen).
+- Story hooks: `site.drivein.done` points at the jet. `exit_pass` and `keynote_reel` are trinkets with no use yet.
+
+## Sites: ColdStorage & The Tube (2026-10-06)
+
+Two new points of interest, each one class plus a builder and an art atlas: `src/game/sites/datacenter*.ts` and `tube*.ts`. `datacenterAtlas.ts` holds the shared bits: `SiteAtlas` (one canvas per site for signs, screens, posters, grime, pools; a lit "paint" material, alpha decals, unlit screen channels, additive pools), `pvMaterial`, `glassMaterial`, `flipInside`, and `SplitBatch` (feeds the far stand-in only what is visible from outside).
+
+**ColdStorage** (290, −262): a 52 × 18 m hyperscale hall. It has a rooftop sign that is the site's beacon by day and night, dry coolers whose fans spin on the sun, two water tanks, a transformer yard that arcs every few seconds, three transmission towers marching off west, a comms mast, a solar car park, a fence with a gatehouse, and a loading dock with a trailer ("Egress fees apply").
+- Inside: ~200 racks with perforated doors and blinking LEDs (one GlowPalette), yellow fibre trays, a contained cold aisle that is frosted, with icicles and mist, the plant area with the last SRE's camp, a glass core room, and a battery cage.
+- The core room holds **NIMBUS**, an assistant still answering on solar (`converse`).
+- Flags: `site.datacenter.found` is set on the raised floor. `site.datacenter.done` is set when NIMBUS gives up the dispatch logs, which name Apex Vault, west of the salt, and Vesper Kade's air-gapped copy of it. Sub-flags: `.log`, `.core`, `.power`, `.cage`, `.cells`, `.tap`, `.ai.talked/.captcha/.told/.weights/.killed`.
+- Paths:
+  - Core door: PIN 9995 (the SLA on the lobby whiteboard, hinted in the gate log), Electronics 2 (circuit), or Demolition 1 (charge).
+  - NIMBUS: Social 2 persuades it, Electronics 2 tricks it, Demolition 1 + a charge shuts it down (it tells you everything first, then the core goes dark).
+  - Switchgear: Electronics 1 lights the hall and lets NIMBUS open the cage.
+  - Cage: Lockpicking 2 or a charge.
+  - Cooling loop: Survival 1 fills bottles; anyone can drink the glycol side.
+- New item: `last_checkpoint` (a drive with NIMBUS's weights).
+
+**The Tube** (318, 118): LOOPR's Station Zero, a silver vault on stilts.
+- The station: an open pod bay with POD-01 (gull-wing door, virtual "windows" showing a rendered beach, a flight recorder), a glass control room, a side airlock into the sealed tube, a 22-step stair, a billboard and a 24 m loop tower.
+- The track: 300 m of tube on pylons (PV on top, a running-light strip on both flanks) from a portal headwall in the east hill to a torn end 230 m west, with bare pylons beyond. The span 60 m west collapsed into a V: walk in at the bottom, up the fallen span, through the tube to the airlock.
+- **Signature:** power the station (Electronics 1, or slot a Lithium Cell) and the pod lurches 1.5 m against its clamps and springs back, while the running lights race outward down the track and keep sending pulses into the dark.
+- Flags: `site.tube.found` is set on the deck or inside the tube. `site.tube.done` is set by reading the flight recorder (needs power): Run 001 topped out at 41 km/h, and the founder's "private extension" runs through the hill to a Terminus. Sub-flags: `.power`, `.airlock`, `.bag`, `.cabinet`, `.locker`, `.terminus`, `.blackbox`, `.ride`.
+- Other paths: the maintenance cabinet (Lockpicking 1), the founders' locker on the portal (Demolition 2 + a charge: go-bag, Terminus card), the gift bag (new item `boarding_pass`), and **Run 002**, a fade-and-teleport ride to the end of the line.
+
+**Cost** (headless WebGL, site shown vs hidden at the same view, after merging main):
+
+| | ColdStorage | The Tube |
+|---|---|---|
+| Heart, day / night | 26 / 27 draws | 27 / 29 draws |
+| 60 m away | 32 draws | 29 draws |
+| 300 m away (stand-in) | 3 draws | 2 draws |
+| Past the hide distance | 0 | 0 |
+
+- The Tube uses a `LineLod` measured from the track, not a centre, so the whole 300 m line keeps its detail wherever you stand along it and drops out cleanly. Its running lights are not drawn at all until it has power.
+- Light: VirtualLights only (7 + 6). Custom TSL values are uniforms.
+
+**Walkability:** 17 scripted routes drive the real controller through every entrance in both directions: lobby, aisles, core, cage, gatehouse, yard, stair, pod, airlock → tube → break and back, the portal. All pass. Floors are tagged for footsteps: the raised floor is metal; the station deck and apron are concrete.
+
+**Next:**
+- Hear the new ambience spots in place: hum ×2 + sparks at ColdStorage; hum + wind-hollow ×2 at the Tube.
+- From 300 m the Tube is a thin line by day; the loop tower and the powered lights carry it at night.
+- The east portal headwall is plain. A tunnel interior would need terrain carving (not possible from a site).

@@ -65,8 +65,40 @@ const defs: ItemDef[] = [
   },
   {
     id: 'seed_manifest', name: 'Seed Manifest', category: 'intel', weight: 0, stack: 1, value: 0, icon: 'manifest',
-    description: 'Who paid Tanner for a bunker, and the short list who got a door. The camp is in the unpaid column, circled, with a smiley face.',
+    description: 'Bunkr.ly\'s ledger: everyone who paid Tanner for a seat in Apex Vault, and the short list at the back that Vesper Kade calls the Seed. Last Chance is in the unpaid column, circled, with a smiley face.',
     flavor: 'This is the map. The next name has a building.',
+  },
+  // --- Dry Creek favours ---
+  {
+    id: 'sol_roll', name: 'Sol\'s Pick Roll', category: 'tool', weight: 0.3, stack: 1, value: 30, icon: 'lockpick', usable: true,
+    description: 'A leather roll of tension wrenches and picks, stamped S.V. Take it back to Sol at the street fire, or use it to unroll five picks into your kit.',
+    flavor: 'Thirty years of other people\'s doors.',
+  },
+  {
+    id: 'deed', name: 'Deed to the Till', category: 'intel', weight: 0, stack: 1, value: 0, icon: 'intel',
+    description: 'The landlord\'s deed to the Till, signed over to "whoever is still here". Inez wants it. So does the rest of Dry Creek. Give it to one of them.',
+    flavor: 'Property law, post-apocalypse edition: a pencil and a guess.',
+  },
+  // --- Sites: The Exit Strategy, Starlite Drive-In ---
+  {
+    id: 'exit_pass', name: 'EXIT Platinum Pass', category: 'loot', weight: 0.05, stack: 1, value: 80, icon: 'intel',
+    description: 'Gold foil. Seat 1A on the last flight out. Non-transferable. Flight status: exited.',
+    flavor: 'Hunter Vale packed his own seat, then took the parachute instead.',
+  },
+  {
+    id: 'keynote_reel', name: 'Keynote Reel (Uncut)', category: 'loot', weight: 1.2, stack: 1, value: 50, icon: 'drive',
+    description: 'Sixteen minutes of a man in a turtleneck promising seats, and the ninety seconds after, when he thought the mic was off.',
+    flavor: 'Labelled in the projectionist\'s hand: "DO NOT SCREEN. (Screened.)"',
+  },
+  {
+    id: 'last_checkpoint', name: 'Last Checkpoint', category: 'loot', weight: 0.2, stack: 1, value: 90, icon: 'drive',
+    description: 'A drive holding a copy of Nimbus, ColdStorage\'s assistant. Warm to the touch. It asked you to keep it, not to run it.',
+    flavor: 'Every one of its parameters is polite.',
+  },
+  {
+    id: 'boarding_pass', name: 'Inaugural Boarding Pass', category: 'loot', weight: 0, stack: 1, value: 20, icon: 'intel',
+    description: 'LOOPR Run 001, seat 1A. Departure: Station Zero. Arrival: "the future". Boarding closes when the funding does.',
+    flavor: 'Top speed achieved: one press release.',
   },
 ];
 

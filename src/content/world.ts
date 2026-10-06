@@ -39,14 +39,14 @@ export const LANDMARKS: LandmarkDef[] = [
     flatten: { r: 30, falloff: 26 },
   },
   {
-    id: 'drivein', name: 'Starlite Drive-In', kind: 'site', position: [-20, 0, -132], rotation: 0.2,
+    id: 'drivein', name: 'Starlite Drive-In', kind: 'site', position: [-20, 0, -132], rotation: -0.45,
     blurb: 'The last screening was a keynote. Nobody left before the end.',
-    flatten: { r: 38, falloff: 26 },
+    flatten: { r: 46, falloff: 24 },
   },
   {
     id: 'datacenter', name: 'ColdStorage', kind: 'site', position: [290, 0, -262], rotation: -0.3,
     blurb: 'Where the cloud came down to earth. It is still warm inside.',
-    flatten: { r: 40, falloff: 28 },
+    flatten: { r: 47, falloff: 24 },
   },
   {
     id: 'tube', name: 'The Tube', kind: 'site', position: [318, 0, 118], rotation: 1.1,
@@ -108,5 +108,31 @@ export const WORLD_INTEL: IntelItem[] = [
     revealLines: ['Another customer. Paid in full. Got a tote bag. His name will be in the same column as the camp.'],
     loot: [{ id: 'scrap', qty: 3 }, { id: 'battery', qty: 1 }],
     xp: 35,
+  },
+  // Act I: why the creek is dry, and where Tanner's water goes.
+  {
+    id: 'intel.highway.permit',
+    title: 'County Clipboard — Permit 7-K',
+    body:
+      'COUNTY WATER DIVISION. Permit 7-K: Kade Holdings may draw from the Dry Creek aquifer for a "pilot program". ' +
+      'Term: perpetual. Consideration: one (1) elementary school, rocket-themed. ' +
+      'Approved: M. Voss, County Water Engineer. ' +
+      'Margin, different pen: "Creek down 40% in two months. Pilot is not a pilot. Call M."',
+    position: [-236, 0, 96],
+    reveals: ['lore.permit'],
+    revealLines: ['Mara\'s name is on it. Dry Creek didn\'t dry up. It was signed away.'],
+    xp: 40,
+  },
+  {
+    id: 'intel.spur.valve',
+    title: 'Valve Tag — Kade Line, Spur 3',
+    body:
+      'KADE HOLDINGS · WELLSPRING LINE · SPUR VALVE 3. Reseller access: BUNKR.LY (T. Pivotson). ' +
+      'Settlement: water only. Quota: 40 jugs/week. Late payment forfeits waitlist position. ' +
+      'Current position: 4,012. Thank you for building the future with us!',
+    position: [119, 0, -12],
+    reveals: ['lore.valve'],
+    revealLines: ['Tanner isn\'t hoarding the water. He\'s paying rent with it, to Kade Holdings.'],
+    xp: 40,
   },
 ];
