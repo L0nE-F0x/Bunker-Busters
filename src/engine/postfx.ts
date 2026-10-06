@@ -2,6 +2,7 @@ import * as THREE from 'three/webgpu';
 import {
   pass, mrt, output, normalView, uniform, screenUV, vec2, vec3, vec4, float, Fn, renderOutput,
   builtinAOContext, time, length, fract, sin, smoothstep, mix, dot, clamp, max, pow, convertToTexture,
+  renderGroup, getViewPosition, normalize, acesFilmicToneMapping,
 } from 'three/tsl';
 import { bloom } from 'three/addons/tsl/display/BloomNode.js';
 import { ao } from 'three/addons/tsl/display/GTAONode.js';
@@ -16,9 +17,24 @@ type N = any;
 const hash2 = (p: N) => fract(sin(dot(p, vec2(12.9898, 78.233))).mul(43758.5453));
 
 /**
- * The "AAA look": HDR scene → ambient-only GTAO → raymarched godrays → bloom → split-tone grade →
- * ACES → SMAA → chromatic aberration, vignette, film grain, and gameplay-driven overlays
- * (damage flash, detection pulse, EMP static).
+ * Time-of-day colour grade. The Atmosphere writes these every frame (warm, saturated golden hours;
+ * crisp days; blue, slightly desaturated moonlight with warm practical lights left alone).
+ */
+export const gradeU = {
+  /** multiplier on the darks / on the brights (split tone in scene-linear, before the tonemap) */
+  shadow: uniform(new THREE.Color(0.9, 0.98, 1.08)).setGroup(renderGroup),
+  high: uniform(new THREE.Color(1.06, 1.0, 0.92)).setGroup(renderGroup),
+  /** extra contrast around mid grey (on top of the ACES curve) and display saturation */
+  contrast: uniform(1.05).setGroup(renderGroup),
+  sat: uniform(1.05).setGroup(renderGroup),
+  /** display-space black lift (night: a little blue so the darks never go dead) */
+  lift: uniform(new THREE.Color(0.004, 0.006, 0.01)).setGroup(renderGroup),
+};
+
+/**
+ * The "AAA look": HDR scene → ambient-only GTAO → phase-weighted godrays → exposure → bloom →
+ * time-of-day split tone → ACES → saturation → SMAA → chromatic aberration, vignette, film grain,
+ * and gameplay-driven overlays (damage flash, detection pulse, EMP static).
  */
 export class PostFX {
   pipeline: THREE.RenderPipeline;
@@ -26,16 +42,20 @@ export class PostFX {
   readonly exposure = uniform(1.0);
   readonly vignette = uniform(0.32);
   readonly grain = uniform(0.045);
-  readonly aberration = uniform(0.0016);
+  readonly aberration = uniform(0.0007);
   readonly damage = uniform(0); // 0..1 red flash
   readonly alert = uniform(0); // 0..1 detection pulse
   readonly emp = uniform(0); // 0..1 EMP static
   readonly fade = uniform(0); // 0..1 fade to black
   readonly menuShade = uniform(0); // 0..1 left-side darkening behind menus
-  readonly saturation = uniform(1.08);
+  readonly saturation = uniform(1.0);
   readonly bloomStrength = uniform(0.55);
   readonly godrayColor = uniform(new THREE.Color(1.0, 0.62, 0.35));
   readonly godrayStrength = uniform(0.35);
+  /** debug handle: `game.post.gradeU` */
+  readonly gradeU = gradeU;
+  /** direction toward the shadow-casting light (sun by day, moon by night), refreshed per frame */
+  private readonly uLightDir = uniform(new THREE.Vector3(0, 1, 0));
 
   bloomNode: N = null;
   godraysNode: N = null;
@@ -86,44 +106,57 @@ export class PostFX {
       gr.distanceAttenuation.value = 1.2;
       this.godraysNode = gr;
       const blurred: N = bilateralBlur(gr.getTextureNode()).getTextureNode();
-      // additive in-scatter: shafts brighten, occluded air stays clear
-      hdr = convertToTexture(hdr.add(vec4(this.godrayColor.mul(blurred.r).mul(this.godrayStrength), 0)));
+      // additive in-scatter: shafts brighten, occluded air stays clear. Weighted by a forward-scatter
+      // phase around the light: the raw march is just "how much lit air", which without a phase
+      // laid a flat milky veil over every view (noon included) instead of shafts toward the sun.
+      const camW = uniform(camera.matrixWorld), projInv = uniform(camera.projectionMatrixInverse);
+      const vdir = normalize(camW.mul(vec4(getViewPosition(screenUV, float(0.5), projInv), 0)).xyz);
+      const mu = max(dot(vdir, this.uLightDir), 0);
+      const phase = float(0.16).add(pow(mu, 2).mul(0.3)).add(pow(mu, 10).mul(1.6));
+      hdr = convertToTexture(hdr.add(vec4(this.godrayColor.mul(blurred.r).mul(this.godrayStrength).mul(phase), 0)));
     } else {
       this.godraysNode = null;
     }
 
+    // exposure first, so the bloom threshold means the same thing at noon and at midnight
+    hdr = hdr.mul(this.exposure);
     if (quality.bloom) {
-      const b: N = bloom(hdr, 0.55, 0.45, 0.82);
+      const b: N = bloom(hdr, 0.55, 0.5, 1.1);
       b.strength = this.bloomStrength;
+      b.smoothWidth.value = 0.9;
       this.bloomNode = b;
       hdr = hdr.add(b);
     }
 
     const graded = this.grade(hdr);
-    let ldr: N = renderOutput(graded, THREE.ACESFilmicToneMapping, THREE.SRGBColorSpace);
+    // the tonemap happens inside grade(); renderOutput only encodes to sRGB
+    let ldr: N = renderOutput(graded, THREE.NoToneMapping, THREE.SRGBColorSpace);
     if (quality.smaa) ldr = smaa(ldr);
     this.pipeline.outputNode = this.finish(convertToTexture(ldr));
     this.pipeline.needsUpdate = true;
   }
 
-  /** Split-tone "orange & teal" grade in linear HDR, before tonemapping. */
+  /**
+   * Scene-linear split tone (time-of-day tints from `gradeU`) and a contrast pivot at mid grey, then
+   * ACES, display saturation and a black lift. Returns display-linear colour (sRGB encoding follows).
+   */
   private grade(hdr: N): N {
-    const exposure = this.exposure;
     const sat = this.saturation;
+    const G = gradeU as Record<keyof typeof gradeU, N>;
+    const luma = (v: N) => dot(v, vec3(0.2126, 0.7152, 0.0722));
     return Fn(() => {
-      const c = vec3(hdr.rgb).mul(exposure).toVar();
-      const l = dot(c, vec3(0.2126, 0.7152, 0.0722));
-      // shadows → teal, highlights → amber
-      const shadowTint = vec3(0.86, 1.0, 1.08);
-      const highTint = vec3(1.08, 0.99, 0.88);
-      const k = smoothstep(0.02, 1.2, l);
-      c.assign(c.mul(mix(shadowTint, highTint, k)));
-      // saturation around luma
-      const l2 = dot(c, vec3(0.2126, 0.7152, 0.0722));
-      c.assign(mix(vec3(l2), c, sat));
-      // gentle filmic toe lift so blacks never go fully dead
-      c.assign(c.add(vec3(0.004, 0.006, 0.008)));
-      return vec4(c, 1);
+      const c = vec3(hdr.rgb).toVar();
+      const l = luma(c);
+      // 0 in the darks, 0.5 at mid grey, → 1 in the highlights
+      const k = l.div(l.add(0.18));
+      const tint: N = mix(G.shadow, G.high, k);
+      c.assign(c.mul(tint.div(max(luma(tint), 0.05))));
+      // contrast around mid grey, hue-preserving (scales the colour by its own luma)
+      c.assign(c.mul(pow(max(l, 1e-4).div(0.18), G.contrast.sub(1))));
+      const d: N = (acesFilmicToneMapping as N)(c, float(1)).toVar();
+      d.assign(max(mix(vec3(luma(d)), d, G.sat.mul(sat)), 0));
+      d.assign(d.add(G.lift.mul(float(1).sub(d))));
+      return vec4(d, 1);
     })();
   }
 
@@ -136,7 +169,7 @@ export class PostFX {
       const r = length(centered);
       // radial chromatic aberration, pumped by EMP + damage
       const ca = aberration.add(emp.mul(0.006)).add(damage.mul(0.004));
-      const dir = centered.mul(r).mul(ca.mul(6));
+      const dir = centered.mul(r.mul(r)).mul(ca.mul(14));
       const col = vec3(
         ldr.sample(uv.sub(dir)).r,
         ldr.sample(uv).g,
@@ -151,9 +184,9 @@ export class PostFX {
       const staticNoise = hash2(uv.mul(vec2(1920, 1080)).floor().add(time.mul(97.0).fract().mul(113.0)));
       col.assign(mix(col, vec3(staticNoise).mul(vec3(0.7, 0.95, 1.0)), emp.mul(0.18)));
 
-      // vignette (slightly warm in the corners)
-      const v = smoothstep(0.85, 0.2, r.mul(float(1).add(vignette)));
-      col.assign(col.mul(mix(vec3(0.55, 0.42, 0.36), vec3(1), v)));
+      // vignette: a neutral optical falloff (a warm tint here once turned a silver moon peach)
+      const v = smoothstep(0.9, 0.25, r.mul(float(1).add(vignette)));
+      col.assign(col.mul(mix(vec3(0.52, 0.5, 0.5), vec3(1), v)));
 
       // alert pulse: amber edges; damage: red edges
       const edge = smoothstep(0.25, 0.75, r);
@@ -175,6 +208,7 @@ export class PostFX {
   }
 
   render() {
+    (this.uLightDir.value as THREE.Vector3).subVectors(this.sun.position, this.sun.target.position).normalize();
     this.pipeline.render();
   }
 
