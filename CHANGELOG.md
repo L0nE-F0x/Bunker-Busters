@@ -3,6 +3,14 @@
 Each `## vX.Y.Z` section becomes the GitHub release notes and the "what's new" list in the in-app
 update notice (the first few bullets). `scripts/release.sh` refuses to release a version without one.
 
+## v0.1.7
+- **Dust storms** roll in and out: brown-out visibility, blowing sand, howling wind, dry lightning with distant thunder, and SeedBot's optics are half-blind in them (a stealth opportunity)
+- **Sky and light**: eye adaptation, deeper day sky, longer twilight afterglow, a milky way and a cratered moon; dust devils on calm afternoons; a dead megacity skyline on the horizon; pebbles and grit underfoot
+- **The Garage, rebuilt in detail**: ribbed roll-up door, neon spilling onto the door and yard, razor wire, yard clutter, a lived-in workshop (ceiling joists, pegboard, shelving, posters), a proper vault with cash and gold, red alarm beacons that sweep the rooms
+- **Effects**: a new EMP blast (arcs, shock ring, sparks), sharper lasers with dust glints, SeedBot nav lights, sparks and smoke when it browns out or crashes
+- **Performance**: far fewer draw calls (batched materials, the hands, SeedBot and the campfire merged, instanced tumbleweeds, cheaper HUD and minimap updates)
+- Fixed: a stripe artifact across concrete floors and ceilings
+
 ## v0.1.6
 - **Fixed: the 3D view could fill only part of the window** if the window was resized while the game was loading (common with tiling window managers): the game now re-fits whenever the window size changes
 

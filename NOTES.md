@@ -63,6 +63,16 @@ URL flags: `?webgl` forces WebGL2. `?gpu=high` / `?gpu=low` force WebGPU on the 
 - Interaction targeting follows your gaze. Banners are queued. The hotbar moved bottom-right so it doesn't sit on the hands.
 - Dev tool: `http://localhost:5173/debug/hands.html?pose=lockpick&look=engineer&torch` renders the hands alone in a studio (dev server only, not part of the build).
 
+### Overnight merge + test-harness lesson (2026-10-06)
+- Merged three agent branches: perf (draw-call batching), weather/world (dust storms, sky, skyline), and the Garage graphics/VFX pass. Their own NOTES sections are below.
+- Conflicts resolved by hand:
+  - Tumbleweeds: both branches instanced them; kept the weather version.
+  - `Drone.ts`: took the Garage rebuild and re-applied the weather branch's storm-visibility changes.
+  - Garage roof: removed a duplicate `rb.build('roof')` (perf folds the roof into the static batch).
+  - Light cones: keep both the near-camera fade and the storm murk.
+- **Harness lesson:** a "wallpaper / transparent window" frame turned out to be the test app closing on its `BB_EXIT_AFTER` timer (Hyprland's fade-out) while the grim loop was still running. Each grim+md5 step takes ~0.75 s, not the 0.4 s sleep. Make `BB_EXIT_AFTER` comfortably longer than the capture loop.
+- Also added (harmless): `alpha: false` on the renderer, an opaque black webview/window background in the shell, and `?hour=N` to set the time of day on start.
+
 ### Desktop freeze: the real cause (2026-10-06, overnight)
 - The owner's "frozen" reports were never input or game logic. **The window stopped presenting frames** while the page kept rendering, and `?bench` still said 50 fps. Found with a screenshot oracle: `grim` the window every 0.5 s and compare md5s.
 - Trigger: **WebKitGTK's own pointer lock** (its X grab from the UI-process connection). Entering gameplay requests pointer lock, so the picture froze at Continue / Enter the Wasteland.
