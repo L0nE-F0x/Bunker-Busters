@@ -1,17 +1,20 @@
 import './styles.css';
 import { ICONS, EYE_ICON } from './icons';
 import { ITEMS, HOTBAR_ITEMS } from '@/content/items';
-import { SKILLS, SKILL_ORDER } from '@/content/skills';
+import { SKILLS, SKILL_ORDER, focusesFor } from '@/content/skills';
 import { ARCHETYPES } from '@/content/archetypes';
+import { journalEntries } from '@/content/story';
 import { MAX_HEALTH } from '@/content/progression';
 import type { GameState, Settings } from '@/game/State';
 import type { AudioEngine } from '@/engine/audio';
-import type { LockResult, UIBridge } from '@/game/context';
+import type { LockResult, TalkChoiceView, UIBridge } from '@/game/context';
 import { LockpickGame } from './Lockpick';
 import { CircuitGame, KeypadGame } from './Circuit';
 import { Minimap, MapData, drawWorldMap, type MapMarker } from './Minimap';
 import { mountUpdateNotice } from './Updater';
 import { isTouch, isIOS, isStandalone, canFullscreen, isFullscreen, enterFullscreen } from '@/engine/device';
+
+const esc = (s: string) => s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]!));
 
 const h = <K extends keyof HTMLElementTagNameMap>(tag: K, cls = '', html = '') => {
   const el = document.createElement(tag);
@@ -34,6 +37,8 @@ export interface HudFrame {
   px: number;
   pz: number;
   markers: MapMarker[];
+  hunger: number;
+  thirst: number;
 }
 
 /** DOM overlay. Owns HUD widgets, menus, modal panels and minigames. */
@@ -48,6 +53,7 @@ export class UI implements UIBridge {
   minigameOpen = false;
   private subtitleTimer = 0;
   private lastClock = '';
+  private lastNeed = '';
   private detCache: { show: boolean | null; color: string; width: string; text: string } = { show: null, color: '', width: '', text: '' };
   private minimapT = 0;
   private lastObjective = '';
@@ -90,10 +96,10 @@ export class UI implements UIBridge {
         <span class="l1">BUNKER</span><span class="l2">BUSTERS</span>
         <div class="glitch"><span>BUNKER\n   BUSTERS</span></div>
       </div>
-      <div class="tagline">They built bunkers. <b>You brought lockpicks.</b></div>
+      <div class="tagline">They locked the future. <b>The camps are still thirsty.</b></div>
       <div class="menu interactive"></div>
       ${isTouch && isIOS && !isStandalone() ? '<div class="ios-tip">For full screen: tap <b>Share</b> → <b>Add to Home Screen</b>, then play from the icon.</div>' : ''}
-      <div class="title-foot"><span>v${__APP_VERSION__} · VERTICAL SLICE · ${opts.backend.toUpperCase()}</span><span class="press">THE WASTELAND IS OPEN</span></div>`);
+      <div class="title-foot"><span>v${__APP_VERSION__} · DAY 1,284 · ${opts.backend.toUpperCase()}</span><span class="press">STAY OUTSIDE</span></div>`);
     el.id = 'title';
     const menu = el.querySelector('.menu')!;
     const add = (label: string, fn: () => void, primary = false, disabled = false) => {
@@ -127,8 +133,8 @@ export class UI implements UIBridge {
           <span><b>Hand</b></span><span>Use what you're looking at (or tap the prompt). ALT is the other action</span>
           <span><b>Arrows</b></span><span>Jump · crouch (toggle: quiet, steps over tripwires)</span>
           <span><b>Torch</b></span><span>Flashlight (SeedBot spots you more easily)</span>
-          <span><b>Hotbar</b></span><span>Tap an item to throw the EMP, eat or drink</span>
-          <span><b>Top right</b></span><span>Pause · kit & skills · map & intel</span>
+          <span><b>Hotbar</b></span><span>EMP, ration, water, medkit</span>
+          <span><b>Top right</b></span><span>Pause · kit, skills & journal · map & intel</span>
           <span><b>Lockpicking</b></span><span>Press and hold on a pin to lift it, let go to set it</span>
         </div>
         <button class="btn">Back</button>
@@ -148,9 +154,11 @@ export class UI implements UIBridge {
           <span><span class="kbd">C</span> / <span class="kbd">Ctrl</span></span><span>Crouch (quiet, steps over tripwires)</span>
           <span><span class="kbd">Space</span></span><span>Jump</span>
           <span><span class="kbd">E</span> / <span class="kbd">F</span></span><span>Interact · alternate action</span>
-          <span><span class="kbd">1</span><span class="kbd">2</span><span class="kbd">3</span></span><span>Throw EMP · eat ration · drink shake</span>
+          <span><span class="kbd">1</span><span class="kbd">2</span><span class="kbd">3</span><span class="kbd">4</span></span><span>EMP · ration · water · medkit</span>
+          <span><span class="kbd">F</span></span><span>The other way in: a charge, a keypad, the wire</span>
           <span><span class="kbd">L</span></span><span>Flashlight (SeedBot spots you more easily)</span>
-          <span><span class="kbd">Tab</span> / <span class="kbd">I</span></span><span>Inventory & skills</span>
+          <span><span class="kbd">Tab</span> / <span class="kbd">I</span></span><span>Kit & skills</span>
+          <span><span class="kbd">J</span></span><span>Journal — why you're out here</span>
           <span><span class="kbd">M</span></span><span>Map & intel</span>
           <span><span class="kbd">Esc</span></span><span>Pause</span>
         </div>
@@ -167,8 +175,8 @@ export class UI implements UIBridge {
     let sel = ARCHETYPES[0].id;
     el.innerHTML = `
       <div class="side interactive">
-        <div class="label">CHOOSE YOUR SCAVENGER</div>
-        <h2>WHO ARE YOU?</h2>
+        <div class="label">THE COMPACT HAS ONE RADIO</div>
+        <h2>WHO GETS IT?</h2>
         <div class="cards"></div>
         <div class="panel detail"><div class="scan"></div></div>
         <div style="display:flex;gap:10px;margin-top:auto">
@@ -184,14 +192,16 @@ export class UI implements UIBridge {
       cards.querySelectorAll('.card').forEach((c) => c.classList.toggle('sel', (c as HTMLElement).dataset.id === sel));
       const bar = (label: string, v: number, max: number, txt: string) =>
         `<div class="stat"><span>${label}</span><span class="track"><i style="width:${(v / max) * 100}%"></i></span><b>${txt}</b></div>`;
+      const quiet = a.stats.stealth < 0.85 ? 'QUIET' : a.stats.stealth > 1.05 ? 'LOUD' : 'EVEN';
+      const trained = SKILL_ORDER.filter((id) => (a.skills[id] ?? 0) > 0);
       detail.innerHTML = `<div class="scan"></div>
         <p>${a.description}</p>
-        ${bar('Lockpicking', a.skills.lockpicking, 5, String(a.skills.lockpicking))}
-        ${bar('Electronics', a.skills.electronics, 5, String(a.skills.electronics))}
-        ${bar('Stealth', 2 - a.stats.stealth, 1.3, a.stats.stealth < 1 ? 'HI' : 'MID')}
-        ${bar('Toughness', a.stats.toughness, 1.3, a.stats.toughness > 1 ? 'HI' : 'MID')}
-        <div class="sig"><strong>Signature · ${a.signature.name}</strong>${a.signature.description}</div>
-        <div class="sig" style="border-color:var(--ink-faint)"><strong style="color:var(--ink-dim)">Starts with</strong>${a.startingItems.map((s) => `${s.qty}× ${ITEMS[s.id].name}`).join(' · ')}</div>`;
+        <p class="motive">${a.motive}</p>
+        ${trained.map((id) => bar(SKILLS[id].name, a.skills[id] ?? 0, 5, String(a.skills[id] ?? 0))).join('')}
+        ${bar('Noticeable', a.stats.stealth, 1.4, quiet)}
+        ${bar('Toughness', a.stats.toughness, 1.4, a.stats.toughness > 1.15 ? 'HI' : a.stats.toughness < 0.95 ? 'LOW' : 'MID')}
+        <div class="sig"><strong>${a.role} · ${a.signature.name}</strong>${a.signature.description}</div>
+        <div class="sig" style="border-color:var(--ink-faint)"><strong style="color:var(--ink-dim)">Pockets · 1 skill point unspent</strong>${a.startingItems.map((s) => `${s.qty}× ${ITEMS[s.id]?.name ?? s.id}`).join(' · ')}</div>`;
       onPreview(sel);
     };
     for (const a of ARCHETYPES) {
@@ -229,6 +239,7 @@ export class UI implements UIBridge {
       <div class="hotbar"></div>
       <div class="vitals">
         <div class="row"><div class="lvl">1</div><div class="bars"><div class="hp"></div><div class="xpbar"><i></i></div></div></div>
+        <div class="needs"><div class="nrow hunger"><span>FOOD</span><div class="track"><i></i></div></div><div class="nrow thirst"><span>WATER</span><div class="track"><i></i></div></div></div>
         <div class="meta"><span class="arch"></span><span class="xptext"></span></div>
         <div class="spwrap"></div>
       </div>
@@ -267,7 +278,7 @@ export class UI implements UIBridge {
     hpEls.forEach((e, i) => (e.className = i < on ? `on ${cls}` : ''));
     this.hud.querySelector('.lvl')!.textContent = String(d.level);
     (this.hud.querySelector('.xpbar i') as HTMLElement).style.width = `${(d.xp / this.state.xpToNext) * 100}%`;
-    this.hud.querySelector('.arch')!.innerHTML = `${this.state.archetype.name.replace('The ', '')}`;
+    this.hud.querySelector('.arch')!.textContent = this.state.archetype.role.toUpperCase();
     this.hud.querySelector('.xptext')!.innerHTML = `<b>${d.xp}</b> / ${this.state.xpToNext} XP`;
     this.hud.querySelector('.spwrap')!.innerHTML = d.skillPoints > 0 ? `<span class="sp-badge">${d.skillPoints} SKILL POINT${d.skillPoints > 1 ? 'S' : ''} · ${isTouch ? 'KIT' : 'TAB'}</span>` : '';
   }
@@ -356,6 +367,18 @@ export class UI implements UIBridge {
     const phase = f.hour < 5 || f.hour > 20.5 ? 'NIGHT' : f.hour < 7.5 ? 'DAWN' : f.hour < 16.5 ? 'DAY' : f.hour < 19 ? 'GOLDEN HOUR' : 'DUSK';
     const clock = `<b>${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}</b> · ${phase}`;
     if (clock !== this.lastClock) { this.lastClock = clock; this.els.clock.innerHTML = clock; }
+    const hk = `${Math.round(f.hunger)}|${Math.round(f.thirst)}`;
+    if (hk !== this.lastNeed) {
+      this.lastNeed = hk;
+      const paint = (sel: string, v: number) => {
+        const row = this.hud.querySelector(sel) as HTMLElement | null;
+        if (!row) return;
+        (row.querySelector('i') as HTMLElement).style.width = `${Math.max(0, Math.min(100, v))}%`;
+        row.classList.toggle('low', v < 30);
+      };
+      paint('.needs .hunger', f.hunger);
+      paint('.needs .thirst', f.thirst);
+    }
     // minimap + compass
     // ~20 Hz is plenty for the minimap, and every canvas update forces the overlay to recomposite
     this.minimapT -= dt;
@@ -382,7 +405,7 @@ export class UI implements UIBridge {
       onClose?.();
     };
     const keyClose = (e: KeyboardEvent) => {
-      if (['Escape', 'Tab', 'KeyI', 'KeyM'].includes(e.code)) {
+      if (['Escape', 'Tab', 'KeyI', 'KeyJ', 'KeyM'].includes(e.code)) {
         e.preventDefault();
         e.stopPropagation();
         close();
@@ -402,49 +425,81 @@ export class UI implements UIBridge {
     return close;
   }
 
-  openInventory(onUse: (id: string) => void, onClose: () => void) {
+  openInventory(onUse: (id: string) => void, onClose: () => void, initial: 'kit' | 'journal' = 'kit') {
     const s = this.state!;
     this.audio.play('ui');
     this.openModal((close) => {
       const m = h('div', 'panel modal interactive');
+      let tab: 'kit' | 'journal' = initial;
       let selected: string | null = s.data.inventory[0]?.id ?? null;
       const render = () => {
         const d = s.data;
-        const cells = Array.from({ length: 24 }, (_, i) => d.inventory[i]);
-        const sel = selected ? ITEMS[selected] : null;
-        m.innerHTML = `<div class="scan"></div>
-          <header><h3>KIT</h3><div class="label">${s.archetype.name} · LEVEL ${d.level}</div></header>
-          <div class="body inv">
-            <div>
-              <div class="grid">${cells.map((c) => c
-                ? `<div class="cell cat-${ITEMS[c.id].category} ${c.id === selected ? 'sel' : ''}" data-id="${c.id}">${ICONS[ITEMS[c.id].icon]}<span class="q">${c.qty}</span></div>`
-                : '<div class="cell empty"></div>').join('')}</div>
-              <div class="weight">CARRY WEIGHT ${s.weight.toFixed(1)} / ${s.carryLimit} KG<div class="track"><i style="width:${Math.min(100, (s.weight / s.carryLimit) * 100)}%"></i></div></div>
+        const over = s.weight > s.carryLimit + 0.05;
+        if (tab === 'journal') {
+          const entries = journalEntries({ has: (f) => s.has(f), archetype: s.archetype });
+          m.innerHTML = `<div class="scan"></div>
+            <header><h3>JOURNAL</h3><div class="label">${esc(s.archetype.name)}</div>
+              <div class="tabs"><button class="tab" data-tab="kit">Kit</button><button class="tab on" data-tab="journal">Journal</button></div>
+            </header>
+            <div class="body">
+              <div class="intel-list journal">${entries.length ? entries.map((e) => `<div class="intel-item"><b>${esc(e.title)}</b><span>${esc(e.body)}</span></div>`).join('') : '<div class="intel-item"><span>Nothing written yet. Mara talks first.</span></div>'}</div>
             </div>
-            <div>
-              <div class="panel info">${sel ? `
-                <div class="cat">${sel.category}</div><h4>${sel.name}</h4>
-                <p>${sel.description}</p>${sel.flavor ? `<p class="flavor">${sel.flavor}</p>` : ''}
-                <div class="stats"><span>WT ${sel.weight}kg</span><span>VALUE ${sel.value}</span><span>×${s.count(sel.id)}</span></div>
-                ${sel.usable ? `<button class="btn use">Use</button>` : ''}` : '<p>Empty pockets. Very zen.</p>'}
+            <footer><span class="kb"><span class="kbd">J</span> close</span><span>${entries.length} entries</span></footer>`;
+        } else {
+          const cells = Array.from({ length: 24 }, (_, i) => d.inventory[i]);
+          const sel = selected ? ITEMS[selected] : null;
+          m.innerHTML = `<div class="scan"></div>
+            <header><h3>KIT</h3><div class="label">${esc(s.archetype.name)} · LEVEL ${d.level}</div>
+              <div class="tabs"><button class="tab on" data-tab="kit">Kit</button><button class="tab" data-tab="journal">Journal</button></div>
+            </header>
+            <div class="body inv">
+              <div>
+                <div class="grid">${cells.map((c) => c && ITEMS[c.id]
+                  ? `<div class="cell cat-${ITEMS[c.id].category} ${c.id === selected ? 'sel' : ''}" data-id="${c.id}">${ICONS[ITEMS[c.id].icon] ?? ''}<span class="q">${c.qty}</span></div>`
+                  : '<div class="cell empty"></div>').join('')}</div>
+                <div class="weight ${over ? 'over' : ''}">CARRY ${s.weight.toFixed(1)} / ${s.carryLimit} KG${over ? ' · OVERBURDENED' : ''}<div class="track"><i style="width:${Math.min(100, (s.weight / s.carryLimit) * 100)}%"></i></div></div>
               </div>
-              <div class="skills">
-                <div class="label">SKILLS · ${d.skillPoints} POINT${d.skillPoints === 1 ? '' : 'S'} AVAILABLE</div>
-                ${SKILL_ORDER.map((id) => {
-                  const sk = SKILLS[id];
-                  const lv = s.skill(id);
-                  return `<div class="skill"><div><div class="n">${sk.name}</div><div class="pips">${Array.from({ length: sk.max }, (_, i) => `<i class="${i < lv ? 'on' : ''}"></i>`).join('')}</div></div>
-                    <button class="btn up" data-skill="${id}" ${d.skillPoints > 0 && lv < sk.max ? '' : 'disabled'}>+</button>
-                    <div class="d">${sk.perLevel[Math.min(lv, sk.max)]}${lv < sk.max ? ` <span style="color:var(--amber)">Next: ${sk.perLevel[lv + 1]}</span>` : ''}</div></div>`;
-                }).join('')}
+              <div>
+                <div class="panel info">${sel ? `
+                  <div class="cat">${sel.category}</div><h4>${esc(sel.name)}</h4>
+                  <p>${esc(sel.description)}</p>${sel.flavor ? `<p class="flavor">${esc(sel.flavor)}</p>` : ''}
+                  <div class="stats"><span>WT ${sel.weight}kg</span><span>VALUE ${sel.value}</span><span>×${s.count(sel.id)}</span></div>
+                  <div class="rowbtns">${sel.usable ? '<button class="btn use">Use</button>' : ''}<button class="btn drop">Drop 1</button><button class="btn drop-all">Drop stack</button></div>` : '<p>Empty pockets. The camp can fix that, or the highway can.</p>'}
+                </div>
+                <div class="skills">
+                  <div class="label">SKILLS · ${d.skillPoints} POINT${d.skillPoints === 1 ? '' : 'S'} · RANK 2 OPENS A FOCUS</div>
+                  ${SKILL_ORDER.map((id) => {
+                    const sk = SKILLS[id];
+                    const lv = s.skill(id);
+                    const owned = s.focus(id);
+                    const pair = focusesFor(id);
+                    const focusRow = lv < 2
+                      ? '<div class="focuses"><span class="need">A focus opens at rank 2. One per skill. The point does not raise the rank.</span></div>'
+                      : `<div class="focuses">${pair.map((f) => {
+                          const taken = owned === f.id;
+                          const can = d.skillPoints > 0 && !owned;
+                          return `<button class="btn focus-btn${taken ? ' on' : ''}" data-focus="${f.id}" ${can ? '' : 'disabled'}>${esc(f.name)}</button>`;
+                        }).join('')}</div><div class="d">${esc(owned ? (pair.find((f) => f.id === owned)?.blurb ?? '') : 'Pick one shape. The other one closes.')}</div>`;
+                    return `<div class="skill"><div><div class="n">${sk.name}</div><div class="pips">${Array.from({ length: sk.max }, (_, i) => `<i class="${i < lv ? 'on' : ''}"></i>`).join('')}</div></div>
+                      <button class="btn up" data-skill="${id}" ${d.skillPoints > 0 && lv < sk.max ? '' : 'disabled'}>+</button>
+                      <div class="d">${esc(sk.perLevel[Math.min(lv, sk.max)])}${lv < sk.max ? ` <span style="color:var(--amber)">Next: ${esc(sk.perLevel[lv + 1])}</span>` : ''}</div>
+                      ${focusRow}</div>`;
+                  }).join('')}
+                </div>
               </div>
             </div>
-          </div>
-          <footer><span class="kb"><span class="kbd">Tab</span> close</span><span>Stats: ${d.stats.picks} locks picked · caught ${d.stats.caught}× · ${d.stats.busted} bunkers busted</span></footer>`;
+            <footer><span class="kb"><span class="kbd">Tab</span> close · <span class="kbd">J</span> journal</span><span>${d.stats.picks} locks · caught ${d.stats.caught}× · ${d.stats.busted} bunkers · food ${Math.round(d.hunger)} · water ${Math.round(d.thirst)}</span></footer>`;
+        }
+        m.querySelectorAll('[data-tab]').forEach((b) => (b as HTMLElement).onclick = () => { tab = (b as HTMLElement).dataset.tab as 'kit' | 'journal'; this.audio.play('ui'); render(); });
         m.querySelectorAll('.cell[data-id]').forEach((c) => (c as HTMLElement).onclick = () => { selected = (c as HTMLElement).dataset.id!; this.audio.play('ui'); render(); });
         m.querySelectorAll('.up').forEach((b) => (b as HTMLElement).onclick = () => { if (s.spendPoint((b as HTMLElement).dataset.skill as never)) { this.audio.play('uiConfirm'); this.refreshVitals(); render(); } });
+        m.querySelectorAll('.focus-btn').forEach((b) => (b as HTMLElement).onclick = () => { if (s.spendFocus((b as HTMLElement).dataset.focus ?? '')) { this.audio.play('uiConfirm'); this.refreshVitals(); render(); } });
         const use = m.querySelector('.use') as HTMLElement | null;
-        if (use && selected) use.onclick = () => { onUse(selected!); if (!s.count(selected!)) selected = null; render(); };
+        if (use && selected) use.onclick = () => { onUse(selected!); if (!s.count(selected!)) selected = null; this.refreshHotbar(); render(); };
+        const drop = m.querySelector('.drop') as HTMLElement | null;
+        const dropAll = m.querySelector('.drop-all') as HTMLElement | null;
+        if (drop && selected) drop.onclick = () => { s.removeItem(selected!, 1); if (!s.count(selected!)) selected = null; this.audio.play('ui'); this.refreshHotbar(); render(); };
+        if (dropAll && selected) dropAll.onclick = () => { s.removeItem(selected!, s.count(selected!)); selected = null; this.audio.play('ui'); this.refreshHotbar(); render(); };
       };
       render();
       void close;
@@ -551,6 +606,184 @@ export class UI implements UIBridge {
       el = h('div', 'resume-hint', isTouch ? 'Tap to resume' : 'Click to resume');
       this.root.appendChild(el);
     } else if (!show && el) el.remove();
+  }
+
+  // ------------------------------------------------------------------ story panels
+  /** Mara's radio, and the debrief. Skip still finishes. */
+  pages(pages: { speaker: string; text: string }[], doneLabel = 'Step outside'): Promise<void> {
+    if (!pages.length) return Promise.resolve();
+    this.modalOpen = true;
+    this.audio.play('ui');
+    const ov = h('div', 'overlay');
+    const panel = h('div', 'panel brief interactive');
+    ov.appendChild(panel);
+    this.root.appendChild(ov);
+    let i = 0;
+    return new Promise((resolve) => {
+      const finish = () => {
+        window.removeEventListener('keydown', onKey, true);
+        ov.remove();
+        this.modalOpen = false;
+        resolve();
+      };
+      const paint = () => {
+        const page = pages[i];
+        const last = i >= pages.length - 1;
+        panel.innerHTML = `<div class="scan"></div>
+          <div class="who">${esc(page.speaker)}</div>
+          <p>${esc(page.text)}</p>
+          <div class="brief-foot">
+            <span>${i + 1} / ${pages.length}</span>
+            <span class="btns"><button class="btn skip">Skip</button><button class="btn primary next">${last ? esc(doneLabel) : 'Next'}</button></span>
+          </div>`;
+        (panel.querySelector('.skip') as HTMLButtonElement).onclick = () => { this.audio.play('ui'); finish(); };
+        (panel.querySelector('.next') as HTMLButtonElement).onclick = () => {
+          this.audio.play('uiConfirm');
+          if (last) finish();
+          else { i++; paint(); }
+        };
+      };
+      const onKey = (e: KeyboardEvent) => {
+        if (e.code !== 'Enter' && e.code !== 'Space' && e.code !== 'Escape' && e.code !== 'KeyE') return;
+        e.preventDefault();
+        e.stopPropagation();
+        if (e.code === 'Escape') { finish(); return; }
+        if (i >= pages.length - 1) finish();
+        else { i++; this.audio.play('ui'); paint(); }
+      };
+      window.addEventListener('keydown', onKey, true);
+      paint();
+    });
+  }
+
+  private choicePanel(speaker: string, text: string, choices: TalkChoiceView[], resolve: (id: string | null) => void) {
+    const ov = h('div', 'overlay');
+    const panel = h('div', 'panel talk interactive');
+    const enabled = choices.filter((c) => !c.disabled);
+    const paint = () => {
+      panel.innerHTML = `<div class="scan"></div>
+        <div class="who">${esc(speaker)}</div>
+        <p>${esc(text)}</p>
+        <div class="choices">${(() => { let n = 0; return choices.map((c) => `<button class="btn choice" data-id="${esc(c.id)}" ${c.disabled ? 'disabled' : ''}><span class="n">${c.disabled ? '·' : ++n}</span><span><b>${esc(c.label)}</b>${c.disabled ? `<small>${esc(c.disabled)}</small>` : ''}</span></button>`).join(''); })()}</div>
+        <div class="brief-foot"><span>Esc hangs up</span><span>${enabled.length ? 'Number keys work' : ''}</span></div>`;
+      panel.querySelectorAll('.choice').forEach((b) => {
+        const btn = b as HTMLButtonElement;
+        if (btn.disabled) return;
+        btn.onclick = () => { this.audio.play('uiConfirm'); finish(btn.dataset.id ?? null); };
+      });
+    };
+    const finish = (id: string | null) => {
+      window.removeEventListener('keydown', onKey, true);
+      ov.remove();
+      resolve(id);
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.code === 'Escape') { e.preventDefault(); e.stopPropagation(); this.audio.play('ui'); finish(null); return; }
+      const n = e.code.startsWith('Digit') ? Number(e.code.slice(5)) : e.code.startsWith('Numpad') ? Number(e.code.slice(6)) : 0;
+      if (n >= 1 && n <= enabled.length) {
+        e.preventDefault();
+        e.stopPropagation();
+        this.audio.play('uiConfirm');
+        finish(enabled[n - 1].id);
+      }
+    };
+    paint();
+    ov.appendChild(panel);
+    this.root.appendChild(ov);
+    window.addEventListener('keydown', onKey, true);
+    return finish;
+  }
+
+  choose(opts: { speaker: string; text: string; choices: TalkChoiceView[] }): Promise<string | null> {
+    this.modalOpen = true;
+    this.audio.play('ui');
+    return new Promise((resolve) => {
+      this.choicePanel(opts.speaker, opts.text, opts.choices, (id) => {
+        this.modalOpen = false;
+        resolve(id);
+      });
+    });
+  }
+
+  converse(opts: {
+    start: string;
+    node: (id: string) => { speaker: string; text: string; choices: TalkChoiceView[] } | null;
+    onChoice: (nodeId: string, choiceId: string) => void;
+  }): Promise<void> {
+    this.modalOpen = true;
+    this.audio.play('ui');
+    return new Promise((resolve) => {
+      const step = (id: string) => {
+        const node = opts.node(id);
+        if (!node) { this.modalOpen = false; resolve(); return; }
+        this.choicePanel(node.speaker, node.text, node.choices, (pick) => {
+          if (!pick) { this.modalOpen = false; resolve(); return; }
+          const choice = node.choices.find((c) => c.id === pick);
+          if (!choice || choice.disabled) { step(id); return; }
+          opts.onChoice(id, pick);
+          if (!choice.next) { this.modalOpen = false; resolve(); return; }
+          step(choice.next);
+        });
+      };
+      step(opts.start);
+    });
+  }
+
+  /** Rest, craft, or raise Mara. Resolves 'radio' when they want the next scene. */
+  camp(opts: {
+    radioLabel: string;
+    radioDisabled?: string;
+    onRest: () => void;
+    onCraft: (id: string) => string | null;
+    recipes: { id: string; name: string; detail: string; disabled?: string }[];
+  }): Promise<'radio' | 'closed'> {
+    this.modalOpen = true;
+    this.audio.play('ui');
+    const ov = h('div', 'overlay');
+    const panel = h('div', 'panel camp-panel interactive');
+    ov.appendChild(panel);
+    this.root.appendChild(ov);
+    let note = 'The fire is real. The full heal is not, unless you\'ve learned how to sleep.';
+    return new Promise((resolve) => {
+      const finish = (why: 'radio' | 'closed') => {
+        window.removeEventListener('keydown', onKey, true);
+        ov.remove();
+        this.modalOpen = false;
+        resolve(why);
+      };
+      const paint = () => {
+        panel.innerHTML = `<div class="scan"></div>
+          <header><h3>LAST CHANCE</h3><div class="label">CAMP</div></header>
+          <div class="body">
+            <p class="camp-note">${esc(note)}</p>
+            <div class="camp-actions">
+              <button class="btn primary rest">Rest and save</button>
+              <button class="btn radio" ${opts.radioDisabled ? 'disabled' : ''}>${esc(opts.radioLabel)}</button>
+            </div>
+            ${opts.radioDisabled ? `<p class="hint">${esc(opts.radioDisabled)}</p>` : ''}
+            <div class="label" style="margin-top:18px">WORK THE SCRAP</div>
+            <div class="recipes">${opts.recipes.map((r) => `<div class="recipe"><div><b>${esc(r.name)}</b><span>${esc(r.detail)}</span>${r.disabled ? `<small>${esc(r.disabled)}</small>` : ''}</div><button class="btn craft" data-id="${esc(r.id)}" ${r.disabled ? 'disabled' : ''}>Make</button></div>`).join('')}</div>
+          </div>
+          <footer><span class="kb"><span class="kbd">Esc</span> back to the fire</span></footer>`;
+        (panel.querySelector('.rest') as HTMLButtonElement).onclick = () => { this.audio.play('uiConfirm'); opts.onRest(); note = 'You sit with it. Not new. Better than you were.'; paint(); };
+        const radio = panel.querySelector('.radio') as HTMLButtonElement;
+        radio.onclick = () => { if (radio.disabled) return; this.audio.play('uiConfirm'); finish('radio'); };
+        panel.querySelectorAll('.craft').forEach((b) => (b as HTMLButtonElement).onclick = () => {
+          const err = opts.onCraft((b as HTMLElement).dataset.id ?? '');
+          this.audio.play(err ? 'deny' : 'uiConfirm');
+          note = err ?? 'Made. It looks like it will work, which is the standard out here.';
+          paint();
+        });
+      };
+      const onKey = (e: KeyboardEvent) => {
+        if (e.code !== 'Escape') return;
+        e.preventDefault();
+        e.stopPropagation();
+        finish('closed');
+      };
+      window.addEventListener('keydown', onKey, true);
+      paint();
+    });
   }
 
   // ------------------------------------------------------------------ UIBridge minigames

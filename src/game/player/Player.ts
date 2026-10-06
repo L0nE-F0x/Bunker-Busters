@@ -30,6 +30,10 @@ export class Player {
   interactPose = 0;
   speedMult = 1;
   flashlight = false;
+  /** Set each frame from the Stealth skill. */
+  stealthRank = 0;
+  /** '' | 'still' | 'lowlight', set each frame from the Stealth focus. */
+  stealthFocus = '';
   private body: ReturnType<Physics['world']['createRigidBody']>;
   collider: ReturnType<Physics['world']['createCollider']>;
   private controller: ReturnType<Physics['world']['createCharacterController']>;
@@ -280,10 +284,16 @@ export class Player {
   /** How visible/noisy the player is right now (1 = normal walking). */
   get noise() {
     const hs = Math.hypot(this.velocity.x, this.velocity.z);
-    // a lit torch makes you far easier to spot
-    const light = this.flashlight ? 1.6 : 1;
-    if (this.crouching) return (0.45 + hs * 0.05) * light;
-    if (this.sprinting) return 1.5 * light;
-    return (0.75 + hs * 0.08) * light;
+    // Stealth 3: a torch is a tell, not a flare.
+    const light = !this.flashlight ? 1
+      : this.stealthFocus === 'lowlight' ? 1.08
+      : this.stealthRank >= 3 ? 1.25 : 1.6;
+    let n: number;
+    if (this.crouching) n = (0.45 + hs * 0.05) * (this.stealthRank >= 1 ? 0.7 : 1);
+    else if (this.sprinting) n = 1.5 * (this.stealthRank >= 4 ? 0.65 : 1);
+    else n = 0.75 + hs * 0.08;
+    if (this.stealthRank >= 5) n *= 0.8;
+    if (this.stealthFocus === 'still') n *= 0.82;
+    return n * light;
   }
 }

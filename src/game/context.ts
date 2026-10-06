@@ -11,10 +11,27 @@ import type { DustPuffs } from './world/effects';
 export type LockResult = 'success' | 'abort' | 'out-of-picks';
 
 /** What gameplay code is allowed to ask of the UI layer. */
+export interface TalkChoiceView {
+  id: string;
+  label: string;
+  /** Greyed out, with this reason. */
+  disabled?: string;
+  /** Where the conversation goes next. Empty ends it. Only used by converse(). */
+  next?: string;
+}
+
 export interface UIBridge {
   lockpick(opts: { pins: number; title: string; onBreak: () => boolean }): Promise<LockResult>;
   keypad(opts: { title: string; code: string; hint: string }): Promise<'ok' | 'wrong' | 'abort'>;
   circuit(opts: { title: string; difficulty: number }): Promise<boolean>;
+  /** One question, then back to the world. */
+  choose(opts: { speaker: string; text: string; choices: TalkChoiceView[] }): Promise<string | null>;
+  /** A whole conversation. `onChoice` runs before the next line, so flags land in time. */
+  converse(opts: {
+    start: string;
+    node: (id: string) => { speaker: string; text: string; choices: TalkChoiceView[] } | null;
+    onChoice: (nodeId: string, choiceId: string) => void;
+  }): Promise<void>;
   banner(title: string, sub: string, kind?: 'good' | 'bad' | 'info'): void;
   subtitle(speaker: string, text: string): void;
 }

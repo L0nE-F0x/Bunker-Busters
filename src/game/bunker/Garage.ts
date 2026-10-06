@@ -6,7 +6,9 @@ import { Sparks } from '../world/effects';
 import { uPoolNight, uPoolBoost } from './garageAtlas';
 import { GARAGE } from '@/content/bunkers/garage';
 import { ITEMS } from '@/content/items';
-import { XP_REWARDS } from '@/content/progression';
+import { XP_REWARDS, empRadius, stealthMeter } from '@/content/progression';
+import { TANNER, visibleChoices } from '@/content/dialogue';
+import type { TalkCtx } from '@/content/dialogue';
 import type { GameContext, Interactable } from '../context';
 import { isTouch } from '@/engine/device';
 
@@ -56,6 +58,8 @@ export class Garage {
   private neonLoop: LoopHandle | null = null;
   private t = 0;
   private shownCrouchHint = false;
+  /** World-time of the last "go check your battery" order. */
+  private recallAt = -999;
 
   constructor(private ctx: GameContext) {
     const [gx, , gz] = GARAGE.location.position;
@@ -176,7 +180,29 @@ export class Garage {
         this.ctx.audio.play('door', { pos: this.b.points.gate });
         this.taunt('My gate! That padlock had a five-star rating!');
       }),
+      secondary: {
+        label: 'Place a breach charge',
+        available: () => this.chargeReason('gate'),
+        run: () => this.breach('gate'),
+      },
     });
+    // intercom just outside the gate, and one inside the yard, so a recall is reachable mid-job
+    const gate = this.b.points.gate;
+    const hail = (id: string, pos: THREE.Vector3) => {
+      this.interactables.push({
+        id,
+        pos,
+        radius: 2.1,
+        visible: () => !this.s.has('debriefed'),
+        primary: {
+          label: 'Hail Tanner on the intercom',
+          available: () => true,
+          run: () => this.talk(),
+        },
+      });
+    };
+    hail('intercom-out', new THREE.Vector3(gate.x, this.b.origin.y + 1.1, gate.z + 4.2));
+    hail('intercom-in', new THREE.Vector3(gate.x + 2.4, this.b.origin.y + 1.1, gate.z - 3.2));
     // secret fence gap
     this.interactables.push({
       id: 'gap',
@@ -213,6 +239,11 @@ export class Garage {
             this.s.addXP(XP_REWARDS.tripwireDisarmed, 'Tripwire disarmed');
           },
         },
+        secondary: {
+          label: 'Yank the wire',
+          available: () => (this.s.skill('demolition') >= 3 ? true : 'Requires Demolition 3 — or crouch over it'),
+          run: () => this.yankWire(tw),
+        },
       });
     }
     // side door
@@ -223,15 +254,9 @@ export class Garage {
       visible: () => !this.s.has(F.side),
       primary: pickAction(4, 'SIDE DOOR PADLOCK', () => this.openSide()),
       secondary: {
-        label: 'Short-circuit the keypad',
-        available: () => (this.s.skill('electronics') >= 1 ? true : 'Requires Electronics 1'),
-        run: async () => {
-          const ok = await ctx.ui.circuit({ title: 'KEYPAD BYPASS', difficulty: 1 });
-          if (ok) {
-            this.s.addXP(XP_REWARDS.keypadShorted, 'Keypad shorted');
-            this.openSide();
-          }
-        },
+        label: 'Another way through the door',
+        available: () => true,
+        run: () => this.sideOptions(),
       },
     });
     // fuse box
@@ -244,7 +269,11 @@ export class Garage {
         label: 'Cut power to the lasers',
         available: () => true,
         run: async () => {
-          if (this.s.skill('electronics') >= 1) {
+          const elec = this.s.skill('electronics');
+          if (elec >= 5) {
+            this.s.addXP(20, 'Lasers disabled');
+            this.s.events.emit('toast', { text: 'You know this box. The lasers die quietly.', kind: 'good' });
+          } else if (elec >= 1) {
             const ok = await ctx.ui.circuit({ title: 'FUSE BOX', difficulty: 0 });
             if (!ok) return;
             this.s.addXP(20, 'Lasers disabled');
@@ -272,24 +301,9 @@ export class Garage {
       visible: () => !this.s.has(F.vault),
       primary: pickAction(5, 'VAULT LOCK', () => this.openVault()),
       secondary: {
-        label: 'Use the keypad',
-        available: () => (this.wrongCodes >= 3 ? 'Keypad locked out' : true),
-        run: async () => {
-          const res = await ctx.ui.keypad({
-            title: 'RUNWAY ROOM',
-            code: '1234',
-            hint: this.s.has(F.intelDrone) ? 'Blueprint: "default code never changed".' : 'A sticky note reads: "default!!"',
-          });
-          if (res === 'ok') {
-            this.s.addXP(30, 'Vault code cracked');
-            this.openVault();
-          } else if (res === 'wrong') {
-            this.wrongCodes++;
-            if (this.wrongCodes >= 3) {
-              this.triggerAlarm(this.b.points.vaultDoor, 'Keypad lockout!');
-            }
-          }
-        },
+        label: 'Keypad, or something louder',
+        available: () => true,
+        run: () => this.vaultOptions(),
       },
     });
     // loot
@@ -305,6 +319,166 @@ export class Garage {
           run: () => this.loot(spot.id),
         },
       });
+    }
+  }
+
+  private chargeReason(which: 'gate' | 'side' | 'vault'): true | string {
+    const need = which === 'gate' ? 1 : which === 'side' ? 3 : 5;
+    if (this.s.skill('demolition') < need) return `Requires Demolition ${need}`;
+    if (this.s.count('charge') < 1) return 'Need a breach charge';
+    return true;
+  }
+
+  private breach(which: 'gate' | 'side' | 'vault') {
+    if (this.chargeReason(which) !== true) { this.ctx.audio.play('deny'); return; }
+    if (!this.s.removeItem('charge', 1)) return;
+    const quiet = which !== 'vault' && this.s.skill('demolition') >= 4 && this.ctx.player.crouching;
+    if (which === 'gate') {
+      this.s.set(F.gate);
+      this.applyFlags();
+      this.ctx.audio.play('door', { pos: this.b.points.gate });
+      this.taunt('MY GATE. That was not in the terms of service!');
+    } else if (which === 'side') this.openSide();
+    else this.openVault();
+    this.ctx.audio.play('thud', { pos: this.ctx.player.position, intensity: 0.85 });
+    this.ctx.cam.addTrauma(quiet ? 0.15 : 0.45);
+    if (quiet) this.s.events.emit('toast', { text: 'Shaped charge. The alarm stayed asleep.', kind: 'good' });
+    else {
+      const at = which === 'gate' ? this.b.points.gate : which === 'side' ? this.b.points.sideDoor : this.b.points.vaultDoor;
+      this.triggerAlarm(at, which === 'vault' ? 'The vault door leaves in pieces.' : 'Breach charge. Everyone heard that.');
+    }
+    this.s.addXP(XP_REWARDS.breach, 'Lock breached');
+  }
+
+  private yankWire(tw: { id: string; armed: boolean; mesh: { visible: boolean }; a: THREE.Vector3; b: THREE.Vector3 }) {
+    tw.armed = false;
+    tw.mesh.visible = false;
+    this.s.set(`garage.${tw.id}.disarmed`);
+    const quiet = this.s.skill('demolition') >= 4 && this.ctx.player.crouching;
+    const at = tw.a.clone().lerp(tw.b, 0.5);
+    if (quiet) {
+      this.ctx.audio.play('disarm');
+      this.s.events.emit('toast', { text: 'You eased the cans down. The alarm stayed asleep.', kind: 'good' });
+      this.s.addXP(XP_REWARDS.tripwireDisarmed, 'Tripwire eased out');
+    } else {
+      this.ctx.audio.play('cans', { pos: at });
+      this.triggerAlarm(at, 'You ripped a tripwire out. The cans noticed.');
+      this.s.addXP(8, 'Tripwire yanked');
+    }
+  }
+
+  private async sideOptions() {
+    const charge = this.chargeReason('side');
+    const pick = await this.ctx.ui.choose({
+      speaker: 'Side door',
+      text: 'The padlock is the patient way. These are the other two.',
+      choices: [
+        { id: 'short', label: 'Short the keypad', disabled: this.s.skill('electronics') >= 1 ? undefined : 'Requires Electronics 1' },
+        { id: 'charge', label: 'Place a breach charge', disabled: charge === true ? undefined : charge },
+        { id: 'no', label: 'Leave it' },
+      ],
+    });
+    if (pick === 'short') {
+      const ok = await this.ctx.ui.circuit({ title: 'KEYPAD BYPASS', difficulty: 1 });
+      if (ok) {
+        this.s.addXP(XP_REWARDS.keypadShorted, 'Keypad shorted');
+        this.openSide();
+      }
+    } else if (pick === 'charge') this.breach('side');
+  }
+
+  private vaultHint() {
+    if (this.s.has('social.code')) return 'He said it out loud. 1 2 3 4.';
+    if (this.s.has('social.digit')) return 'Tanner slipped. It starts with 1, then 2. He said the rest was obvious.';
+    if (this.s.has('social.told') || this.s.has(F.intelDrone)) return 'Everyone who knows him says the code is obvious. Nobody wrote the digits down.';
+    return 'No hint on the housing. Three wrong codes and it locks you out.';
+  }
+
+  private async vaultOptions() {
+    const locked = this.wrongCodes >= 3;
+    const charge = this.chargeReason('vault');
+    const pick = await this.ctx.ui.choose({
+      speaker: 'Runway Room',
+      text: 'Five pins, or a keypad Tanner is very proud of, or a noise.',
+      choices: [
+        { id: 'pad', label: 'Use the keypad', disabled: locked ? 'Keypad locked out' : undefined },
+        { id: 'charge', label: 'Place a breach charge', disabled: charge === true ? undefined : charge },
+        { id: 'no', label: 'Step back' },
+      ],
+    });
+    if (pick === 'charge') { this.breach('vault'); return; }
+    if (pick !== 'pad') return;
+    const res = await this.ctx.ui.keypad({ title: 'RUNWAY ROOM', code: '1234', hint: this.vaultHint() });
+    if (res === 'ok') {
+      this.s.addXP(40, 'Vault code cracked');
+      this.openVault();
+    } else if (res === 'wrong') {
+      this.wrongCodes++;
+      if (this.wrongCodes >= 3) this.triggerAlarm(this.b.points.vaultDoor, 'Keypad lockout!');
+    }
+  }
+
+  private talkCtx(): TalkCtx {
+    return {
+      skill: (id) => this.s.skill(id),
+      has: (f) => this.s.has(f),
+      gateOpen: this.s.has(F.gate),
+      sideOpen: this.s.has(F.side),
+      recallReady: this.t - this.recallAt > 75,
+      archetype: this.s.archetype.id,
+    };
+  }
+
+  private talk() {
+    const start = this.s.has(F.complete) ? 'after' : 'hello';
+    return this.ctx.ui.converse({
+      start,
+      node: (id) => {
+        const node = TANNER[id];
+        if (!node) return null;
+        const ctx = this.talkCtx();
+        return {
+          speaker: node.speaker,
+          text: node.text(ctx),
+          choices: visibleChoices(id, ctx).map((c) => ({
+            id: c.id,
+            label: c.label,
+            next: c.next,
+            disabled: c.disabled?.(ctx) ?? undefined,
+          })),
+        };
+      },
+      onChoice: (nodeId, choiceId) => {
+        const choice = TANNER[nodeId]?.choices.find((c) => c.id === choiceId);
+        if (choice?.effect) this.applyTalk(choice.effect);
+      },
+    });
+  }
+
+  private applyTalk(effect: 'recall' | 'openGate' | 'openSide' | 'digit' | 'code' | 'past' | 'told') {
+    const s = this.s;
+    if (effect === 'told' && s.set('social.told')) s.addXP(XP_REWARDS.talk, 'He explained the scam');
+    if (effect === 'past' && s.set('social.past')) s.addXP(20, 'He remembers you');
+    if (effect === 'digit' && s.set('social.digit')) s.addXP(35, 'Half a vault code');
+    if (effect === 'code' && s.set('social.code')) s.addXP(45, 'He said the code out loud');
+    if (effect === 'recall') {
+      this.recallAt = this.t;
+      const extra = s.focus('social') === 'longcon' ? 5 : 0;
+      this.drone.recall(8 + s.skill('social') + extra);
+      if (s.set('social.recalled')) s.addXP(15, 'SeedBot sent home');
+      this.ctx.audio.play('megaphone', { pos: this.b.points.megaphone });
+    }
+    if (effect === 'openGate' && !s.has(F.gate)) {
+      s.set(F.gate);
+      s.set('social.gate');
+      this.applyFlags();
+      this.ctx.audio.play('door', { pos: this.b.points.gate });
+      s.addXP(30, 'Talked the gate open');
+    }
+    if (effect === 'openSide' && !s.has(F.side)) {
+      s.set('social.side');
+      this.openSide();
+      s.addXP(35, 'Talked the side door open');
     }
   }
 
@@ -332,14 +506,21 @@ export class Garage {
     const table = GARAGE.loot;
     const got: string[] = [];
     if (id === 'safe') {
-      for (const g of table.guaranteed) { this.s.addItem(g.item, g.qty); got.push(`${g.qty}× ${ITEMS[g.item].name}`); }
+      // The water and the manifest come with you even if the pack is already rude about it.
+      for (const g of table.guaranteed) {
+        const n = this.s.addItem(g.item, g.qty, false, true);
+        if (n) got.push(`${n}× ${ITEMS[g.item].name}`);
+      }
+      if (this.s.weight > this.s.carryLimit + 0.05) {
+        this.s.events.emit('toast', { text: 'Overburdened. The water is the point. Drop the junk.', kind: 'info' });
+      }
     } else {
-      const half = id === 'crate_a' ? table.rolls.slice(0, 3) : table.rolls.slice(3);
+      const half = id === 'crate_a' ? table.rolls.slice(0, 4) : table.rolls.slice(4);
       for (const r of half) {
         if (Math.random() > r.chance) continue;
         const qty = r.qty[0] + Math.floor(Math.random() * (r.qty[1] - r.qty[0] + 1));
-        this.s.addItem(r.item, qty);
-        got.push(`${qty}× ${ITEMS[r.item].name}`);
+        const n = this.s.addItem(r.item, qty);
+        if (n) got.push(`${n}× ${ITEMS[r.item].name}`);
       }
     }
     ctx.ui.banner('LOOTED', got.join('  ·  '), 'good');
@@ -349,7 +530,7 @@ export class Garage {
       setTimeout(() => {
         this.s.addXP(table.xp, 'BUNKER BUSTED: The Garage');
         ctx.audio.sting('busted');
-        ctx.ui.banner('BUNKER BUSTED', 'The Garage · Tier 1 cleared. Tier 2 "Apex Vault" intel arrives in v0.2.', 'good');
+        ctx.ui.banner('BUNKER BUSTED', 'The cistern is open. Radio Mara at the campfire. She wants the names read out loud.', 'good');
         this.s.events.emit('bunkerComplete', { id: 'garage' });
         this.taunt('Fine. FINE. I am pivoting. To grief.');
       }, 1800);
@@ -396,9 +577,12 @@ export class Garage {
   }
 
   /** EMP blast from the player's grenade. */
-  emp(pos: THREE.Vector3, radius: number) {
-    if (this.drone.position.distanceTo(pos) <= radius && this.drone.state !== 'disabled') {
-      const dur = 12 * (this.s.skill('electronics') >= 2 ? 1.5 : 1);
+  emp(pos: THREE.Vector3, _radius?: number) {
+    let reach = empRadius(this.s.skill('demolition'));
+    if (this.s.focus('demolition') === 'wide') reach *= 1.18;
+    if (this.drone.position.distanceTo(pos) <= reach && this.drone.state !== 'disabled') {
+      let dur = 12 * (this.s.skill('electronics') >= 2 ? 1.5 : 1);
+      if (this.s.focus('electronics') === 'deepcell') dur *= 1.3;
       this.drone.emp(dur);
       this.s.addXP(XP_REWARDS.droneEmp, 'SeedBot fried');
       this.ctx.ui.subtitle('SeedBot', 'ERR_VIBES_NOT_FOUND. SHUTTING DOWN.');
@@ -471,7 +655,7 @@ export class Garage {
 
     // drone
     const night = ctx.atmo.uNight.value as number;
-    const stealthMult = (ctx.state.archetype.id === 'infiltrator' ? 0.6 : 1) * (this.s.skill('electronics') >= 3 ? 0.8 : 1);
+    const stealthMult = ctx.state.archetype.stats.stealth * stealthMeter(this.s.skill('stealth')) * (this.s.skill('electronics') >= 3 ? 0.85 : 1);
     this.drone.update(dt, {
       playerChest: p.clone().add(new THREE.Vector3(0, player.crouching ? 0.7 : 1.2, 0)),
       playerFeet: p.clone(),
@@ -573,13 +757,21 @@ export class Garage {
   /** Context-sensitive objective text. */
   objective(): string {
     const s = this.s;
-    if (s.has(F.complete)) return 'Bunker busted! Head back to the campfire to rest & save.';
-    if (s.has(F.vault)) return 'Loot the Runway Room.';
-    if (this.playerInside) return s.has(F.lasers) ? 'Get into the vault.' : 'Get past the lasers (jump low beams, crouch under high ones) — or find the fuse box.';
-    if (s.has(F.side)) return 'Get inside the building.';
-    if (this.playerInYard) return 'Break into the building — the side door is on the east wall.';
-    if (s.has(F.gate) || s.has(F.gap)) return 'Slip into the yard. Mind the drone.';
-    if (d2(this.ctx.player.position, this.b.origin) < 60 * 60) return 'Get past the fence: pick the gate padlock' + (s.has(F.intelGap) ? ' or use the NE fence gap.' : '.');
+    if (s.has(F.complete)) return s.has('debriefed') ? '' : 'The Garage is open. Radio Mara at the campfire — she wants the names.';
+    if (s.has(F.vault)) return 'Loot the Runway Room. The water is the point. The manifest is the map.';
+    if (this.playerInside) {
+      if (!s.has(F.lasers)) return 'Lasers in the hall. Jump the low beams, crouch the high ones, or kill them at the fuse box.';
+      if (s.has('social.code')) return 'The vault. He said 1234. The lockpick still works if you don\'t trust him.';
+      if (s.has('social.digit')) return 'The vault. The code starts with 12. Or pick the five pins.';
+      return 'The vault. Five pins, or a code he thinks is obvious.';
+    }
+    if (s.has(F.side)) return 'Get inside. SeedBot doesn\'t follow you through the door.';
+    if (this.playerInYard) return 'Side door is on the east wall. The intercom inside the gate still reaches Tanner.';
+    if (s.has(F.gate) || s.has(F.gap)) return 'You\'re through the fence. The drone is the tax on being bright or loud.';
+    if (d2(this.ctx.player.position, this.b.origin) < 70 * 70) {
+      const gap = s.has(F.intelGap) ? ', the loose panel on the north-east fence,' : '';
+      return `Past the fence: pick the gate${gap} or hail the intercom just outside it.`;
+    }
     return '';
   }
 

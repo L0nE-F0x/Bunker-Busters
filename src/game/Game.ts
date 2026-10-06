@@ -18,6 +18,7 @@ import { DustMotes, GroundHaze, DustPuffs, SandStreaks, DustDevils, Shockwave, h
 import { Weather } from './world/Weather';
 import { updateRim, glow } from './world/materials';
 import { Garage } from './bunker/Garage';
+import { Settlement } from './town/Settlement';
 import { Player } from './player/Player';
 import { FirstPersonCamera } from './player/FirstPersonCamera';
 import { Hands, HAND_LOOKS } from './player/Hands';
@@ -26,9 +27,12 @@ import type { GameContext, Interactable, UIBridge } from './context';
 import { UI, type HudFrame } from '@/ui/UI';
 import { MapData, LANDMARK_MARKERS, type MapMarker } from '@/ui/Minimap';
 import { SPAWN, WORLD_INTEL, LANDMARKS } from '@/content/world';
+import { WORLD_CACHES, briefingFor, debriefFor, reminderFor, storyObjective } from '@/content/story';
+import { RECIPES, type Recipe } from '@/content/craft';
+import { SKILLS } from '@/content/skills';
 import { GARAGE } from '@/content/bunkers/garage';
-import { ITEMS } from '@/content/items';
-import { XP_REWARDS } from '@/content/progression';
+import { ITEMS, HOTBAR_ITEMS } from '@/content/items';
+import { XP_REWARDS, fallFactor } from '@/content/progression';
 import { damp } from '@/engine/noise';
 
 /** Debug: ?skip=props,landmarks,scrub,dust,haze,env,post,garage disables subsystems (for GPU bisecting). */
@@ -36,6 +40,13 @@ const SKIP = new Set((new URLSearchParams(location.search).get('skip') ?? '').sp
 
 /** Debug: ?bench logs frame-rate stats to the console every 2s (read by the desktop test runs). */
 const BENCH = new URLSearchParams(location.search).has('bench');
+
+/** Brute borrows the engineer's hands. Fixer borrows the infiltrator's. No new meshes. */
+function handArchetype(id: string) {
+  if (id === 'brute') return 'engineer';
+  if (id === 'fixer') return 'infiltrator';
+  return id;
+}
 
 type Mode = 'loading' | 'title' | 'charselect' | 'playing';
 
@@ -68,6 +79,7 @@ export class Game {
   devils!: DustDevils;
   weather!: Weather;
   garage!: Garage;
+  settlement!: Settlement;
   map!: MapData;
   player: Player | null = null;
   cam!: FirstPersonCamera;
@@ -173,6 +185,7 @@ export class Game {
     this.ctx = this.makeContext();
     await step(0.7, 'Building a doomsday bunker (pre-revenue)');
     this.garage = new Garage(this.ctx);
+    this.settlement = new Settlement(this.ctx, this.landmarks);
     this.buildIntel();
     if (!SKIP.has('env')) this.buildEnvironment();
     if (SKIP.has('garage')) this.scene.remove(this.garage.b.group, this.garage.drone.group);
@@ -208,9 +221,30 @@ export class Game {
   private makeContext(): GameContext {
     const self = this;
     const ui: UIBridge = {
-      lockpick: (o) => self.withMinigame('lockpick', () => self.ui.lockpick(o)),
+      lockpick: (o) => {
+        const s = self.state!;
+        let pins = o.pins;
+        let onBreak = o.onBreak;
+        if (s.focus('lockpicking') === 'feeler') pins = Math.max(2, pins - 1);
+        if (s.focus('lockpicking') === 'saver') {
+          onBreak = () => {
+            if (Math.random() < 0.5 && s.count('lockpick') > 0) {
+              s.events.emit('toast', { text: 'The pick held. Barely.', kind: 'good' });
+              return true;
+            }
+            return o.onBreak();
+          };
+        }
+        return self.withMinigame('lockpick', () => self.ui.lockpick({ ...o, pins, onBreak }));
+      },
       keypad: (o) => self.withMinigame('keypad', () => self.ui.keypad(o)),
-      circuit: (o) => self.withMinigame('keypad', () => self.ui.circuit(o)),
+      circuit: (o) => {
+        const s = self.state!;
+        const difficulty = s.focus('electronics') === 'hotline' ? Math.max(1, o.difficulty - 1) : o.difficulty;
+        return self.withMinigame('keypad', () => self.ui.circuit({ ...o, difficulty }));
+      },
+      choose: (o) => self.withMinigame('idle', () => self.ui.choose(o)),
+      converse: (o) => self.withMinigame('idle', () => self.ui.converse(o)),
       banner: (a, b, k) => self.ui.banner(a, b, k),
       subtitle: (a, b) => self.ui.subtitle(a, b),
     };
@@ -318,47 +352,116 @@ export class Game {
         },
       });
     }
-    // campfire rest
+    // campfire: rest is partial unless Survival 5, and the radio is the story
     const camp = this.landmarks.campPosition;
     this.interactables.push({
       id: 'camp',
       pos: camp.clone(),
       radius: 3.2,
-      primary: { label: 'Rest by the fire · save & heal', available: () => true, run: () => this.rest() },
+      primary: { label: 'The camp', available: () => true, run: () => this.openCamp() },
       secondary: {
         label: 'Wait until ' + 'night/day',
         available: () => true,
         run: () => this.waitTime(),
       },
     });
-    this.interactables.push(...this.garage.interactables);
+    for (const c of WORLD_CACHES) {
+      const y = this.hf.heightAt(c.x, c.z) + 0.5;
+      this.interactables.push({
+        id: c.id,
+        pos: new THREE.Vector3(c.x, y, c.z),
+        radius: 2.3,
+        visible: () => !this.state?.has(c.id),
+        primary: { label: c.label, available: () => true, run: () => this.takeCache(c.id) },
+      });
+    }
+    this.interactables.push(...this.garage.interactables, ...this.settlement.interactables);
   }
 
   private collectIntel(id: string) {
     const s = this.state!;
     const it = WORLD_INTEL.find((i) => i.id === id)!;
     s.set(`intel:${id}`);
-    const reveals: string[] = [];
-    for (const r of it.reveals ?? []) {
-      if (s.set(r)) {
-        if (r === 'garage.marker') reveals.push('The Garage has been marked on your map.');
-        if (r === 'garage.gap') reveals.push('New route: a loose fence panel on the Garage\'s NE side.');
-        if (r === 'garage.drone') reveals.push('SeedBot browns out every ~25s. The vault keypad uses a default code.');
-      }
+    for (const r of it.reveals ?? []) s.set(r);
+    const lines = [...(it.revealLines ?? [])];
+    for (const loot of it.loot ?? []) {
+      const n = s.addItem(loot.id, loot.qty);
+      if (n) lines.push(`Salvaged ${n}× ${ITEMS[loot.id]?.name ?? loot.id}.`);
     }
     const mesh = this.intelMeshes.get(id);
     if (mesh) mesh.visible = false;
-    this.ui.showIntel(it.title, it.body, reveals.join('<br>'), () => this.afterModal());
+    this.ui.showIntel(it.title, it.body, lines.join('<br>'), () => this.afterModal());
     this.input.exitLock();
     s.addXP(it.xp, 'Intel recovered');
   }
 
-  private rest() {
+  private takeCache(id: string) {
+    const c = WORLD_CACHES.find((x) => x.id === id);
+    const s = this.state;
+    if (!c || !s || !s.set(c.id)) return;
+    if (c.shockWithoutElectronics && s.skill('electronics') < 1) {
+      s.damage(8);
+      this.audio.play('zap');
+      this.ui.toast('The mast bit you. Electronics would have made it polite.', 'bad');
+    }
+    const got: string[] = [];
+    for (const it of c.items) {
+      const n = s.addItem(it.id, it.qty);
+      if (n) got.push(`${n}× ${ITEMS[it.id]?.name ?? it.id}`);
+    }
+    s.addXP(c.xp, 'Scavenged');
+    this.audio.play('pickup');
+    this.ui.toast(got.join(' · ') || 'Nothing you could carry.', got.length ? 'good' : 'info');
+  }
+
+  private recipeBlock(r: Recipe): string | undefined {
     const s = this.state!;
-    s.heal(100);
-    this.save(true);
-    this.audio.play('uiConfirm');
-    this.ui.banner('RESTED', 'Health restored · Game saved', 'info');
+    if (r.skill && s.skill(r.skill.id) < r.skill.level) return `Needs ${SKILLS[r.skill.id].name} ${r.skill.level}`;
+    for (const n of r.need) if (s.count(n.id) < n.qty) return `Need ${n.qty}× ${ITEMS[n.id]?.name ?? n.id}`;
+    return undefined;
+  }
+
+  /** The fire, the scrap, and Mara. One panel, because the camp is one place. */
+  private openCamp() {
+    const s = this.state!;
+    const debrief = s.has('garage.complete') && !s.has('debriefed');
+    const recipes = RECIPES.map((r) => ({ id: r.id, name: r.name, detail: r.detail, disabled: this.recipeBlock(r) }));
+    const refreshRecipes = () => {
+      for (const row of recipes) {
+        const r = RECIPES.find((x) => x.id === row.id);
+        if (r) row.disabled = this.recipeBlock(r);
+      }
+    };
+    void this.withMinigame('idle', async () => {
+      const why = await this.ui.camp({
+        radioLabel: debrief ? 'Radio Mara — read the names' : 'Ask Mara what the job is',
+        onRest: () => {
+          const full = s.skill('survival') >= 5;
+          s.restAtFire();
+          this.save(true);
+          this.audio.play('uiConfirm');
+          this.ui.toast(full ? 'You sleep like someone who learned how. Saved.' : 'Rested. Not new. Saved.', 'good');
+        },
+        onCraft: (id) => {
+          const err = s.craft(id);
+          refreshRecipes();
+          return err;
+        },
+        recipes,
+      });
+      if (why !== 'radio') return;
+      if (debrief) {
+        await this.ui.pages(debriefFor(s.archetype), 'Close the radio');
+        if (s.set('debriefed')) {
+          s.data.thirst = 100;
+          s.data.hunger = Math.min(100, s.data.hunger + 35);
+          s.heal(30);
+          s.addXP(XP_REWARDS.debrief, 'The names, read out loud');
+          this.ui.banner('THE MANIFEST', 'Vesper Kade. Apex Vault. Not tonight. The camp drinks.', 'good');
+          this.save(true);
+        }
+      } else await this.ui.pages(reminderFor(s.archetype), 'Back to the fire');
+    });
   }
 
   private async waitTime() {
@@ -416,9 +519,10 @@ export class Game {
     this.atmo.paused = true;
     const show = (id: string) => {
       this.hands?.dispose();
-      this.hands = new Hands(HAND_LOOKS[id] ?? HAND_LOOKS.infiltrator);
+      const look = handArchetype(id);
+      this.hands = new Hands(HAND_LOOKS[look] ?? HAND_LOOKS.infiltrator);
       this.hands.attach(this.camera);
-      this.hands.setBase(id === 'engineer' ? 'showcaseEmp' : 'showcase');
+      this.hands.setBase(look === 'engineer' ? 'showcaseEmp' : 'showcase');
     };
     const leave = () => { this.hands?.dispose(); this.hands = null; };
     // (hands are re-created fresh in startGame, so the showcase offset never leaks into play)
@@ -451,7 +555,7 @@ export class Game {
     // shadow-only body in first person (layer 1): one merged caster per animated joint
     this.player.model.bakeShadowProxy(0.07);
     this.hands?.dispose();
-    this.hands = new Hands(HAND_LOOKS[state.data.archetype] ?? HAND_LOOKS.infiltrator);
+    this.hands = new Hands(HAND_LOOKS[handArchetype(state.data.archetype)] ?? HAND_LOOKS.infiltrator);
     this.hands.attach(this.camera);
     // footsteps follow the first-person stride (the shadow body's gait runs on its own clock)
     this.player.model.onFootstep = null;
@@ -478,10 +582,22 @@ export class Game {
     this.ui.mountHUD(state, this.map);
     this.ui.fade(true);
     setTimeout(() => this.ui.fade(false), 300);
-    this.input.requestLock();
-    if (!state.has('intro')) {
-      state.set('intro');
-      setTimeout(() => this.ui.banner('THE WASTELAND', `${state.archetype.name} · Day 1,284 after the Great Pivot`, 'info'), 900);
+    // Harness runs and old saves skip the radio. A new game hears why the radio exists.
+    const skipBrief = new URLSearchParams(location.search).has('autostart') || state.has('briefed');
+    if (skipBrief) {
+      if (!state.has('briefed')) { state.set('briefed'); state.set('intro'); }
+      this.input.requestLock();
+    } else if (this.player) {
+      this.player.frozen = true;
+      this.busy = true;
+      void this.ui.pages(briefingFor(state.archetype)).then(() => {
+        state.set('briefed');
+        state.set('intro');
+        if (this.player) this.player.frozen = false;
+        this.busy = false;
+        this.input.requestLock();
+        this.ui.banner('LAST CHANCE', `${state.archetype.name} · Day 1,284`, 'info');
+      });
     }
     this.startLoops();
   }
@@ -495,7 +611,7 @@ export class Game {
       this.puffs.emit(this.player.position, Math.round(6 + k * 10), 0.8 + k * 2.2, 0.25 + k * 0.5, 0.45 + k * 0.5, this.player.velocity.clone().multiplyScalar(0.4));
     }
     if (speed > 7.7 && this.state) {
-      const dmg = Math.round((speed - 7.7) * 11);
+      const dmg = Math.round((speed - 7.7) * 11 * fallFactor(this.state.skill('survival')));
       this.state.damage(dmg);
       this.audio.play('thud', { intensity: Math.min(1, (speed - 7.7) / 6 + 0.4) });
       this.post.damage.value = Math.min(1, 0.4 + dmg / 60);
@@ -538,6 +654,8 @@ export class Game {
     if (!this.state || !this.player) return;
     const s = this.state;
     s.data.stats.caught++;
+    s.data.thirst = Math.max(0, s.data.thirst - 12);
+    s.data.hunger = Math.max(0, s.data.hunger - 6);
     this.hands?.jolt(1);
     this.busy = true;
     this.player.frozen = true;
@@ -558,11 +676,17 @@ export class Game {
       this.ui.fade(false);
       this.player!.frozen = false;
       this.busy = false;
+      if (s.set('tut.caught')) this.ui.subtitle('Mara Voss', 'SeedBot graduates people. Crouch, or don\'t let it look at you. The pick was the expensive part.');
     }, 3600);
   }
 
   private onLockChange() {
     if (this.mode !== 'playing') return;
+    // a lock that lands late (the close of the previous menu) must not grab the mouse out of this one
+    if (this.input.locked && (this.ui.modalOpen || this.ui.minigameOpen || this.busy)) {
+      this.input.exitLock();
+      return;
+    }
     if (!this.input.locked && !this.ui.modalOpen && !this.ui.minigameOpen && !this.busy) this.openPause();
     this.ui.resumeHint(false);
   }
@@ -622,16 +746,48 @@ export class Game {
       else this.throwEmp();
       return;
     }
-    const heal = id === 'ration' ? 35 : id === 'soylent' ? 20 : 0;
-    if (heal) {
+    if (id === 'noisemaker') { this.popNoisemaker(); return; }
+    const meal = id === 'ration' ? [45, 0, 18] : id === 'water' ? [0, 42, 4] : id === 'soylent' ? [30, 12, 12] : null;
+    if (meal) {
       s.removeItem(id, 1);
       const apply = () => {
-        s.heal(heal);
+        const hp = s.satisfy(meal[0], meal[1], meal[2]);
         this.audio.play('eat');
-        this.ui.toast(`${ITEMS[id].name}: +${heal} health`, 'good');
+        const bits = [hp ? `+${hp} health` : '', meal[0] ? 'less hungry' : '', meal[1] ? 'less thirsty' : ''].filter(Boolean);
+        this.ui.toast(`${ITEMS[id].name}. ${bits.join(', ')}.`, 'good');
+      };
+      if (this.hands && !this.ui.modalOpen) this.hands.eat(apply); else apply();
+      return;
+    }
+    if (id === 'medkit') {
+      s.removeItem(id, 1);
+      const apply = () => {
+        s.heal(55);
+        s.data.thirst = Math.max(0, s.data.thirst - 4);
+        this.audio.play('eat');
+        this.ui.toast('Medkit. The hole closes. Your mouth is a little drier.', 'good');
       };
       if (this.hands && !this.ui.modalOpen) this.hands.eat(apply); else apply();
     }
+  }
+
+  private popNoisemaker() {
+    const s = this.state!;
+    if (!this.player || !s.removeItem('noisemaker', 1)) return;
+    const fwd = new THREE.Vector3(0, 0, -1).applyQuaternion(this.camera.quaternion);
+    fwd.y = 0;
+    if (fwd.lengthSq() < 1e-4) fwd.set(0, 0, -1);
+    fwd.normalize();
+    const pos = this.player.position.clone().addScaledVector(fwd, 16);
+    pos.y = this.hf.heightAt(pos.x, pos.z) + 0.4;
+    this.audio.play('cans', { pos });
+    const near = this.player.position.distanceTo(this.garage.b.origin) < 90;
+    const drone = this.garage.drone;
+    if (near && drone.state !== 'disabled' && drone.state !== 'alert') {
+      drone.investigate(pos);
+      this.ui.toast('The can lands somewhere you are not. SeedBot goes to look.', 'info');
+    } else if (near && drone.state === 'alert') this.ui.toast('Too late for a rattle. It already likes you.', 'bad');
+    else this.ui.toast('A can rattles in the dust. Nothing out here is paid to care.', 'info');
   }
 
   private throwEmp() {
@@ -743,7 +899,7 @@ export class Game {
 
   private markers(): MapMarker[] {
     const s = this.state!;
-    const out: MapMarker[] = [...LANDMARK_MARKERS];
+    const out: MapMarker[] = LANDMARK_MARKERS.filter((m) => m.id !== 'cave' || s.has('cave.known') || s.has('seen:cave'));
     const [gx, , gz] = GARAGE.location.position;
     const nearGarage = this.player ? Math.hypot(this.player.position.x - gx, this.player.position.z - gz) < 90 : false;
     if (s.has('garage.marker') || nearGarage || s.has('garage.complete')) {
@@ -753,6 +909,11 @@ export class Game {
       if (s.has(`intel:${it.id}`)) continue;
       const known = it.id === 'intel.gas.note' || this.map.revealedAt(it.position[0], it.position[2]) > 100;
       if (known) out.push({ id: it.id, x: it.position[0], z: it.position[2], label: 'Intel', color: '#c896ff', kind: 'intel' });
+    }
+    for (const c of WORLD_CACHES) {
+      if (s.has(c.id)) continue;
+      if (!s.has(`approach:${c.id}`) && this.map.revealedAt(c.x, c.z) < 30) continue;
+      out.push({ id: c.id, x: c.x, z: c.z, label: c.id === 'cache.cooler' ? 'Cooler' : 'Mast cells', color: '#7ec8d4', kind: 'intel' });
     }
     if (this.player && this.garage.drone.position.distanceTo(this.player.position) < 70 && this.garage.drone.state !== 'disabled') {
       out.push({ id: 'drone', x: this.garage.drone.position.x, z: this.garage.drone.position.z, label: 'SeedBot', color: this.garage.drone.state === 'alert' ? '#ff3b3b' : '#ffb347', kind: 'drone' });
@@ -764,10 +925,7 @@ export class Game {
     const s = this.state!;
     const near = this.garage.objective();
     if (near) return near;
-    if (s.has('garage.complete')) return 'Bunker busted! Rest at the campfire. (Tier 2: Apex Vault — coming in v0.2)';
-    if (!s.has('garage.marker')) return 'Find a lead: search Last Chance Gas for anything useful.';
-    if (!s.has('intel:intel.spire.blueprint')) return 'Head to The Garage (marked on your map). Optional: scout The Spire for blueprints.';
-    return 'Head to The Garage and bust it open.';
+    return storyObjective({ has: (f) => s.has(f), archetype: s.archetype });
   }
 
   private bench(now: number) {
@@ -830,6 +988,7 @@ export class Game {
     // world systems
     this.atmo.follow(this.camera);
     this.landmarks.update(dt, this.t);
+    this.settlement?.update(dt);
     if (this.mode !== 'playing') this.garage.update(dt);
     this.props.update(dt, focusPos, this.atmo.wind);
     this.scrub.update(focusPos, this.atmo.wind);
@@ -881,11 +1040,35 @@ export class Game {
     input.enabled = !blocked;
     this.cam.enabled = !blocked && input.locked;
 
+    // The body keeps the build honest: quiet feet, a heavy pack, a dry mouth.
+    if (!blocked) s.tickNeeds(dt);
+    let sp = s.archetype.stats.speed;
+    const worst = Math.min(s.data.hunger, s.data.thirst);
+    if (worst < 30) sp *= 0.86;
+    if (worst < 12) sp *= 0.8;
+    if (s.weight > s.carryLimit + 0.05) sp *= 0.72;
+    player.speedMult = sp;
+    player.stealthRank = s.skill('stealth');
+    player.stealthFocus = s.focus('stealth');
+    if (!blocked) {
+      if (s.data.thirst < 55 && s.set('tut.thirst')) this.ui.toast('Water is dropping. The blue bar. A ration will not fix it.', 'info');
+      if (s.data.thirst < 28 && s.set('tut.dry')) this.ui.toast('You are drying out. Drink, or walk slower and bleed.', 'bad');
+      if (s.data.hunger < 28 && s.set('tut.hungry')) this.ui.toast('Hunger. A ration off the hotbar. The fire helps a little.', 'bad');
+      if (s.weight > s.carryLimit + 0.05 && s.set('tut.heavy')) this.ui.toast('Overburdened. Drop something from the kit, or walk it at seventy percent.', 'bad');
+    }
+
     // UI hotkeys
     if (!blocked) {
       if (input.pressed('Tab') || input.pressed('KeyI')) {
         this.input.exitLock();
-        this.ui.openInventory((id) => this.useItem(id), () => this.afterModal());
+        const firstKit = !s.has('tut.kit');
+        this.ui.openInventory((id) => this.useItem(id), () => {
+          if (firstKit && s.set('tut.kit')) this.ui.toast('One point. Six skills, and at rank 2 a focus that spends the point without raising the rank. Dry Creek has a door for each of them.', 'info');
+          this.afterModal();
+        });
+      } else if (input.pressed('KeyJ')) {
+        this.input.exitLock();
+        this.ui.openInventory((id) => this.useItem(id), () => this.afterModal(), 'journal');
       } else if (input.pressed('KeyM')) {
         this.input.exitLock();
         const intel = WORLD_INTEL.filter((i) => s.has(`intel:${i.id}`)).map((i) => ({ title: i.title, body: i.body }));
@@ -893,9 +1076,9 @@ export class Game {
       } else if (input.pressed('Escape')) {
         this.input.exitLock();
       }
-      if (input.pressed('Digit1')) this.useItem('emp');
-      if (input.pressed('Digit2')) this.useItem('ration');
-      if (input.pressed('Digit3')) this.useItem('soylent');
+      HOTBAR_ITEMS.forEach((id, i) => {
+        if (input.pressed(`Digit${i + 1}`)) this.useItem(id);
+      });
     }
 
     if (!blocked && input.pressed('KeyL') && this.hands) {
@@ -921,7 +1104,13 @@ export class Game {
     if (this.focus) {
       const f = this.focus;
       const pa = f.primary.available();
-      prompt.push({ key: 'E', label: f.primary.label, na: pa === true ? undefined : pa });
+      let primary = f.primary.label;
+      if (f.id === 'camp') {
+        primary = s.has('garage.complete') && !s.has('debriefed')
+          ? 'Radio Mara — you have the names'
+          : 'The camp — rest, craft, radio';
+      }
+      prompt.push({ key: 'E', label: primary, na: pa === true ? undefined : pa });
       if (f.secondary) {
         const sa = f.secondary.available();
         let label = f.secondary.label;
@@ -948,16 +1137,18 @@ export class Game {
       });
     }
 
-    // fog of war + landmark discovery
-    this.revealTimer -= dt;
-    if (this.revealTimer <= 0) {
+    // fog of war + landmark discovery. The radio briefing is not a walk.
+    if (!blocked) this.revealTimer -= dt;
+    if (!blocked && this.revealTimer <= 0) {
       this.revealTimer = 0.4;
       this.map.reveal(player.position.x, player.position.z, 60);
       for (const lm of LANDMARKS) {
         if (this.landmarkSeen.has(lm.id) || s.has(`seen:${lm.id}`)) continue;
-        if (Math.hypot(player.position.x - lm.position[0], player.position.z - lm.position[2]) < 40) {
+        const reach = lm.kind === 'cave' ? 24 : lm.kind === 'town' ? 50 : 40;
+        if (Math.hypot(player.position.x - lm.position[0], player.position.z - lm.position[2]) < reach) {
           this.landmarkSeen.add(lm.id);
           s.set(`seen:${lm.id}`);
+          if (lm.id === 'cave') s.set('cave.known');
           this.ui.banner(lm.name.toUpperCase(), lm.blurb, 'info');
           s.addXP(XP_REWARDS.landmarkDiscovered, `Discovered ${lm.name}`);
         }
@@ -966,17 +1157,25 @@ export class Game {
       if (!s.has('seen:garage') && Math.hypot(player.position.x - gx, player.position.z - gz) < 70) {
         s.set('seen:garage');
         s.set('garage.marker');
-        this.ui.banner('THE GARAGE', `Tier 1 bunker · Owner: ${GARAGE.owner.name}, ${GARAGE.owner.archetype}`, 'info');
+        this.ui.banner('THE GARAGE', 'The camp\'s water is in his cistern. The names are in the vault. He is still inside.', 'info');
+      }
+      for (const c of WORLD_CACHES) {
+        if (s.has(c.id) || s.has(`approach:${c.id}`)) continue;
+        if (Math.hypot(player.position.x - c.x, player.position.z - c.z) < 22) {
+          if (s.set(`approach:${c.id}`)) this.ui.toast(c.approach, 'info');
+        }
       }
     }
 
-    // death
+    // death is a debt, not a nap
     if (s.data.health <= 0 && !this.busy) {
       this.busy = true;
       player.frozen = true;
-      this.ui.fade(true, 'You collapse in the dust. Someone drags you back to camp.');
+      this.ui.fade(true, 'You go down in the dust. Mara had someone drag you back. The job did not.');
       setTimeout(() => {
-        s.heal(60);
+        s.heal(50);
+        s.data.hunger = Math.max(s.data.hunger, 48);
+        s.data.thirst = Math.max(s.data.thirst, 48);
         const c = this.landmarks.campPosition.clone().add(new THREE.Vector3(2, 0, 2));
         c.y = this.hf.heightAt(c.x, c.z) + 0.2;
         player.teleport(c);
@@ -1008,6 +1207,8 @@ export class Game {
       px: player.position.x,
       pz: player.position.z,
       markers: this.markers(),
+      hunger: s.data.hunger,
+      thirst: s.data.thirst,
     });
     void vec3;
   }

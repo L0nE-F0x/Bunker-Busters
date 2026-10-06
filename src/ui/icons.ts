@@ -13,6 +13,10 @@ export const ICONS: Record<string, string> = {
   crate: S('<path d="M8 16 l16 -8 l16 8 v18 l-16 8 l-16 -8 z"/><path d="M8 16 l16 8 l16 -8 M24 24 v18"/>', '#5dff9a'),
   water: S('<path d="M20 8 h8 v6 l4 4 v20 a3 3 0 0 1 -3 3 h-10 a3 3 0 0 1 -3 -3 v-20 l4 -4 z"/><path d="M16 26 h16"/>', '#ffb347'),
   intel: S('<path d="M12 8 h18 l8 8 v24 h-26 z"/><path d="M30 8 v8 h8 M17 24 h14 M17 30 h14 M17 36 h8"/>', '#c896ff'),
+  charge: S('<circle cx="24" cy="26" r="10"/><path d="M24 16 v-6"/><path d="M24 8 c4 2 5 4 2 6"/><path d="M18 26 h12 M24 20 v12"/>', '#ff8a5a'),
+  noise: S('<rect x="16" y="14" width="12" height="20" rx="2"/><path d="M30 18 c4 3 4 9 0 12 M33 15 c6 4 6 14 0 18"/>', '#ffb347'),
+  medkit: S('<rect x="10" y="14" width="28" height="22" rx="3"/><path d="M18 14 v-4 h12 v4 M24 20 v12 M18 26 h12"/>', '#5dff9a'),
+  manifest: S('<path d="M14 8 h16 v32 h-16 z"/><path d="M18 8 v32 M14 14 h4 M22 16 h6 M22 22 h6 M22 28 h6 M22 34 h4"/>', '#c896ff'),
 };
 
 export const EYE_ICON = `<svg viewBox="0 0 64 40" fill="none" stroke="currentColor" stroke-width="3"><path d="M4 20 C14 4 50 4 60 20 C50 36 14 36 4 20 Z"/><circle cx="32" cy="20" r="8" fill="currentColor"/></svg>`;

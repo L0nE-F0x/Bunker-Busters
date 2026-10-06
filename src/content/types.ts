@@ -1,6 +1,6 @@
 // Shared content schema. Everything a designer touches lives in /content and conforms to these types.
 
-export type SkillId = 'lockpicking' | 'electronics';
+export type SkillId = 'lockpicking' | 'electronics' | 'stealth' | 'demolition' | 'survival' | 'social';
 export type Vec3 = [number, number, number];
 
 export interface SkillDef {
@@ -28,11 +28,26 @@ export interface ItemDef {
 
 export interface ArchetypeDef {
   id: string;
+  /** Person's name. Mara uses this. */
   name: string;
+  /** Short role shown on the HUD, e.g. "Infiltrator". */
+  role: string;
   tagline: string;
   description: string;
+  /** One sentence: why the Compact handed you the radio. */
+  motive: string;
+  /** Page of the camp briefing, second person. */
+  briefing: string;
+  /** Journal entry unlocked at the start. */
+  journal: string;
+  /** Mara's last line after the Garage. */
+  coda: string;
   accent: string; // CSS colour, also used for goggles/LEDs on the model
-  skills: Record<SkillId, number>;
+  /** Ranks this person already has. Missing skills start at 0. */
+  skills: Partial<Record<SkillId, number>>;
+  /** Extra kilograms before the pack complains. */
+  carry: number;
+  /** `stealth` below 1 is quieter. It multiplies how fast SeedBot's meter fills. */
   stats: { stealth: number; speed: number; toughness: number };
   signature: { name: string; description: string };
   startingItems: { id: string; qty: number }[];
@@ -69,6 +84,10 @@ export interface IntelItem {
   body: string;
   position: Vec3; // world position (y resolved against terrain if 0)
   reveals?: string[]; // flags this intel unlocks, e.g. 'garage.marker'
+  /** Lines shown under the document when it's read. */
+  revealLines?: string[];
+  /** Stuff in the same pile as the paper. */
+  loot?: { id: string; qty: number }[];
   xp: number;
 }
 
@@ -87,7 +106,7 @@ export interface Bunker {
 export interface LandmarkDef {
   id: string;
   name: string;
-  kind: 'gas-station' | 'radio-tower';
+  kind: 'gas-station' | 'radio-tower' | 'town' | 'cave';
   position: Vec3;
   rotation: number;
   camp?: boolean;

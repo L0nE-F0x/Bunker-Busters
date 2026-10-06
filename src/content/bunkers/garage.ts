@@ -38,6 +38,8 @@ export const GARAGE: Bunker = {
       solutions: [
         { kind: 'lockpick', label: 'Pick the gate padlock (3 pins)', requires: { items: ['lockpick'] } },
         { kind: 'stealth', label: 'Slip through the NE fence gap', requires: { intel: 'garage.gap' } },
+        { kind: 'force', label: 'Breach charge on the gate', requires: { skills: { demolition: 1 }, items: ['charge'] } },
+        { kind: 'social', label: 'Talk Tanner into opening it', requires: { skills: { social: 4 } } },
       ],
     },
     {
@@ -47,6 +49,8 @@ export const GARAGE: Bunker = {
       solutions: [
         { kind: 'lockpick', label: 'Pick the padlock (4 pins)', requires: { items: ['lockpick'] } },
         { kind: 'hack', label: 'Short the door keypad', requires: { skills: { electronics: 1 } } },
+        { kind: 'force', label: 'Breach charge on the side door', requires: { skills: { demolition: 3 }, items: ['charge'] } },
+        { kind: 'social', label: 'Talk him into unlatching it', requires: { skills: { social: 5 } } },
       ],
     },
     {
@@ -64,23 +68,28 @@ export const GARAGE: Bunker = {
       obstacles: [{ id: 'vault_lock', kind: 'padlock', label: 'Vault padlock', difficulty: 5 }],
       solutions: [
         { kind: 'lockpick', label: 'Pick the vault lock (5 pins)', requires: { items: ['lockpick'] } },
-        { kind: 'hack', label: 'Enter the default keypad code', requires: { intel: 'garage.drone', skills: { electronics: 1 } } },
+        { kind: 'hack', label: 'Enter the keypad code', requires: { skills: { social: 3 } } },
+        { kind: 'force', label: 'Breach charge on the vault', requires: { skills: { demolition: 5 }, items: ['charge'] } },
       ],
     },
   ],
   loot: {
     guaranteed: [
+      { item: 'seed_manifest', qty: 1 },
+      { item: 'water', qty: 4 },
       { item: 'hoodie', qty: 1 },
-      { item: 'water', qty: 3 },
       { item: 'pitch_deck', qty: 1 },
+      { item: 'medkit', qty: 1 },
     ],
     rolls: [
       { item: 'soylent', qty: [1, 2], chance: 1 },
-      { item: 'battery', qty: [1, 3], chance: 0.9 },
-      { item: 'emp', qty: [1, 1], chance: 0.6 },
+      { item: 'battery', qty: [1, 2], chance: 0.85 },
+      { item: 'emp', qty: [1, 1], chance: 0.4 },
+      { item: 'charge', qty: [1, 1], chance: 0.55 },
+      { item: 'noisemaker', qty: [1, 2], chance: 0.7 },
       { item: 'nft_drive', qty: [1, 3], chance: 0.8 },
-      { item: 'lockpick', qty: [2, 4], chance: 1 },
-      { item: 'scrap', qty: [4, 9], chance: 1 },
+      { item: 'lockpick', qty: [1, 3], chance: 0.9 },
+      { item: 'scrap', qty: [3, 7], chance: 1 },
     ],
     xp: 250,
   },

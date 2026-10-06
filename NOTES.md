@@ -365,3 +365,43 @@ The owner found the constant wind annoying and could never hear any music. Both 
 - **Tooling:** `scripts/dev/audio-capture.mjs` records the master mix to a WAV, with per-bus dB once a second. `--during` scripts the scene. `ffmpeg … showspectrumpic` turns the WAV into a spectrogram to look at. `browser.mjs`'s `launch()` takes extra Chrome args.
 
 **Not verified:** how it actually sounds. Nobody has listened yet; only levels, spectrograms and pitch were checked. Owner feedback decides the next tuning (melody taste, whistle level, gust frequency).
+
+## Story and systems pass (2026-10-06)
+
+The Garage is still the only building. This pass is about why you are standing outside it, and about the sheet you bring. Shaders, materials, and the world look were left alone.
+
+**What works** (headless Chrome, clicked through on the dev server):
+- A new game opens on Mara Voss's radio. Four pages: the camps are thirsty, the job is Tanner's cistern and the Seed Manifest, your own reason, and where to start. Skip finishes the call. `?autostart` and any save that already heard the intro skip it, so the harness and old runs are not stuck on the radio. The wasteland stays quiet until she hangs up.
+- Four people can take the radio. Rue Calder (locks, quiet), Nash Okonkwo (circuits), Paz Duarte (charges, a heavier pack, louder feet), Len Cho (he already knows how to talk). Each has a motive, a partial skill line, one unspent point, and a different pocket. On a short screen all four cards are on the page and the write-up scrolls.
+- Six skills, five ranks, and a careful Garage run will not fill the sheet. Lockpicking and electronics do what they did. Stealth changes how loud you are and how fast SeedBot fills. Demolition is the loud door, and the quiet one if you crouch at rank 4. Survival is hunger, thirst, falls, and the pack. Social engineering is what Tanner will admit on the intercom, one rank at a time, up to the vault code said out loud.
+- Hunger and thirst drain while you walk. The hotbar is EMP, ration, water, medkit. A dry mouth slows you. Overburdening slows you further, and the story loot still comes with you. Dying is a debt: half a life back at the fire, not a nap. Only Survival 5 sleeps you all the way back.
+- The campfire is one panel. Rest and save, five scrap recipes, and the radio. Before the job, Mara repeats it. After the vault, she reads the names. Vesper Kade cuts in and names Apex Vault, west of the salt. That door is not on this map. The objective says so.
+- J opens the journal. The corner objective changes with what you have actually learned: the pump note, the cooler, the fence he never paid for, the intercom, the debrief.
+- A v1 save migrates. Hunger and thirst get a default, the four new skills start at zero, and an old `intro` flag counts as already briefed.
+
+**Stubbed**
+- Apex is a name on the radio. No second bunker, no hacking minigame, no new stealth lighting.
+- Camp craft is the five recipes. No bench.
+
+**Next**
+- Walk the Garage once as each person. The numbers want a human pass before they are trusted: which door is free, which one is miserable.
+- The owner asked to ship this for a live playtest. That walk is now the playtest. See the v0.2.0 section.
+
+## Dry Creek, the wash, and focuses (2026-10-06)
+
+The sheet from the systems pass had nowhere new to be spent, and the map still had one building. This pass copies the gas-station kit (memoized materials, batched boxes, canvas signs, neon, string lights) into more places. It does not add a shader, and it is not six copies of the Garage.
+
+**What works** (headless Chrome on the dev server, teleports plus screenshots):
+- Dry Creek, west of the highway: diner, clinic, the Till, a three-room motel, a water tower, a shed. Nia, Doc Ivers, Inez, Sol, Ren. Doors are 1.5 m and 2.15 m tall. The closet in the Till opens onto a stair (lockpicking 3, a charge, or Social 4 with Inez). The page is on the loft. A player on the ground floor cannot reach that prompt. The loft floor holds the capsule.
+- The clinic generator is an electronics check. The freezer is a harder one. The motel's middle door is a 3-pin. The boarded room wants a charge. Stealth 2 crouches the till. Survival forages the wash behind the motel and, with 4 or a quiet 3, the crate under the tower.
+- The Cut is a cave on the north ridge. The mountain beside it is still a cliff (about 80°). The way up is a carved wash north of the spire, posted, max grade about 19° on the centerline. The player stands on it and does not slide. Wick is in the main chamber. A charge opens the side pocket. The cave marker stays off the map until someone tells you, or until you walk into it.
+- At rank 2 a skill offers two focuses. The point spends and the rank stays. Feeler, Spare Tension, and the other ten are wired (locks, EMP, noise, town social checks, food, rest). Rue can buy one on day one.
+- `?autostart` still lands in play with no radio call.
+
+**Stubbed**
+- Apex Vault is still a name on the radio. Not in this release.
+- Town people are batched primitive figures, the same language as the props, not a second character model.
+- The wash is a grade cut into the heightfield. It is a path, not a switchback trail with handrails.
+
+**Next**
+- The owner's live pass: which Dry Creek door is free, which one is miserable, and whether the wash is obvious enough from the spire.

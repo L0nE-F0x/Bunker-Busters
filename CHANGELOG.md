@@ -3,6 +3,13 @@
 Each `## vX.Y.Z` section becomes the GitHub release notes and the "what's new" list in the in-app
 update notice (the first few bullets). `scripts/release.sh` refuses to release a version without one.
 
+## v0.2.0
+- **Dry Creek.** West of the highway: a diner, a clinic, a store, and a motel, with people who are not the job. Nia, Doc, Inez, Sol, and Ren each ask for a different skill
+- **The closet is a stair.** In the Till, lockpicking 3, a charge, or enough conversation that Inez admits to the key. The page at the top cannot be read from the ground floor
+- **The wash, north of the spire.** Posts lead up the ridge to a cave, The Cut. Wick lives in it. A pocket in the rock stays shut until you spend a charge
+- **A focus at rank 2.** Six skills, and once a skill is rank 2 the point can shape it instead of raising it: shorter locks, a pick that sometimes holds, a simpler bypass, a quieter step, a charge that does not wake the street
+- **The radio has a reason now.** Day 1,284. The camps are thirsty. The job is the cistern and the Seed Manifest. Four people can take it. Hunger, thirst, and the pack are part of the walk. At the end of the debrief, Vesper Kade names Apex Vault. That door is not in this release
+
 ## v0.1.9
 - **Real music.** A generative soundtrack in the spirit of a spaghetti western: plucked guitar with echo, warm pads, bass and a whistled main theme on the title screen. Out in the wasteland it plays in pieces of a minute or two with quiet stretches between them, so it never wears thin
 - **Music follows the action:** a tense pulse and heartbeat rise as SeedBot gets suspicious, drums kick in when the alarm goes off, plus stingers for busting the vault and getting caught. The Music slider in Settings now does something

@@ -1,5 +1,5 @@
 import { Simplex2, smoothstep, lerp, clamp } from '@/engine/noise';
-import { WORLD_SIZE, WORLD_SEED, HIGHWAY, SIDE_ROADS, LANDMARKS } from '@/content/world';
+import { WORLD_SIZE, WORLD_SEED, HIGHWAY, SIDE_ROADS, LANDMARKS, CAVE_TRAIL } from '@/content/world';
 import { GARAGE } from '@/content/bunkers/garage';
 
 export interface FlattenZone { x: number; z: number; r: number; falloff: number; target?: number }
@@ -41,6 +41,8 @@ export class Heightfield {
   private noise = new Simplex2(WORLD_SEED);
   private noise2 = new Simplex2(WORLD_SEED + 7);
   zones: FlattenZone[] = [];
+  /** Walkable corridor carved after the flatten zones. Empty until generate(). */
+  trail: [number, number][] = [];
 
   constructor(segments = 420) {
     this.res = segments + 1;
@@ -53,10 +55,19 @@ export class Heightfield {
 
     const g = GARAGE.location.position;
     this.zones.push({ x: g[0], z: g[2], r: 34, falloff: 26 });
-    for (const lm of LANDMARKS) this.zones.push({ x: lm.position[0], z: lm.position[2], r: lm.kind === 'gas-station' ? 30 : 16, falloff: 22 });
-    for (const zn of this.zones) zn.target = this.baseHeight(zn.x, zn.z) + (zn === this.zones[0] ? 0.5 : 0);
-    // the radio tower sits on a raised knoll
-    const spire = this.zones.find((z) => Math.abs(z.x - LANDMARKS[1].position[0]) < 1);
+    for (const lm of LANDMARKS) {
+      const spec = lm.kind === 'gas-station' ? { r: 30, falloff: 22 }
+        : lm.kind === 'town' ? { r: 44, falloff: 28 }
+        : lm.kind === 'cave' ? { r: 14, falloff: 18 }
+        : { r: 16, falloff: 22 };
+      const zn: FlattenZone = { x: lm.position[0], z: lm.position[2], ...spec };
+      // Sit the cave on the ridge, then blend a walkable ramp down toward the flats.
+      if (lm.kind === 'cave') zn.target = this.rawHeight(lm.position[0], lm.position[2]);
+      this.zones.push(zn);
+    }
+    for (const zn of this.zones) if (zn.target == null) zn.target = this.baseHeight(zn.x, zn.z) + (zn === this.zones[0] ? 0.5 : 0);
+    const spireLm = LANDMARKS.find((l) => l.kind === 'radio-tower');
+    const spire = spireLm && this.zones.find((z) => Math.abs(z.x - spireLm.position[0]) < 1);
     if (spire) spire.target = (spire.target ?? 0) + 7;
 
     this.generate();
@@ -122,6 +133,44 @@ export class Heightfield {
         this.heights[i] = h;
       }
     }
+    this.carveTrail();
+  }
+
+  /**
+   * The ridge's own slope is a cliff. Replace it along CAVE_TRAIL with a grade the
+   * controller can walk (smoothstep peaks near 1.5× the average rise/run) and a
+   * flat walking surface about 18 m across. The banks blend back into the mountain.
+   */
+  private carveTrail() {
+    const cave = LANDMARKS.find((l) => l.kind === 'cave');
+    if (!cave || CAVE_TRAIL.length < 2) return;
+    this.trail = CAVE_TRAIL;
+    const [cx, , cz] = cave.position;
+    const shelf = this.heightAt(cx, cz);
+    const [sx, sz] = CAVE_TRAIL[0];
+    const base = this.heightAt(sx, sz);
+    let total = 0;
+    for (let i = 0; i < CAVE_TRAIL.length - 1; i++) {
+      const a = CAVE_TRAIL[i], b = CAVE_TRAIL[i + 1];
+      total += Math.hypot(b[0] - a[0], b[1] - a[1]);
+    }
+    if (total < 1) return;
+    const { res, step, size } = this;
+    const half = size / 2;
+    for (let iz = 0; iz < res; iz++) {
+      for (let ix = 0; ix < res; ix++) {
+        const x = -half + ix * step;
+        const z = -half + iz * step;
+        const { d, arc } = distToPolyline(x, z, CAVE_TRAIL);
+        if (d > 20) continue;
+        const t = clamp(arc / total, 0, 1);
+        const u = t * t * (3 - 2 * t);
+        const trailH = lerp(base, shelf, u);
+        const k = smoothstep(20, 9, d);
+        const i = iz * res + ix;
+        this.heights[i] = lerp(this.heights[i], trailH, k);
+      }
+    }
   }
 
   /** Bilinear height at world XZ. */
@@ -163,6 +212,8 @@ export class Heightfield {
   zoneDistance(x: number, z: number) {
     let best = Infinity;
     for (const zn of this.zones) best = Math.min(best, Math.hypot(x - zn.x, z - zn.z) - zn.r);
+    // Keep rocks and scrub off the wash. 14 m reads as "inside the corridor" to scatter.
+    if (this.trail.length) best = Math.min(best, distToPolyline(x, z, this.trail).d - 14);
     return best;
   }
 

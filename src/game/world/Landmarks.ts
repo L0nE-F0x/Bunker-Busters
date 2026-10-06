@@ -31,7 +31,8 @@ export class Landmarks {
   constructor(private hf: Heightfield, private physics: Physics) {
     for (const lm of LANDMARKS) {
       if (lm.kind === 'gas-station') this.gasStation(lm);
-      else this.radioTower(lm);
+      else if (lm.kind === 'radio-tower') this.radioTower(lm);
+      // town and cave are built by Settlement and parented under this group
     }
   }
 

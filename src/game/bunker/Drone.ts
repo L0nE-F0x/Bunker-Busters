@@ -61,6 +61,8 @@ export class Drone {
   private lastSeen = new THREE.Vector3();
   private searchTarget = new THREE.Vector3();
   private zapCooldown = 0;
+  /** Tanner told it to dock and run a diagnostic. It does not acquire targets while this is up. */
+  private recallFor = 0;
   private closeTime = 0;
   private colorNow = COLORS.calm.clone();
   private scanPhase = 0;
@@ -208,6 +210,14 @@ export class Drone {
     this.detection = 0;
   }
 
+  /** Fly home and ignore the player. Social Engineering, not an EMP — the rotors stay up. */
+  recall(seconds: number) {
+    if (this.state === 'disabled') return;
+    this.recallFor = seconds;
+    this.detection = 0;
+    if (this.state !== 'patrol') this.setState('patrol');
+  }
+
   investigate(p: THREE.Vector3) {
     if (this.state === 'disabled' || this.state === 'alert') return;
     this.searchTarget.copy(p).setY(this.path[0].y);
@@ -305,8 +315,9 @@ export class Drone {
     this.zapCooldown = Math.max(0, this.zapCooldown - dt);
     const t = performance.now() / 1000;
 
+    if (this.recallFor > 0) this.recallFor -= dt;
     // ---- perception ----
-    const active = this.state !== 'disabled' && this.state !== 'sputter';
+    const active = this.recallFor <= 0 && this.state !== 'disabled' && this.state !== 'sputter';
     this.canSee = active && this.sees(s);
     if (this.canSee) {
       const dist = this.position.distanceTo(s.playerChest);
@@ -325,6 +336,12 @@ export class Drone {
     const hover = this.path[0].y;
     switch (this.state) {
       case 'patrol': {
+        if (this.recallFor > 0) {
+          this.detection = 0;
+          this.moveToward(this.home, 3.4, dt);
+          this.faceToward(this.home, 4, dt);
+          break;
+        }
         const target = this.path[this.wp];
         if (this.moveToward(target, 2.6, dt) < 1.2) this.wp = (this.wp + 1) % this.path.length;
         this.scanPhase += dt * 0.9;
