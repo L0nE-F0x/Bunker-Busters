@@ -8,6 +8,7 @@ import { PostFX } from '@/engine/postfx';
 import { Physics } from '@/engine/physics';
 import { Input } from '@/engine/input';
 import { AudioEngine, type LoopHandle } from '@/engine/audio';
+import { Acoustics, isSoft } from '@/engine/surface';
 import { Atmosphere } from './world/Atmosphere';
 import { Heightfield } from './world/Heightfield';
 import { Terrain } from './world/Terrain';
@@ -67,6 +68,8 @@ export class Game {
   camera = new THREE.PerspectiveCamera(55, innerWidth / innerHeight, 0.1, 6000);
   physics = new Physics();
   audio = new AudioEngine();
+  /** Footstep surfaces and room enclosure from a few physics rays (audio only). */
+  acoustics: Acoustics | null = null;
   input: Input;
   ui: UI;
   /** On-screen controls (phones/tablets only). */
@@ -157,6 +160,7 @@ export class Game {
     this.hf = new Heightfield();
     this.terrain = new Terrain(this.hf, this.atmo);
     this.terrain.addToPhysics(this.physics);
+    this.acoustics = new Acoustics(this.physics, this.hf);
     this.scene.add(this.terrain.mesh, this.terrain.far);
     await step(0.4, 'Scattering debris of a failed civilisation');
     this.props = new Props(this.hf, this.physics, this.atmo);
@@ -572,18 +576,21 @@ export class Game {
     // footsteps follow the first-person stride (the shadow body's gait runs on its own clock)
     this.player.model.onFootstep = null;
     this.cam.onStep = (k) => {
-      const inside = this.garage.playerInside;
-      this.audio.play(inside ? 'stepMetal' : 'step', { intensity: k });
-      // sprinting on sand kicks up a little dust behind each footfall
       const pl = this.player;
-      if (!inside && pl && pl.sprinting && pl.grounded) {
+      if (!pl) return;
+      const surf = this.acoustics?.surfaceAt(pl.position) ?? 'sand';
+      this.audio.footstep(surf, k, { crouch: pl.crouching, sprint: pl.sprinting });
+      // sprinting on sand kicks up a little dust behind each footfall
+      if (isSoft(surf) && pl.sprinting && pl.grounded) {
         const back = pl.velocity.clone().setY(0).multiplyScalar(-0.15);
         this.puffs.emit(pl.position.clone().addScaledVector(pl.velocity, 0.05), 2, 0.35, 0.35, 0.35, back);
       }
     };
     this.player.onLand = (k, speed) => this.landed(k, speed);
     this.player.onTuck = (dy) => this.cam.shiftEye(dy);
-    this.player.onJump = () => this.audio.play('step', { intensity: 0.6 });
+    this.player.onJump = () => {
+      if (this.player) this.audio.footstep(this.acoustics?.surfaceAt(this.player.position) ?? 'sand', 0.6, { kind: 'jump' });
+    };
     this.cam.snap(state.data.yaw + Math.PI, -0.05);
     this.garage.applyFlags(true);
     for (const it of WORLD_INTEL) {
@@ -616,7 +623,7 @@ export class Game {
 
   /** Touchdown. Above ~3 m (7.7 m/s) a fall starts to hurt; ~11 m will put you down. */
   private landed(k: number, speed: number) {
-    this.audio.play('land', { intensity: k });
+    if (this.player) this.audio.land(this.acoustics?.surfaceAt(this.player.position) ?? 'sand', k);
     this.cam.land(speed);
     this.hands?.jolt(k * 0.5);
     if (this.player && !this.garage.playerInside && speed > 3.5) {
@@ -1024,12 +1031,17 @@ export class Game {
     this.post.alert.value = damp(this.post.alert.value as number, alertTarget, 4, dt);
     const tension = this.mode === 'playing' ? Math.max(this.garage.drone.detection, this.garage.alarm > 0 ? 1 : 0) : 0;
     const playing = this.mode === 'playing';
+    if (playing && this.acoustics && this.player) this.acoustics.update(dt, this.player.position);
     this.audio.update(dt, this.camera, this.atmo.windStrength, tension, this.weather.intensity, {
       mood: this.mode === 'title' ? 'title' : this.mode === 'charselect' ? 'camp' : playing ? 'play' : 'off',
       night: this.atmo.isNight,
       hour: this.atmo.hour,
       inside: playing && this.garage.playerInside,
       alarm: playing && this.garage.alarm > 0,
+      room: playing ? this.acoustics?.room : undefined,
+      floor: this.acoustics?.surface,
+      front: this.weather.front,
+      windDir: this.atmo.windDir,
     });
     if (!this.loopsStarted && this.audio.ready && this.mode !== 'loading') this.startLoops();
 

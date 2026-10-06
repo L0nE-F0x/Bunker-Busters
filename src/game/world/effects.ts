@@ -10,12 +10,18 @@ import type { Heightfield } from './Heightfield';
 import { noise } from '@/engine/noiseTex';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { VirtualLight } from './lights';
+import { setGroundHeight } from './materials';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 type N = any;
 
-/** Half-float height texture so GPU effects can hug the terrain. */
+const _heightTex = new WeakMap<Heightfield, THREE.DataTexture>();
+
+/** Half-float height texture so GPU effects can hug the terrain (one per heightfield; also feeds the
+ *  materials' contact layer). */
 export function heightTexture(hf: Heightfield) {
+  const cached = _heightTex.get(hf);
+  if (cached) return cached;
   const S = 256;
   const data = new Uint16Array(S * S);
   for (let y = 0; y < S; y++) {
@@ -28,6 +34,8 @@ export function heightTexture(hf: Heightfield) {
   const tex = new THREE.DataTexture(data, S, S, THREE.RedFormat, THREE.HalfFloatType);
   tex.magFilter = tex.minFilter = THREE.LinearFilter;
   tex.needsUpdate = true;
+  _heightTex.set(hf, tex);
+  setGroundHeight(tex, hf.size);
   return tex;
 }
 
@@ -372,12 +380,26 @@ export class Fire {
     const mat = new THREE.MeshBasicNodeMaterial({ transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide, forceSinglePass: true });
     mat.colorNode = Fn(() => {
       const p = uv();
-      const n = noise(vec2(p.x.mul(0.6), p.y.mul(0.45).sub(time.mul(0.5)))).r.sub(0.5).mul(1.8);
-      const shapeX = abs(p.x.sub(0.5)).mul(2);
-      const flame = smoothstep(0.0, 0.7, float(1).sub(shapeX.mul(float(1.3).add(p.y.mul(1.5)))).sub(p.y.mul(0.8)).add(n.mul(0.6)));
-      const core = pow(flame, 3);
-      const col = mix(vec3(1.0, 0.25, 0.03), vec3(1.0, 0.75, 0.3), core).mul(flame.mul(9));
-      return vec4(col, flame);
+      // each crossed card samples its own patch of turbulence (they overlap from most angles)
+      const card = positionLocal.x.add(positionLocal.z).mul(0.37);
+      const n1 = noise(vec2(p.x.mul(0.7).add(card), p.y.mul(0.5).sub(time.mul(0.85)))).r.sub(0.5);
+      const n2 = noise(vec2(p.x.mul(1.7).add(card.mul(2.3)).add(0.3), p.y.mul(1.2).sub(time.mul(1.6)))).g.sub(0.5);
+      // the flame licks sideways more the higher it gets
+      const x = p.x.sub(0.5).add(n1.mul(0.9).add(n2.mul(0.5)).mul(0.2).mul(p.y.add(0.1)));
+      // teardrop: wide and rounded at the base, drawn up to a ragged tip
+      const width = pow(clamp(float(1).sub(p.y), 0, 1), 0.7).mul(0.46).mul(smoothstep(-0.05, 0.12, p.y));
+      const body = smoothstep(width, width.mul(0.1), abs(x));
+      const tongues = smoothstep(0.05, 0.4, n1.mul(1.1).add(n2.mul(0.9)).sub(p.y.mul(0.55)).add(0.55));
+      const flame = body.mul(tongues);
+      // heat: hottest low in the core, cooling to deep red at the edges and the tips
+      const heat = flame.mul(float(1).sub(p.y.mul(0.75))).mul(smoothstep(width, 0.0, abs(x)).mul(0.6).add(0.4));
+      const ramp = mix(
+        mix(vec3(0.55, 0.06, 0.01), vec3(1.0, 0.32, 0.04), smoothstep(0.05, 0.35, heat)),
+        mix(vec3(1.0, 0.62, 0.18), vec3(1.0, 0.9, 0.65), smoothstep(0.65, 0.95, heat)),
+        smoothstep(0.3, 0.65, heat),
+      );
+      // (additive with src alpha: the colour is scaled by alpha once more on the way out)
+      return vec4(ramp.mul(heat.mul(2.6).add(1.0)), flame);
     })();
     // the three crossed flame cards, stones and logs are each one merged mesh (static relative to the fire)
     const at = (g: THREE.BufferGeometry, x: number, y: number, z: number, rx: number, ry: number) =>
@@ -454,27 +476,50 @@ export class Fire {
  *  meshes, so without this their hard edges stayed crisp while the storm swallowed everything else. */
 export const coneMurk = uniform(0).setGroup(renderGroup);
 
-/** Additive cone of light for spotlights (drone, floodlights) with drifting dust inside. */
+/**
+ * Additive cone of light for spotlights (drone, floodlights, beacons): a fake volume. Brightness
+ * follows the path length through the cone (view angle to the surface), falls off away from the
+ * source, carries drifting dust, and fades softly where it meets geometry instead of cutting hard.
+ * Every parameter is a uniform, so all cones share one program. `scan` (0..1) sends sonar-like rings
+ * down the beam (the drone).
+ */
 export function lightCone(length: number, radius: number, c: THREE.ColorRepresentation, intensity = 0.6) {
   const geo = new THREE.ConeGeometry(radius, length, 32, 1, true);
   geo.translate(0, -length / 2, 0);
   const uIntensity = uniform(intensity);
   const uColor = uniform(new THREE.Color(c));
+  const uLen = uniform(length);
+  const uScan = uniform(0);
   // additive: single pass over both faces = same result as the back-then-front double pass
   const mat = new THREE.MeshBasicNodeMaterial({ transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide, fog: false, forceSinglePass: true });
   mat.colorNode = Fn(() => {
-    const along = positionLocal.y.negate().div(length); // 0 at tip, 1 at base
-    const v = normalize(cameraPosition.sub(positionWorld));
-    const facing = abs(dot(normalWorld, v));
-    const n = noise(positionWorld.xz.add(positionWorld.y).mul(0.12).add(time.mul(0.02))).r.sub(0.5).mul(2);
-    const near = smoothstep(0.6, 5.0, positionWorld.sub(cameraPosition).length());
-    const a = pow(facing, 2.0).mul(smoothstep(1.0, 0.05, along)).mul(smoothstep(0.0, 0.08, along)).mul(n.mul(0.35).add(0.75)).mul(near);
-    const murk = exp(positionWorld.sub(cameraPosition).length().mul(coneMurk).mul(-0.07));
+    const along = positionLocal.y.negate().div(uLen); // 0 at tip, 1 at base
+    const toCam = cameraPosition.sub(positionWorld);
+    const dist = toCam.length();
+    const facing = abs(dot(normalWorld, toCam.div(dist)));
+    // path length through the volume ~ facing; light thins out with distance from the lamp
+    const thick = pow(facing, 1.6);
+    const fall = pow(float(1).sub(along), 1.5).mul(smoothstep(0.0, 0.05, along)).add(smoothstep(0.35, 0.0, along).mul(0.35));
+    // two drifting dust layers: slow billows and finer motes catching the light
+    // (two skewed 2D projections multiplied, so the motes don't line up into streaks in 3D)
+    const wp = positionWorld;
+    const billow = noise(wp.xz.add(wp.y).mul(0.12).add(time.mul(0.02))).r;
+    const mA = noise(vec2(wp.x.add(wp.y.mul(0.41)), wp.z.sub(wp.y.mul(0.57))).mul(0.8).add(time.mul(vec2(0.05, -0.03)))).g;
+    const mB = noise(vec2(wp.x.sub(wp.y.mul(0.63)), wp.z.add(wp.y.mul(0.29))).mul(0.65).add(0.4).sub(time.mul(vec2(0.02, 0.04)))).r;
+    const dust = billow.mul(0.9).add(smoothstep(0.3, 0.6, mA.mul(mB)).mul(0.6)).add(0.15);
+    const near = smoothstep(0.6, 5.0, dist);
+    // soft intersection with whatever the beam lands on (ground, walls, the player)
+    const soft = clamp(viewportLinearDepth.sub(linearDepth()).mul(cameraFar.sub(cameraNear)).div(1.2), 0, 1);
+    // distance (in beam lengths) to the nearest scan ring travelling away from the lamp
+    const ringD = float(0.5).sub(abs(fract(along.sub(time.mul(0.45))).sub(0.5)));
+    const ring = smoothstep(0.03, 0.0, ringD).mul(uScan).mul(smoothstep(0.05, 0.3, along)).mul(float(1).sub(along));
+    const a = thick.mul(fall).mul(dust).mul(near).mul(soft).mul(0.6).add(ring.mul(facing).mul(soft).mul(0.6));
+    const murk = exp(dist.mul(coneMurk).mul(-0.07));
     return vec4((uColor as N).mul(a).mul(uIntensity).mul(murk), 1);
   })();
   const mesh = new THREE.Mesh(geo, mat);
   mesh.renderOrder = 20;
-  return { mesh, intensity: uIntensity, color: uColor };
+  return { mesh, intensity: uIntensity, color: uColor, scan: uScan };
 }
 
 /**
