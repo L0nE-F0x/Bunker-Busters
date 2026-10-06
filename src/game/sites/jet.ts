@@ -6,6 +6,7 @@ import { box, cyl, beam, wire, norm, MeshBatch } from '../world/kit';
 import { rustyMetal, plainStandard, fabric, leather, wood, corrugated, type GlowSlot } from '../world/materials';
 import { VirtualLight } from '../world/lights';
 import { Sparks } from '../world/effects';
+import { surfaces } from '@/engine/surface';
 import { ITEMS } from '@/content/items';
 import { XP_REWARDS } from '@/content/progression';
 import {
@@ -241,7 +242,8 @@ export class JetSite extends Site {
     const fw = 2 * Math.sqrt(RI * RI - FY * FY);
     sec.add(k.carpet, box(fw - 0.04, 0.05, f1 - f0, 0, FY - 0.025, (f0 + f1) / 2));
     sec.add(k.frame, box(fw - 0.1, 0.12, f1 - f0 + 0.1, 0, FY - 0.11, (f0 + f1) / 2));
-    sec.col(0, FY - 0.15, (f0 + f1) / 2, fw / 2, 0.15, (f1 - f0) / 2);
+    // carpet over the deck: a softer step than the bare metal outside
+    surfaces.tag(sec.col(0, FY - 0.15, (f0 + f1) / 2, fw / 2, 0.15, (f1 - f0) / 2), 'wood');
     for (const [zEnd, jag] of [[f0, o.jag0], [f1, o.jag1]] as const) {
       if (!jag) continue;
       const dir = zEnd === f0 ? -1 : 1;
@@ -469,7 +471,7 @@ export class JetSite extends Site {
       const x = -1.86 - i * 0.29, y = FY - 0.19 * (i + 1) + 0.0;
       sec.add(k.paint, box(0.3, 0.04, dw - 0.1, x, y, (dz0 + dz1) / 2));
       sec.add(k.carpet, box(0.26, 0.012, dw - 0.2, x, y + 0.025, (dz0 + dz1) / 2));
-      sec.col(x, y - 0.5, (dz0 + dz1) / 2, 0.15, 0.5, dw / 2 - 0.05);
+      surfaces.tag(sec.col(x, y - 0.5, (dz0 + dz1) / 2, 0.15, 0.5, dw / 2 - 0.05), 'metal');
     }
     for (const z of [dz0 + 0.03, dz1 - 0.03]) {
       const g = new THREE.BoxGeometry(1.0, 0.24, 0.04);

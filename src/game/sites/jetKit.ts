@@ -9,6 +9,7 @@ import { noise } from '@/engine/noiseTex';
 import { MeshBatch, Frame, canvasTexture, grime, norm } from '@/game/world/kit';
 import { GlowPalette, plainStandard } from '@/game/world/materials';
 import { GlowSprites } from '@/game/world/effects';
+import { surfaces } from '@/engine/surface';
 
 /**
  * Shared building kit for the two sites by the same hand: The Exit Strategy (jet.ts) and the Starlite
@@ -146,7 +147,8 @@ export class SiteKit {
     // smooth normals across the grid (non-indexed → average by position)
     smoothNormals(g);
     this.sand.push(norm(g));
-    if (collide) this.tri(g);
+    // drifts are sand underfoot, whatever the landmark's floor table says
+    if (collide) surfaces.tag(this.tri(g), 'sand');
   }
 
   /** Build the static set under `root` and return [near group, far stand-in]. */
