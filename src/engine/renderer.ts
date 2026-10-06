@@ -90,6 +90,33 @@ export function fitCanvas(renderer: THREE.WebGPURenderer, canvas: HTMLCanvasElem
 }
 
 /**
+ * Three's shadow pass draws every caster with one shared override material and copies each caster's
+ * `alphaTest` onto it. Material's alphaTest setter bumps `version` whenever the value crosses 0, and a
+ * version change makes every later shadow render object re-derive its material cache key (a walk of
+ * the whole node graph, ~9 KB of garbage each). One alpha-tested caster in the sun's box (a site's
+ * cut-out atlas) meant two bumps a frame: every caster, every frame (0.44 ms + 440 KB/frame in
+ * Chrome inside the Garage). Each caster has its own shadow render object whose cache key already
+ * includes its alpha test, so on that material the bump only costs. This removes it there, nowhere else.
+ */
+function quietShadowAlphaTest(renderer: THREE.WebGPURenderer) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const r = renderer as any;
+  if (typeof r.renderObject !== 'function') return;
+  const patched = new WeakSet<object>();
+  const renderObject = r.renderObject;
+  r.renderObject = function (object: THREE.Object3D, scene: THREE.Scene, ...rest: unknown[]) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const m = scene.overrideMaterial as any;
+    if (m && m.isShadowPassMaterial && !patched.has(m)) {
+      patched.add(m);
+      let a = m.alphaTest;
+      Object.defineProperty(m, 'alphaTest', { get: () => a, set: (v: number) => { a = v; }, configurable: true });
+    }
+    return renderObject.call(this, object, scene, ...rest);
+  };
+}
+
+/**
  * WebGPU first, WebGL2 fallback. Some driver stacks (e.g. Chrome + Vulkan on hybrid-GPU Linux)
  * expose WebGPU but fail at the canvas swapchain; if the device reports errors right after start
  * we remember that and reload on the WebGL2 backend.
@@ -116,6 +143,7 @@ export async function createRenderer(canvas: HTMLCanvasElement) {
     powerPreference: choice === 'webgpu-low' ? 'low-power' : 'high-performance',
   });
   await renderer.init();
+  quietShadowAlphaTest(renderer);
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFShadowMap;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
