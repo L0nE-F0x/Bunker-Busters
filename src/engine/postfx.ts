@@ -154,7 +154,10 @@ export class PostFX {
       // contrast around mid grey, hue-preserving (scales the colour by its own luma)
       c.assign(c.mul(pow(max(l, 1e-4).div(0.18), G.contrast.sub(1))));
       const d: N = (acesFilmicToneMapping as N)(c, float(1)).toVar();
-      d.assign(max(mix(vec3(luma(d)), d, G.sat.mul(sat)), 0));
+      // low light loses colour (night grades desaturate), but lights keep theirs: fire stays orange
+      const ld = luma(d);
+      const satK = mix(G.sat, max(G.sat, float(1.05)), smoothstep(0.15, 0.6, ld));
+      d.assign(max(mix(vec3(ld), d, satK.mul(sat)), 0));
       d.assign(d.add(G.lift.mul(float(1).sub(d))));
       return vec4(d, 1);
     })();

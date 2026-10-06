@@ -86,6 +86,7 @@ export function familyMaterial(f: Family, glowSources: { value: number }[] = [])
         const sd = settle(m, bC().xyz, float(0.8));
         m.colorNode = sd.color;
         m.roughnessNode = mix(bP().x, float(0.95), sd.dust);
+        m.emissiveNode = sunRim();
         m.metalnessNode = bP().y;
         return m;
       }
@@ -134,6 +135,9 @@ export const uDustColor = uniform(new THREE.Color(0.6, 0.41, 0.24)).setGroup(ren
 export const uDustCover = uniform(0.35).setGroup(renderGroup);
 /** 0 at night, 1 by day (fades the fake sun rim light). */
 export const uDaylight = uniform(1).setGroup(renderGroup);
+/** Direction toward the sun and how strongly a low sun rims backlit silhouettes (set by the Atmosphere). */
+export const uRimSunDir = uniform(new THREE.Vector3(0, 1, 0)).setGroup(renderGroup);
+export const uBacklight = uniform(0).setGroup(renderGroup);
 
 const _flatGround = new THREE.DataTexture(new Uint16Array([0]), 1, 1, THREE.RedFormat, THREE.HalfFloatType);
 _flatGround.needsUpdate = true;
@@ -185,6 +189,18 @@ const rim = (power = 3): N =>
     return rimColor.mul(f).mul(rimStrength).mul(uDaylight);
   })();
 
+/**
+ * Golden-hour backlight: when you look toward a low sun, silhouettes pick up a thin warm edge (the
+ * Fresnel sheen and translucency a real low sun gives everything). Zero at noon and at night.
+ */
+const sunRim = (): N =>
+  Fn(() => {
+    const v = normalize(cameraPosition.sub(positionWorld));
+    const f = pow(float(1).sub(max(dot(normalWorld, v), 0)), 4);
+    const toward = pow(max(dot(v.negate(), uRimSunDir), 0), 3);
+    return rimColor.mul(f.mul(toward).mul(uBacklight));
+  })();
+
 export interface RustOpts { base: THREE.ColorRepresentation; rust?: number; roughness?: number; metalness?: number; scale?: number; paintChips?: boolean; rim?: number }
 
 /** Painted / bare metal with rust blooms, vertical streaks and chipped paint. */
@@ -218,7 +234,7 @@ function rustSetup(m: THREE.MeshStandardNodeMaterial, P: { base: N; rustAmt: N; 
   m.roughnessNode = mix(mix(rough, float(0.95), rustMask), float(0.95), sd.dust);
   m.metalnessNode = mix(metal, float(0.1), rustMask);
   m.normalNode = bumpFromHeight(rustMask.mul(0.6).add(t2.r.mul(0.25)), float(0.05));
-  m.emissiveNode = rim(3).mul(rimK);
+  m.emissiveNode = rim(3).mul(rimK).add(sunRim());
 }
 
 /** Weathered concrete with stains, pitting and water streaks. */
@@ -249,6 +265,7 @@ function concreteSetup(m: THREE.MeshStandardNodeMaterial, base: N, s: N, stainAm
     .mul(float(1).sub(pits.mul(0.35))).mul(float(1).sub(crackLine.mul(0.5))));
   m.colorNode = sd.color;
   m.normalNode = bumpFromHeight(t1.r.mul(0.3).add(t2.a.mul(0.1)).sub(pits.mul(0.4)).sub(crackLine.mul(0.3)), float(0.04));
+  m.emissiveNode = sunRim().mul(0.6);
 }
 
 /** Corrugated sheet metal: ridges via sin along a local axis, with rust. */
@@ -277,6 +294,7 @@ export function plainStandard(c: THREE.ColorRepresentation, roughness = 0.8, met
     const sd = settle(m, materialColor, float(0.8));
     m.colorNode = sd.color;
     m.roughnessNode = mix(uniform(roughness), float(0.95), sd.dust);
+    m.emissiveNode = sunRim();
     return tag(m, 'plain', c, 0, [roughness, metalness]);
   });
 }
@@ -336,7 +354,7 @@ function fabricSetup(m: THREE.MeshStandardNodeMaterial, base: N) {
   const fine = noise(positionLocal.xy.sub(positionLocal.z).mul(9)).g;
   m.colorNode = settle(m, base.mul(float(0.72).add(t.r.mul(0.4)).add(fine.mul(0.1))), float(0.6)).color;
   m.normalNode = bumpFromHeight(t.r.mul(0.5).add(fine.mul(0.15)), float(0.012));
-  m.emissiveNode = rim(2.5).mul(0.35);
+  m.emissiveNode = rim(2.5).mul(0.35).add(sunRim());
 }
 
 /** Leather / skin with fine grain and rim light. */
@@ -383,6 +401,7 @@ function woodSetup(m: THREE.MeshStandardNodeMaterial, base: N) {
   const grain = noise(vec2(positionLocal.x.add(positionLocal.z).mul(0.15), positionLocal.y.mul(4))).r;
   m.colorNode = settle(m, base.mul(float(0.7).add(grain.mul(0.45)))).color;
   m.normalNode = bumpFromHeight(grain.mul(0.5), float(0.02));
+  m.emissiveNode = sunRim();
 }
 
 export function updateRim(sunColor: THREE.Color, strength: number) {

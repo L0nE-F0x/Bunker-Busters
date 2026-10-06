@@ -199,7 +199,7 @@ export class Terrain {
     // a broader ripple field (~4-6 m crests) that survives into the mid-ground and catches low sun
     const mPhase = xz.x.mul(0.62).add(xz.y.mul(0.78)).mul(1.15).add(midTap.g.sub(0.5).mul(9));
     const macro = sin(mPhase).mul(0.5).add(0.5).sub(0.5).mul(smoothstep(1.2, 0.3, fwidth(mPhase))).add(0.5);
-    const rippleH = pow(ripple, 2.0).mul(0.6).add(fine.mul(0.3)).add(grain.mul(0.15)).add(pow(macro, 1.6).mul(1.4));
+    const rippleH = pow(ripple, 2.0).mul(0.6).add(fine.mul(0.3)).add(grain.mul(0.15)).add(pow(macro, 1.6).mul(2.4));
     // long wind streaks: lighter sand blown into tails, darker coarse lag between them
     const wdir = vec2(0.93, 0.36);
     const wAlong = xz.dot(wdir), wAcross = xz.dot(vec2(-0.36, 0.93));
@@ -317,7 +317,7 @@ export class Terrain {
     mat.colorNode = col;
     mat.normalNode = bumpFromHeight(h, float(0.06));
     // fine sand gets a soft grazing sheen toward a low sun; rock and old asphalt stay matte-ish
-    mat.roughnessNode = mix(mix(float(0.88).add(grain.mul(0.08)), float(0.86), rockMask), mix(float(0.78), float(0.55), oil), roadFinal);
+    mat.roughnessNode = mix(mix(float(0.8).add(grain.mul(0.1)), float(0.86), rockMask), mix(float(0.78), float(0.55), oil), roadFinal);
     // the sky can't reach into the folds: occlusion on the ambient/IBL only, so sunlit hollows stay lit
     mat.aoNode = float(1).sub(hollow.mul(0.5)).sub(basin.mul(0.2));
     return mat;

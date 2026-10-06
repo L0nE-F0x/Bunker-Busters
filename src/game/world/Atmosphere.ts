@@ -7,7 +7,7 @@ import { clamp as clampN, lerp, smoothstep as smoothN } from '@/engine/noise';
 import { noise } from '@/engine/noiseTex';
 import { gradeU } from '@/engine/postfx';
 import { coneMurk } from './effects';
-import { uDustCover, uDaylight } from './materials';
+import { uDustCover, uDaylight, uRimSunDir, uBacklight } from './materials';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 type N = any;
@@ -244,9 +244,11 @@ export class Atmosphere {
       const col = mix(hz, this.uZenith, t).toVar();
       // below horizon: darker ground haze
       col.assign(mix(col, hz.mul(0.7), smoothstep(0.0, -0.25, h)));
-      // storm: one brown dome, a little darker overhead
+      // storm: one brown dome, a little darker overhead. It uses exactly the fog's colour, so far
+      // ridges and the skyline melt into it instead of standing out as flat cut-outs
       const storm = this.uStorm;
-      col.assign(mix(col, hz.mul(mix(float(1), float(0.6), clamp(h, 0, 1))), storm.mul(0.96)));
+      const hzFog = this.haze(vec3(rd.x, max(h, 0.0).mul(0.3), rd.z).normalize(), float(0.3));
+      col.assign(mix(col, hzFog.mul(mix(float(1), float(0.6), clamp(h, 0, 1))), storm.mul(0.97)));
 
       // sun disk + corona
       const sunVis = smoothstep(-0.08, 0.02, this.uSunDir.y);
@@ -272,7 +274,7 @@ export class Atmosphere {
       const dayCol = mix(this.uSunColor.mul(float(0.95).add(lit.mul(2.4))), skyLit.mul(1.05), dens.mul(0.5));
       const nightCol = skyLit.mul(1.5).add(vec3(0.05, 0.06, 0.09).mul(this.uNight));
       const cloudCol = mix(nightCol, dayCol, sunVis);
-      col.assign(mix(col, cloudCol, cloud.mul(0.72).mul(clear)));
+      col.assign(mix(col, cloudCol, cloud.mul(0.72).mul(clear).mul(clear)));
 
       // night sky: a detailed milky way (bright core, mottled glow, dark dust lanes, a warm galactic
       // centre), round anti-aliased stars with a real magnitude spread, and a crisp cratered moon
@@ -353,8 +355,8 @@ export class Atmosphere {
       const b = this.uFogFalloff;
       const tt = dist.mul(rd.y).mul(b);
       const ratio = select(abs(tt).lessThan(1e-4), float(1), float(1).sub(exp(tt.negate())).div(tt));
-      // storm: visibility drops to ~60 m (density ×28 at full strength)
-      const density = this.uFogDensity.mul(float(1).add(this.uDust.mul(1.1))).mul(float(1).add(this.uStorm.mul(this.uStorm).mul(27)));
+      // storm: visibility drops to ~60 m (the storm term doesn't follow the time-of-day density)
+      const density = this.uFogDensity.mul(float(1).add(this.uDust.mul(1.1))).add(this.uStorm.mul(this.uStorm).mul(0.042));
       // a clear near zone: the first tens of metres stay crisp (storms excepted), so the air reads as
       // depth instead of a milky veil over everything
       const near = mix(smoothstep(6, 80, dist), float(1), this.uStorm);
@@ -425,6 +427,8 @@ export class Atmosphere {
     this.applyGrade(i, t);
     this.uNight.value = smoothN(0.02, -0.2, sunDir.y);
     uDaylight.value = smoothN(-0.08, 0.06, sunDir.y);
+    (uRimSunDir.value as THREE.Vector3).copy(sunDir);
+    uBacklight.value = 0.9 * smoothN(-0.04, 0.05, sunDir.y) * smoothN(0.45, 0.1, sunDir.y) * (1 - this.storm);
     const coverTarget = Math.max(0.35, this.storm);
     this.dustCover += (coverTarget - this.dustCover) * Math.min(1, dt * (coverTarget > this.dustCover ? 1 / 45 : 1 / 360));
     uDustCover.value = this.dustCover;
@@ -485,7 +489,7 @@ export class Atmosphere {
     set(gradeU.high.value as THREE.Color, a.gH, b.gH);
     set(gradeU.lift.value as THREE.Color, a.lift, b.lift);
     // a storm flattens everything into one warm murk
-    (gradeU.shadow.value as THREE.Color).lerp(tmpA.setRGB(1.04, 0.98, 0.92), st * 0.6);
+    (gradeU.shadow.value as THREE.Color).lerp(tmpA.setRGB(1.08, 0.97, 0.86), st);
     gradeU.contrast.value = lerp(a.con, b.con, t) - st * 0.08;
     gradeU.sat.value = lerp(a.sat, b.sat, t) * (1 - st * 0.15);
   }

@@ -380,12 +380,26 @@ export class Fire {
     const mat = new THREE.MeshBasicNodeMaterial({ transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide, forceSinglePass: true });
     mat.colorNode = Fn(() => {
       const p = uv();
-      const n = noise(vec2(p.x.mul(0.6), p.y.mul(0.45).sub(time.mul(0.5)))).r.sub(0.5).mul(1.8);
-      const shapeX = abs(p.x.sub(0.5)).mul(2);
-      const flame = smoothstep(0.0, 0.7, float(1).sub(shapeX.mul(float(1.3).add(p.y.mul(1.5)))).sub(p.y.mul(0.8)).add(n.mul(0.6)));
-      const core = pow(flame, 3);
-      const col = mix(vec3(1.0, 0.25, 0.03), vec3(1.0, 0.75, 0.3), core).mul(flame.mul(9));
-      return vec4(col, flame);
+      // each crossed card samples its own patch of turbulence (they overlap from most angles)
+      const card = positionLocal.x.add(positionLocal.z).mul(0.37);
+      const n1 = noise(vec2(p.x.mul(0.7).add(card), p.y.mul(0.5).sub(time.mul(0.85)))).r.sub(0.5);
+      const n2 = noise(vec2(p.x.mul(1.7).add(card.mul(2.3)).add(0.3), p.y.mul(1.2).sub(time.mul(1.6)))).g.sub(0.5);
+      // the flame licks sideways more the higher it gets
+      const x = p.x.sub(0.5).add(n1.mul(0.9).add(n2.mul(0.5)).mul(0.2).mul(p.y.add(0.1)));
+      // teardrop: wide and rounded at the base, drawn up to a ragged tip
+      const width = pow(clamp(float(1).sub(p.y), 0, 1), 0.7).mul(0.46).mul(smoothstep(-0.05, 0.12, p.y));
+      const body = smoothstep(width, width.mul(0.1), abs(x));
+      const tongues = smoothstep(0.05, 0.4, n1.mul(1.1).add(n2.mul(0.9)).sub(p.y.mul(0.55)).add(0.55));
+      const flame = body.mul(tongues);
+      // heat: hottest low in the core, cooling to deep red at the edges and the tips
+      const heat = flame.mul(float(1).sub(p.y.mul(0.75))).mul(smoothstep(width, 0.0, abs(x)).mul(0.6).add(0.4));
+      const ramp = mix(
+        mix(vec3(0.55, 0.06, 0.01), vec3(1.0, 0.32, 0.04), smoothstep(0.05, 0.35, heat)),
+        mix(vec3(1.0, 0.62, 0.18), vec3(1.0, 0.9, 0.65), smoothstep(0.65, 0.95, heat)),
+        smoothstep(0.3, 0.65, heat),
+      );
+      // (additive with src alpha: the colour is scaled by alpha once more on the way out)
+      return vec4(ramp.mul(heat.mul(2.6).add(1.0)), flame);
     })();
     // the three crossed flame cards, stones and logs are each one merged mesh (static relative to the fire)
     const at = (g: THREE.BufferGeometry, x: number, y: number, z: number, rx: number, ry: number) =>
