@@ -657,3 +657,66 @@ Dry Creek, The Cut and the wash were grey slabs, boxes and box people. They are 
 **Next:**
 - Owner pass in the desktop app: night exposure of the signs and windows under the new grade.
 - Whether the pocket is easy to spot.
+
+## Perf pass (2026-10-06)
+
+The desktop app is CPU-bound in WebKitGTK: draw submission, uniform uploads and garbage, not the 4050 (GPU frame ~5 ms at 1600×900 by headless timer queries). So this pass cuts draws, the shadow pass above all, and per-frame JS. No colour shader changed.
+
+**What changed:**
+- **Shadow proxies** (`kit.ts`: `shadowProxy`, `plainCaster`, `SHADOW_LAYER`).
+  - Three draws every caster in the sun's depth pass with one override material. So a static set's casters merge into one position-only mesh on layer 1 (shadow camera only), and the originals stop casting. The shadow map is the same.
+  - Alpha-shaped materials (chain link) keep their own draw.
+  - Used by the Garage (static set, each door, the lock, the tripwires), the gas station and the Spire.
+- **Props shadow stream** (`ShadowStream` in `Props.ts`).
+  - Rocks, trees, wrecks, poles, wires and billboards were ~12 shadow draws covering the whole map.
+  - Their triangles sit in 32 m cells. Every 20 m of travel, the cells within 190 m are copied into one shadow-only mesh.
+  - The buffer uses static usage on purpose: **three re-uploads any `DynamicDrawUsage` attribute on every draw**.
+- **Far LOD**: the Garage, the gas station and the Spire swap to `buildFar()` stand-ins past ~140 m.
+  - The Garage keeps its chain link. The gas station's tents keep their fabric, and its neon and sign stay drawn.
+  - Checked by day and by night at the swap distance.
+- **Garage**:
+  - The interior's own draws (vault door, whiteboard, lasers, loot) are hidden while nobody can see in.
+  - The additive lasers render in a single pass.
+  - Floodlight cones skip their draw by day.
+  - The tripwires are 3 shared meshes, re-merged on disarm through a handle whose `visible` does it.
+  - `update()` allocates nothing.
+- **Main pass**:
+  - The 90 trees are one static mesh (was 3 instanced draws).
+  - Billboard frames and backs are one batch.
+  - Rocks draw only within size × 500 m (~2 px).
+- **Renderer**: the shadow override material's `alphaTest` setter bumps its version whenever a caster's alpha test crosses 0.
+  - With one alpha-tested caster in the sun's box (the sites' cut-out atlases), every shadow render object re-derived its cache key every frame. Inside the Garage that cost 0.44 ms + 440 KB/frame.
+  - The bump is dropped on that material only.
+- **JS**:
+  - Rapier's per-step `mapNewSoftBodies()` makes a wasm→JS call per collider (~530). It now runs only after something is created or removed.
+  - HUD markers are rebuilt at 20 Hz.
+  - The minimap skips redraws while nothing changed: 0 standing still, was 20/s.
+  - Tumbleweed zone checks run at 10 Hz.
+
+**Numbers.** Headless Chrome, main @ 41f3ade vs this branch, interleaved runs, trimmed means. CPU measured at 480×270 so the GPU isn't the limit. Post is 22 draws in both.
+
+| spot | draws (main/shadow) | render CPU ms | frame CPU ms | JS alloc KB/frame |
+|---|---|---|---|---|
+| spawn | 105 (41/42) → 82 (38/22) | 2.23 → 2.03 | 2.87 → 2.51 | 400 → 186 |
+| spawn, facing the Garage | 165 (101/42) → 98 (54/22) | 3.25 → 2.18 | 3.84 → 2.60 | 450 → 187 |
+| Garage gate | 185 (87/76) → 129 (67/40) | 3.03 → 2.67 | 3.64 → 3.17 | 439 → 214 |
+| inside the Garage | 159 (57/80) → 128 (57/49) | 3.32 → 2.58 | 3.97 → 3.04 | 1110 → 206 |
+| Dry Creek street | 118 (49/47) → 103 (47/34) | 2.45 → 2.35 | 3.06 → 2.76 | 403 → 193 |
+| spawn at night | 104 (40/42) → 81 (37/22) | 2.30 → 2.04 | 2.90 → 2.43 | 349 → 169 |
+
+- Triangles drop ~130–150k per frame (1.24M → 1.12M at spawn).
+- Full-res fps on the Intel iGPU is GPU-bound (22–33) and unchanged within noise.
+
+**Harness.** These scripts live in the perf agent's scratch dir, not the repo.
+- `ab3.mjs` interleaves two dev servers per spot.
+- `vcompare.mjs` shoots both builds with time pinned and diffs them. Pin time before diffing: cloud shadows, sand flow, scrub sway, the drone and the broken neon all move between runs.
+- `performance.now()` is coarsened to 0.1 ms in headless Chrome, so use means, not medians.
+
+**Next:**
+- The third-person shadow body costs 16–17 shadow draws everywhere (`CharacterModel.ts`). Merging it is the biggest shadow-pass win left.
+- Sites and town should call `shadowProxy(near)` on each near set. The drive-in alone adds 10 shadow draws as seen from the Garage.
+- The post stack is a fixed 22 draws (`postfx.ts`).
+- Terrain LOD was measured and deferred.
+  - Halving the grid saves ~0.5 ms on the 4050 and ~2–3 ms on the iGPU, but the desktop is CPU-bound.
+  - Coarse far terrain needs crack-free stitching and error-driven selection to keep silhouettes intact.
+- Owner check in the desktop app: `scripts/dev/bench-desktop.sh high`.
