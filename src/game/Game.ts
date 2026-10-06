@@ -108,6 +108,11 @@ export class Game {
   private shockwaves: Shockwave[] = [];
   private flash: VirtualLight;
   private intelMeshes = new Map<string, THREE.Object3D>();
+  private intelGems: THREE.Object3D[] = [];
+  private markerCache: MapMarker[] | null = null;
+  private markerAt = 0;
+  private readonly _fwd = new THREE.Vector3();
+  private readonly _to = new THREE.Vector3();
   private loops: LoopHandle[] = [];
   private loopsStarted = false;
   private t = 0;
@@ -356,6 +361,7 @@ export class Game {
       const gem = new THREE.Mesh(new THREE.OctahedronGeometry(0.18, 0), holo.material);
       gem.name = 'gem';
       g.add(gem);
+      this.intelGems.push(gem);
       const paper = new THREE.Mesh(new THREE.PlaneGeometry(0.32, 0.42), new THREE.MeshStandardNodeMaterial({ color: '#e8dcc0', roughness: 0.8, side: THREE.DoubleSide }));
       paper.position.y = -0.5;
       paper.rotation.x = -1.2;
@@ -993,9 +999,9 @@ export class Game {
     if (!this.player) return null;
     const p = this.player.position;
     const eye = this.camera.position;
-    const fwd = new THREE.Vector3(0, 0, -1).applyQuaternion(this.camera.quaternion);
+    const fwd = this._fwd.set(0, 0, -1).applyQuaternion(this.camera.quaternion);
     let best: Interactable | null = null, bestScore = Infinity;
-    const to = new THREE.Vector3();
+    const to = this._to;
     for (const it of this.interactables) {
       if (it.visible && !it.visible()) continue;
       const flat = Math.hypot(it.pos.x - p.x, it.pos.z - p.z);
@@ -1010,6 +1016,12 @@ export class Game {
       if (score < bestScore) { bestScore = score; best = it; }
     }
     return best;
+  }
+
+  /** HUD markers, rebuilt at most every 50 ms: only the 20 Hz minimap reads them per frame. */
+  private hudMarkers(now: number) {
+    if (!this.markerCache || now - this.markerAt >= 50) { this.markerCache = this.markers(); this.markerAt = now; }
+    return this.markerCache;
   }
 
   private markers(): MapMarker[] {
@@ -1106,6 +1118,7 @@ export class Game {
     this.settlement?.update(dt, this.camera.position);
     for (const site of this.sites) site.update(dt, this.camera.position);
     if (this.mode !== 'playing') this.garage.update(dt);
+    this.garage.cull(this.camera.position);
     this.props.update(dt, focusPos, this.atmo.wind);
     this.scrub.update(focusPos, this.atmo.wind);
     this.dust.update(dt);
@@ -1115,9 +1128,10 @@ export class Game {
     this.devils.update();
     this.updateGrenades(dt);
     this.updateEnvironment(dt);
-    for (const [, g] of this.intelMeshes) {
-      const gem = g.getObjectByName('gem');
-      if (gem) { gem.rotation.y += dt * 1.5; gem.position.y = Math.sin(this.t * 2) * 0.08; }
+    for (const gem of this.intelGems) {
+      if (!gem.parent?.visible) continue;
+      gem.rotation.y += dt * 1.5;
+      gem.position.y = Math.sin(this.t * 2) * 0.08;
     }
     // gameplay-driven post
     this.post.damage.value = damp(this.post.damage.value as number, 0, 2.5, dt);
@@ -1336,7 +1350,7 @@ export class Game {
       playerYaw: player.yaw,
       px: player.position.x,
       pz: player.position.z,
-      markers: this.markers(),
+      markers: this.hudMarkers(performance.now()),
       hunger: s.data.hunger,
       thirst: s.data.thirst,
     });

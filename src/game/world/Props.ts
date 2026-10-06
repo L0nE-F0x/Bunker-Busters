@@ -6,11 +6,141 @@ import { Simplex2, mulberry32 } from '@/engine/noise';
 import type { Heightfield } from './Heightfield';
 import type { Physics } from '@/engine/physics';
 import { HIGHWAY, WORLD_SEED } from '@/content/world';
-import { box, cyl, beam, merge, MeshBatch, wire, canvasTexture, grime, norm } from './kit';
+import { box, cyl, beam, merge, MeshBatch, wire, canvasTexture, grime, norm, place, plainCaster, proxyMaterial, SHADOW_LAYER } from './kit';
 import { rustyMetal, plainStandard, wood } from './materials';
 import { bumpFromHeight } from './Terrain';
 import { noise, noiseTexture } from '@/engine/noiseTex';
 import type { Atmosphere } from './Atmosphere';
+
+interface RockInstance { m: THREE.Matrix4; x: number; z: number; reach: number }
+/** A rock is drawn within size × ROCK_REACH metres (a 0.25 m stone: ~125 m, about 2 px at 1080p). */
+const ROCK_REACH = 500;
+/** Rock culling is re-evaluated every this many metres of travel (and padded by as much). */
+const CULL_STEP = 15;
+
+/**
+ * Static shadow casters streamed around the player in ONE depth-pass draw. Every caster's triangles
+ * are pre-transformed into 32 m cells at load; whenever the player has moved REBUILD m, the cells
+ * within RADIUS are copied into a single position-only mesh that only the shadow camera sees. Its
+ * shadow map is the same as the originals' within RADIUS (the sun's box is ±70 m; a 10 m pole's shadow
+ * at a low sun is ~60 m), and the originals stop casting.
+ */
+class ShadowStream {
+  static readonly CELL = 32;
+  static readonly RADIUS = 190;
+  static readonly REBUILD = 20;
+  readonly mesh: THREE.Mesh;
+  private build = new Map<number, number[]>();
+  private cells = new Map<number, Float32Array>();
+  private at = new THREE.Vector2(1e9, 1e9);
+  private pos!: THREE.BufferAttribute;
+
+  constructor() {
+    this.mesh = new THREE.Mesh(new THREE.BufferGeometry(), proxyMaterial(THREE.FrontSide));
+    this.mesh.name = 'propShadows';
+    this.mesh.layers.set(SHADOW_LAYER);
+    this.mesh.castShadow = true;
+    this.mesh.receiveShadow = false;
+  }
+
+  private key(x: number, z: number) {
+    const c = ShadowStream.CELL;
+    return (Math.floor(x / c) + 1000) * 4096 + (Math.floor(z / c) + 1000);
+  }
+
+  private push(key: number, a: THREE.Vector3, b: THREE.Vector3, c: THREE.Vector3) {
+    let arr = this.build.get(key);
+    if (!arr) this.build.set(key, (arr = []));
+    arr.push(a.x, a.y, a.z, b.x, b.y, b.z, c.x, c.y, c.z);
+  }
+
+  /** Take over `o`'s shadow if it's a static front-faced plain caster. */
+  take(o: THREE.Object3D) {
+    const mesh = o as THREE.Mesh;
+    if (!mesh.isMesh || !mesh.castShadow || !mesh.visible || (o as THREE.SkinnedMesh).isSkinnedMesh) return;
+    const mat = mesh.material as THREE.Material;
+    if (!plainCaster(mat) || mat.side !== THREE.FrontSide) return;
+    const geo = mesh.geometry, pos = geo.attributes.position as THREE.BufferAttribute, idx = geo.index;
+    const count = idx ? idx.count : pos.count;
+    const a = new THREE.Vector3(), b = new THREE.Vector3(), c = new THREE.Vector3();
+    const tri = (m: THREE.Matrix4, i: number, key: number | null) => {
+      const ia = idx ? idx.getX(i) : i, ib = idx ? idx.getX(i + 1) : i + 1, ic = idx ? idx.getX(i + 2) : i + 2;
+      a.fromBufferAttribute(pos, ia).applyMatrix4(m);
+      b.fromBufferAttribute(pos, ib).applyMatrix4(m);
+      c.fromBufferAttribute(pos, ic).applyMatrix4(m);
+      this.push(key ?? this.key((a.x + b.x + c.x) / 3, (a.z + b.z + c.z) / 3), a, b, c);
+    };
+    const im = o as THREE.InstancedMesh;
+    if (im.isInstancedMesh) {
+      const m = new THREE.Matrix4(), w = new THREE.Matrix4();
+      for (let k = 0; k < im.count; k++) {
+        im.getMatrixAt(k, m);
+        w.multiplyMatrices(im.matrixWorld, m);
+        const key = this.key(w.elements[12], w.elements[14]);
+        for (let i = 0; i < count; i += 3) tri(w, i, key);
+      }
+    } else {
+      for (let i = 0; i < count; i += 3) tri(mesh.matrixWorld, i, null);
+    }
+    mesh.castShadow = false;
+  }
+
+  finish() {
+    for (const [k, arr] of this.build) this.cells.set(k, new Float32Array(arr));
+    this.build.clear();
+    // capacity: the fullest disc any focus can see (bounded per cell: every cell within RADIUS + one
+    // cell diagonal of that cell's centre)
+    const { CELL, RADIUS } = ShadowStream;
+    const reach = RADIUS + CELL * 1.5, r = Math.ceil(reach / CELL);
+    let capacity = 0, i0 = Infinity, i1 = -Infinity, j0 = Infinity, j1 = -Infinity;
+    for (const k of this.cells.keys()) {
+      const ci = Math.floor(k / 4096), cj = k % 4096;
+      i0 = Math.min(i0, ci); i1 = Math.max(i1, ci); j0 = Math.min(j0, cj); j1 = Math.max(j1, cj);
+    }
+    for (let ci = i0 - r; ci <= i1 + r; ci++) for (let cj = j0 - r; cj <= j1 + r; cj++) {
+      let sum = 0;
+      for (let i = -r; i <= r; i++) for (let j = -r; j <= r; j++) {
+        if ((i * i + j * j) * CELL * CELL > reach * reach) continue;
+        sum += this.cells.get((ci + i) * 4096 + (cj + j))?.length ?? 0;
+      }
+      capacity = Math.max(capacity, sum);
+    }
+    this.pos = new THREE.BufferAttribute(new Float32Array(capacity), 3);
+    // static usage on purpose: three re-uploads a DynamicDrawUsage attribute on every draw; this one
+    // only changes on a rebuild (needsUpdate + update range)
+    this.mesh.geometry.setAttribute('position', this.pos);
+    this.mesh.geometry.setDrawRange(0, 0);
+    this.mesh.geometry.boundingSphere = new THREE.Sphere(new THREE.Vector3(), ShadowStream.RADIUS + ShadowStream.CELL);
+  }
+
+  update(focus: THREE.Vector3) {
+    if (Math.hypot(focus.x - this.at.x, focus.z - this.at.y) < ShadowStream.REBUILD) return;
+    this.at.set(focus.x, focus.z);
+    const { CELL, RADIUS } = ShadowStream;
+    const r = Math.ceil(RADIUS / CELL) + 1;
+    const cx = Math.floor(focus.x / CELL), cz = Math.floor(focus.z / CELL);
+    const out = this.pos.array as Float32Array;
+    let n = 0;
+    for (let i = -r; i <= r; i++) {
+      for (let j = -r; j <= r; j++) {
+        // nearest point of the cell to the focus
+        const x0 = (cx + i) * CELL, z0 = (cz + j) * CELL;
+        const dx = Math.max(x0 - focus.x, 0, focus.x - x0 - CELL), dz = Math.max(z0 - focus.z, 0, focus.z - z0 - CELL);
+        if (dx * dx + dz * dz > RADIUS * RADIUS) continue;
+        const arr = this.cells.get((cx + i + 1000) * 4096 + (cz + j + 1000));
+        if (!arr || n + arr.length > out.length) continue;
+        out.set(arr, n);
+        n += arr.length;
+      }
+    }
+    this.mesh.geometry.setDrawRange(0, n / 3);
+    this.mesh.visible = n > 0;
+    this.pos.clearUpdateRanges();
+    this.pos.addUpdateRange(0, n);
+    this.pos.needsUpdate = true;
+    this.mesh.geometry.boundingSphere!.center.set(focus.x, focus.y, focus.z);
+  }
+}
 
 export function rockMaterial() {
   const m = new THREE.MeshStandardNodeMaterial({ roughness: 0.9, flatShading: true });
@@ -99,8 +229,13 @@ const BILLBOARDS = [
 export class Props {
   group = new THREE.Group();
   /** Tumbleweeds share one InstancedMesh (one draw call + one shadow call instead of ten each). */
-  tumbleweeds: { pos: THREE.Vector3; rot: THREE.Euler; scale: number; vel: THREE.Vector3; r: number }[] = [];
+  tumbleweeds: { pos: THREE.Vector3; rot: THREE.Euler; scale: number; vel: THREE.Vector3; r: number; zoneT?: number }[] = [];
   private tumbleMesh!: THREE.InstancedMesh;
+  /** Rock variants with every placed instance; update() keeps only the ones big enough to see. */
+  private rocks: { mesh: THREE.InstancedMesh; all: RockInstance[] }[] = [];
+  /** Every static prop's shadow in one streamed draw (see ShadowStream). */
+  private shadows!: ShadowStream;
+  private cullAt = new THREE.Vector2(1e9, 1e9);
   private readonly _m = new THREE.Matrix4();
   private readonly _q = new THREE.Quaternion();
   private readonly _s = new THREE.Vector3();
@@ -114,6 +249,17 @@ export class Props {
     this.buildBillboards();
     this.buildTumbleweeds();
     this.buildFarCity();
+    // Shadow pass: rocks, trees, wrecks, poles, wires and billboards were ~12 draws covering the
+    // whole map. Now one mesh holds the casters near the player, rebuilt as they walk. Tumbleweeds
+    // move, so they keep their own.
+    this.shadows = new ShadowStream();
+    this.group.updateMatrixWorld(true);
+    for (const o of [...this.group.children]) {
+      if (o === this.tumbleMesh) continue;
+      o.traverse((c) => this.shadows.take(c));
+    }
+    this.shadows.finish();
+    this.group.add(this.shadows.mesh);
   }
 
   private okSpot(x: number, z: number, roadClear = 9, zoneClear = 8) {
@@ -131,6 +277,7 @@ export class Props {
     const noise = new Simplex2(5);
     variants.forEach((geo, vi) => {
       const mesh = new THREE.InstancedMesh(geo, mat, counts[vi]);
+      const all: RockInstance[] = [];
       let n = 0;
       let guard = 0;
       while (n < counts[vi] && guard++ < 20000) {
@@ -148,6 +295,7 @@ export class Props {
         dummy.scale.set(s * (0.8 + rand() * 0.5), s, s * (0.8 + rand() * 0.5));
         dummy.updateMatrix();
         mesh.setMatrixAt(n++, dummy.matrix);
+        all.push({ m: dummy.matrix.clone(), x, z, reach: Math.max(s, 0.1) * ROCK_REACH });
         if (s > 0.9) this.physics.addBall({ x, y: y + s * 0.2, z }, s * 0.75);
       }
       mesh.count = n;
@@ -155,6 +303,7 @@ export class Props {
       mesh.receiveShadow = true;
       mesh.computeBoundingSphere();
       this.group.add(mesh);
+      this.rocks.push({ mesh, all });
     });
   }
 
@@ -166,8 +315,11 @@ export class Props {
     m.normalNode = bumpFromHeight(noise(vec2(positionWorld.x.add(positionWorld.z).mul(2.5), positionWorld.y.mul(0.25))).r, float(0.03));
     const variants = [deadTreeGeometry(7), deadTreeGeometry(19), deadTreeGeometry(42)];
     const dummy = new THREE.Object3D();
+    // Every tree is baked into ONE static mesh (was three instanced draws, one per variant). The trees
+    // don't move and all 90 stay drawn, so instancing bought nothing. clone().applyMatrix4() carries the
+    // normals through the normal matrix like the instancing path did (uniform scale: same direction).
+    const placed: THREE.BufferGeometry[] = [];
     variants.forEach((geo) => {
-      const mesh = new THREE.InstancedMesh(geo, m, 30);
       let c = 0, guard = 0;
       while (c < 30 && guard++ < 5000) {
         const x = (rand() - 0.5) * this.hf.size * 0.8;
@@ -181,15 +333,16 @@ export class Props {
         dummy.rotation.set((rand() - 0.5) * 0.15, rand() * Math.PI * 2, (rand() - 0.5) * 0.15);
         dummy.scale.setScalar(s);
         dummy.updateMatrix();
-        mesh.setMatrixAt(c++, dummy.matrix);
+        placed.push(geo.clone().applyMatrix4(dummy.matrix));
+        c++;
         this.physics.addCylinder({ x, y: y + 1.5, z }, 1.5, 0.25 * s);
       }
-      mesh.count = c;
-      mesh.castShadow = true;
-      mesh.receiveShadow = true;
-      mesh.computeBoundingSphere();
-      this.group.add(mesh);
     });
+    const mesh = new THREE.Mesh(merge(placed), m);
+    mesh.name = 'trees';
+    mesh.castShadow = true;
+    mesh.receiveShadow = true;
+    this.group.add(mesh);
   }
 
   /** Point & tangent along the highway at arc length t (0..1). */
@@ -303,6 +456,7 @@ export class Props {
       [258, -58, 0.62],
     ];
     const postMat = rustyMetal({ base: '#5a5550', rust: 0.7 });
+    const frames = new MeshBatch();
     placements.forEach(([bx, bz, yaw], i) => {
       const ad = BILLBOARDS[i % BILLBOARDS.length];
       const tex = canvasTexture(1024, 512, (ctx, w, h) => {
@@ -339,9 +493,12 @@ export class Props {
       });
       const y = this.hf.heightAt(bx, bz);
       const grp = new THREE.Group();
-      const b = new MeshBatch();
-      b.add(postMat, box(0.35, 9, 0.35, -4, 4.5, 0), box(0.35, 9, 0.35, 4, 4.5, 0), box(10.6, 0.3, 0.3, 0, 5.8, -0.2), box(10.6, 0.2, 1.2, 0, 5.7, 0.5));
-      grp.add(b.build('billboardFrame'));
+      // frame + painted back of every billboard: one batch in world space (was two draws each)
+      const at = new THREE.Matrix4().compose(new THREE.Vector3(bx, y - 0.2, bz), new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), yaw), new THREE.Vector3(1, 1, 1));
+      frames.add(postMat, ...[
+        box(0.35, 9, 0.35, -4, 4.5, 0), box(0.35, 9, 0.35, 4, 4.5, 0), box(10.6, 0.3, 0.3, 0, 5.8, -0.2), box(10.6, 0.2, 1.2, 0, 5.7, 0.5),
+        place(new THREE.PlaneGeometry(10, 5), 0, 8.4, 0, 0, Math.PI, 0),
+      ].map((g) => g.applyMatrix4(at)));
       const panelMat = new THREE.MeshStandardNodeMaterial({ map: tex, roughness: 0.8 });
       const panel = new THREE.Mesh(new THREE.PlaneGeometry(10, 5), panelMat);
       panel.position.set(0, 8.4, 0.05);
@@ -349,10 +506,6 @@ export class Props {
       panel.receiveShadow = true;
       // tear a corner by rotating a small flap
       grp.add(panel);
-      const back = new THREE.Mesh(new THREE.PlaneGeometry(10, 5), postMat);
-      back.rotation.y = Math.PI;
-      back.position.set(0, 8.4, 0.0);
-      grp.add(back);
       grp.position.set(bx, y - 0.2, bz);
       grp.rotation.y = yaw;
       this.group.add(grp);
@@ -361,6 +514,7 @@ export class Props {
         this.physics.addCylinder({ x: bx + p.x, y: y + 4.5, z: bz + p.z }, 4.5, 0.3);
       }
     });
+    this.group.add(frames.build('billboardFrames'));
   }
 
   private buildTumbleweeds() {
@@ -493,8 +647,31 @@ export class Props {
     this.group.add(mesh);
   }
 
+  /**
+   * Main pass: a rock only draws while it could cover more than ~2 px (reach = size × ROCK_REACH, re-checked
+   * every CULL_STEP m of travel). Big boulders show across the map; pebbles past ~120 m are skipped.
+   */
+  private cullRocks(focus: THREE.Vector3) {
+    this.cullAt.set(focus.x, focus.z);
+    for (const { mesh, all } of this.rocks) {
+      let n = 0;
+      for (const r of all) {
+        const dx = r.x - focus.x, dz = r.z - focus.z, reach = r.reach + CULL_STEP;
+        if (dx * dx + dz * dz < reach * reach) mesh.setMatrixAt(n++, r.m);
+      }
+      mesh.count = n;
+      mesh.visible = n > 0;
+      mesh.instanceMatrix.clearUpdateRanges();
+      mesh.instanceMatrix.addUpdateRange(0, n * 16);
+      mesh.instanceMatrix.needsUpdate = true;
+      mesh.computeBoundingSphere();
+    }
+  }
+
   /** Respawn tumbleweeds upwind of the player and roll them with the wind. */
   update(dt: number, focus: THREE.Vector3, wind: THREE.Vector2) {
+    this.shadows.update(focus);
+    if (Math.hypot(focus.x - this.cullAt.x, focus.z - this.cullAt.y) > CULL_STEP) this.cullRocks(focus);
     const wl = Math.max(0.1, wind.length());
     // storms make them bound: bigger hops, more often
     const hopChance = 0.04 * wl * (wl > 1.8 ? 2.5 : 1);
@@ -502,7 +679,14 @@ export class Props {
     for (const tw of this.tumbleweeds) {
       const p = tw.pos;
       const dx = p.x - focus.x, dz = p.z - focus.z;
-      if (dx * dx + dz * dz > 120 * 120 || p.x > 9000 || this.hf.zoneDistance(p.x, p.z) < 2) {
+      // the zone test walks every flatten zone and the trail polyline: ten times a second is plenty
+      // (the margin covers the ~1 m a fast tumbleweed rolls in between)
+      let inZone = false;
+      if ((tw.zoneT = (tw.zoneT ?? 0) - dt) <= 0) {
+        tw.zoneT = 0.1;
+        inZone = p.x < 9000 && this.hf.zoneDistance(p.x, p.z) < 2 + Math.hypot(tw.vel.x, tw.vel.z) * 0.1;
+      }
+      if (dx * dx + dz * dz > 120 * 120 || p.x > 9000 || inZone) {
         const a = Math.random() * Math.PI * 2;
         const upwind = new THREE.Vector2(-wind.x, -wind.y).normalize();
         p.set(focus.x + upwind.x * 70 + Math.cos(a) * 50, 0, focus.z + upwind.y * 70 + Math.sin(a) * 50);

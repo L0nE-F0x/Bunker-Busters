@@ -4,22 +4,11 @@ import type { Heightfield } from './Heightfield';
 import type { Physics } from '@/engine/physics';
 import { LANDMARKS } from '@/content/world';
 import type { LandmarkDef } from '@/content/types';
-import { box, cyl, beam, MeshBatch, canvasTexture, grime, wire } from './kit';
+import { box, cyl, beam, MeshBatch, DistanceLod, Frame, canvasTexture, grime, wire, shadowProxy } from './kit';
 import { rustyMetal, concrete, corrugated, neon, plainStandard, fabric, wood, glow, warmWindow } from './materials';
 import { Fire, lightCone } from './effects';
 
 export interface Flicker { set: (v: number) => void; phase: number; speed: number; broken: number }
-
-/** Local→world helper for a landmark with position + yaw. */
-class Frame {
-  readonly m: THREE.Matrix4;
-  constructor(public x: number, public y: number, public z: number, public yaw: number) {
-    this.m = new THREE.Matrix4().compose(new THREE.Vector3(x, y, z), new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), yaw), new THREE.Vector3(1, 1, 1));
-  }
-  p(lx: number, ly: number, lz: number) {
-    return new THREE.Vector3(lx, ly, lz).applyMatrix4(this.m);
-  }
-}
 
 export class Landmarks {
   group = new THREE.Group();
@@ -28,6 +17,7 @@ export class Landmarks {
   blinkers: { u: { value: number }; period: number; offset: number }[] = [];
   campPosition = new THREE.Vector3();
   audioSpots: { kind: AmbientKind; pos: THREE.Vector3 }[] = [];
+  private lods: DistanceLod[] = [];
 
   constructor(private hf: Heightfield, private physics: Physics) {
     for (const lm of LANDMARKS) {
@@ -133,7 +123,8 @@ export class Landmarks {
     const nx = signX + 1.7, ny = 8.2, nz = signZ + 0.2;
     tubes.push(cyl(0.04, 0.04, 4.6, nx, ny + 1.5, nz, 6, 0, 0, Math.PI / 2), cyl(0.04, 0.04, 4.6, nx, ny - 1.5, nz, 6, 0, 0, Math.PI / 2));
     tubes.push(cyl(0.04, 0.04, 3.0, nx - 2.3, ny, nz, 6), cyl(0.04, 0.04, 3.0, nx + 2.3, ny, nz, 6));
-    b.add(neonMat, ...tubes);
+    // its own batch: the neon reads from across the map at night, so it stays out of the far swap
+    const neonBatch = new MeshBatch().add(neonMat, ...tubes);
     this.flickers.push({ set: (v) => (neonFlicker.value = v), phase: 3, speed: 1.3, broken: 0.5 });
     this.audioSpots.push({ kind: 'neon', pos: f.p(nx, ny, nz) });
 
@@ -180,7 +171,15 @@ export class Landmarks {
     }
     this.flickers.push({ set: (v) => (bulbs.intensity.value = 5 * (0.85 + 0.15 * v)), phase: 1, speed: 0.3, broken: 0.05 });
 
-    root.add(b.build('gas'));
+    // the tents keep their fabric (its rim light catches the fire at night, even from the road)
+    const far = b.buildFar('gas-far', { keep: [tentMat, tent2] });
+    const near = b.build('gas');
+    // the sign's and the neon's shadows join the near set's single shadow draw; both stay drawn from far
+    const neonGrp = neonBatch.build('gas-neon');
+    near.add(sign, neonGrp);
+    shadowProxy(near);
+    root.add(sign, neonGrp, near);
+    this.addLod(root, f, 20, near, far);
 
     const fire = new Fire(1, 40);
     fire.group.position.set(campX + 1, 0.15, campZ + 1);
@@ -263,18 +262,29 @@ export class Landmarks {
     b.add(red2.material, place3(new THREE.SphereGeometry(0.16, 10, 8), new THREE.Vector3(0, 12, 1.4)));
     this.blinkers.push({ u: red2.intensity, period: 1.6, offset: 0.8 });
 
-    root.add(b.build('spire'));
+    const far = b.buildFar('spire-far');
+    const near = b.build('spire');
+    shadowProxy(near);
+    root.add(near);
     // a work lamp that casts a light cone onto the intel spot
     const lampPos = new THREE.Vector3(shackX + 1.8, 2.5, shackZ + 1.9);
     const cone = lightCone(3, 1.6, '#bfeaff', 0.25);
     cone.mesh.position.copy(lampPos);
     cone.mesh.rotation.x = -0.5;
-    root.add(cone.mesh);
+    near.add(cone.mesh);
+    this.addLod(root, f, 20, near, far);
     this.group.add(root);
     void neon;
   }
 
+  /** Past ~140 m from its edge a landmark draws as its one-draw flat stand-in (no shadow). */
+  private addLod(root: THREE.Object3D, f: Frame, radius: number, near: THREE.Object3D, far: THREE.Object3D) {
+    root.add(far);
+    this.lods.push(new DistanceLod(new THREE.Vector3(f.x, f.y, f.z), radius, near, far));
+  }
+
   update(dt: number, t: number, cam?: THREE.Vector3) {
+    if (cam) for (const l of this.lods) l.update(cam);
     for (const fire of this.fires) fire.update(dt, cam);
     for (const fl of this.flickers) {
       const n = Math.sin(t * 17 * fl.speed + fl.phase) * Math.sin(t * 3.1 * fl.speed + fl.phase * 2);

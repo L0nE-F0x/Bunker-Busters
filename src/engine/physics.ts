@@ -12,6 +12,27 @@ export class Physics {
     this.R = RAPIER;
     this.world = new RAPIER.World({ x: 0, y: -9.81, z: 0 });
     this.world.timestep = 1 / 60;
+    this.skipIdleBookkeeping();
+  }
+
+  /**
+   * Rapier's World.step() ends with mapNewSoftBodies(), which walks every body and collider handle
+   * through JS callbacks to sync its handle maps (~530 static colliders here: a wasm→JS call each,
+   * every frame, plus garbage). The maps only go stale when something is created or removed (a
+   * removed body takes its colliders with it inside wasm), so run that sync only after such a change.
+   */
+  private skipIdleBookkeeping() {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const w = this.world as any;
+    if (typeof w.mapNewSoftBodies !== 'function') return;
+    let dirty = true;
+    const sync = w.mapNewSoftBodies.bind(w);
+    w.mapNewSoftBodies = () => { if (dirty) { dirty = false; sync(); } };
+    for (const name of ['createRigidBody', 'removeRigidBody', 'createCollider', 'removeCollider', 'createImpulseJoint', 'removeImpulseJoint', 'createMultibodyJoint', 'removeMultibodyJoint']) {
+      const fn = w[name];
+      if (typeof fn !== 'function') continue;
+      w[name] = (...args: unknown[]) => { dirty = true; return fn.apply(w, args); };
+    }
   }
 
   /** Static oriented box. `pos` is the centre; `half` are half extents; `rotY` radians about Y. */
