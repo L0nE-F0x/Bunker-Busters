@@ -528,3 +528,29 @@ The baseline looked milky by day, one-note orange at golden hour, and flat on th
 **Next:**
 - Look at it in the desktop app: the grade, the night exposure and the shimmer at 144 Hz.
 - Tune the `GRADE` keys with the owner. Each is a one-line edit.
+
+## Story & systems pass 2 (2026-10-06)
+
+Act I now has a plot, a quest log, people who keep score, real skill trees, and six people to pick from. No new shaders or geometry: this pass is content, game state and UI.
+
+**What works** (headless Chrome on the dev server: scripted playthroughs as all six people, plus a v1 and a v2 save loaded through Continue):
+- **The arc.** Day 1,284. Last Chance has three days of water and SeedBot lifts the camp's jugs. *Middle:* Dry Creek's creek was signed away to Kade Holdings the summer before the Pivot (permit 7-K, a clipboard on the highway west of camp, approved "M. Voss"). A valve tag on the dirt spur, or Tanner on the intercom (Social 2/3), shows that Bunkr.ly resold seats in Vesper Kade's Apex Vault and paid her in water (waitlist #4,012). *Turn:* the manifest's last page is the Seed, the people Vesper keeps, and Mara is on it. Vesper cuts into the debrief and offers twenty jugs a week for the ledger. *End:* read every name on the open net, keep it as leverage, or take the deal. Each ending pays differently and moves standing, and all three land on the same hook: the water is on a clock and the rest of it is in Apex Vault, west of the salt.
+- **Delivery.** Mara's camp radio is progress-aware (and owns up to the permit). Tanner has new branches and taunts. Banter (`content/banter.ts`) is one-shot subtitle lines from Mara or from you, gated on places and flags, at least 40 s apart, never over another subtitle, never in menus or alarms.
+- **Quests** (`content/quests.ts`, runtime `game/Story.ts`). Steps are pure functions of flags, so fresh, loaded and migrated runs agree. Progress is stored as flags (`q:<id>`, `q:<id>:<step>`, `q:<id>:done`). A toast per step; a banner plus XP, items and standing on completion. The corner objective follows the tracked quest, else the main story; the Garage's own advice still wins while you stand at it. The current step's landmark gets a gold map marker.
+- **Ten favours.** Nia (who is drinking her water: tell her, cover with 2 bottles, or Social 3 peace), Doc (power, then a medkit for Wick: deliver it or keep it), Inez (the Till's deed: to her or to the town), Sol (his pick roll: return it or unroll it), Ren and the drive-in (tell Ren how the keynote ended, or say it was static), Wick (the rockfall, then Vesper's crate: take it or leave it), Pip's ledger at the camp, and three site quests (the jet via Wick, ColdStorage via Mara, the Tube via Inez). Site quests only read `seen:<id>`, `site.<id>.found` and `site.<id>.done`.
+- **Standing** (`content/people.ts`) for twelve people and two places (Dry Creek, the Compact). Favours unlock services: Nia's plate and Doc's house calls (once per rest), Inez's price (2, 3 or 4 scrap), Sol's lesson (the picks recipe makes 3), Wick's seep, Ren as the camp's lookout. After Act I anyone at standing 2+ joins the crew for Apex. The camp panel lists Hollis, Pip and Dez (and Ren); Dez packs an EMP from a cell and scrap.
+- **Six archetypes.** New: Juno Reyes, Scout (Survival 2, Stealth 1; Long Walk: needs drain 25% slower, falls hurt 25% less) and Theo Vance, Defector (Electronics 1, Social 1; Insider: Tanner hears one Social rank more, Dry Creek one less). Scout borrows the work gloves, Defector the thin ones (`handArchetype()`).
+- **Skill trees.** Ranks 1–5, a focus at rank 2, a capstone at rank 4 (one of two, costs a point, no rank). All twelve capstones are wired and were checked in the page: Bump Key, Master's Hands, Salvage, Overclock, Shadow, Exit Plan, Bench Chemist, Blast Proof, Camel, Pack Rat, Handler, Word of Mouth. Minigame effects live in Game's `makeContext` wrappers, so every lock and board gets them. Fixed: Hot Line made the fuse box harder (its difficulty floor was 1).
+- **Screens.** Kit, Skills (K) and Journal (J) are one modal with tabs; the key for the open tab closes it. Skills: six skills on the left, the selected tree with costs on the right. Journal: quests (track, steps, hints, how it ended), people (standing, what they think of you and of each other, favours), the story so far. Dialogue and radio cards show a monogram, role and standing; Vesper's say "unknown carrier".
+- **Character select** shows all six cards at 1280×720 and up: a 3×2 roster over one sheet (motive, playstyle, skill line, build bars, pocket, passive). Arrows and Enter work.
+- **Save v3** adds `capstones`, `rep`, `tracked`, `rests` and `marks`. v1/v2 saves load with defaults; a v2 run that already heard the debrief counts as "read the names"; Sol's roll and the deed are handed over if that room or loft was already looted; finished quests catch up quietly (XP and standing, no second pile of loot) with one toast.
+- Fixed: "info" toasts were 220 px tall (the kit card's `.info` rule matched them).
+
+**Stubbed**
+- Act II is a quest with a crew step and a locked "Reach Apex Vault" step. No Apex yet.
+- The four sites are built by other passes. Their quests trust the three flags and nothing else.
+- The camp's people have no 3D figures. Ren "walks to Last Chance" but still stands in Dry Creek.
+
+**Next**
+- Play Act I end to end as two different builds and cut any line that runs long as a subtitle.
+- Once the sites land, tune each site quest's wrap line to what its secret actually is.

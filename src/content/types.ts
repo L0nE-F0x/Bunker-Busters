@@ -49,9 +49,27 @@ export interface ArchetypeDef {
   carry: number;
   /** `stealth` below 1 is quieter. It multiplies how fast SeedBot's meter fills. */
   stats: { stealth: number; speed: number; toughness: number };
+  /** The passive, as the card shows it. Stats-based passives are wired through `stats`/`carry`. */
   signature: { name: string; description: string };
+  /** A passive that needs its own code path (see GameState and Game). */
+  perk?: ArchetypePerk;
   startingItems: { id: string; qty: number }[];
+  /** One line each: the word on the street, for the character card. */
+  playstyle: string;
 }
+
+/**
+ * - `trail`: hunger and thirst drain 25% slower, falls hurt 25% less.
+ * - `insider`: Tanner hears one Social rank more. Dry Creek hears one less.
+ */
+export type ArchetypePerk = 'trail' | 'insider';
+
+/** Everyone whose opinion of you is tracked. */
+export type PersonId =
+  | 'mara' | 'hollis' | 'pip' | 'dez'
+  | 'nia' | 'doc' | 'inez' | 'sol' | 'ren' | 'wick'
+  | 'tanner' | 'vesper'
+  | 'creek' | 'compact';
 
 export type SolutionKind = 'stealth' | 'hack' | 'force' | 'social' | 'lockpick';
 

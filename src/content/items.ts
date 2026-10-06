@@ -65,8 +65,19 @@ const defs: ItemDef[] = [
   },
   {
     id: 'seed_manifest', name: 'Seed Manifest', category: 'intel', weight: 0, stack: 1, value: 0, icon: 'manifest',
-    description: 'Who paid Tanner for a bunker, and the short list who got a door. The camp is in the unpaid column, circled, with a smiley face.',
+    description: 'Bunkr.ly\'s ledger: everyone who paid Tanner for a seat in Apex Vault, and the short list at the back that Vesper Kade calls the Seed. Last Chance is in the unpaid column, circled, with a smiley face.',
     flavor: 'This is the map. The next name has a building.',
+  },
+  // --- Dry Creek favours ---
+  {
+    id: 'sol_roll', name: 'Sol\'s Pick Roll', category: 'tool', weight: 0.3, stack: 1, value: 30, icon: 'lockpick', usable: true,
+    description: 'A leather roll of tension wrenches and picks, stamped S.V. Take it back to Sol at the street fire, or use it to unroll five picks into your kit.',
+    flavor: 'Thirty years of other people\'s doors.',
+  },
+  {
+    id: 'deed', name: 'Deed to the Till', category: 'intel', weight: 0, stack: 1, value: 0, icon: 'intel',
+    description: 'The landlord\'s deed to the Till, signed over to "whoever is still here". Inez wants it. So does the rest of Dry Creek. Give it to one of them.',
+    flavor: 'Property law, post-apocalypse edition: a pencil and a guess.',
   },
 ];
 

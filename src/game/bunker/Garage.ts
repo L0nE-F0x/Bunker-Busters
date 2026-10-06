@@ -418,13 +418,16 @@ export class Garage {
     }
   }
 
+  /** Tanner hears the Defector one Social rank up (Insider). Handler halves the recall cooldown. */
   private talkCtx(): TalkCtx {
+    const insider = this.s.archetype.perk === 'insider' ? 1 : 0;
+    const cooldown = this.s.capstone('social') === 'handler' ? 37.5 : 75;
     return {
-      skill: (id) => this.s.skill(id),
+      skill: (id) => this.s.skill(id) + (id === 'social' ? insider : 0),
       has: (f) => this.s.has(f),
       gateOpen: this.s.has(F.gate),
       sideOpen: this.s.has(F.side),
-      recallReady: this.t - this.recallAt > 75,
+      recallReady: this.t - this.recallAt > cooldown,
       archetype: this.s.archetype.id,
     };
   }
@@ -455,16 +458,18 @@ export class Garage {
     });
   }
 
-  private applyTalk(effect: 'recall' | 'openGate' | 'openSide' | 'digit' | 'code' | 'past' | 'told') {
+  private applyTalk(effect: NonNullable<(typeof TANNER)[string]['choices'][number]['effect']>) {
     const s = this.s;
     if (effect === 'told' && s.set('social.told')) s.addXP(XP_REWARDS.talk, 'He explained the scam');
     if (effect === 'past' && s.set('social.past')) s.addXP(20, 'He remembers you');
+    if (effect === 'kade' && s.set('tanner.kade')) s.addXP(XP_REWARDS.talk, 'Who Tanner pays');
     if (effect === 'digit' && s.set('social.digit')) s.addXP(35, 'Half a vault code');
     if (effect === 'code' && s.set('social.code')) s.addXP(45, 'He said the code out loud');
     if (effect === 'recall') {
       this.recallAt = this.t;
       const extra = s.focus('social') === 'longcon' ? 5 : 0;
-      this.drone.recall(8 + s.skill('social') + extra);
+      const handler = s.capstone('social') === 'handler' ? 2 : 1;
+      this.drone.recall((8 + s.skill('social') + extra) * handler);
       if (s.set('social.recalled')) s.addXP(15, 'SeedBot sent home');
       this.ctx.audio.play('megaphone', { pos: this.b.points.megaphone });
     }
@@ -754,10 +759,15 @@ export class Garage {
     uPoolBoost.value = this.b.neonFlicker.value < 0.5 ? 0.75 : 1;
   }
 
-  /** Context-sensitive objective text. */
+  /**
+   * Context-sensitive advice while you are at the Garage (inside, in the yard, or within 70 m).
+   * Elsewhere it stays quiet and the quest log (Story) speaks for the main story.
+   */
   objective(): string {
     const s = this.s;
-    if (s.has(F.complete)) return s.has('debriefed') ? '' : 'The Garage is open. Radio Mara at the campfire — she wants the names.';
+    if (s.has(F.complete)) return '';
+    const near = this.playerInside || this.playerInYard || d2(this.ctx.player.position, this.b.origin) < 70 * 70;
+    if (!near) return '';
     if (s.has(F.vault)) return 'Loot the Runway Room. The water is the point. The manifest is the map.';
     if (this.playerInside) {
       if (!s.has(F.lasers)) return 'Lasers in the hall. Jump the low beams, crouch the high ones, or kill them at the fuse box.';
@@ -768,11 +778,8 @@ export class Garage {
     if (s.has(F.side)) return 'Get inside. SeedBot doesn\'t follow you through the door.';
     if (this.playerInYard) return 'Side door is on the east wall. The intercom inside the gate still reaches Tanner.';
     if (s.has(F.gate) || s.has(F.gap)) return 'You\'re through the fence. The drone is the tax on being bright or loud.';
-    if (d2(this.ctx.player.position, this.b.origin) < 70 * 70) {
-      const gap = s.has(F.intelGap) ? ', the loose panel on the north-east fence,' : '';
-      return `Past the fence: pick the gate${gap} or hail the intercom just outside it.`;
-    }
-    return '';
+    const gap = s.has(F.intelGap) ? ', use the loose panel on the north-east fence,' : '';
+    return `Get past the fence: pick the gate${gap} or hail Tanner on the intercom beside it.`;
   }
 
   /** Respawn point just outside the gate. */
