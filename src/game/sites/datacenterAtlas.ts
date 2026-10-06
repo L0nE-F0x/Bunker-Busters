@@ -1,6 +1,6 @@
 import * as THREE from 'three/webgpu';
 import { texture, uniform, float, vec3, vec4, sin, uv, mix, smoothstep, abs, positionWorld, time, max, Fn } from 'three/tsl';
-import { canvasTexture, norm } from '../world/kit';
+import { canvasTexture, norm, MeshBatch } from '../world/kit';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 type N = any;
@@ -277,4 +277,17 @@ export function flipInside(g: THREE.BufferGeometry) {
   for (let i = 0; i < n.count; i++) n.setXYZ(i, -n.getX(i), -n.getY(i), -n.getZ(i));
   p.needsUpdate = n.needsUpdate = u.needsUpdate = true;
   return g;
+}
+
+/** A MeshBatch pair: everything goes to `near`; only what can be seen from outside goes to `ext`,
+ *  the source of the far stand-in (so interiors don't ride along in the silhouette). */
+export class SplitBatch {
+  readonly near = new MeshBatch();
+  readonly ext = new MeshBatch();
+  indoor = false;
+  add(m: THREE.Material, ...g: THREE.BufferGeometry[]) {
+    this.near.add(m, ...g);
+    if (!this.indoor) this.ext.add(m, ...g);
+    return this;
+  }
 }

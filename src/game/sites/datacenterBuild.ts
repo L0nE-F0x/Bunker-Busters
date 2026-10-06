@@ -6,7 +6,7 @@ import { rustyMetal, concrete, corrugated, plainStandard, chainLink, fabric, glo
 import { GlowSprites, lightCone } from '../world/effects';
 import { VirtualLight } from '../world/lights';
 import { dcAtlas } from './datacenterArt';
-import { pvMaterial, glassMaterial, flipInside, rng } from './datacenterAtlas';
+import { pvMaterial, glassMaterial, flipInside, rng, SplitBatch } from './datacenterAtlas';
 
 /** Site-local layout of ColdStorage (metres; +z faces the access road and the highway beyond). */
 export const HALL = { x0: -26, x1: 26, z0: -14, z1: 4, h: 7.3, t: 0.4 };
@@ -91,19 +91,6 @@ interface Door {
   open: number;
   target: number;
   solid: boolean;
-}
-
-/** A MeshBatch pair: everything goes to `near`; only what can be seen from outside goes to `ext`,
- *  the source of the far stand-in (so 200 racks don't ride along in the silhouette). */
-class SplitBatch {
-  readonly near = new MeshBatch();
-  readonly ext = new MeshBatch();
-  indoor = false;
-  add(m: THREE.Material, ...g: THREE.BufferGeometry[]) {
-    this.near.add(m, ...g);
-    if (!this.indoor) this.ext.add(m, ...g);
-    return this;
-  }
 }
 
 /**
