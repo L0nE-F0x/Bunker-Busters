@@ -1,9 +1,10 @@
 import { isMobile } from '@/engine/device';
 import { ITEMS } from '@/content/items';
 import { ARCHETYPES } from '@/content/archetypes';
-import { SKILLS, emptySkills, FOCUSES, SKILL_ORDER } from '@/content/skills';
-import { RECIPES } from '@/content/craft';
-import type { SkillId, Vec3, ArchetypeDef } from '@/content/types';
+import { SKILLS, emptySkills, FOCUSES, CAPSTONES, SKILL_ORDER, FOCUS_RANK, CAPSTONE_RANK } from '@/content/skills';
+import { RECIPES, type Recipe } from '@/content/craft';
+import { favours } from '@/content/quests';
+import type { SkillId, Vec3, ArchetypeDef, PersonId } from '@/content/types';
 import {
   xpForLevel, SKILL_POINTS_PER_LEVEL, MAX_HEALTH, NEED_MAX, BASE_CARRY,
   THIRST_PER_SEC, HUNGER_PER_SEC, needDrain, foodBonus, survivalCarry,
@@ -11,14 +12,23 @@ import {
 import { EventBus } from '@/engine/events';
 
 export interface SaveData {
-  version: 2;
+  version: 3;
   archetype: string;
   level: number;
   xp: number;
   skillPoints: number;
   skills: Record<SkillId, number>;
-  /** One focus id per skill. Absent means the branch is still open. */
+  /** One focus id per skill (rank 2). Absent means the branch is still open. */
   focuses: Partial<Record<SkillId, string>>;
+  /** One capstone id per skill (rank 4). v3. */
+  capstones: Partial<Record<SkillId, string>>;
+  /** Standing with people and places, roughly -3..+4. v3. */
+  rep: Partial<Record<PersonId, number>>;
+  /** Quest id pinned to the corner of the screen, or '' for the main story. v3. */
+  tracked: string;
+  /** Rests at the fire so far. Once-per-rest favours remember the count they were last used at. v3. */
+  rests: number;
+  marks: Record<string, number>;
   health: number;
   /** 0 empty, 100 fine. */
   hunger: number;
@@ -44,6 +54,7 @@ export type GameEvents = {
   taunt: { speaker: string; text: string };
   caught: { reason: string };
   flag: { flag: string };
+  rep: { id: PersonId; delta: number; value: number };
   inventoryChanged: Record<string, never>;
   bunkerComplete: { id: string };
 };
@@ -60,13 +71,18 @@ export class GameState {
   static fresh(archetypeId: string, spawn: Vec3): GameState {
     const a = ARCHETYPES.find((x) => x.id === archetypeId) ?? ARCHETYPES[0];
     return new GameState({
-      version: 2,
+      version: 3,
       archetype: a.id,
       level: 1,
       xp: 0,
       skillPoints: 1,
       skills: { ...emptySkills(), ...a.skills },
       focuses: {},
+      capstones: {},
+      rep: {},
+      tracked: '',
+      rests: 0,
+      marks: {},
       health: MAX_HEALTH,
       hunger: 82,
       thirst: 76,
@@ -81,8 +97,21 @@ export class GameState {
     });
   }
 
+  private archCache: { key: string; def: ArchetypeDef } | null = null;
+
+  /**
+   * The person you picked, with stats as they stand now. Shadow (Stealth capstone) makes you
+   * quieter to SeedBot, which reads `archetype.stats.stealth`. Cached: the drone asks every frame.
+   */
   get archetype(): ArchetypeDef {
-    return ARCHETYPES.find((x) => x.id === this.data.archetype) ?? ARCHETYPES[0];
+    const base = ARCHETYPES.find((x) => x.id === this.data.archetype) ?? ARCHETYPES[0];
+    const shadow = this.capstone('stealth') === 'shadow';
+    const key = `${base.id}|${shadow}`;
+    if (this.archCache?.key !== key) {
+      const def = shadow ? { ...base, stats: { ...base.stats, stealth: base.stats.stealth * 0.75 } } : base;
+      this.archCache = { key, def };
+    }
+    return this.archCache.def;
   }
 
   // ---------- flags ----------
@@ -115,11 +144,56 @@ export class GameState {
   spendFocus(focusId: string) {
     const def = FOCUSES.find((f) => f.id === focusId);
     if (!def || this.data.skillPoints <= 0) return false;
-    if (this.skill(def.skill) < 2 || this.focus(def.skill)) return false;
+    if (this.skill(def.skill) < FOCUS_RANK || this.focus(def.skill)) return false;
     this.data.focuses[def.skill] = def.id;
     this.data.skillPoints--;
     this.events.emit('toast', { text: `${def.name}. ${SKILLS[def.skill].name} takes a shape.`, kind: 'good' });
     return true;
+  }
+  /** The capstone bought for this skill, or ''. */
+  capstone(id: SkillId) {
+    return this.data.capstones[id] ?? '';
+  }
+  /** Rank 4's branch. Same rules as a focus: a point, no rank, the twin closes. */
+  spendCapstone(capId: string) {
+    const def = CAPSTONES.find((f) => f.id === capId);
+    if (!def || this.data.skillPoints <= 0) return false;
+    if (this.skill(def.skill) < CAPSTONE_RANK || this.capstone(def.skill)) return false;
+    this.data.capstones[def.skill] = def.id;
+    this.data.skillPoints--;
+    this.archCache = null;
+    this.events.emit('toast', { text: `${def.name}. ${SKILLS[def.skill].name} is finished.`, kind: 'good' });
+    return true;
+  }
+  /** What a lockpick minigame plays at. Master's Hands plays every lock at rank 5. */
+  lockSkill() {
+    return this.capstone('lockpicking') === 'master' ? 5 : this.skill('lockpicking');
+  }
+  /** What a bypass board plays at. Overclock plays every board at rank 5. */
+  boardSkill() {
+    return this.capstone('electronics') === 'overclock' ? 5 : this.skill('electronics');
+  }
+
+  // ---------- standing ----------
+  rep(id: PersonId) {
+    return this.data.rep[id] ?? 0;
+  }
+  addRep(id: PersonId, delta: number) {
+    if (!delta) return;
+    const value = Math.max(-3, Math.min(4, this.rep(id) + delta));
+    this.data.rep[id] = value;
+    this.events.emit('rep', { id, delta, value });
+  }
+  /** Standing favours from finished quests (content/quests.ts `favours`). */
+  favours() {
+    return favours(this);
+  }
+  /** Once-per-rest favours (Nia's plate, Doc's house calls, Wick's seep). */
+  favourReady(key: string) {
+    return this.data.marks[key] !== this.data.rests;
+  }
+  useFavour(key: string) {
+    this.data.marks[key] = this.data.rests;
   }
 
   // ---------- xp ----------
@@ -143,7 +217,9 @@ export class GameState {
 
   /** Hunger and thirst. Menus should not call this — reading isn't metabolizing. */
   tickNeeds(dt: number) {
-    const m = needDrain(this.skill('survival'));
+    let m = needDrain(this.skill('survival'));
+    if (this.capstone('survival') === 'camel') m *= 0.65;
+    if (this.archetype.perk === 'trail') m *= 0.75;
     this.data.thirst = Math.max(0, this.data.thirst - THIRST_PER_SEC * m * dt);
     this.data.hunger = Math.max(0, this.data.hunger - HUNGER_PER_SEC * m * dt);
     const worst = Math.min(this.data.hunger, this.data.thirst);
@@ -170,6 +246,7 @@ export class GameState {
 
   /** A real rest. Survival 5 is the only rank that puts you all the way back. */
   restAtFire() {
+    this.data.rests++;
     const sv = this.skill('survival');
     if (sv >= 5) {
       this.data.health = MAX_HEALTH;
@@ -190,7 +267,8 @@ export class GameState {
 
   // ---------- health ----------
   damage(amount: number) {
-    const mult = 1 / this.archetype.stats.toughness;
+    let mult = 1 / this.archetype.stats.toughness;
+    if (this.capstone('demolition') === 'blastproof') mult *= 0.75;
     const d = Math.round(amount * mult);
     this.data.health = Math.max(0, this.data.health - d);
     this.events.emit('health', { value: this.data.health, delta: -d });
@@ -209,7 +287,7 @@ export class GameState {
     return this.data.inventory.reduce((w, s) => w + (ITEMS[s.id]?.weight ?? 0) * s.qty, 0);
   }
   get carryLimit() {
-    return BASE_CARRY + survivalCarry(this.skill('survival')) + this.archetype.carry;
+    return BASE_CARRY + survivalCarry(this.skill('survival')) + this.archetype.carry + (this.capstone('survival') === 'packrat' ? 6 : 0);
   }
 
   /**
@@ -241,6 +319,14 @@ export class GameState {
     return added;
   }
 
+  /** How many a recipe makes for you: Sol's lesson bends a third pick, Bench Chemist packs a second charge. */
+  craftYield(r: Recipe) {
+    let n = r.out.qty;
+    if (r.id === 'picks' && favours(this).solLesson) n += 1;
+    if (r.id === 'charge' && this.capstone('demolition') === 'chemist') n *= 2;
+    return n;
+  }
+
   /** Campfire recipes. Null means it worked. A string is the reason it didn't. */
   craft(id: string): string | null {
     const recipe = RECIPES.find((r) => r.id === id);
@@ -252,8 +338,9 @@ export class GameState {
       if (this.count(n.id) < n.qty) return `Need ${n.qty}× ${ITEMS[n.id]?.name ?? n.id}.`;
     }
     for (const n of recipe.need) this.removeItem(n.id, n.qty);
-    const got = this.addItem(recipe.out.id, recipe.out.qty);
-    if (got < recipe.out.qty) {
+    const want = this.craftYield(recipe);
+    const got = this.addItem(recipe.out.id, want);
+    if (got < want) {
       this.removeItem(recipe.out.id, got);
       for (const n of recipe.need) this.addItem(n.id, n.qty, true, true);
       return 'Too heavy, even after spending the parts.';
@@ -305,27 +392,69 @@ function readFocuses(raw: unknown): Partial<Record<SkillId, string>> {
   return out;
 }
 
-/** v1 saves predate hunger, thirst, and four of the six skills. Keep the run. */
+function readCapstones(raw: unknown): Partial<Record<SkillId, string>> {
+  const src = (raw as { capstones?: unknown }).capstones;
+  const out: Partial<Record<SkillId, string>> = {};
+  if (!src || typeof src !== 'object') return out;
+  for (const id of SKILL_ORDER) {
+    const v = (src as Record<string, unknown>)[id];
+    if (typeof v === 'string' && CAPSTONES.some((f) => f.id === v && f.skill === id)) out[id] = v;
+  }
+  return out;
+}
+
+function readNumbers(raw: unknown): Record<string, number> {
+  const out: Record<string, number> = {};
+  if (!raw || typeof raw !== 'object') return out;
+  for (const [k, v] of Object.entries(raw as Record<string, unknown>)) {
+    if (typeof v === 'number' && Number.isFinite(v)) out[k] = v;
+  }
+  return out;
+}
+
+const ACT1_ENDINGS = ['act1.broadcast', 'act1.leverage', 'act1.deal'];
+
+/**
+ * v1 predates hunger, thirst and four of the six skills. v2 predates capstones, standing and quests.
+ * Keep the run: every missing field gets a default. Quest progress is rebuilt from flags on load
+ * (Story.sync), so an old save picks up the quests it already finished without replaying them.
+ */
 function migrateSave(raw: unknown): SaveData | null {
   if (!raw || typeof raw !== 'object') return null;
   const d = raw as Partial<SaveData> & { skills?: Partial<Record<SkillId, number>> };
   const version = (raw as { version?: number }).version;
-  if (version !== 1 && version !== 2) return null;
+  if (version !== 1 && version !== 2 && version !== 3) return null;
   if (!d.archetype || !d.inventory || !d.position) return null;
   const flags = [...(d.flags ?? [])];
   if (flags.includes('intro') && !flags.includes('briefed')) flags.push('briefed');
+  // a v2 run that already heard the debrief ended Act I before the choice existed: Mara read the names
+  if (flags.includes('debriefed') && !ACT1_ENDINGS.some((f) => flags.includes(f))) flags.push('act1.broadcast');
+  const inventory = [...d.inventory];
+  if (version !== 3) {
+    // Things v2 looted before they carried a story: hand over the quest item, or count the choice as made.
+    const give = (id: string) => { if (!inventory.some((s) => s.id === id)) inventory.push({ id, qty: 1 }); };
+    if (flags.includes('creek.motel.b.loot')) give('sol_roll');
+    if (flags.includes('creek.loft')) give('deed');
+    if (flags.includes('cave.pocket.loot')) flags.push('q.wick.took');
+    if (!flags.includes('migrated.v3')) flags.push('migrated.v3');
+  }
   return {
-    version: 2,
-    archetype: d.archetype,
+    version: 3,
+    archetype: ARCHETYPES.some((a) => a.id === d.archetype) ? d.archetype : ARCHETYPES[0].id,
     level: d.level ?? 1,
     xp: d.xp ?? 0,
     skillPoints: d.skillPoints ?? 0,
     skills: { ...emptySkills(), ...(d.skills ?? {}) },
     focuses: readFocuses(raw),
+    capstones: readCapstones(raw),
+    rep: readNumbers((raw as { rep?: unknown }).rep) as Partial<Record<PersonId, number>>,
+    tracked: typeof d.tracked === 'string' ? d.tracked : '',
+    rests: typeof d.rests === 'number' ? d.rests : 0,
+    marks: readNumbers((raw as { marks?: unknown }).marks),
     health: d.health ?? MAX_HEALTH,
     hunger: d.hunger ?? 78,
     thirst: d.thirst ?? 72,
-    inventory: d.inventory,
+    inventory,
     position: d.position,
     yaw: d.yaw ?? 0,
     hour: d.hour ?? 17.1,

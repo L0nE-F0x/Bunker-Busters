@@ -687,12 +687,7 @@ export class Settlement {
     this.interactables.push({
       id: 'generator', pos: this.pos('generator'), radius: 1.9,
       visible: () => !this.s?.has('creek.power'),
-      primary: this.circuitAction('generator', 'Clinic generator', 2, 'creek.power', () => {
-        this.s.set('creek.power');
-        this.ctx.audio.play('unlock');
-        this.ctx.ui.banner('GENERATOR', 'The clinic window wakes up. Doc can work.', 'good');
-        this.s.addXP(XP_REWARDS.keypadShorted, 'Generator');
-      }),
+      primary: this.circuitAction('generator', 'Clinic generator', 2, 'creek.power', () => this.powerClinic('The clinic window wakes up. Doc can work.')),
     });
     this.interactables.push({
       id: 'inez', pos: this.pos('inez'), radius: 2.1,
@@ -717,7 +712,7 @@ export class Settlement {
     this.interactables.push({
       id: 'closet', pos: this.pos('closet'), radius: 1.85,
       visible: () => !this.s?.has('creek.stair'),
-      primary: this.pickAction(4, 3, 'CLOSET', () => this.opened('creek.stair', 'closet', 'The closet was a stair. It still is.')),
+      primary: this.pickAction(4, 3, 'CLOSET', () => this.opened('creek.stair', 'closet', 'The closet was a stair all along. Up you go.')),
       secondary: {
         label: 'Charge the closet door',
         available: () => this.chargeReason(2),
@@ -746,7 +741,14 @@ export class Settlement {
     this.interactables.push({
       id: 'motelBloot', pos: this.pos('motelBloot'), radius: 1.6,
       visible: () => !!this.s?.has('creek.motel.b') && !this.s.has('creek.motel.b.loot'),
-      primary: { label: 'Search the room', available: () => true, run: () => this.take('creek.motel.b.loot', [{ id: 'battery', qty: 1 }, { id: 'scrap', qty: 2 }, { id: 'medkit', qty: 1 }]) },
+      primary: {
+        label: 'Search the room', available: () => true,
+        run: () => {
+          // Sol's roll is the room's real find. It comes with you even if the pack complains.
+          if (!this.s.has('creek.motel.b.loot')) this.s.addItem('sol_roll', 1, false, true);
+          this.take('creek.motel.b.loot', [{ id: 'battery', qty: 1 }, { id: 'scrap', qty: 2 }, { id: 'medkit', qty: 1 }]);
+        },
+      },
     });
     this.interactables.push({
       id: 'motelC', pos: this.pos('motelC'), radius: 1.85,
@@ -818,18 +820,42 @@ export class Settlement {
       primary: {
         label: 'The crate she didn\'t buy',
         available: () => true,
-        run: async () => {
-          if (!this.s.set('cave.pocket.loot')) return;
-          const got = this.loot([{ id: 'water', qty: 1 }, { id: 'battery', qty: 2 }, { id: 'scrap', qty: 2 }]);
-          this.s.addXP(40, 'Vesper\'s leftover');
-          await this.ctx.ui.choose({
-            speaker: 'Paint on the rock',
-            text: `V. K. looked. Didn't buy. Under the paint, a crate with her handwriting on the tape: "prototype adjacent." ${got}`,
-            choices: [{ id: 'ok', label: 'Leave the view' }],
-          });
-        },
+        run: () => this.vesperCrate(),
       },
     });
+  }
+
+  // ------------------------------------------------------------------ rules of the street
+  /** The Social rank Dry Creek hears: Known Face adds one, the Defector's founder accent costs one. */
+  private townSocial() {
+    return Math.max(0, this.social() - (this.s.archetype.perk === 'insider' ? 1 : 0));
+  }
+
+  private needSocial(n: number, who: string) {
+    if (this.townSocial() >= n) return undefined;
+    const accent = this.s.archetype.perk === 'insider' ? ' Dry Creek hears your founder accent: one rank less.' : '';
+    return `Requires Social Engineering ${n}. ${who}${accent}`;
+  }
+
+  /** "Walk west with me" after Act I. Anyone at standing 2 says yes. */
+  private crewChoice(id: 'nia' | 'doc' | 'inez' | 'sol' | 'ren' | 'wick', label = 'Would you walk west with me, to Apex?') {
+    if (!this.s.has('debriefed')) return [];
+    if (this.s.has(`crew.${id}`)) return [{ id: 'crewed', label: 'About Apex.', disabled: 'Already said yes. Already packing.' }];
+    const rep = this.s.rep(id);
+    return [{ id: 'crew', label, disabled: rep >= 2 ? undefined : 'Not yet. Finish a favour for them first (standing 2).', next: 'crew' }];
+  }
+
+  private joinCrew(id: string) {
+    if (!this.s.set(`crew.${id}`)) return;
+    this.s.addXP(25, 'Crew for Apex');
+    this.ctx.audio.play('uiConfirm');
+  }
+
+  private powerClinic(line: string) {
+    if (!this.s.set('creek.power')) return;
+    this.ctx.audio.play('unlock');
+    this.ctx.ui.banner('GENERATOR', line, 'good');
+    this.s.addXP(XP_REWARDS.keypadShorted, 'Generator');
   }
 
   private circuitAction(id: string, title: string, difficulty: number, flag: string, onOk: () => void): Action {
@@ -845,6 +871,8 @@ export class Settlement {
         if (this.s.has(flag)) return;
         if (this.s.skill('electronics') >= 5) {
           this.toast('You flip it like a switch.', 'good');
+          // Salvage pays for a switch too (boards pay through Game's circuit wrapper)
+          if (this.s.capstone('electronics') === 'salvage') this.loot([{ id: 'battery', qty: 1 }]);
           onOk();
           return;
         }
@@ -925,13 +953,34 @@ export class Settlement {
     this.s.addXP(XP_REWARDS.cache, 'Cache');
   }
 
+  private async vesperCrate() {
+    const pick = await this.ctx.ui.choose({
+      speaker: 'Paint on the rock',
+      text: '"V. K. looked. Didn\'t buy." Under the paint, a crate taped shut in her handwriting: PROTOTYPE ADJACENT. Water, cells, scrap. Wick is watching you from the fire.',
+      choices: [
+        { id: 'take', label: 'Take the crate.' },
+        { id: 'leave', label: 'Leave it for Wick.' },
+        { id: 'later', label: 'Not yet.' },
+      ],
+    });
+    if (pick === 'take' && this.s.set('q.wick.took')) {
+      this.s.set('cave.pocket.loot');
+      const got = this.loot([{ id: 'water', qty: 1 }, { id: 'battery', qty: 2 }, { id: 'scrap', qty: 2 }]);
+      this.s.addXP(40, 'Vesper\'s leftovers');
+      this.toast(`${got}. Wick says nothing, which from Wick is a paragraph.`, 'good');
+    } else if (pick === 'leave' && this.s.set('q.wick.left')) {
+      this.s.set('cave.pocket.loot');
+      this.toast('You leave it. Wick paints over her initials with his own, and points at the seep at the back of the cave.', 'good');
+    }
+  }
+
   private async readWash() {
     if (!this.s.set('creek.wash')) return;
     this.s.set('cave.known');
     this.s.addXP(15, 'The wash');
     await this.ctx.ui.choose({
       speaker: 'Board on the shed',
-      text: 'North of the spire. Posts. The wash is the only ground that still agrees to be walked. Wick is at the top. He does not come down for coffee.',
+      text: 'South of the Spire there\'s a wash with posts in it, the only ground up that ridge that still agrees to be walked. Wick lives at the top. He does not come down for coffee.',
       choices: [{ id: 'ok', label: 'Follow the posts.' }],
     });
   }
@@ -941,7 +990,7 @@ export class Settlement {
     this.s.addXP(15, 'Guest book');
     await this.ctx.ui.choose({
       speaker: 'Guest book',
-      text: 'Last page, pencil. "Room 2 is three pins if your hands are worth a rank. Room 3 is nails. The ice machine left with the owner. If you can open a closet, the Till has a stair that the sign says is a closet."',
+      text: 'Last page, in pencil: "Room 2 is three pins, if your hands are worth a rank. Room 3 is nailed shut. The ice machine left with the owner. And the Till has a stair that the sign calls a closet."',
       choices: [{ id: 'ok', label: 'Tear the page out' }],
     });
   }
@@ -950,61 +999,142 @@ export class Settlement {
     if (!this.s.set('creek.loft')) return;
     this.s.set('cave.known');
     const got = this.loot([{ id: 'battery', qty: 1 }, { id: 'water', qty: 1 }]);
+    this.s.addItem('deed', 1, true, true);
     this.s.addXP(35, 'The stair');
     await this.ctx.ui.choose({
-      speaker: 'Page on the shelf',
-      text: `Inez's landlord drew a ridge and a cut in it, north, where the ground steps up. "Wick answers the radio with silence. The pocket behind the rocks is not his. A woman with rocket money looked and did not buy." ${got}`,
-      choices: [{ id: 'ok', label: 'Fold it into the journal' }],
+      speaker: 'The landlord\'s shelf',
+      text: `A map of the ridge south of the Spire, with a cut drawn in it: "Wick answers the radio with silence. A woman with rocket money looked at the pocket and didn't buy." Under it, the deed to the Till, signed over to "whoever is still here". ${got}`,
+      choices: [{ id: 'ok', label: 'Take the deed. Decide later.' }],
     });
   }
 
+  // ------------------------------------------------------------------ Nia
   private async talkNia() {
     if (this.s.set('creek.talk.nia')) this.s.addXP(XP_REWARDS.talk, 'Heard Nia');
     await this.ctx.ui.converse({
       start: 'hello',
       node: (id) => this.niaNode(id),
       onChoice: (_n, choice) => {
-        if (choice === 'water' && this.s.set('creek.nia.water')) {
+        const s = this.s;
+        if (choice === 'water' && s.set('creek.nia.water')) {
           this.loot([{ id: 'water', qty: 1 }]);
-          this.toast('Nia slides one bottle. She writes it down.', 'good');
+          this.toast('Nia slides one bottle across. She writes it down.', 'good');
         }
-        if (choice === 'ridge' && this.s.set('creek.nia.ridge')) {
-          this.s.set('cave.known');
-          this.s.addXP(XP_REWARDS.talk, 'The ridge');
+        if (choice === 'ridge' && s.set('creek.nia.ridge')) {
+          s.set('cave.known');
+          s.addXP(XP_REWARDS.talk, 'The ridge');
         }
-        if (choice === 'stair') this.s.set('creek.hint.stair');
+        if (choice === 'stair') s.set('creek.hint.stair');
+        if (choice === 'tell') s.set('q.nia.told');
+        if (choice === 'cover' && s.count('water') >= 2 && !s.has('q.nia.covered')) {
+          s.removeItem('water', 2);
+          s.set('q.nia.covered');
+        }
+        if (choice === 'peace' && this.townSocial() >= 3) s.set('q.nia.peace');
+        if (choice === 'plate' && s.favours().niaPlate && s.favourReady('nia.plate')) {
+          s.useFavour('nia.plate');
+          s.satisfy(45, 12, 8);
+          this.ctx.audio.play('eat');
+          this.toast('Nia\'s plate. Beans, something green, and opinions. Less hungry, less thirsty.', 'good');
+        }
+        if (choice === 'deed' && s.removeItem('deed', 1)) s.set('q.inez.town');
+        if (choice === 'crew') this.joinCrew('nia');
       },
     });
   }
 
   private niaNode(id: string) {
-    const soc = this.social();
+    const s = this.s;
+    const soc = this.townSocial();
+    const q = s.has('q:nia.short') && !s.has('q:nia.short:done');
     if (id === 'hello') {
+      const short = s.has('q.nia.told') || s.has('q.nia.peace') || s.has('q.nia.covered')
+        ? ''
+        : ' Also, somebody keeps drinking my ledger. Two bottles a week, from under this counter.';
+      const plate = s.favours().niaPlate;
       return {
         speaker: 'Nia Pell',
-        text: 'You have the radio look. Mara\'s, or just thirsty. I cook what shows up. Today that is not much.',
+        text: `${s.rep('nia') >= 2 ? 'There you are. Sit.' : 'You have the radio look. Mara\'s, or just thirsty.'} I cook what shows up. Today that isn't much.${short}`,
         choices: [
-          { id: 'water', label: 'One bottle, for the camp.', disabled: this.s.has('creek.nia.water') ? 'She already wrote you down.' : undefined, next: 'hello' },
+          { id: 'water', label: 'One bottle, for the camp.', disabled: s.has('creek.nia.water') ? 'She already wrote you down.' : undefined, next: 'hello' },
+          ...(q ? [{ id: 'short', label: s.has('q.nia.who') ? 'I know who\'s taking your water.' : 'About your missing water...', next: 'short' }] : []),
+          ...(plate ? [{ id: 'plate', label: 'Eat at the counter.', disabled: s.favourReady('nia.plate') ? undefined : 'Rest first. The plate is for people who sleep.', next: 'hello' }] : []),
+          ...(s.count('deed') && !s.has('q.inez.inez') && !s.has('q.inez.town') ? [{ id: 'deed', label: 'Pin the Till\'s deed on your wall. It\'s the town\'s.', next: 'deed' }] : []),
           { id: 'who', label: 'Who else is still here?', next: 'who' },
-          { id: 'ridge', label: 'Anything north of the highway?', disabled: soc >= 1 ? undefined : 'Requires Social Engineering 1. She doesn\'t give directions to a stranger.', next: 'ridge' },
+          { id: 'ridge', label: 'Anything up on the ridge?', disabled: this.needSocial(1, 'She doesn\'t give directions to strangers.'), next: 'ridge' },
+          ...this.crewChoice('nia'),
           { id: 'bye', label: 'Keep the light on.' },
         ],
+      };
+    }
+    if (id === 'short') {
+      if (!s.has('q.nia.who')) {
+        return {
+          speaker: 'Nia Pell',
+          text: 'Two bottles a week. Always at night. Always the good ones. Find out who before I suspect everyone. I already suspect everyone.',
+          choices: [{ id: 'back', label: 'I\'ll ask around.', next: 'hello' }],
+        };
+      }
+      return {
+        speaker: 'Nia Pell',
+        text: 'Well? Who is it? Don\'t soften it. I\'ve been softened enough for one apocalypse.',
+        choices: [
+          { id: 'tell', label: 'It\'s Doc.', next: 'told' },
+          { id: 'cover', label: 'The jugs leak. Here, two of mine. (2 water)', disabled: s.count('water') >= 2 ? undefined : 'You need 2 water to cover it.', next: 'covered' },
+          { id: 'peace', label: 'It\'s Doc, and he needs it for the clinic. Talk to him.', disabled: soc >= 3 ? undefined : this.needSocial(3, 'Making peace takes a gentle tongue.'), next: 'peace' },
+          { id: 'back', label: 'Not yet.', next: 'hello' },
+        ],
+      };
+    }
+    if (id === 'told') {
+      return {
+        speaker: 'Nia Pell',
+        text: 'Doc? DOC. I fed that man through two winters. ...Thank you. There\'s a plate at the counter for you whenever you\'ve slept. I\'m going to go yell now.',
+        choices: [{ id: 'ok', label: 'Go easy on him. Or don\'t.' }],
+      };
+    }
+    if (id === 'covered') {
+      return {
+        speaker: 'Nia Pell',
+        text: 'Leaky jugs. Of course it\'s leaky jugs. Thank you. I\'ll stop glaring at the clinic. Mostly.',
+        choices: [{ id: 'ok', label: 'Glare a little. For balance.' }],
+      };
+    }
+    if (id === 'peace') {
+      return {
+        speaker: 'Nia Pell',
+        text: 'For the sterilizer? He could have ASKED. Fine. Fine! He stores it here, in writing, and he buys the next ledger. Tell him I said that. Tell him I said it nicely.',
+        choices: [{ id: 'ok', label: 'I\'ll tell him you said it nicely.' }],
+      };
+    }
+    if (id === 'deed') {
+      return {
+        speaker: 'Nia Pell',
+        text: 'The Till belongs to Dry Creek? Inez is going to set something on fire. Probably this. I\'m going to laminate it.',
+        choices: [{ id: 'ok', label: 'Laminate it twice.' }],
+      };
+    }
+    if (id === 'crew') {
+      return {
+        speaker: 'Nia Pell',
+        text: 'Somebody has to feed you on the way. Yes. I\'m bringing the stove. The stove is coming whether it likes it or not.',
+        choices: [{ id: 'ok', label: 'Bring the stove.' }],
       };
     }
     if (id === 'who') {
       return {
         speaker: 'Nia Pell',
-        text: 'Doc Ivers, if the generator agrees with him. Inez at the Till, who locks rooms she says are empty. Sol at the fire knows which locks are tired. Ren just sits. We are not a town. We are the pause between thirsts.',
-        choices: [{ id: 'back', label: 'That\'s a town.', next: 'hello' }],
+        text: 'Doc Ivers runs the clinic, when the generator agrees with him. Inez runs the Till and locks rooms she says are empty. Sol keeps the street fire and knows every tired lock. Ren just sits and counts the road. We\'re not a town. We\'re a pause between thirsts.',
+        choices: [{ id: 'back', label: 'Sounds like a town to me.', next: 'hello' }],
       };
     }
     if (id === 'ridge') {
-      const stair = soc >= 3 ? ' Inez\'s back room has a stair. She says it\'s a closet. Closets don\'t have that many steps.' : '';
+      const stair = soc >= 3 ? ' And Inez\'s back room has a stair. She calls it a closet. Closets don\'t have that many steps.' : '';
       return {
         speaker: 'Nia Pell',
-        text: `North of the spire. Someone cut a wash into the ridge and put posts in it. That is the only ground that still agrees to be walked. A man named Wick is at the top and answers the radio with silence.${stair}`,
+        text: `South of the Spire, somebody cut a wash into the ridge and put posts in it. It\'s the only ground up there that still agrees to be walked. A man called Wick lives at the top and answers the radio with silence.${stair}`,
         choices: [
-          ...(soc >= 3 ? [{ id: 'stair', label: 'And the stair?', next: 'hello' }] : []),
+          ...(soc >= 3 ? [{ id: 'stair', label: 'Tell me about the stair.', next: 'hello' }] : []),
           { id: 'ok', label: 'I\'ll know it when I see it.', next: 'hello' },
         ],
       };
@@ -1012,79 +1142,151 @@ export class Settlement {
     return null;
   }
 
+  // ------------------------------------------------------------------ Doc
   private async talkDoc() {
     if (this.s.set('creek.talk.doc')) this.s.addXP(XP_REWARDS.talk, 'Heard Doc');
     await this.ctx.ui.converse({
       start: 'hello',
-      node: (id) => {
-        if (id !== 'hello') return null;
-        const powered = this.s.has('creek.power');
-        const soc = this.social();
-        return {
-          speaker: 'Doc Ivers',
-          text: powered
-            ? 'Window\'s on. That means I can see what I\'m doing. Don\'t make me grateful out loud.'
-            : 'If you are bleeding, the generator has to agree first. It is out the east side. I don\'t speak to it.',
-          choices: [
-            {
-              id: 'heal', label: 'Patch me up.',
-              disabled: !powered ? 'The generator is out.' : this.s.has('creek.doc.heal') ? 'He already spent the gauze.' : undefined,
-            },
-            {
-              id: 'list', label: 'You knew Tanner\'s patients.',
-              disabled: soc >= 2 ? (this.s.has('creek.doc.list') ? 'You have the list.' : undefined) : 'Requires Social Engineering 2.',
-              next: 'hello',
-            },
-            { id: 'bye', label: 'I\'ll get the generator.' },
-          ],
-        };
-      },
+      node: (id) => this.docNode(id),
       onChoice: (_n, choice) => {
-        if (choice === 'heal' && this.s.has('creek.power') && this.s.set('creek.doc.heal')) {
-          const sv = this.s.skill('survival');
-          this.s.heal(30 + sv * 6);
-          if (sv >= 2) this.loot([{ id: 'medkit', qty: 1 }]);
-          this.toast(sv >= 2 ? 'Doc stitches, and he makes you take a kit so you stop visiting.' : 'Doc stitches what he can see. Survival 2 and he would have handed you a kit.', 'good');
+        const s = this.s;
+        if (choice === 'heal' && s.has('creek.power')) {
+          const calls = s.favours().docCalls;
+          const ok = calls ? s.favourReady('doc.heal') : !s.has('creek.doc.heal');
+          if (!ok) return;
+          if (calls) s.useFavour('doc.heal');
+          s.set('creek.doc.heal');
+          const sv = s.skill('survival');
+          s.heal(30 + sv * 6);
+          if (sv >= 2 && !s.has('creek.doc.kit')) { s.set('creek.doc.kit'); this.loot([{ id: 'medkit', qty: 1 }]); }
+          this.toast(calls ? 'House call. Doc stitches you and complains about your posture.' : sv >= 2 ? 'Doc stitches, then makes you take a kit so you stop visiting.' : 'Doc stitches what he can see.', 'good');
         }
-        if (choice === 'list' && this.social() >= 2 && this.s.set('creek.doc.list')) {
-          this.s.addXP(25, 'Patient list');
-          this.toast('Half the names are the camp. He sold them a bunker and shipped shakes. Doc kept the page because nobody else would.', 'info');
+        if (choice === 'cell' && !s.has('creek.power') && s.removeItem('battery', 1)) {
+          this.powerClinic('Doc swears at the generator until it agrees with him. The window wakes up.');
         }
+        if (choice === 'list' && this.townSocial() >= 2 && s.set('creek.doc.list')) {
+          s.addXP(25, 'Patient list');
+        }
+        if (choice === 'admit' && this.townSocial() >= 2) s.set('q.nia.who');
+        if (choice === 'kit' && s.has('creek.power') && s.set('q.doc.kit')) {
+          s.addItem('medkit', 1, false, true);
+        }
+        if (choice === 'creek' && s.set('creek.doc.permit')) s.addXP(XP_REWARDS.talk, 'Why the creek is dry');
+        if (choice === 'crew') this.joinCrew('doc');
       },
     });
   }
 
+  private docNode(id: string) {
+    const s = this.s;
+    const powered = s.has('creek.power');
+    const soc = this.townSocial();
+    if (id === 'hello') {
+      const calls = s.favours().docCalls;
+      const healBlock = !powered ? 'The generator is out.' : calls ? (s.favourReady('doc.heal') ? undefined : 'House calls are once per rest.') : s.has('creek.doc.heal') ? 'He already spent the gauze on you.' : undefined;
+      const coughQuest = s.has('q:doc.cough') && !s.has('q.doc.kit');
+      return {
+        speaker: 'Doc Ivers',
+        text: powered
+          ? (s.rep('doc') >= 2 ? 'My favourite patient. Don\'t let it go to your head, there are only nine of you.' : 'Window\'s on. That means I can see what I\'m doing. Don\'t make me grateful out loud.')
+          : 'If you\'re bleeding, the generator has to agree first. It\'s out the east side. I don\'t speak to it. Also, Wick has a cough I can hear from here, and I can\'t do a thing about it in the dark.',
+        choices: [
+          { id: 'heal', label: calls ? 'House call, Doc.' : 'Patch me up.', disabled: healBlock, next: 'hello' },
+          ...(!powered ? [{ id: 'cell', label: 'Here, a lithium cell. Rig it yourself.', disabled: s.count('battery') ? undefined : 'You don\'t have a lithium cell.', next: 'hello' }] : []),
+          ...(coughQuest && powered ? [{ id: 'kit', label: 'You mentioned Wick\'s cough.', next: 'kit' }] : []),
+          ...(s.has('q:nia.short') && !s.has('q.nia.who') ? [{ id: 'admit', label: 'Nia\'s missing water, Doc.', disabled: soc >= 2 ? undefined : this.needSocial(2, 'He won\'t confess to a stranger.'), next: 'admit' }] : []),
+          { id: 'list', label: 'You knew Tanner\'s customers.', disabled: soc >= 2 ? (s.has('creek.doc.list') ? 'You have the list.' : undefined) : this.needSocial(2, 'He doesn\'t share patients with strangers.'), next: 'list' },
+          { id: 'creek', label: 'What happened to the creek?', next: 'creek' },
+          ...this.crewChoice('doc'),
+          { id: 'bye', label: 'Take care, Doc.' },
+        ],
+      };
+    }
+    if (id === 'kit') {
+      return {
+        speaker: 'Doc Ivers',
+        text: 'Wick. Up in the Cut, south of the Spire. Coughs like a cement mixer, won\'t come down. Take him this. Tell him it\'s from the town, not from me. He\'ll use it if it\'s from the town.',
+        choices: [{ id: 'ok', label: 'From the town. Got it.' }],
+      };
+    }
+    if (id === 'admit') {
+      return {
+        speaker: 'Doc Ivers',
+        text: '...The sterilizer needs water. I was going to ask her. I\'ve been going to ask her for two years. Tell her, or don\'t. I\'m a doctor, not a diplomat.',
+        choices: [{ id: 'ok', label: 'I\'ll think about what she hears.', next: 'hello' }],
+      };
+    }
+    if (id === 'list') {
+      return {
+        speaker: 'Doc Ivers',
+        text: 'Bunker health plans. Tanner sold them to half the camps: "priority medical in your private shelter". I treated the people who bought them. They got a tote bag and a laminated card. I kept the list because somebody should.',
+        choices: [{ id: 'ok', label: 'Somebody should.', next: 'hello' }],
+      };
+    }
+    if (id === 'creek') {
+      return {
+        speaker: 'Doc Ivers',
+        text: 'The summer before the Pivot, the county let Kade Holdings run a "pilot" on our aquifer. We got a school with a rocket on the sign. Eight months later the creek stopped. They called it a drought. Droughts don\'t come with a pump station.',
+        choices: [{ id: 'ok', label: 'Kade Holdings.', next: 'hello' }],
+      };
+    }
+    if (id === 'crew') {
+      return {
+        speaker: 'Doc Ivers',
+        text: 'Somebody has to stitch you up on the salt. Fine. I\'m bringing the good gauze, and I\'m complaining the whole way.',
+        choices: [{ id: 'ok', label: 'Complain all you like.' }],
+      };
+    }
+    return null;
+  }
+
+  // ------------------------------------------------------------------ Inez
   private async talkInez() {
     if (this.s.set('creek.talk.inez')) this.s.addXP(XP_REWARDS.talk, 'Heard Inez');
     await this.ctx.ui.converse({
       start: 'hello',
       node: (id) => this.inezNode(id),
       onChoice: (_n, choice) => {
+        const s = this.s;
         if (choice === 'trade') {
-          if (this.s.count('scrap') < 3) return;
-          this.s.removeItem('scrap', 3);
+          const rate = s.favours().inezRate;
+          if (s.count('scrap') < rate) return;
+          s.removeItem('scrap', rate);
           this.loot([{ id: 'water', qty: 1 }]);
-          this.toast('Three scrap. One bottle. She does not haggle because haggling is a second conversation.', 'good');
+          this.toast(`${rate} scrap, one bottle. She doesn't haggle. Haggling is a second conversation.`, 'good');
         }
-        if (choice === 'open' && this.s.set('creek.stair')) {
+        if (choice === 'open' && s.set('creek.stair')) {
           this.openDoor('closet', false);
           this.ctx.audio.play('door');
-          this.s.addXP(20, 'Inez opened the closet');
+          s.addXP(20, 'Inez opened the closet');
         }
-        if (choice === 'stair') this.s.set('creek.hint.stair');
+        if (choice === 'stair') s.set('creek.hint.stair');
+        if (choice === 'tickets') s.set('inez.tube');
+        if (choice === 'deed' && s.removeItem('deed', 1)) s.set('q.inez.inez');
+        if (choice === 'crew') this.joinCrew('inez');
       },
     });
   }
 
   private inezNode(id: string) {
-    const soc = this.social();
+    const s = this.s;
+    const soc = this.townSocial();
     if (id === 'hello') {
+      const rate = s.favours().inezRate;
+      const owner = s.has('q.inez.inez');
       return {
         speaker: 'Inez Quill',
-        text: 'The Till is open. The sign about the closet is also open, which is a kind of honesty. Don\'t palm the drawer. I can hear a hand.',
+        text: owner
+          ? 'Welcome to the Till. My Till. Legally, in pencil. Browse. Don\'t palm. I can hear a hand.'
+          : s.has('q.inez.town')
+            ? 'The town\'s Till is open. The town\'s prices went up. Funny how that works.'
+            : 'The Till is open. The sign about the closet is also open, which is a kind of honesty. Don\'t palm the drawer. I can hear a hand.',
         choices: [
-          { id: 'trade', label: 'Three scrap for a bottle.', disabled: soc >= 2 ? (this.s.count('scrap') >= 3 ? undefined : 'Need 3 scrap.') : 'Requires Social Engineering 2.', next: 'hello' },
-          { id: 'closet', label: 'The closet.', disabled: soc >= 3 ? undefined : 'Requires Social Engineering 3.', next: 'closet' },
+          { id: 'trade', label: `${rate} scrap for a bottle.`, disabled: soc >= 2 ? (s.count('scrap') >= rate ? undefined : `Need ${rate} scrap.`) : this.needSocial(2, 'She doesn\'t trade with strangers.'), next: 'hello' },
+          ...(s.count('deed') && !owner && !s.has('q.inez.town') ? [{ id: 'deed', label: 'I found the deed to the Till. It\'s yours.', next: 'deeded' }] : []),
+          { id: 'closet', label: 'The closet.', disabled: s.has('creek.stair') ? 'You\'ve been up there.' : this.needSocial(3, 'She won\'t discuss the closet with a stranger.'), next: 'closet' },
+          { id: 'tickets', label: 'Ever sell anything that actually worked?', next: 'tickets' },
+          ...this.crewChoice('inez'),
           { id: 'bye', label: 'I\'ll look, not touch.' },
         ],
       };
@@ -1092,105 +1294,311 @@ export class Settlement {
     if (id === 'closet') {
       return {
         speaker: 'Inez Quill',
-        text: this.s.has('creek.stair')
-          ? 'You already opened it. Try not to live up there.'
-          : 'The landlord\'s stair. I don\'t have a key that I will admit to. A picker at rank 3 gets bored and opens it. Or you can keep talking.',
+        text: 'The landlord\'s stair. I don\'t have a key that I will admit to. A picker at rank 3 gets bored and opens it. Or you can keep talking.',
         choices: [
-          { id: 'open', label: 'Admit to the key.', disabled: soc >= 4 ? (this.s.has('creek.stair') ? 'Already open.' : undefined) : 'Requires Social Engineering 4.', next: 'hello' },
+          { id: 'open', label: 'Admit to the key.', disabled: soc >= 4 ? undefined : this.needSocial(4, 'She\'s not admitting anything yet.'), next: 'hello' },
           { id: 'stair', label: 'I\'ll come back with a pick.', next: 'hello' },
         ],
+      };
+    }
+    if (id === 'tickets') {
+      return {
+        speaker: 'Inez Quill',
+        text: 'Before the Pivot I sold forty tickets for the hyperloop out east. The Tube. Nobody\'s asked for a refund, because nobody ever arrived. If you\'re walking that way, find out whether I owe anybody.',
+        choices: [{ id: 'ok', label: 'I\'ll look into your refund policy.', next: 'hello' }],
+      };
+    }
+    if (id === 'deeded') {
+      return {
+        speaker: 'Inez Quill',
+        text: '"Whoever is still here." I\'m still here. ...Thank you. Bottles are two scrap for you from now on. Don\'t tell Sol. Sol thinks I have a heart and I like him confused.',
+        choices: [{ id: 'ok', label: 'Your secret\'s safe.' }],
+      };
+    }
+    if (id === 'crew') {
+      return {
+        speaker: 'Inez Quill',
+        text: 'West? To a vault full of rich people\'s things? I\'ll bring the scale. Somebody has to price it all.',
+        choices: [{ id: 'ok', label: 'Bring the scale.' }],
       };
     }
     return null;
   }
 
+  // ------------------------------------------------------------------ Sol
   private async talkSol() {
     if (this.s.set('creek.talk.sol')) this.s.addXP(XP_REWARDS.talk, 'Heard Sol');
     await this.ctx.ui.converse({
       start: 'hello',
-      node: (id) => {
-        const soc = this.social();
-        if (id === 'locks') {
-          return {
-            speaker: 'Sol Varga',
-            text: 'Left room is open. The guest book in it is worth reading. Middle door is three pins, and only if lockpicking is at least a rank. Right door is nails. A charge, not a conversation. The Till\'s closet is a worse lock: rank 3, or you talk Inez into admitting she has the key.',
-            choices: [{ id: 'ok', label: 'I\'ll spend the point on the door I mean.', next: 'hello' }],
-          };
-        }
-        if (id !== 'hello') return null;
-        return {
-          speaker: 'Sol Varga',
-          text: 'Fire\'s communal. The news is not. You want locks, or you want the version where we are all fine.',
-          choices: [
-            { id: 'locks', label: 'Locks.', disabled: soc >= 1 ? undefined : 'Requires Social Engineering 1.', next: 'locks' },
-            { id: 'fine', label: 'The fine version.' },
-          ],
-        };
+      node: (id) => this.solNode(id),
+      onChoice: (_n, choice) => {
+        const s = this.s;
+        if (choice === 'locks') s.set('creek.sol.locks');
+        if (choice === 'night') s.set('q.nia.who');
+        if (choice === 'give' && s.removeItem('sol_roll', 1)) s.set('q.sol.returned');
+        if (choice === 'lie' && s.count('sol_roll')) s.set('q.sol.kept');
+        if (choice === 'crew') this.joinCrew('sol');
       },
-      onChoice: (_n, choice) => { if (choice === 'locks') this.s.set('creek.sol.locks'); },
     });
   }
 
+  private solNode(id: string) {
+    const s = this.s;
+    if (id === 'hello') {
+      const rollOpen = !s.has('q.sol.returned') && !s.has('q.sol.kept');
+      return {
+        speaker: 'Sol Varga',
+        text: s.has('q.sol.kept')
+          ? 'Fire\'s communal. My roll isn\'t, but here we are.'
+          : 'Fire\'s communal. The news isn\'t. You want locks, or the version where we\'re all fine?',
+        choices: [
+          { id: 'locks', label: 'Locks.', disabled: this.needSocial(1, 'He doesn\'t talk shop with strangers.'), next: 'locks' },
+          ...(rollOpen && !s.count('sol_roll') ? [{ id: 'lost', label: 'You look like you lost something.', next: 'lost' }] : []),
+          ...(rollOpen && s.count('sol_roll') ? [
+            { id: 'give', label: 'Here. Your roll, from room 2.', next: 'given' },
+            { id: 'lie', label: 'Room 2 was empty. Sorry.', next: 'lied' },
+          ] : []),
+          ...(s.has('q:nia.short') && !s.has('q.nia.who') ? [{ id: 'night', label: 'Who walks past your fire at night?', next: 'night' }] : []),
+          ...this.crewChoice('sol'),
+          { id: 'fine', label: 'The fine version.' },
+        ],
+      };
+    }
+    if (id === 'locks') {
+      return {
+        speaker: 'Sol Varga',
+        text: 'Left motel room is open, and the guest book in it is worth a read. Middle door is three pins: Lockpicking 1. Right door is nailed: a charge, not a conversation. The Till\'s closet is the real lock. Rank 3, or talk Inez into admitting she has the key.',
+        choices: [{ id: 'ok', label: 'I\'ll spend the point on the door I mean.', next: 'hello' }],
+      };
+    }
+    if (id === 'lost') {
+      return {
+        speaker: 'Sol Varga',
+        text: 'My pick roll. It\'s in motel room 2. I locked it in, then I locked myself out. Thirty years a locksmith. If you get in there, bring it back. Quietly. Nobody needs to hear about this.',
+        choices: [{ id: 'ok', label: 'Nobody will hear it from me.', next: 'hello' }],
+      };
+    }
+    if (id === 'given') {
+      return {
+        speaker: 'Sol Varga',
+        text: 'You brought it back. People don\'t bring things back anymore. Here, sit. Bend the pick like this, not like that. Your picks will last longer, and you\'ll get three out of the scrap that used to make two.',
+        choices: [{ id: 'ok', label: 'Like this, not like that.' }],
+      };
+    }
+    if (id === 'lied') {
+      return {
+        speaker: 'Sol Varga',
+        text: 'Mm. That\'s my roll on your belt. Keep it, then. My hands will remember whose hands it went to.',
+        choices: [{ id: 'ok', label: 'Leave the fire.' }],
+      };
+    }
+    if (id === 'night') {
+      return {
+        speaker: 'Sol Varga',
+        text: 'Doc. Every other night, with a jug and a face like a confession. I don\'t ask. I notice. Now you\'ve noticed too. Congratulations, it\'s heavier than it looks.',
+        choices: [{ id: 'ok', label: 'It is.', next: 'hello' }],
+      };
+    }
+    if (id === 'crew') {
+      return {
+        speaker: 'Sol Varga',
+        text: 'Thirty years of other people\'s doors. One more won\'t kill me. It might. Yes.',
+        choices: [{ id: 'ok', label: 'Bring the roll.' }],
+      };
+    }
+    return null;
+  }
+
+  // ------------------------------------------------------------------ Ren
   private async talkRen() {
     if (this.s.set('creek.talk.ren')) this.s.addXP(10, 'Heard Ren');
-    const sv = this.s.skill('survival');
-    await this.ctx.ui.choose({
-      speaker: 'Ren Oka',
-      text: 'We are a pause. The highway thinks it\'s a place. It isn\'t. Sit long enough and the wash starts to look like a pantry.',
-      choices: [
-        { id: 'pantry', label: 'Show me.', disabled: sv >= 2 ? (this.s.has('creek.ren.ration') ? 'You already ate their spare.' : undefined) : 'Requires Survival 2. You don\'t look like you know a pantry from a ditch.' },
-        { id: 'sit', label: 'I\'ll sit.' },
-      ],
-    }).then((id) => {
-      if (id === 'pantry' && sv >= 2 && this.s.set('creek.ren.ration')) {
-        this.loot([{ id: 'ration', qty: 1 }]);
-        this.toast('Ren hands you the ration they were saving for a person who could name the wash.', 'good');
-      }
+    await this.ctx.ui.converse({
+      start: 'hello',
+      node: (id) => this.renNode(id),
+      onChoice: (_n, choice) => {
+        const s = this.s;
+        if (choice === 'pantry' && s.skill('survival') >= 2 && s.set('creek.ren.ration')) {
+          this.loot([{ id: 'ration', qty: 1 }]);
+          this.toast('Ren hands you the ration they were saving for somebody who could name the wash.', 'good');
+        }
+        if (choice === 'truth') s.set('q.ren.truth');
+        if (choice === 'spare') s.set('q.ren.spare');
+        if (choice === 'crew') this.joinCrew('ren');
+      },
     });
   }
 
+  private renNode(id: string) {
+    const s = this.s;
+    const sv = s.skill('survival');
+    const told = s.has('q.ren.truth') || s.has('q.ren.spare');
+    if (id === 'hello') {
+      return {
+        speaker: 'Ren Oka',
+        text: s.has('q.ren.truth')
+          ? 'I\'m leaving for Last Chance in the morning. Mara says they need somebody who can count a road. I can count a road.'
+          : 'We\'re a pause. The highway thinks it\'s a place. It isn\'t. Sit long enough and the wash starts to look like a pantry.',
+        choices: [
+          ...(s.has('site.drivein.done') && !told ? [{ id: 'ending', label: 'I found out how the keynote ended.', next: 'ending' }] : []),
+          { id: 'drive', label: 'What did you do before the pause?', next: 'drive' },
+          { id: 'pantry', label: 'Show me the pantry.', disabled: sv >= 2 ? (s.has('creek.ren.ration') ? 'You already ate their spare.' : undefined) : 'Requires Survival 2. You don\'t look like you know a pantry from a ditch.', next: 'hello' },
+          ...this.crewChoice('ren'),
+          { id: 'sit', label: 'I\'ll sit.' },
+        ],
+      };
+    }
+    if (id === 'drive') {
+      return {
+        speaker: 'Ren Oka',
+        text: 'I ran the projector at the Starlite Drive-In, north of the highway. The last screening was a keynote. I walked out at "one more thing". Nobody else came out. I\'d like to know what the thing was. I wouldn\'t like to go and look.',
+        choices: [{ id: 'ok', label: 'I could look.', next: 'hello' }],
+      };
+    }
+    if (id === 'ending') {
+      return {
+        speaker: 'Ren Oka',
+        text: 'Tell me. Or don\'t. I\'ve been fine not knowing for two years. Mostly fine.',
+        choices: [
+          { id: 'truth', label: 'Tell Ren everything you saw.', next: 'truthful' },
+          { id: 'spare', label: 'It was static, Ren. Just static.', next: 'spared' },
+        ],
+      };
+    }
+    if (id === 'truthful') {
+      return {
+        speaker: 'Ren Oka',
+        text: '...All that. And nobody left. Huh. (Ren laughs, once, like a door that hasn\'t opened in years.) I think I\'m done sitting. Tell Mara there\'s a lookout coming.',
+        choices: [{ id: 'ok', label: 'I\'ll tell her.' }],
+      };
+    }
+    if (id === 'spared') {
+      return {
+        speaker: 'Ren Oka',
+        text: 'Static. Okay. That\'s... okay. Here, take the projector\'s last cells. I won\'t be needing them.',
+        choices: [{ id: 'ok', label: 'Thanks, Ren.' }],
+      };
+    }
+    if (id === 'crew') {
+      return {
+        speaker: 'Ren Oka',
+        text: 'I\'ll walk wherever you\'re walking. That\'s new for me. I\'ll count the steps.',
+        choices: [{ id: 'ok', label: 'Count them out loud.' }],
+      };
+    }
+    return null;
+  }
+
+  // ------------------------------------------------------------------ Wick
   private async talkWick() {
     if (this.s.set('creek.talk.wick')) this.s.addXP(XP_REWARDS.talk, 'Heard Wick');
     await this.ctx.ui.converse({
       start: 'hello',
       node: (id) => this.wickNode(id),
       onChoice: (_n, choice) => {
-        if (choice === 'share' && this.s.skill('survival') >= 2 && this.s.set('cave.share')) {
+        const s = this.s;
+        if (choice === 'share' && s.skill('survival') >= 2 && s.set('cave.share')) {
           this.loot([{ id: 'ration', qty: 1 }, { id: 'water', qty: 1 }]);
-          this.toast('Wick splits what the ridge allows. It is not a feast. It is a count.', 'good');
+          this.toast('Wick splits what the ridge allows. It isn\'t a feast. It\'s a count.', 'good');
         }
-        if (choice === 'vesper') this.s.set('cave.wick.vesper');
+        if (choice === 'vesper') s.set('cave.wick.vesper');
+        if (choice === 'view') s.set('wick.jet');
+        if (choice === 'help' && !s.has('cave.pocket') && (s.skill('survival') >= 3 || this.townSocial() >= 3)) {
+          s.set('cave.pocket');
+          this.clearBlocker('rockfall');
+          this.ctx.audio.play('thud', { pos: this.ctx.player.position, intensity: 0.4 });
+          s.addXP(XP_REWARDS.breach, 'Shifted the rockfall');
+        }
+        if (choice === 'kit' && s.count('medkit') && !s.has('q.doc.kept') && s.removeItem('medkit', 1)) {
+          s.set('q.doc.delivered');
+          s.set('wick.jet');
+        }
+        if (choice === 'greet') s.set('q.doc.kept');
+        if (choice === 'seep' && s.favours().wickSeep && s.favourReady('wick.seep')) {
+          s.useFavour('wick.seep');
+          this.loot([{ id: 'water', qty: 1 }]);
+        }
+        if (choice === 'crew') this.joinCrew('wick');
       },
     });
   }
 
   private wickNode(id: string) {
-    const sv = this.s.skill('survival');
-    const soc = this.social();
+    const s = this.s;
+    const sv = s.skill('survival');
+    const soc = this.townSocial();
     if (id === 'hello') {
+      const docErrand = s.has('q.doc.kit') && !s.has('q.doc.delivered') && !s.has('q.doc.kept');
       return {
         speaker: 'Wick',
-        text: 'You found the cut. Most people find the highway and call that a life. The fire is mine. The view is nobody\'s, which is why it is still here.',
+        text: s.has('q.wick.left')
+          ? 'You again. The seep\'s yours too. Don\'t tell anybody, they\'ll want a view.'
+          : 'You found the cut. Most people find the highway and call that a life. The fire is mine. The view is nobody\'s, which is why it\'s still here.',
         choices: [
-          { id: 'share', label: 'I sleep outside too.', disabled: sv >= 2 ? (this.s.has('cave.share') ? 'He already split it.' : undefined) : 'Requires Survival 2. He can tell you don\'t live on what you carry.', next: 'hello' },
-          { id: 'fall', label: 'The rocks in the side passage.', next: 'fall' },
-          { id: 'vesper', label: 'A woman with rocket money.', disabled: soc >= 1 ? undefined : 'Requires Social Engineering 1.', next: 'vesper' },
+          ...(docErrand ? [
+            { id: 'kit', label: 'Doc sent this. From the town. (give a medkit)', disabled: s.count('medkit') ? undefined : 'You don\'t have a medkit any more.', next: 'kitted' },
+            { id: 'greet', label: 'Doc says hello. (keep the medkit)', next: 'helloed' },
+          ] : []),
+          ...(s.favours().wickSeep ? [{ id: 'seep', label: 'Fill a bottle at the seep.', disabled: s.favourReady('wick.seep') ? undefined : 'It\'s still filling. Rest first.', next: 'hello' }] : []),
+          { id: 'view', label: 'What can you see from up here?', next: 'view' },
+          { id: 'share', label: 'I sleep outside too.', disabled: sv >= 2 ? (s.has('cave.share') ? 'He already split it.' : undefined) : 'Requires Survival 2. He can tell you don\'t live on what you carry.', next: 'hello' },
+          ...(!s.has('cave.pocket') ? [{ id: 'fall', label: 'The rocks in the side passage.', next: 'fall' }] : []),
+          { id: 'vesper', label: 'A woman with rocket money.', disabled: this.needSocial(1, 'He doesn\'t gossip with strangers.'), next: 'vesper' },
+          ...this.crewChoice('wick'),
           { id: 'bye', label: 'I\'ll leave the fire.' },
         ],
       };
     }
-    if (id === 'fall') {
+    if (id === 'view') {
       return {
         speaker: 'Wick',
-        text: 'Not mine. A charge moves it, if you are that kind of person. Rank two, and something that blows. I don\'t help. I also don\'t stop you. Some doors are just rocks.',
-        choices: [{ id: 'ok', label: 'Some doors are just doors.', next: 'hello' }],
+        text: 'The highway. The Garage\'s neon, when he remembers to pay for it. And southwest, out in the dunes, a tail fin. A private jet tried to leave the week of the Pivot. The desert said no.',
+        choices: [{ id: 'ok', label: 'A jet in the dunes.', next: 'hello' }],
+      };
+    }
+    if (id === 'fall') {
+      const can = sv >= 3 || soc >= 3;
+      return {
+        speaker: 'Wick',
+        text: 'Not mine. A charge moves it, if you\'re that kind of person: Demolition 2. Or we shift it by hand, if you\'ve got the back or the patter for it. Some doors are just rocks.',
+        choices: [
+          { id: 'help', label: 'Help me shift it by hand.', disabled: can ? undefined : 'Requires Survival 3 or Social Engineering 3. He won\'t lift for just anybody.', next: 'shifted' },
+          { id: 'ok', label: 'Some doors are just doors.', next: 'hello' },
+        ],
+      };
+    }
+    if (id === 'shifted') {
+      return {
+        speaker: 'Wick',
+        text: 'Lift with your legs. Your legs. Not your opinions. ...There. Behind it is her crate. Go see what she thinks she left.',
+        choices: [{ id: 'ok', label: 'Dust off.' }],
+      };
+    }
+    if (id === 'kitted') {
+      return {
+        speaker: 'Wick',
+        text: 'From the town. Sure. (He coughs, and uses it.) ...Tell Doc thank you. Don\'t tell him I said it. Here, water from the seep. And look southwest off the edge sometime. There\'s a jet out there.',
+        choices: [{ id: 'ok', label: 'I won\'t tell him.' }],
+      };
+    }
+    if (id === 'helloed') {
+      return {
+        speaker: 'Wick',
+        text: 'Hello back. (He coughs for a long time.) Tell him I\'m fine. I\'m always fine.',
+        choices: [{ id: 'ok', label: 'Leave him with the cough.' }],
       };
     }
     if (id === 'vesper') {
       return {
         speaker: 'Wick',
-        text: 'She stood where you are standing. Said the Garage was a prototype with bad numbers. I said the prototype has my cousin\'s water. She didn\'t like that. She looked at the pocket, didn\'t buy, and left her name in paint like a person who thinks paint is a deed.',
+        text: 'She stood where you\'re standing. Said the Garage was a prototype with bad unit economics. I said the prototype has my cousin\'s water. She looked at the pocket in the rock, didn\'t buy, and left her initials in paint, like paint is a deed.',
         choices: [{ id: 'ok', label: 'The camp has her name too.', next: 'hello' }],
+      };
+    }
+    if (id === 'crew') {
+      return {
+        speaker: 'Wick',
+        text: 'I\'ve been looking at the salt from up here for two years. Might as well walk on it. Yes.',
+        choices: [{ id: 'ok', label: 'Bring the view.' }],
       };
     }
     return null;

@@ -1,10 +1,13 @@
 import './styles.css';
 import { ICONS, EYE_ICON } from './icons';
 import { ITEMS, HOTBAR_ITEMS } from '@/content/items';
-import { SKILLS, SKILL_ORDER, focusesFor } from '@/content/skills';
+import { SKILLS, SKILL_ORDER, focusesFor, capstonesFor } from '@/content/skills';
 import { ARCHETYPES } from '@/content/archetypes';
-import { journalEntries } from '@/content/story';
-import { MAX_HEALTH } from '@/content/progression';
+import { PEOPLE, standingTier, STANDING_WORD } from '@/content/people';
+import { MAX_HEALTH, BASE_CARRY } from '@/content/progression';
+import type { ArchetypeDef, SkillId } from '@/content/types';
+import { skillsHTML, bindSkills, defaultSkill } from './SkillsView';
+import { journalHTML, bindJournal, monogram, standingPips, type JournalSource, type JournalSel } from './JournalView';
 import type { GameState, Settings } from '@/game/State';
 import type { AudioEngine } from '@/engine/audio';
 import type { LockResult, TalkChoiceView, UIBridge } from '@/game/context';
@@ -157,8 +160,9 @@ export class UI implements UIBridge {
           <span><span class="kbd">1</span><span class="kbd">2</span><span class="kbd">3</span><span class="kbd">4</span></span><span>EMP · ration · water · medkit</span>
           <span><span class="kbd">F</span></span><span>The other way in: a charge, a keypad, the wire</span>
           <span><span class="kbd">L</span></span><span>Flashlight (SeedBot spots you more easily)</span>
-          <span><span class="kbd">Tab</span> / <span class="kbd">I</span></span><span>Kit & skills</span>
-          <span><span class="kbd">J</span></span><span>Journal — why you're out here</span>
+          <span><span class="kbd">Tab</span> / <span class="kbd">I</span></span><span>Kit</span>
+          <span><span class="kbd">K</span></span><span>Skills: ranks, focuses, capstones</span>
+          <span><span class="kbd">J</span></span><span>Journal: quests, people, the story so far</span>
           <span><span class="kbd">M</span></span><span>Map & intel</span>
           <span><span class="kbd">Esc</span></span><span>Pause</span>
         </div>
@@ -169,53 +173,98 @@ export class UI implements UIBridge {
   }
 
   // ------------------------------------------------------------------ char select
+  /**
+   * Six people, one radio. A 3×2 roster of compact cards over a detail sheet, all on one column
+   * that fits a 720p screen without scrolling the roster (the sheet scrolls on tiny screens).
+   */
   showCharSelect(onPick: (id: string) => void, onPreview: (id: string) => void, onBack: () => void) {
     const el = h('div', '');
     el.id = 'charselect';
     let sel = ARCHETYPES[0].id;
     el.innerHTML = `
-      <div class="side interactive">
-        <div class="label">THE COMPACT HAS ONE RADIO</div>
-        <h2>WHO GETS IT?</h2>
-        <div class="cards"></div>
-        <div class="panel detail"><div class="scan"></div></div>
-        <div style="display:flex;gap:10px;margin-top:auto">
+      <div class="cs-side interactive">
+        <div class="cs-top">
+          <div class="label">Day 1,284 · The Compact has one radio</div>
+          <h2>Who gets it?</h2>
+        </div>
+        <div class="cs-cards" role="listbox"></div>
+        <div class="panel cs-detail"></div>
+        <div class="cs-actions">
           <button class="btn back">Back</button>
-          <button class="btn primary go" style="flex:1">Enter the wasteland</button>
+          <button class="btn primary go">Take the radio</button>
         </div>
       </div>`;
-    const cards = el.querySelector('.cards')!;
-    const detail = el.querySelector('.detail')!;
+    const cards = el.querySelector('.cs-cards')!;
+    const detail = el.querySelector('.cs-detail') as HTMLElement;
     const render = () => {
       const a = ARCHETYPES.find((x) => x.id === sel)!;
       el.style.setProperty('--accent', a.accent);
-      cards.querySelectorAll('.card').forEach((c) => c.classList.toggle('sel', (c as HTMLElement).dataset.id === sel));
-      const bar = (label: string, v: number, max: number, txt: string) =>
-        `<div class="stat"><span>${label}</span><span class="track"><i style="width:${(v / max) * 100}%"></i></span><b>${txt}</b></div>`;
-      const quiet = a.stats.stealth < 0.85 ? 'QUIET' : a.stats.stealth > 1.05 ? 'LOUD' : 'EVEN';
-      const trained = SKILL_ORDER.filter((id) => (a.skills[id] ?? 0) > 0);
-      detail.innerHTML = `<div class="scan"></div>
-        <p>${a.description}</p>
-        <p class="motive">${a.motive}</p>
-        ${trained.map((id) => bar(SKILLS[id].name, a.skills[id] ?? 0, 5, String(a.skills[id] ?? 0))).join('')}
-        ${bar('Noticeable', a.stats.stealth, 1.4, quiet)}
-        ${bar('Toughness', a.stats.toughness, 1.4, a.stats.toughness > 1.15 ? 'HI' : a.stats.toughness < 0.95 ? 'LOW' : 'MID')}
-        <div class="sig"><strong>${a.role} · ${a.signature.name}</strong>${a.signature.description}</div>
-        <div class="sig" style="border-color:var(--ink-faint)"><strong style="color:var(--ink-dim)">Pockets · 1 skill point unspent</strong>${a.startingItems.map((s) => `${s.qty}× ${ITEMS[s.id]?.name ?? s.id}`).join(' · ')}</div>`;
+      cards.querySelectorAll('.cs-card').forEach((c) => c.classList.toggle('sel', (c as HTMLElement).dataset.id === sel));
+      detail.innerHTML = this.archetypeSheet(a);
+      detail.scrollTop = 0;
       onPreview(sel);
     };
     for (const a of ARCHETYPES) {
-      const c = h('div', 'card', `<div class="name">${a.name}</div><div class="tag">${a.tagline}</div>`);
+      const c = h('button', 'cs-card', `<span class="mono" style="--pc:${a.accent}">${a.name.split(' ').map((w) => w[0]).join('')}</span><span class="nm">${esc(a.name)}<small>${esc(a.role)}</small></span>`);
       c.dataset.id = a.id;
+      c.setAttribute('role', 'option');
       c.style.setProperty('--accent', a.accent);
       c.onmouseenter = () => this.audio.play('uiHover');
-      c.onclick = () => { sel = a.id; this.audio.play('ui'); render(); };
+      c.onclick = () => { if (sel === a.id) return; sel = a.id; this.audio.play('ui'); render(); };
       cards.appendChild(c);
     }
-    (el.querySelector('.go') as HTMLButtonElement).onclick = () => { this.audio.play('uiConfirm'); el.remove(); onPick(sel); };
-    (el.querySelector('.back') as HTMLButtonElement).onclick = () => { el.remove(); onBack(); };
+    // arrows walk the roster; Enter takes the radio
+    const onKey = (e: KeyboardEvent) => {
+      const i = ARCHETYPES.findIndex((a) => a.id === sel);
+      const step = e.code === 'ArrowRight' ? 1 : e.code === 'ArrowLeft' ? -1 : e.code === 'ArrowDown' ? 3 : e.code === 'ArrowUp' ? -3 : 0;
+      if (step) {
+        e.preventDefault();
+        sel = ARCHETYPES[(i + step + ARCHETYPES.length) % ARCHETYPES.length].id;
+        this.audio.play('ui');
+        render();
+      } else if (e.code === 'Enter') { e.preventDefault(); go(); }
+    };
+    const leave = () => { window.removeEventListener('keydown', onKey); el.remove(); };
+    const go = () => { this.audio.play('uiConfirm'); leave(); onPick(sel); };
+    window.addEventListener('keydown', onKey);
+    (el.querySelector('.go') as HTMLButtonElement).onclick = go;
+    (el.querySelector('.back') as HTMLButtonElement).onclick = () => { leave(); onBack(); };
     this.root.appendChild(el);
     render();
+  }
+
+  /** The detail sheet for one archetype: who, why, the skill line, the build, the passive, the pocket. */
+  private archetypeSheet(a: ArchetypeDef) {
+    const bar = (label: string, v: number, txt: string) =>
+      `<div class="cs-bar"><span>${label}</span><span class="track"><i style="width:${Math.round(Math.max(0.06, Math.min(1, v)) * 100)}%"></i></span><b>${txt}</b></div>`;
+    const quiet = (1.3 - a.stats.stealth) / 0.8;
+    const tough = (a.stats.toughness - 0.7) / 0.7;
+    const pace = (a.stats.speed - 0.9) / 0.2;
+    const pack = BASE_CARRY + a.carry;
+    const skills = SKILL_ORDER.map((id) => {
+      const lv = a.skills[id] ?? 0;
+      return `<div class="cs-skill ${lv ? 'has' : ''}"><span>${SKILLS[id].name.replace(' Engineering', '')}</span><span class="pips">${Array.from({ length: 5 }, (_, i) => `<i class="${i < lv ? 'on' : ''}"></i>`).join('')}</span></div>`;
+    }).join('');
+    const SHORT: Record<string, string> = { lockpick: 'Picks', emp: 'EMP', battery: 'Cells', water: 'Water', ration: 'Rations', scrap: 'Scrap', nft_drive: 'Wallet', charge: 'Charges', noisemaker: 'Noise', medkit: 'Medkit' };
+    const pocket = a.startingItems.map((s) => {
+      const name = ITEMS[s.id]?.name ?? s.id;
+      return `<span class="it" title="${esc(name)}">${ICONS[ITEMS[s.id]?.icon ?? ''] ?? ''}<b>${s.qty}</b><small>${esc(SHORT[s.id] ?? name)}</small></span>`;
+    }).join('');
+    return `<div class="scan"></div>
+      <div class="cs-name"><h3>${esc(a.name)}</h3><span class="role">${esc(a.role)}<i>·</i>“${esc(a.tagline)}”</span></div>
+      <p class="cs-motive">${esc(a.motive)}</p>
+      <p class="cs-desc"><b>${esc(a.playstyle)}</b> ${esc(a.description)}</p>
+      <div class="cs-grid">
+        <div><div class="label">Skill line</div>${skills}</div>
+        <div><div class="label">Build</div>
+          ${bar('Quiet', quiet, quiet > 0.7 ? 'HIGH' : quiet < 0.25 ? 'LOW' : 'MID')}
+          ${bar('Toughness', tough, tough > 0.7 ? 'HIGH' : tough < 0.35 ? 'LOW' : 'MID')}
+          ${bar('Pace', pace, pace > 0.65 ? 'QUICK' : pace < 0.4 ? 'SLOW' : 'EVEN')}
+          ${bar('Pack', pack / 26, `${pack} KG`)}
+        </div>
+      </div>
+      <div class="cs-pocket"><span class="label">Pocket · and one skill point to spend</span><div>${pocket}</div></div>
+      <div class="cs-passive"><span class="label">Passive · ${esc(a.signature.name)}</span><p>${esc(a.signature.description)}</p></div>`;
   }
 
   // ------------------------------------------------------------------ HUD
@@ -280,7 +329,7 @@ export class UI implements UIBridge {
     (this.hud.querySelector('.xpbar i') as HTMLElement).style.width = `${(d.xp / this.state.xpToNext) * 100}%`;
     this.hud.querySelector('.arch')!.textContent = this.state.archetype.role.toUpperCase();
     this.hud.querySelector('.xptext')!.innerHTML = `<b>${d.xp}</b> / ${this.state.xpToNext} XP`;
-    this.hud.querySelector('.spwrap')!.innerHTML = d.skillPoints > 0 ? `<span class="sp-badge">${d.skillPoints} SKILL POINT${d.skillPoints > 1 ? 'S' : ''} · ${isTouch ? 'KIT' : 'TAB'}</span>` : '';
+    this.hud.querySelector('.spwrap')!.innerHTML = d.skillPoints > 0 ? `<span class="sp-badge">${d.skillPoints} SKILL POINT${d.skillPoints > 1 ? 'S' : ''} · ${isTouch ? 'KIT' : 'K'}</span>` : '';
   }
 
   refreshHotbar() {
@@ -291,12 +340,15 @@ export class UI implements UIBridge {
     }).join('');
   }
 
+  /** A level-up waits for any banner on screen (a quest finishing usually brings both at once). */
+  private pendingLevel = 0;
   levelUp(level: number) {
+    this.refreshVitals();
+    if (this.bannerBusy) { this.pendingLevel = level; return; }
     this.audio.play('levelUp');
-    const el = h('div', 'levelup', `<div class="ring">${level}</div><div class="t">LEVEL UP</div><div class="s">+1 skill point — ${isTouch ? 'open your kit' : 'press <span class="kbd">Tab</span>'} to spend</div>`);
+    const el = h('div', 'levelup', `<div class="ring">${level}</div><div class="t">LEVEL UP</div><div class="s">+1 skill point — ${isTouch ? 'open your kit' : 'press <span class="kbd">K</span>'} to spend</div>`);
     this.hud.appendChild(el);
     setTimeout(() => el.remove(), 4300);
-    this.refreshVitals();
   }
 
   private bannerQueue: [string, string, 'good' | 'bad' | 'info'][] = [];
@@ -310,7 +362,11 @@ export class UI implements UIBridge {
 
   private nextBanner() {
     const next = this.bannerQueue.shift();
-    if (!next) { this.bannerBusy = false; return; }
+    if (!next) {
+      this.bannerBusy = false;
+      if (this.pendingLevel && this.hud) { const l = this.pendingLevel; this.pendingLevel = 0; this.levelUp(l); }
+      return;
+    }
     this.bannerBusy = true;
     const [title, sub, kind] = next;
     const el = h('div', `banner ${kind}`, `<div class="big">${title}</div><div class="rule"></div><div class="sub">${sub}</div>`);
@@ -327,6 +383,17 @@ export class UI implements UIBridge {
     el.querySelector('.line')!.textContent = `“${text}”`;
     el.style.opacity = '1';
     this.subtitleTimer = 3 + text.length * 0.05;
+  }
+
+  /** True while a subtitle is on screen. Banter waits for it. */
+  get subtitleBusy() {
+    return this.subtitleTimer > 0;
+  }
+
+  /** The small caps line over the objective: the quest the corner is following. Called on change only. */
+  setObjectiveLabel(label: string) {
+    const el = this.els.objective?.querySelector('.label');
+    if (el) el.textContent = label;
   }
 
   updateHUD(dt: number, f: HudFrame) {
@@ -395,7 +462,8 @@ export class UI implements UIBridge {
   }
 
   // ------------------------------------------------------------------ modals
-  private openModal(build: (close: () => void) => HTMLElement, onClose?: () => void) {
+  /** `keys` sees a key first; return true to keep the modal open (e.g. switching tabs). */
+  private openModal(build: (close: () => void) => HTMLElement, onClose?: () => void, keys?: (code: string) => boolean) {
     this.modalOpen = true;
     const ov = h('div', 'overlay');
     const close = () => {
@@ -405,11 +473,11 @@ export class UI implements UIBridge {
       onClose?.();
     };
     const keyClose = (e: KeyboardEvent) => {
-      if (['Escape', 'Tab', 'KeyI', 'KeyJ', 'KeyM'].includes(e.code)) {
-        e.preventDefault();
-        e.stopPropagation();
-        close();
-      }
+      if (!['Escape', 'Tab', 'KeyI', 'KeyJ', 'KeyK', 'KeyM'].includes(e.code)) return;
+      e.preventDefault();
+      e.stopPropagation();
+      if (e.code !== 'Escape' && keys?.(e.code)) return;
+      close();
     };
     setTimeout(() => window.addEventListener('keydown', keyClose, true), 50);
     const panel = build(close);
@@ -425,33 +493,65 @@ export class UI implements UIBridge {
     return close;
   }
 
-  openInventory(onUse: (id: string) => void, onClose: () => void, initial: 'kit' | 'journal' = 'kit') {
+  /**
+   * Kit, Skills and Journal: one modal, three tabs. Tab/I, K and J switch to their tab, or close
+   * the modal if you're already on it. Escape always closes.
+   */
+  openInventory(onUse: (id: string) => void, onClose: () => void, initial: 'kit' | 'skills' | 'journal' = 'kit', story: JournalSource | null = null) {
     const s = this.state!;
     this.audio.play('ui');
-    this.openModal((close) => {
+    let tab = initial;
+    let render = () => {};
+    const want = (code: string): 'kit' | 'skills' | 'journal' | null =>
+      code === 'Tab' || code === 'KeyI' ? 'kit' : code === 'KeyK' ? 'skills' : code === 'KeyJ' ? 'journal' : null;
+    this.openModal(() => {
       const m = h('div', 'panel modal interactive');
-      let tab: 'kit' | 'journal' = initial;
       let selected: string | null = s.data.inventory[0]?.id ?? null;
-      const render = () => {
-        const d = s.data;
-        const over = s.weight > s.carryLimit + 0.05;
-        if (tab === 'journal') {
-          const entries = journalEntries({ has: (f) => s.has(f), archetype: s.archetype });
-          m.innerHTML = `<div class="scan"></div>
-            <header><h3>JOURNAL</h3><div class="label">${esc(s.archetype.name)}</div>
-              <div class="tabs"><button class="tab" data-tab="kit">Kit</button><button class="tab on" data-tab="journal">Journal</button></div>
-            </header>
-            <div class="body">
-              <div class="intel-list journal">${entries.length ? entries.map((e) => `<div class="intel-item"><b>${esc(e.title)}</b><span>${esc(e.body)}</span></div>`).join('') : '<div class="intel-item"><span>Nothing written yet. Mara talks first.</span></div>'}</div>
+      let skill: SkillId = defaultSkill(s);
+      const jsel: JournalSel = { sub: 'quests', quest: '', person: '' };
+      const header = (title: string, label: string) => {
+        const pts = s.data.skillPoints;
+        return `<div class="scan"></div>
+          <header><h3>${title}</h3><div class="label">${label}</div>
+            <div class="tabs">
+              <button class="tab ${tab === 'kit' ? 'on' : ''}" data-tab="kit">Kit</button>
+              <button class="tab ${tab === 'skills' ? 'on' : ''}" data-tab="skills">Skills${pts ? `<i class="tab-dot">${pts}</i>` : ''}</button>
+              <button class="tab ${tab === 'journal' ? 'on' : ''}" data-tab="journal">Journal</button>
             </div>
-            <footer><span class="kb"><span class="kbd">J</span> close</span><span>${entries.length} entries</span></footer>`;
+          </header>`;
+      };
+      render = () => {
+        const d = s.data;
+        if (tab === 'skills') {
+          m.innerHTML = `${header('SKILLS', `${esc(s.archetype.name)} · LEVEL ${d.level}`)}
+            ${skillsHTML(s, skill)}
+            <footer><span class="kb"><span class="kbd">K</span> close · <span class="kbd">Tab</span> kit · <span class="kbd">J</span> journal</span><span>A focus or capstone costs a point and doesn't raise the rank.</span></footer>`;
+          bindSkills(m, s, {
+            select: (id) => { skill = id; this.audio.play('ui'); render(); },
+            spent: () => { this.audio.play('uiConfirm'); this.refreshVitals(); render(); },
+            deny: () => this.audio.play('deny'),
+          });
+        } else if (tab === 'journal') {
+          if (story) {
+            m.innerHTML = `${header('JOURNAL', esc(s.archetype.name))}
+              ${journalHTML(s, story, jsel)}
+              <footer><span class="kb"><span class="kbd">J</span> close · <span class="kbd">K</span> skills</span><span>The corner of the screen follows the tracked quest, or the story.</span></footer>`;
+            bindJournal(m, story, jsel, () => { this.audio.play('ui'); render(); });
+          } else {
+            m.innerHTML = `${header('JOURNAL', esc(s.archetype.name))}<div class="body"><p class="empty">Nothing written yet.</p></div>`;
+          }
         } else {
           const cells = Array.from({ length: 24 }, (_, i) => d.inventory[i]);
           const sel = selected ? ITEMS[selected] : null;
-          m.innerHTML = `<div class="scan"></div>
-            <header><h3>KIT</h3><div class="label">${esc(s.archetype.name)} · LEVEL ${d.level}</div>
-              <div class="tabs"><button class="tab on" data-tab="kit">Kit</button><button class="tab" data-tab="journal">Journal</button></div>
-            </header>
+          const over = s.weight > s.carryLimit + 0.05;
+          const build = SKILL_ORDER.map((id) => {
+            const lv = s.skill(id);
+            const f = focusesFor(id).find((x) => x.id === s.focus(id));
+            const c = capstonesFor(id).find((x) => x.id === s.capstone(id));
+            const tags = [f?.name, c?.name].filter(Boolean).join(' · ');
+            return `<div class="kb-skill ${lv ? '' : 'zero'}"><span>${SKILLS[id].name}</span><span class="pips">${Array.from({ length: 5 }, (_, i) => `<i class="${i < lv ? 'on' : ''}"></i>`).join('')}</span><small>${esc(tags)}</small></div>`;
+          }).join('');
+          m.innerHTML = `${header('KIT', `${esc(s.archetype.name)} · LEVEL ${d.level}`)}
             <div class="body inv">
               <div>
                 <div class="grid">${cells.map((c) => c && ITEMS[c.id]
@@ -464,47 +564,36 @@ export class UI implements UIBridge {
                   <div class="cat">${sel.category}</div><h4>${esc(sel.name)}</h4>
                   <p>${esc(sel.description)}</p>${sel.flavor ? `<p class="flavor">${esc(sel.flavor)}</p>` : ''}
                   <div class="stats"><span>WT ${sel.weight}kg</span><span>VALUE ${sel.value}</span><span>×${s.count(sel.id)}</span></div>
-                  <div class="rowbtns">${sel.usable ? '<button class="btn use">Use</button>' : ''}<button class="btn drop">Drop 1</button><button class="btn drop-all">Drop stack</button></div>` : '<p>Empty pockets. The camp can fix that, or the highway can.</p>'}
+                  <div class="rowbtns">${sel.usable ? `<button class="btn use">${sel.id === 'sol_roll' ? 'Unroll (5 picks)' : 'Use'}</button>` : ''}<button class="btn drop">Drop 1</button><button class="btn drop-all">Drop stack</button></div>` : '<p>Empty pockets. The camp can fix that, or the highway can.</p>'}
                 </div>
-                <div class="skills">
-                  <div class="label">SKILLS · ${d.skillPoints} POINT${d.skillPoints === 1 ? '' : 'S'} · RANK 2 OPENS A FOCUS</div>
-                  ${SKILL_ORDER.map((id) => {
-                    const sk = SKILLS[id];
-                    const lv = s.skill(id);
-                    const owned = s.focus(id);
-                    const pair = focusesFor(id);
-                    const focusRow = lv < 2
-                      ? '<div class="focuses"><span class="need">A focus opens at rank 2. One per skill. The point does not raise the rank.</span></div>'
-                      : `<div class="focuses">${pair.map((f) => {
-                          const taken = owned === f.id;
-                          const can = d.skillPoints > 0 && !owned;
-                          return `<button class="btn focus-btn${taken ? ' on' : ''}" data-focus="${f.id}" ${can ? '' : 'disabled'}>${esc(f.name)}</button>`;
-                        }).join('')}</div><div class="d">${esc(owned ? (pair.find((f) => f.id === owned)?.blurb ?? '') : 'Pick one shape. The other one closes.')}</div>`;
-                    return `<div class="skill"><div><div class="n">${sk.name}</div><div class="pips">${Array.from({ length: sk.max }, (_, i) => `<i class="${i < lv ? 'on' : ''}"></i>`).join('')}</div></div>
-                      <button class="btn up" data-skill="${id}" ${d.skillPoints > 0 && lv < sk.max ? '' : 'disabled'}>+</button>
-                      <div class="d">${esc(sk.perLevel[Math.min(lv, sk.max)])}${lv < sk.max ? ` <span style="color:var(--amber)">Next: ${esc(sk.perLevel[lv + 1])}</span>` : ''}</div>
-                      ${focusRow}</div>`;
-                  }).join('')}
+                <div class="kit-build">
+                  <div class="label">Build · ${d.skillPoints} point${d.skillPoints === 1 ? '' : 's'} to spend</div>
+                  ${build}
+                  <button class="btn to-skills" data-tab="skills">Open skills · K</button>
                 </div>
               </div>
             </div>
-            <footer><span class="kb"><span class="kbd">Tab</span> close · <span class="kbd">J</span> journal</span><span>${d.stats.picks} locks · caught ${d.stats.caught}× · ${d.stats.busted} bunkers · food ${Math.round(d.hunger)} · water ${Math.round(d.thirst)}</span></footer>`;
+            <footer><span class="kb"><span class="kbd">Tab</span> close · <span class="kbd">K</span> skills · <span class="kbd">J</span> journal</span><span>${d.stats.picks} locks · caught ${d.stats.caught}× · ${d.stats.busted} bunkers · food ${Math.round(d.hunger)} · water ${Math.round(d.thirst)}</span></footer>`;
+          m.querySelectorAll('.cell[data-id]').forEach((c) => (c as HTMLElement).onclick = () => { selected = (c as HTMLElement).dataset.id!; this.audio.play('ui'); render(); });
+          const use = m.querySelector('.use') as HTMLElement | null;
+          if (use && selected) use.onclick = () => { onUse(selected!); if (!s.count(selected!)) selected = null; this.refreshHotbar(); render(); };
+          const drop = m.querySelector('.drop') as HTMLElement | null;
+          const dropAll = m.querySelector('.drop-all') as HTMLElement | null;
+          if (drop && selected) drop.onclick = () => { s.removeItem(selected!, 1); if (!s.count(selected!)) selected = null; this.audio.play('ui'); this.refreshHotbar(); render(); };
+          if (dropAll && selected) dropAll.onclick = () => { s.removeItem(selected!, s.count(selected!)); selected = null; this.audio.play('ui'); this.refreshHotbar(); render(); };
         }
-        m.querySelectorAll('[data-tab]').forEach((b) => (b as HTMLElement).onclick = () => { tab = (b as HTMLElement).dataset.tab as 'kit' | 'journal'; this.audio.play('ui'); render(); });
-        m.querySelectorAll('.cell[data-id]').forEach((c) => (c as HTMLElement).onclick = () => { selected = (c as HTMLElement).dataset.id!; this.audio.play('ui'); render(); });
-        m.querySelectorAll('.up').forEach((b) => (b as HTMLElement).onclick = () => { if (s.spendPoint((b as HTMLElement).dataset.skill as never)) { this.audio.play('uiConfirm'); this.refreshVitals(); render(); } });
-        m.querySelectorAll('.focus-btn').forEach((b) => (b as HTMLElement).onclick = () => { if (s.spendFocus((b as HTMLElement).dataset.focus ?? '')) { this.audio.play('uiConfirm'); this.refreshVitals(); render(); } });
-        const use = m.querySelector('.use') as HTMLElement | null;
-        if (use && selected) use.onclick = () => { onUse(selected!); if (!s.count(selected!)) selected = null; this.refreshHotbar(); render(); };
-        const drop = m.querySelector('.drop') as HTMLElement | null;
-        const dropAll = m.querySelector('.drop-all') as HTMLElement | null;
-        if (drop && selected) drop.onclick = () => { s.removeItem(selected!, 1); if (!s.count(selected!)) selected = null; this.audio.play('ui'); this.refreshHotbar(); render(); };
-        if (dropAll && selected) dropAll.onclick = () => { s.removeItem(selected!, s.count(selected!)); selected = null; this.audio.play('ui'); this.refreshHotbar(); render(); };
+        m.querySelectorAll('[data-tab]').forEach((b) => (b as HTMLElement).onclick = () => { tab = (b as HTMLElement).dataset.tab as typeof tab; this.audio.play('ui'); render(); });
       };
       render();
-      void close;
       return m;
-    }, onClose);
+    }, onClose, (code) => {
+      const next = want(code);
+      if (!next || next === tab) return false;
+      tab = next;
+      this.audio.play('ui');
+      render();
+      return true;
+    });
   }
 
   openMap(px: number, pz: number, yaw: number, markers: MapMarker[], intel: { title: string; body: string }[], onClose: () => void) {
@@ -609,6 +698,22 @@ export class UI implements UIBridge {
   }
 
   // ------------------------------------------------------------------ story panels
+  /**
+   * The card header: monogram, name, and what they are to you. People come from content/people;
+   * anything else (a note, a door, paint on a rock) gets a plain tag.
+   */
+  private speakerHead(speaker: string) {
+    const [name, channel] = speaker.split(' · ');
+    const p = PEOPLE.find((x) => x.name === name || (name === 'Wick' && x.id === 'wick'));
+    if (!p) return `<div class="spk thing"><span class="mono" style="--pc:#c896ff">${esc(name.slice(0, 1))}</span><div><b>${esc(name)}</b><small>${esc(channel ?? 'Read it')}</small></div></div>`;
+    const rep = this.state?.rep(p.id) ?? 0;
+    const onAir = p.id === 'mara' || p.id === 'vesper' || p.id === 'hollis' || p.id === 'pip' || p.id === 'dez';
+    const radio = channel && channel !== p.role ? channel : p.id === 'mara' || p.id === 'vesper' ? 'On the air' : onAir ? 'At the fire' : p.place;
+    const intrude = p.id === 'vesper' ? '<i class="carrier">Unknown carrier</i>' : '';
+    const standing = p.faction || p.id === 'vesper' || p.id === 'tanner' ? '' : `<span class="st">${STANDING_WORD[standingTier(rep)]}${standingPips(rep)}</span>`;
+    return `<div class="spk ${p.id === 'vesper' ? 'intrude' : ''}">${monogram(p.id, p.name)}<div><b>${esc(p.name)}${intrude}</b><small>${esc(p.role)} · ${esc(radio)}</small></div>${standing}</div>`;
+  }
+
   /** Mara's radio, and the debrief. Skip still finishes. */
   pages(pages: { speaker: string; text: string }[], doneLabel = 'Step outside'): Promise<void> {
     if (!pages.length) return Promise.resolve();
@@ -629,11 +734,12 @@ export class UI implements UIBridge {
       const paint = () => {
         const page = pages[i];
         const last = i >= pages.length - 1;
+        panel.classList.toggle('intrude', page.speaker.startsWith('Vesper'));
         panel.innerHTML = `<div class="scan"></div>
-          <div class="who">${esc(page.speaker)}</div>
+          ${this.speakerHead(page.speaker)}
           <p>${esc(page.text)}</p>
           <div class="brief-foot">
-            <span>${i + 1} / ${pages.length}</span>
+            <span class="dots">${pages.map((_, k) => `<i class="${k === i ? 'on' : k < i ? 'past' : ''}"></i>`).join('')}</span>
             <span class="btns"><button class="btn skip">Skip</button><button class="btn primary next">${last ? esc(doneLabel) : 'Next'}</button></span>
           </div>`;
         (panel.querySelector('.skip') as HTMLButtonElement).onclick = () => { this.audio.play('ui'); finish(); };
@@ -661,11 +767,12 @@ export class UI implements UIBridge {
     const panel = h('div', 'panel talk interactive');
     const enabled = choices.filter((c) => !c.disabled);
     const paint = () => {
+      panel.classList.toggle('intrude', speaker.startsWith('Vesper'));
       panel.innerHTML = `<div class="scan"></div>
-        <div class="who">${esc(speaker)}</div>
+        ${this.speakerHead(speaker)}
         <p>${esc(text)}</p>
         <div class="choices">${(() => { let n = 0; return choices.map((c) => `<button class="btn choice" data-id="${esc(c.id)}" ${c.disabled ? 'disabled' : ''}><span class="n">${c.disabled ? '·' : ++n}</span><span><b>${esc(c.label)}</b>${c.disabled ? `<small>${esc(c.disabled)}</small>` : ''}</span></button>`).join(''); })()}</div>
-        <div class="brief-foot"><span>Esc hangs up</span><span>${enabled.length ? 'Number keys work' : ''}</span></div>`;
+        <div class="brief-foot"><span>Esc ${speaker.includes('Tanner') ? 'hangs up' : 'leaves'}</span><span>${enabled.length ? 'Number keys work' : ''}</span></div>`;
       panel.querySelectorAll('.choice').forEach((b) => {
         const btn = b as HTMLButtonElement;
         if (btn.disabled) return;
@@ -729,51 +836,70 @@ export class UI implements UIBridge {
     });
   }
 
-  /** Rest, craft, or raise Mara. Resolves 'radio' when they want the next scene. */
+  /**
+   * The camp: rest, craft, the people at the fire, and the radio. Resolves 'radio', 'closed',
+   * or the id of the person you walked over to (Game runs the talk and reopens the panel).
+   */
   camp(opts: {
     radioLabel: string;
     radioDisabled?: string;
+    people: { id: string; name: string; role: string }[];
     onRest: () => void;
     onCraft: (id: string) => string | null;
     recipes: { id: string; name: string; detail: string; disabled?: string }[];
-  }): Promise<'radio' | 'closed'> {
+  }): Promise<string> {
     this.modalOpen = true;
     this.audio.play('ui');
     const ov = h('div', 'overlay');
-    const panel = h('div', 'panel camp-panel interactive');
+    const panel = h('div', 'panel camp-panel modal interactive');
     ov.appendChild(panel);
     this.root.appendChild(ov);
     let note = 'The fire is real. The full heal is not, unless you\'ve learned how to sleep.';
     return new Promise((resolve) => {
-      const finish = (why: 'radio' | 'closed') => {
+      const finish = (why: string) => {
         window.removeEventListener('keydown', onKey, true);
         ov.remove();
         this.modalOpen = false;
         resolve(why);
       };
       const paint = () => {
+        const people = opts.people.map((p) => {
+          const rep = this.state?.rep(p.id as never) ?? 0;
+          return `<button class="camp-person" data-person="${esc(p.id)}">${monogram(p.id as never, p.name)}<span><b>${esc(p.name)}</b><small>${esc(p.role)}</small></span>${standingPips(rep)}</button>`;
+        }).join('');
         panel.innerHTML = `<div class="scan"></div>
-          <header><h3>LAST CHANCE</h3><div class="label">CAMP</div></header>
-          <div class="body">
-            <p class="camp-note">${esc(note)}</p>
-            <div class="camp-actions">
-              <button class="btn primary rest">Rest and save</button>
-              <button class="btn radio" ${opts.radioDisabled ? 'disabled' : ''}>${esc(opts.radioLabel)}</button>
+          <header><h3>LAST CHANCE</h3><div class="label">Camp · Day 1,284</div></header>
+          <div class="body camp-body">
+            <div class="camp-col">
+              <p class="camp-note">${esc(note)}</p>
+              <div class="camp-actions">
+                <button class="btn primary rest">Rest and save</button>
+                <button class="btn radio" ${opts.radioDisabled ? 'disabled' : ''}>${esc(opts.radioLabel)}</button>
+              </div>
+              ${opts.radioDisabled ? `<p class="hint">${esc(opts.radioDisabled)}</p>` : ''}
+              <div class="label" style="margin-top:18px">Around the fire</div>
+              <div class="camp-people">${people}</div>
             </div>
-            ${opts.radioDisabled ? `<p class="hint">${esc(opts.radioDisabled)}</p>` : ''}
-            <div class="label" style="margin-top:18px">WORK THE SCRAP</div>
-            <div class="recipes">${opts.recipes.map((r) => `<div class="recipe"><div><b>${esc(r.name)}</b><span>${esc(r.detail)}</span>${r.disabled ? `<small>${esc(r.disabled)}</small>` : ''}</div><button class="btn craft" data-id="${esc(r.id)}" ${r.disabled ? 'disabled' : ''}>Make</button></div>`).join('')}</div>
+            <div class="camp-col">
+              <div class="label">Work the scrap</div>
+              <div class="recipes">${opts.recipes.map((r) => `<div class="recipe"><div><b>${esc(r.name)}</b><span>${esc(r.detail)}</span>${r.disabled ? `<small>${esc(r.disabled)}</small>` : ''}</div><button class="btn craft" data-id="${esc(r.id)}" ${r.disabled ? 'disabled' : ''}>Make</button></div>`).join('')}</div>
+            </div>
           </div>
           <footer><span class="kb"><span class="kbd">Esc</span> back to the fire</span></footer>`;
         (panel.querySelector('.rest') as HTMLButtonElement).onclick = () => { this.audio.play('uiConfirm'); opts.onRest(); note = 'You sit with it. Not new. Better than you were.'; paint(); };
         const radio = panel.querySelector('.radio') as HTMLButtonElement;
         radio.onclick = () => { if (radio.disabled) return; this.audio.play('uiConfirm'); finish('radio'); };
+        panel.querySelectorAll('.camp-person').forEach((b) => (b as HTMLButtonElement).onclick = () => { this.audio.play('ui'); finish((b as HTMLElement).dataset.person ?? 'closed'); });
         panel.querySelectorAll('.craft').forEach((b) => (b as HTMLButtonElement).onclick = () => {
           const err = opts.onCraft((b as HTMLElement).dataset.id ?? '');
           this.audio.play(err ? 'deny' : 'uiConfirm');
           note = err ?? 'Made. It looks like it will work, which is the standard out here.';
           paint();
         });
+        const x = h('button', 'btn close-x', '✕');
+        x.setAttribute('aria-label', 'Close');
+        x.onclick = () => { this.audio.play('ui'); finish('closed'); };
+        panel.querySelector('header')!.appendChild(x);
       };
       const onKey = (e: KeyboardEvent) => {
         if (e.code !== 'Escape') return;
@@ -791,7 +917,7 @@ export class UI implements UIBridge {
     this.minigameOpen = true;
     const g = new LockpickGame(this.root, this.audio, {
       ...opts,
-      skill: this.state?.skill('lockpicking') ?? 0,
+      skill: this.state?.lockSkill() ?? 0,
       picks: () => this.state?.count('lockpick') ?? 0,
     });
     const r = await g.run();
@@ -808,7 +934,7 @@ export class UI implements UIBridge {
 
   async circuit(opts: { title: string; difficulty: number }) {
     this.minigameOpen = true;
-    const r = await new CircuitGame(this.root, this.audio, { ...opts, skill: this.state?.skill('electronics') ?? 0 }).run();
+    const r = await new CircuitGame(this.root, this.audio, { ...opts, skill: this.state?.boardSkill() ?? 0 }).run();
     this.minigameOpen = false;
     return r;
   }
