@@ -98,6 +98,9 @@ export async function createRenderer(canvas: HTMLCanvasElement) {
   const renderer = new THREE.WebGPURenderer({
     canvas,
     antialias: false,
+    // opaque canvas: the desktop webview (WebKitGTK) passes canvas alpha through to the window, so any
+    // pixel the post stack leaves with alpha < 1 showed the desktop wallpaper through the game
+    alpha: false,
     forceWebGL: choice === 'webgl',
     powerPreference: choice === 'webgpu-low' ? 'low-power' : 'high-performance',
   });

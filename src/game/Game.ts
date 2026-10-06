@@ -434,6 +434,8 @@ export class Game {
     this.atmo.paused = false;
     this.atmo.dayLengthMinutes = 26;
     this.atmo.hour = state.data.hour;
+    const hourOverride = Number(new URLSearchParams(location.search).get('hour')); // debug: ?hour=18.6
+    if (hourOverride) this.atmo.hour = hourOverride;
     this.map.deserialize(state.data.discovered);
     const [x, , z] = state.data.position;
     const spawn = new THREE.Vector3(x, this.hf.heightAt(x, z) + 0.1, z);

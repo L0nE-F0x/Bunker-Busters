@@ -83,6 +83,10 @@ fn main() {
                 .get_webview_window("main")
                 .expect("main window missing from tauri.conf.json");
 
+            // Opaque black behind the page: under XWayland a transparent window background let the
+            // desktop wallpaper show through the game whenever a frame came out with alpha < 1.
+            let _ = win.set_background_color(Some(tauri::window::Color(0, 0, 0, 255)));
+
             // Dev/testing: open a different page (e.g. the GPU canary) instead of the game.
             if let Ok(url) = std::env::var("BB_START_URL") {
                 win.navigate(url.parse()?)?;
