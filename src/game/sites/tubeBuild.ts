@@ -554,7 +554,7 @@ export class TubeBuild {
     b.add(M.flange(), box(ix1 - ix0, 0.1, 0.08, (ix0 + ix1) / 2, fl - 0.04, TZ - fw / 2), box(ix1 - ix0, 0.1, 0.08, (ix0 + ix1) / 2, fl - 0.04, TZ + fw / 2));
     for (let i = 0; i < 3; i++) b.add(M.dark(), cyl(0.04, 0.04, ix1 - ix0, (ix0 + ix1) / 2, PY + 0.2 + i * 0.12, TZ + 1.45, 6, 0, 0, Math.PI / 2));
     this.lens.add(this.chase.material, this.chase.strip(box(ix1 - ix0 - 0.4, 0.03, 0.1, (ix0 + ix1) / 2, PY + R - 0.16, TZ)));
-    for (let x = ix0 + 3; x < ix1; x += 6) this.chase.halo(new THREE.Vector3(x, PY + R - 0.3, TZ), Math.abs(x) / 240, 0.8);
+    for (let x = ix0 + 6; x < ix1; x += 12) this.chase.halo(new THREE.Vector3(x, PY + R - 0.3, TZ), Math.abs(x) / 240, 0.45);
     b.add(M.yellow(), box(1.2, 0.5, 0.6, -30, fl + 0.45, TZ - 0.78));
     b.add(M.rubber(), cyl(0.12, 0.12, 0.08, -30.5, fl + 0.12, TZ - 1.05, 10, Math.PI / 2), cyl(0.12, 0.12, 0.08, -29.5, fl + 0.12, TZ - 1.05, 10, Math.PI / 2));
     this.col(-30, fl + 0.45, TZ - 0.78, 0.6, 0.45, 0.3);
