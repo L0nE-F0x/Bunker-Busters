@@ -1,7 +1,7 @@
 import * as THREE from 'three/webgpu';
 import {
   Fn, vec2, vec3, float, positionWorld, normalWorld, texture, smoothstep, mix, abs, pow, sin,
-  uniform, normalView, positionView, faceDirection, step, fwidth,
+  uniform, normalView, positionView, faceDirection, step, fwidth, clamp,
 } from 'three/tsl';
 import { noise, fbm2 } from '@/engine/noiseTex';
 import type { Heightfield } from './Heightfield';
@@ -29,10 +29,13 @@ export class Terrain {
   mesh: THREE.Mesh;
   far: THREE.Mesh;
   dataTexture: THREE.DataTexture;
+  /** Shading only: landscape cavity (R: height minus its ~10 m blur, G: minus its ~30 m blur). */
+  cavityTexture: THREE.DataTexture;
   readonly uPlayer = uniform(new THREE.Vector3());
 
   constructor(private hf: Heightfield, private atmo?: Atmosphere) {
     this.dataTexture = this.buildDataTexture();
+    this.cavityTexture = buildCavityTexture(hf);
     const material = this.buildMaterial();
     this.mesh = new THREE.Mesh(this.buildGeometry(), material);
     this.mesh.receiveShadow = true;
@@ -180,16 +183,33 @@ export class Terrain {
     const fine = noise(xz.div(5)).g.sub(0.5);
     const grain = noise(xz.div(1.3)).a.sub(0.5);
 
-    // sand with wind ripples
+    // landscape-scale cavity: hollows hold shade (ambient occlusion) and old moisture, ridges are
+    // sun-bleached. Baked once from the heightfield, so the ground reads as relief, not a sheet.
+    const cav = texture(this.cavityTexture, xz.div(size).add(0.5));
+    const hollow = smoothstep(0.2, -2.2, cav.r).mul(inside);
+    const basin = smoothstep(-0.5, -7.0, cav.g).mul(inside);
+    const ridge = smoothstep(0.4, 2.8, cav.r).mul(inside);
+
+    // sand with wind ripples; the ripples fade before they shrink to a pixel (they banded into
+    // moire stripes across the mid-ground)
     const warp = fbm2(xz.div(36)).mul(7);
-    const ripple = sin(xz.x.mul(0.9).add(xz.y.mul(0.4)).mul(5.5).add(warp)).mul(0.5).add(0.5);
-    const rippleH = pow(ripple, 2.0).mul(0.6).add(fine.mul(0.3)).add(grain.mul(0.15));
+    const rPhase = xz.x.mul(0.9).add(xz.y.mul(0.4)).mul(5.5);
+    const rippleAA = smoothstep(1.1, 0.3, fwidth(rPhase));
+    const ripple = sin(rPhase.add(warp)).mul(0.5).add(0.5).sub(0.5).mul(rippleAA).add(0.5);
+    // a broader ripple field (~4-6 m crests) that survives into the mid-ground and catches low sun
+    const mPhase = xz.x.mul(0.62).add(xz.y.mul(0.78)).mul(1.15).add(midTap.g.sub(0.5).mul(9));
+    const macro = sin(mPhase).mul(0.5).add(0.5).sub(0.5).mul(smoothstep(1.2, 0.3, fwidth(mPhase))).add(0.5);
+    const rippleH = pow(ripple, 2.0).mul(0.6).add(fine.mul(0.3)).add(grain.mul(0.15)).add(pow(macro, 1.6).mul(2.4));
+    // long wind streaks: lighter sand blown into tails, darker coarse lag between them
+    const wdir = vec2(0.93, 0.36);
+    const wAlong = xz.dot(wdir), wAcross = xz.dot(vec2(-0.36, 0.93));
+    const streak = noise(vec2(wAlong.div(60), wAcross.div(3.2)).add(0.21)).r.sub(0.5);
     const sandBase = mix(
-      mix(vec3(0.64, 0.41, 0.23), vec3(0.50, 0.30, 0.17), smoothstep(-0.25, 0.25, big)),
-      vec3(0.74, 0.54, 0.33),
+      mix(vec3(0.66, 0.41, 0.22), vec3(0.52, 0.30, 0.16), smoothstep(-0.25, 0.25, big)),
+      vec3(0.76, 0.55, 0.33),
       smoothstep(0.0, 0.3, mid).mul(0.5),
     );
-    const sand = sandBase.mul(float(0.9).add(ripple.mul(0.1)).add(grain.mul(0.06)));
+    const sand = sandBase.mul(float(0.9).add(ripple.mul(0.1)).add(grain.mul(0.06)).add(streak.mul(0.16)));
 
     // cracked salt / mud flats in low ground
     const lowMask = smoothstep(-6.5, -9.0, wp.y.add(mid.mul(6))).mul(smoothstep(0.25, 0.05, slope));
@@ -197,32 +217,54 @@ export class Terrain {
     const crk = smoothstep(0.16, 0.03, crackTap.b);
     const mud = mix(mix(vec3(0.68, 0.58, 0.46), vec3(0.54, 0.45, 0.35), crackTap.r), vec3(0.24, 0.18, 0.14), crk.mul(0.85));
 
-    // rock / mesa faces with strata
+    // rock / mesa faces: an irregular stack of sediment layers (1D noise up the face, drifting slowly
+    // sideways) instead of evenly spaced sine stripes, with desert varnish streaking down the cliffs
     const rockMask = smoothstep(0.22, 0.42, slope.add(mid.mul(0.15)));
     const strataN = fbm2(xz.div(90)).mul(5);
-    const strata = sin(wp.y.mul(1.6).add(strataN)).mul(0.5).add(0.5);
-    // fine bands fade out once they get thinner than a pixel (they shimmered into moire on far mesas)
-    const strata2 = sin(wp.y.mul(6.3).add(strataN.mul(2))).mul(0.5).add(0.5)
-      .sub(0.5).mul(smoothstep(1.2, 0.35, fwidth(wp.y.mul(6.3)))).add(0.5);
-    const rockTap = noise(vec2(xz.x.add(xz.y).mul(0.6), wp.y).div(4));
-    const rock = mix(mix(vec3(0.30, 0.17, 0.11), vec3(0.50, 0.26, 0.14), strata), vec3(0.64, 0.42, 0.27), strata2.mul(0.35))
-      .mul(float(0.8).add(rockTap.r.mul(0.35)));
-    const rockH = strata2.mul(0.6).add(rockTap.r.mul(0.9)).add(rockTap.b.mul(0.4));
+    const along = xz.x.add(xz.y);
+    const layer = noise(vec2(wp.y.div(11).add(strataN.mul(0.12)), along.div(520))).r;
+    const layerFine = noise(vec2(wp.y.div(2.6).add(strataN.mul(0.3)), along.div(240)).add(0.37)).g;
+    const bands = smoothstep(0.3, 0.7, layer);
+    const pale = smoothstep(0.6, 0.78, layerFine).mul(smoothstep(1.2, 0.35, fwidth(wp.y.div(2.6)).mul(6)));
+    const rockTap = noise(vec2(along.mul(0.6), wp.y).div(4));
+    const varnish = smoothstep(0.5, 0.78, noise(vec2(along.mul(0.22), wp.y.mul(0.018)).add(0.53)).r)
+      .mul(smoothstep(0.35, 0.6, slope));
+    const rock = mix(mix(vec3(0.27, 0.13, 0.08), vec3(0.55, 0.30, 0.16), bands), vec3(0.70, 0.52, 0.36), pale.mul(0.55))
+      .mul(float(0.78).add(rockTap.r.mul(0.4)))
+      .mul(float(1).sub(varnish.mul(0.5)));
+    const ledge = smoothstep(0.42, 0.5, layer).mul(smoothstep(0.58, 0.5, layer));
+    const rockH = layerFine.mul(0.5).add(rockTap.r.mul(0.9)).add(rockTap.b.mul(0.4)).add(ledge.mul(0.8));
 
     // scrub patches
-    const scrubMask = smoothstep(0.05, 0.25, fbm2(xz.div(80).add(0.3))).mul(float(1).sub(rockMask)).mul(0.5);
+    const scrubTap = noise(xz.div(80).add(0.3));
+    const scrubMask = smoothstep(0.05, 0.25, scrubTap.r.sub(0.5)).mul(float(1).sub(rockMask)).mul(0.5);
 
-    // highway: crumbling asphalt, cracks, faded paint, drifting sand
-    const edgeNoise = fbm2(xz.div(9)).mul(2.4);
+    // highway: old, sun-greyed asphalt. Alligator cracking only in patches (a crack network
+    // everywhere read as paving tiles), darker tar repairs, crumbling edges, faded paint, drifting sand
+    const t9 = noise(xz.div(9));
+    const edgeNoise = t9.r.sub(0.5).mul(2.4);
     const asphaltMask = smoothstep(4.6, 3.8, roadD.add(edgeNoise)).mul(inside);
-    const sandDrift = smoothstep(0.45, 0.7, noise(xz.div(22).add(0.5)).g);
-    const roadCracks = smoothstep(0.1, 0.02, noise(xz.div(6).add(0.25)).b);
+    // (taps shared between masks where the scale allows: every fetch costs the whole ground)
+    const driftTap = noise(xz.div(22).add(0.5));
+    const sandDrift = smoothstep(0.45, 0.7, driftTap.g);
+    const crackZone = smoothstep(0.52, 0.72, driftTap.r).add(smoothstep(3.0, 4.2, roadD).mul(0.6));
+    const roadCracks = smoothstep(0.07, 0.015, noise(xz.div(5).add(0.25)).b).mul(clamp(crackZone, 0, 1));
+    const tarPatch = smoothstep(0.68, 0.7, crackTap.g);
     const dash = smoothstep(0.1, 0.25, d.b).mul(smoothstep(0.22, 0.12, roadD));
     const sideLine = smoothstep(0.18, 0.06, abs(roadD.sub(3.3)));
-    const paintWear = smoothstep(0.35, 0.6, noise(xz.div(3)).r);
+    const t3 = noise(xz.div(3));
+    const paintWear = smoothstep(0.35, 0.6, t3.r);
+    const aggregate = grain.add(0.5).mul(0.35).add(fine.add(0.5).mul(0.65));
+    // sun-bleached blotches, darker wheel paths either side of each lane centre, oil drips between them
+    const bleach = scrubTap.g.sub(0.5);
+    const wheel = smoothstep(0.55, 0.0, abs(abs(roadD.sub(1.65)).sub(0.55))).mul(0.5);
+    const oil = smoothstep(0.62, 0.8, t3.g).mul(smoothstep(0.35, 0.0, abs(roadD.sub(1.65))));
+    const asphaltBase = mix(vec3(0.095, 0.092, 0.088), vec3(0.19, 0.18, 0.17), aggregate)
+      .mul(float(1).add(bleach.mul(0.5)).sub(wheel.mul(0.3)).sub(oil.mul(0.45)))
+      .mul(float(1).sub(tarPatch.mul(0.25)));
     const asphalt = mix(
       mix(
-        mix(mix(vec3(0.12, 0.115, 0.11), vec3(0.2, 0.19, 0.18), fine.add(0.5)), vec3(0.05), roadCracks.mul(0.8)),
+        mix(asphaltBase, vec3(0.03), roadCracks.mul(0.9)),
         vec3(0.75, 0.55, 0.12), dash.mul(paintWear).mul(0.85),
       ),
       vec3(0.62, 0.6, 0.56), sideLine.mul(paintWear).mul(0.6),
@@ -237,7 +279,7 @@ export class Terrain {
     // pebbles and grit scattered over sand and dirt (cell blobs, thinned by a second tap; they fade
     // out before they shrink below a pixel so the far ground doesn't sparkle)
     const pebTap = noise(xz.div(2.8).add(0.13));
-    const pebMask = smoothstep(0.62, 0.8, noise(xz.div(9).add(0.71)).r.add(mid.mul(0.6)));
+    const pebMask = smoothstep(0.62, 0.8, t9.g.add(mid.mul(0.6)));
     const pebNear = smoothstep(0.5, 0.15, fwidth(xz.x.div(2.8)).mul(12));
     const pebble = smoothstep(0.5, 0.8, pebTap.b).mul(step(0.72, pebTap.a)).mul(pebMask).mul(pebNear)
       .mul(float(1).sub(rockMask)).mul(float(1).sub(roadFinal)).mul(float(1).sub(lowMask));
@@ -249,6 +291,10 @@ export class Terrain {
     col = mix(col, dirt, trackMask);
     col = mix(col, rock, rockMask);
     col = mix(col, asphalt, roadFinal);
+
+    // cavity: damp, darker, slightly richer hollows; bleached ridges
+    col = col.mul(float(1).sub(hollow.mul(0.22)).sub(basin.mul(0.1)).add(ridge.mul(0.07)));
+    col = mix(col, col.mul(vec3(0.92, 0.86, 0.84)), hollow.mul(float(1).sub(roadFinal)).mul(0.6));
 
     let h: N = mix(rippleH.mul(0.5).add(pebble.mul(0.5)), rockH, rockMask);
     h = mix(h, crk.mul(-0.6).add(fine.mul(0.15)), lowMask);
@@ -270,7 +316,10 @@ export class Terrain {
 
     mat.colorNode = col;
     mat.normalNode = bumpFromHeight(h, float(0.06));
-    mat.roughnessNode = mix(mix(float(0.97), float(0.86), rockMask), float(0.78), roadFinal);
+    // fine sand gets a soft grazing sheen toward a low sun; rock and old asphalt stay matte-ish
+    mat.roughnessNode = mix(mix(float(0.8).add(grain.mul(0.1)), float(0.86), rockMask), mix(float(0.78), float(0.55), oil), roadFinal);
+    // the sky can't reach into the folds: occlusion on the ambient/IBL only, so sunlit hollows stay lit
+    mat.aoNode = float(1).sub(hollow.mul(0.5)).sub(basin.mul(0.2));
     return mat;
   }
 
@@ -295,4 +344,42 @@ export class Terrain {
 
 function lerpN(a: number, b: number, t: number) {
   return a + (b - a) * t;
+}
+
+/**
+ * Landscape cavity for shading: height minus a blurred copy of itself at two radii (two box passes
+ * each, ≈ Gaussian). Negative = hollow, positive = ridge. RG half-float on the heightfield grid.
+ */
+function buildCavityTexture(hf: Heightfield) {
+  const { res, heights } = hf;
+  const blur = (src: Float32Array, r: number) => {
+    const tmp = new Float32Array(src.length), out = new Float32Array(src.length);
+    const pass = (a: Float32Array, b: Float32Array, horizontal: boolean) => {
+      for (let j = 0; j < res; j++) {
+        let acc = 0, n = 0;
+        const at = (i: number) => (horizontal ? j * res + i : i * res + j);
+        for (let i = -r; i <= r; i++) { if (i >= 0 && i < res) { acc += a[at(i)]; n++; } }
+        for (let i = 0; i < res; i++) {
+          b[at(i)] = acc / n;
+          const lo = i - r, hi = i + r + 1;
+          if (lo >= 0) { acc -= a[at(lo)]; n--; }
+          if (hi < res) { acc += a[at(hi)]; n++; }
+        }
+      }
+    };
+    pass(src, tmp, true); pass(tmp, out, false);
+    pass(out, tmp, true); pass(tmp, out, false);
+    return out;
+  };
+  const a = blur(heights, 3), b = blur(heights, 9);
+  const data = new Uint16Array(res * res * 2);
+  for (let i = 0; i < res * res; i++) {
+    data[i * 2] = THREE.DataUtils.toHalfFloat(heights[i] - a[i]);
+    data[i * 2 + 1] = THREE.DataUtils.toHalfFloat(heights[i] - b[i]);
+  }
+  const tex = new THREE.DataTexture(data, res, res, THREE.RGFormat, THREE.HalfFloatType);
+  tex.magFilter = tex.minFilter = THREE.LinearFilter;
+  tex.wrapS = tex.wrapT = THREE.ClampToEdgeWrapping;
+  tex.needsUpdate = true;
+  return tex;
 }

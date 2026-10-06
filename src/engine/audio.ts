@@ -1,33 +1,98 @@
 import * as THREE from 'three/webgpu';
 import { Music, type MusicMood } from './music';
+import { SpotManager, VOICES, crackleBuffer, type AmbientKind, type SpotHandle, type VoiceEnv } from './ambient';
+import { footstep, landing, type StepOpts } from './foley';
+import { HARDNESS, type Room, type Surface } from './surface';
 
-/** What the world sounds like right now (fed by the game every frame). */
 /**
  * Positional ambience loops (Landmarks/sites push `{ kind, pos }` into `landmarks.audioSpots`).
- * The first four are synthesized; the rest are reserved names for places that are being built, and
- * play nothing until the audio pass gives them a voice.
+ * Every kind has a voice in ./ambient.ts:
+ *   drone: SeedBot's rotors · fire: camp fire · neon: tube buzz · generator: small diesel
  *   drip: water in a cave · hum: server/transformer hum · wind-hollow: wind through a hull or pipe
  *   radio: a radio murmuring to itself · projector: film projector clatter · crowd: low voices round a fire
  *   sparks: a shorting cable
+ * Spots are distance-gated: beyond a kind's range they have no nodes at all.
  */
-export type AmbientKind = 'drone' | 'fire' | 'neon' | 'generator' | 'drip' | 'hum' | 'wind-hollow' | 'radio' | 'projector' | 'crowd' | 'sparks';
+export type { AmbientKind } from './ambient';
+export type { Surface } from './surface';
 
-export interface SoundScene { mood: MusicMood; night: boolean; hour: number; inside: boolean; alarm: boolean }
+/** What the world sounds like right now (fed by the game every frame). */
+export interface SoundScene {
+  mood: MusicMood;
+  night: boolean;
+  hour: number;
+  /** The game knows the player is indoors (the Garage house). */
+  inside: boolean;
+  alarm: boolean;
+  /** From `Acoustics`: how enclosed the listener is (walls all round = a room) and its size. */
+  room?: Room;
+  /** The floor underfoot (hard floors reflect more). */
+  floor?: Surface;
+  /** An approaching dust storm's wall on the horizon 0..1 (Weather.front). */
+  front?: number;
+  /** Wind heading on the ground plane (x, z as Atmosphere.windDir's x, y). The storm comes from −windDir. */
+  windDir?: { x: number; y: number };
+}
+
+/** A convolution reverb that's only connected (and so only costs anything) while it's being fed. */
+class Verb {
+  readonly input: GainNode;
+  private on = false;
+  private level = 0;
+  private idleSince = 0;
+
+  constructor(ctx: AudioContext, private conv: ConvolverNode, out: AudioNode) {
+    this.input = ctx.createGain();
+    this.input.gain.value = 0;
+    conv.connect(out);
+  }
+
+  set(v: number, t: number) {
+    if (v > 0.01) {
+      this.idleSince = 0;
+      if (!this.on) { this.input.connect(this.conv); this.on = true; }
+    } else if (this.on) {
+      // keep it connected long enough for the tail to ring out, then let it go silent for free
+      v = 0;
+      if (!this.idleSince) this.idleSince = t;
+      else if (t - this.idleSince > 3) { this.input.disconnect(this.conv); this.on = false; }
+    }
+    if (Math.abs(v - this.level) > 0.003) {
+      this.input.gain.setTargetAtTime(v, t, 0.35);
+      this.level = v;
+    }
+  }
+
+  get active() {
+    return this.on;
+  }
+}
 
 /**
- * Fully procedural audio: an ambience that breathes (a soft breeze, passing gusts, insects by day,
- * crickets and coyotes at night, dust storms), a generative score (./music.ts), spatialised loops
- * (drone hum, fire, neon buzz) and synthesised one-shots. No audio files.
+ * Fully procedural audio: an ambience that breathes (a soft breeze, gusts that follow the
+ * weather's, insects by day, crickets and coyotes at night, dust storms), a generative score
+ * (./music.ts), distance-gated positional loops (./ambient.ts), footsteps by surface (./foley.ts),
+ * a room reverb that fades in indoors, and synthesised one-shots. No audio files.
  */
 export class AudioEngine {
   ctx!: AudioContext;
   private master!: GainNode;
   private sfx!: GainNode;
+  /** Diegetic world sound (footsteps, positional loops): dry-ish outdoors, into the room reverb indoors. */
+  private foley!: GainNode;
+  private foleyHall!: GainNode;
   private amb!: GainNode;
   private music!: GainNode;
   private reverb!: ConvolverNode;
   private reverbSend!: GainNode;
+  /** Everything that should ring in a room goes through here into the two room reverbs. */
+  private roomBus!: GainNode;
+  private roomSmall!: Verb;
+  private roomLarge!: Verb;
   private noiseBuf!: AudioBuffer;
+  private crackleBuf!: AudioBuffer;
+  private buffers = new Map<string, AudioBuffer>();
+  private spots!: SpotManager;
   private ambLP!: BiquadFilterNode;
   private ambOut!: GainNode;
   private breeze!: { gain: GainNode; f: BiquadFilterNode };
@@ -35,17 +100,35 @@ export class AudioEngine {
   private breezeTarget = 0.4;
   private breezeT = 0;
   private gustT = 5;
+  /** The last gust's envelope (audio-clock times) and the weather's own surge above its mean. */
+  private gustEv = { t0: -99, atk: 1, hold: 1, rel: 1, k: 0 };
+  private windAvg = 0.6;
+  private surge = 0;
+  private gustNow = 0;
   private cicadaT = 12;
-  private coyoteT = 35;
+  private coyoteT = 80;
+  private hawkT = 60;
   private crickets = [
     { f: 4450, period: 0.82, pan: -0.55, on: false, t: 2, next: 0 },
     { f: 4980, period: 1.07, pan: 0.6, on: false, t: 6, next: 0 },
     { f: 4120, period: 0.64, pan: 0.15, on: false, t: 11, next: 0 },
   ];
-  private storm: { hiss: GainNode; howl: GainNode; howlF: BiquadFilterNode[]; rumble: GainNode } | null = null;
+  /** Night insect chorus (built at dusk, torn down at dawn). */
+  private chorus: { level: GainNode; stop: (t: number) => void; walk: number; walkT: number } | null = null;
+  private chorusIdle = 0;
+  /** Dust-storm layers: built when a storm starts, torn down a while after it ends. */
+  private storm: { hiss: GainNode; howl: GainNode; howlF: BiquadFilterNode[]; rumble: GainNode; sand: GainNode; stop: (t: number) => void } | null = null;
+  private stormIdle = 0;
+  /** The storm wall's distant roar while it's still on the horizon. */
+  private frontRoar: { g: GainNode; pan: StereoPannerNode; stop: (t: number) => void } | null = null;
+  /** Smoothed enclosure 0..1 (rays + the game's own `inside`). */
+  private enclosed = 0;
+  private sceneT = 0;
   private score: Music | null = null;
   private alarm: { osc: OscillatorNode; gain: GainNode; lfo: OscillatorNode } | null = null;
   private started = false;
+  private stepFoot = 0;
+  private stepPan: StereoPannerNode[] = [];
   volume = { master: 0.8, music: 0.5, sfx: 0.9 };
 
   get ready() {
@@ -76,10 +159,40 @@ export class AudioEngine {
     this.reverbSend.gain.value = 0.35;
     this.reverbSend.connect(this.reverb).connect(this.master);
 
+    // rooms: a tight, bright one for huts and cabins and a long, dark one for halls and caves
+    const small = ctx.createConvolver();
+    small.buffer = this.makeRoomImpulse(0.8, 0.5, 0.03, 0.004, 0.62, 0.25);
+    const large = ctx.createConvolver();
+    large.buffer = this.makeRoomImpulse(2.6, 1.9, 0.075, 0.014, 0.45, 0.1);
+    this.roomSmall = new Verb(ctx, small, this.master);
+    this.roomLarge = new Verb(ctx, large, this.master);
+    this.roomBus = ctx.createGain();
+    // keep the boom out of the rooms: heel thumps through a long tail turn to mud
+    const roomHP = ctx.createBiquadFilter();
+    roomHP.type = 'highpass';
+    roomHP.frequency.value = 150;
+    this.roomBus.connect(roomHP);
+    roomHP.connect(this.roomSmall.input);
+    roomHP.connect(this.roomLarge.input);
+
     this.sfx = ctx.createGain();
     this.sfx.gain.value = this.volume.sfx;
     this.sfx.connect(this.master);
     this.sfx.connect(this.reverbSend);
+    this.foley = ctx.createGain();
+    this.foley.gain.value = this.volume.sfx;
+    this.foley.connect(this.master);
+    this.foley.connect(this.roomBus);
+    this.foleyHall = ctx.createGain();
+    this.foleyHall.gain.value = 0.3;
+    this.foley.connect(this.foleyHall).connect(this.reverbSend);
+    // alternate feet sit a hair either side of centre
+    for (const p of [-0.06, 0.06]) {
+      const sp = ctx.createStereoPanner();
+      sp.pan.value = p;
+      sp.connect(this.foley);
+      this.stepPan.push(sp);
+    }
     // ambience bus → a lowpass that closes when you're indoors (walls muffle the desert)
     this.amb = ctx.createGain();
     this.amb.gain.value = 1;
@@ -93,8 +206,25 @@ export class AudioEngine {
     this.music.connect(this.master);
 
     this.noiseBuf = this.makeNoise(4);
+    this.crackleBuf = crackleBuffer(ctx);
+    this.spots = new SpotManager(this.voiceEnv(ctx), this.foley, this.roomBus);
     this.startWind();
     this.score = new Music(ctx, this.music, this.reverbSend, this.noiseBuf);
+  }
+
+  private voiceEnv(ctx: BaseAudioContext, cache = this.buffers): VoiceEnv {
+    return {
+      ctx,
+      noise: this.noiseBuf,
+      crackle: this.crackleBuf,
+      cached: (key, make) => {
+        let b = cache.get(key);
+        if (!b) { b = make(ctx); cache.set(key, b); }
+        return b;
+      },
+      wind: () => this.windAvg + this.surge,
+      gust: () => this.gustNow,
+    };
   }
 
   /** Musical stingers (bunker busted, caught). */
@@ -108,6 +238,7 @@ export class AudioEngine {
     this.master.gain.value = this.volume.master;
     this.music.gain.value = this.volume.music;
     this.sfx.gain.value = this.volume.sfx;
+    this.foley.gain.value = this.volume.sfx;
   }
 
   private makeNoise(seconds: number) {
@@ -139,6 +270,33 @@ export class AudioEngine {
     return buf;
   }
 
+  /**
+   * A room: sparse early reflections inside `early` s after a `pre` s gap, then a diffuse tail
+   * decaying by 60 dB over `rt60` s that darkens as it dies (one-pole lowpass `damp0` → `damp1`).
+   */
+  private makeRoomImpulse(seconds: number, rt60: number, early: number, pre: number, damp0: number, damp1: number) {
+    const ctx = this.ctx;
+    const sr = ctx.sampleRate;
+    const len = Math.floor(sr * seconds);
+    const buf = ctx.createBuffer(2, len, sr);
+    for (let c = 0; c < 2; c++) {
+      const d = buf.getChannelData(c);
+      for (let k = 0; k < 12; k++) {
+        const ti = pre + Math.random() * early;
+        d[Math.floor(ti * sr)] += (Math.random() < 0.5 ? -1 : 1) * (1 - 0.6 * ((ti - pre) / early)) * 0.7;
+      }
+      let y = 0;
+      const i0 = Math.floor(pre * sr);
+      for (let i = i0; i < len; i++) {
+        const t = i / sr;
+        const a = damp0 + (damp1 - damp0) * Math.min(1, t / rt60);
+        y += a * (Math.random() * 2 - 1 - y);
+        d[i] += y * Math.exp((-6.9 * t) / rt60) * Math.min(1, (i - i0) / (0.012 * sr)) * 0.6;
+      }
+    }
+    return buf;
+  }
+
   private noiseSource(loop = true) {
     const src = this.ctx.createBufferSource();
     src.buffer = this.noiseBuf;
@@ -160,7 +318,6 @@ export class AudioEngine {
     src.connect(f).connect(gain).connect(this.amb);
     src.start(0, Math.random() * 3);
     this.breeze = { gain, f };
-    this.startStorm();
   }
 
   /**
@@ -172,6 +329,7 @@ export class AudioEngine {
     const t = ctx.currentTime;
     const atk = 1.1 + Math.random() * 2.2, hold = 0.2 + Math.random() * 1.2, rel = 1.8 + Math.random() * 2.8;
     const end = t + atk + hold + rel;
+    this.gustEv = { t0: t, atk, hold, rel, k };
     const src = this.noiseSource();
     const bp = ctx.createBiquadFilter();
     bp.type = 'bandpass';
@@ -206,6 +364,15 @@ export class AudioEngine {
     src.stop(end + 0.1);
   }
 
+  /** 0..1 how far into the last gust we are (for voices that ride the wind, e.g. wind-hollow). */
+  private gustEnvelope(t: number) {
+    const g = this.gustEv;
+    const x = t - g.t0;
+    if (x < 0 || x > g.atk + g.hold + g.rel) return 0;
+    const e = x < g.atk ? x / g.atk : x < g.atk + g.hold ? 1 : 1 - (x - g.atk - g.hold) / g.rel;
+    return e * g.k;
+  }
+
   /** A cricket's chirp: three quick sine pulses. */
   private chirp(t: number, f: number, pan: number, level: number) {
     const ctx = this.ctx;
@@ -224,6 +391,44 @@ export class AudioEngine {
     o.connect(g).connect(p).connect(this.amb);
     o.start(t);
     o.stop(t + 0.16);
+  }
+
+  /**
+   * The night's far-off insect chorus: two narrow bands of noise trilled at different rates, very
+   * quiet, swelling and thinning on a slow random walk so it never sits still.
+   */
+  private startChorus() {
+    const ctx = this.ctx;
+    const t = ctx.currentTime;
+    const level = ctx.createGain();
+    level.gain.value = 0;
+    level.connect(this.amb);
+    const srcs: AudioScheduledSourceNode[] = [];
+    for (const [f, q, rate, g] of [[4300, 9, 27, 1], [2950, 7, 38, 0.55]] as const) {
+      const n = this.noiseSource();
+      const bp = ctx.createBiquadFilter();
+      bp.type = 'bandpass';
+      bp.frequency.value = f;
+      bp.Q.value = q;
+      const am = ctx.createGain();
+      am.gain.value = 0.5 * g;
+      const lfo = ctx.createOscillator();
+      lfo.frequency.value = rate;
+      const lfoG = ctx.createGain();
+      lfoG.gain.value = 0.5 * g;
+      lfo.connect(lfoG).connect(am.gain);
+      n.connect(bp).connect(am).connect(level);
+      n.start(t, Math.random() * 3);
+      lfo.start(t);
+      srcs.push(n, lfo);
+    }
+    this.chorus = {
+      level, walk: 0.6, walkT: 0,
+      stop: (w) => {
+        for (const s of srcs) { try { s.stop(w); } catch { /* stopped */ } }
+        setTimeout(() => level.disconnect(), (w - ctx.currentTime) * 1000 + 200);
+      },
+    };
   }
 
   /** Cicadas swelling somewhere off in the scrub on a hot afternoon. */
@@ -259,6 +464,48 @@ export class AudioEngine {
     lfo.start(t);
     src.stop(end + 0.1);
     lfo.stop(end + 0.1);
+  }
+
+  /** A hawk circling far off on a hot day: one hoarse, falling "kee-eeer", mostly reverb. */
+  private hawk() {
+    const ctx = this.ctx;
+    const t = ctx.currentTime + 0.1;
+    const dur = 1.3 + Math.random() * 0.5;
+    const f0 = 2700 + Math.random() * 400;
+    const o = ctx.createOscillator();
+    o.type = 'sawtooth';
+    o.frequency.setValueAtTime(f0 * 0.82, t);
+    o.frequency.exponentialRampToValueAtTime(f0, t + 0.12);
+    o.frequency.exponentialRampToValueAtTime(f0 * 0.68, t + dur);
+    const bp = ctx.createBiquadFilter();
+    bp.type = 'bandpass';
+    bp.Q.value = 4;
+    bp.frequency.setValueAtTime(f0, t);
+    bp.frequency.exponentialRampToValueAtTime(f0 * 0.7, t + dur);
+    // the rasp
+    const n = this.noiseSource(false);
+    const nG = ctx.createGain();
+    nG.gain.value = 1.4;
+    const g = ctx.createGain();
+    const peak = 0.0065 + Math.random() * 0.004;
+    g.gain.setValueAtTime(0, t);
+    g.gain.linearRampToValueAtTime(peak, t + 0.1);
+    g.gain.setValueAtTime(peak, t + dur * 0.55);
+    g.gain.linearRampToValueAtTime(0, t + dur);
+    const p = ctx.createStereoPanner();
+    p.pan.value = (Math.random() * 2 - 1) * 0.8;
+    const dry = ctx.createGain();
+    dry.gain.value = 0.4;
+    const wet = ctx.createGain();
+    wet.gain.value = 0.9;
+    o.connect(bp);
+    n.connect(nG).connect(bp);
+    bp.connect(g).connect(p);
+    p.connect(dry).connect(this.amb);
+    p.connect(wet).connect(this.reverbSend);
+    o.start(t);
+    o.stop(t + dur + 0.05);
+    n.start(t, Math.random() * 3, dur + 0.05);
   }
 
   /** A coyote howling far off (sometimes answered), soaked in the night air's reverb. */
@@ -317,15 +564,24 @@ export class AudioEngine {
     this.burst('lowpass', 70, 1.2, 0.7 * (0.5 + k * 0.5), dur * 1.3, delay + 0.25, this.amb);
   }
 
-  /** Dust-storm layers, silent until a storm: sand hiss, a whistling howl, and a deep buffeting rumble. */
+  /**
+   * Dust-storm layers: sand hiss, a whistling howl, a deep buffeting rumble and grains ticking off
+   * everything. Built when a storm begins and torn down a while after it clears (they used to run,
+   * silent, all session).
+   */
   private startStorm() {
     const ctx = this.ctx;
+    const t = ctx.currentTime;
+    const srcs: AudioScheduledSourceNode[] = [];
+    const outs: AudioNode[] = [];
     const layer = (gainOut: GainNode, ...chain: AudioNode[]) => {
       const src = this.noiseSource();
       let n: AudioNode = src;
       for (const c of chain) n = n.connect(c);
       n.connect(gainOut).connect(this.amb);
-      src.start(0, Math.random() * 3);
+      src.start(t, Math.random() * 3);
+      srcs.push(src);
+      outs.push(gainOut);
     };
     const filt = (type: BiquadFilterType, f: number, q = 0.7) => {
       const b = ctx.createBiquadFilter();
@@ -334,8 +590,8 @@ export class AudioEngine {
       b.Q.value = q;
       return b;
     };
-    const hiss = ctx.createGain(), howl = ctx.createGain(), rumble = ctx.createGain();
-    hiss.gain.value = howl.gain.value = rumble.gain.value = 0;
+    const hiss = ctx.createGain(), howl = ctx.createGain(), rumble = ctx.createGain(), sand = ctx.createGain();
+    hiss.gain.value = howl.gain.value = rumble.gain.value = sand.gain.value = 0;
     layer(hiss, filt('highpass', 1800), filt('peaking', 4200, 0.6));
     const howlF = [filt('bandpass', 520, 7), filt('bandpass', 840, 9)];
     const pan = [ctx.createStereoPanner(), ctx.createStereoPanner()];
@@ -344,7 +600,45 @@ export class AudioEngine {
     layer(howl, howlF[0], pan[0]);
     layer(howl, howlF[1], pan[1]);
     layer(rumble, filt('lowpass', 140));
-    this.storm = { hiss, howl, howlF, rumble };
+    // grains: the crackle buffer, fast and high, like sand rattling off metal and glass
+    const grains = ctx.createBufferSource();
+    grains.buffer = this.crackleBuf;
+    grains.loop = true;
+    grains.playbackRate.value = 1.7;
+    grains.connect(filt('highpass', 4500)).connect(sand).connect(this.amb);
+    grains.start(t, Math.random() * 2);
+    srcs.push(grains);
+    outs.push(sand);
+    this.storm = {
+      hiss, howl, howlF, rumble, sand,
+      stop: (w) => {
+        for (const s of srcs) { try { s.stop(w); } catch { /* stopped */ } }
+        setTimeout(() => { for (const o of outs) o.disconnect(); }, (w - ctx.currentTime) * 1000 + 200);
+      },
+    };
+  }
+
+  /** The storm wall on the horizon: a low, distant roar from upwind that grows as it comes. */
+  private startFront() {
+    const ctx = this.ctx;
+    const t = ctx.currentTime;
+    const n = this.noiseSource();
+    const lp = ctx.createBiquadFilter();
+    lp.type = 'lowpass';
+    lp.frequency.value = 230;
+    lp.Q.value = 0.5;
+    const g = ctx.createGain();
+    g.gain.value = 0;
+    const pan = ctx.createStereoPanner();
+    n.connect(lp).connect(g).connect(pan).connect(this.amb);
+    n.start(t, Math.random() * 3);
+    this.frontRoar = {
+      g, pan,
+      stop: (w) => {
+        try { n.stop(w); } catch { /* stopped */ }
+        setTimeout(() => pan.disconnect(), (w - ctx.currentTime) * 1000 + 200);
+      },
+    };
   }
 
   /** Called every frame. */
@@ -352,29 +646,55 @@ export class AudioEngine {
     if (!this.started) return;
     const t = this.ctx.currentTime;
     const wind = Math.min(windStrength, 1.6);
-    const outdoorsLife = !scene.inside && storm < 0.2;
 
-    // breeze: a slow random walk, from near-silent lulls to a steady blow
+    // the weather's own gusts: how far the wind is above its running mean right now
+    this.windAvg += (windStrength - this.windAvg) * Math.min(1, dt / 6);
+    const surgePrev = this.surge;
+    this.surge = Math.max(0, windStrength - this.windAvg);
+    this.gustNow = Math.min(1, Math.max(this.gustEnvelope(t), this.surge * 1.6));
+
+    // indoors: the rays say how closed-in we are; the game can insist (the Garage house)
+    const encTarget = Math.max(scene.inside ? 0.85 : 0, scene.room?.enclosure ?? 0);
+    this.enclosed += (encTarget - this.enclosed) * Math.min(1, dt * 3);
+    const inside = this.enclosed > 0.6;
+    const outdoorsLife = !inside && storm < 0.2;
+
+    // breeze: a slow random walk, from near-silent lulls to a steady blow, lifted by the weather's gusts
     this.breezeT -= dt;
     if (this.breezeT <= 0) {
       this.breezeT = 4 + Math.random() * 8;
       this.breezeTarget = Math.random() < 0.3 ? 0.05 : 0.2 + Math.random() * 0.8;
     }
     this.breezeLvl += (this.breezeTarget - this.breezeLvl) * Math.min(1, dt / 3);
-    this.breeze.gain.gain.setTargetAtTime(0.012 + 0.04 * this.breezeLvl * wind + storm * 0.22, t, 0.4);
-    this.breeze.f.frequency.setTargetAtTime(320 + this.breezeLvl * 300 + storm * 500, t, 0.8);
+    this.sceneT -= dt;
+    const slow = this.sceneT <= 0; // the slow parameters only need updating ~10× a second
+    if (slow) this.sceneT = 0.1;
+    if (slow) {
+      this.breeze.gain.gain.setTargetAtTime(0.012 + 0.04 * this.breezeLvl * wind + Math.min(0.04, this.surge * 0.05) + storm * 0.22, t, 0.4);
+      this.breeze.f.frequency.setTargetAtTime(320 + this.breezeLvl * 300 + this.surge * 200 + storm * 500, t, 0.8);
+    }
 
-    // gusts come and go; more of them (and stronger) as the wind picks up
+    // gusts come and go; more of them (and stronger) as the wind picks up, and one rides each of the
+    // weather's surges (what makes the grass and dust lean is what you hear)
     this.gustT -= dt;
-    if (this.gustT <= 0) {
-      const k = Math.min(1, (0.25 + Math.random() * 0.6) * (0.5 + wind * 0.6) + storm * 0.5);
+    const surgeRise = this.surge > 0.18 && surgePrev <= 0.18;
+    if (this.gustT <= 0 || (surgeRise && t - this.gustEv.t0 > 4)) {
+      const k = Math.min(1, (0.25 + Math.random() * 0.6) * (0.5 + wind * 0.6) + storm * 0.5 + this.surge * 0.6);
       this.gust(k);
       this.gustT = storm > 0.3 ? 1.5 + Math.random() * 3 : (8 + Math.random() * 16) / (0.5 + wind * 0.6);
     }
 
-    // dust-storm layers (silent otherwise)
+    // dust-storm layers: built when one starts, gone a while after it clears
+    if (storm > 0.01 && !this.storm) this.startStorm();
     if (this.storm) {
-      const gust = 0.5 + 0.5 * Math.sin(t * 0.37) * Math.sin(t * 0.13 + 1.3);
+      if (storm < 0.005) {
+        this.stormIdle += dt;
+        if (this.stormIdle > 6) { this.storm.stop(t + 0.5); this.storm = null; }
+      } else this.stormIdle = 0;
+    }
+    if (this.storm && slow) {
+      // the howl follows the weather's gusts; the buffet is the fast flutter on top
+      const gust = Math.min(1, 0.35 + this.surge * 1.3 + 0.25 * Math.sin(t * 0.37) * Math.sin(t * 0.13 + 1.3));
       const buffet = 0.55 + 0.45 * Math.sin(t * 1.9) * Math.sin(t * 0.71 + 2.1);
       const s = this.storm;
       s.hiss.gain.setTargetAtTime(storm * 0.2 * (0.5 + buffet * 0.7), t, 0.25);
@@ -382,9 +702,29 @@ export class AudioEngine {
       s.howlF[0].frequency.setTargetAtTime(430 + gust * 260 + buffet * 60, t, 0.8);
       s.howlF[1].frequency.setTargetAtTime(760 + gust * 380, t, 0.9);
       s.rumble.gain.setTargetAtTime(storm * 0.7 * (0.4 + buffet * 0.6), t, 0.3);
+      s.sand.gain.setTargetAtTime(storm * storm * 0.05 * (0.5 + gust * 0.6), t, 0.3);
     }
 
-    // wildlife: crickets after dark (and by the campfire), cicadas on hot afternoons, coyotes far off
+    // a storm on the horizon: its roar arrives before it does, from upwind
+    const front = storm < 0.3 ? scene.front ?? 0 : 0;
+    if (front > 0.02 && !this.frontRoar) this.startFront();
+    if (this.frontRoar && slow) {
+      const fr = this.frontRoar;
+      if (front < 0.01 && storm < 0.01) { fr.g.gain.setTargetAtTime(0, t, 1); fr.stop(t + 4); this.frontRoar = null; }
+      else {
+        fr.g.gain.setTargetAtTime(front * front * 0.05 + storm * 0.03, t, 1.5);
+        const wd = scene.windDir;
+        if (wd) {
+          // upwind is −windDir; pan by how far it sits to the listener's right
+          const right = new THREE.Vector3(1, 0, 0).applyQuaternion(camera.quaternion);
+          const l = Math.hypot(right.x, right.z) || 1;
+          fr.pan.pan.setTargetAtTime(Math.max(-0.85, Math.min(0.85, (-wd.x * right.x - wd.y * right.z) / l)), t, 0.3);
+        }
+      }
+    }
+
+    // wildlife: crickets after dark (and by the campfire), cicadas on hot afternoons, a hawk by day,
+    // coyotes far off at night (rarely)
     const h = scene.hour;
     const cricketTime = scene.mood === 'camp' || (scene.mood === 'play' && (h > 19.4 || h < 5.3));
     for (const c of this.crickets) {
@@ -400,22 +740,50 @@ export class AudioEngine {
         c.next += c.period * (0.94 + Math.random() * 0.12);
       }
     }
+    // the chorus behind them: only on a night outdoors in play (the camp has its own crickets)
+    const chorusTime = scene.mood === 'play' && (h > 20 || h < 4.8) && outdoorsLife;
+    if (chorusTime && !this.chorus) this.startChorus();
+    if (this.chorus) {
+      const c = this.chorus;
+      c.walkT -= dt;
+      if (c.walkT <= 0) { c.walkT = 5 + Math.random() * 9; c.walk = Math.random() < 0.2 ? 0.15 : 0.4 + Math.random() * 0.6; }
+      if (slow) c.level.gain.setTargetAtTime(chorusTime ? 0.009 * c.walk : 0, t, 2.5);
+      this.chorusIdle = chorusTime ? 0 : this.chorusIdle + dt;
+      if (this.chorusIdle > 12) { c.stop(t + 0.1); this.chorus = null; this.chorusIdle = 0; }
+    }
     if (scene.mood === 'play' && outdoorsLife) {
       this.cicadaT -= dt;
       if (this.cicadaT <= 0) {
         this.cicadaT = 18 + Math.random() * 35;
         if (h > 9.5 && h < 17.5) this.cicada();
       }
+      this.hawkT -= dt;
+      if (this.hawkT <= 0) {
+        this.hawkT = 110 + Math.random() * 200;
+        if (h > 7.5 && h < 18 && storm < 0.05) this.hawk();
+      }
       this.coyoteT -= dt;
       if (this.coyoteT <= 0) {
-        this.coyoteT = 55 + Math.random() * 100;
+        this.coyoteT = 100 + Math.random() * 160;
         if (scene.night) this.coyote();
       }
     }
 
-    // indoors: the desert goes muffled and distant
-    this.ambLP.frequency.setTargetAtTime(scene.inside ? 650 : 18000, t, 0.25);
-    this.ambOut.gain.setTargetAtTime(scene.inside ? 0.55 : 1, t, 0.25);
+    if (slow) {
+      // indoors: the desert goes muffled and distant (gradually, with how closed-in it is)
+      const e = Math.min(1, Math.max(0, (this.enclosed - 0.25) / 0.6));
+      this.ambLP.frequency.setTargetAtTime(18000 * Math.pow(650 / 18000, e), t, 0.25);
+      this.ambOut.gain.setTargetAtTime(1 - 0.55 * e, t, 0.25);
+      // and the room answers: small rooms ring short and bright, halls and caves long and dark
+      // (the mean wall distance; a rock floor means a cave, which rings long whatever its size)
+      const size = scene.room?.size ?? 24;
+      const large = Math.min(1, Math.max(0, (size - 4.5) / 4) + (scene.floor === 'rock' ? 0.5 : 0));
+      const hard = HARDNESS[scene.floor ?? 'sand'];
+      const wet = this.enclosed * (0.55 + 0.45 * hard);
+      this.roomSmall.set(wet * (1 - large) * 0.3, t);
+      this.roomLarge.set(wet * large * 0.4, t);
+      this.foleyHall.gain.setTargetAtTime(0.3 * (1 - this.enclosed), t, 0.3);
+    }
 
     this.score?.update({ mood: scene.mood, night: scene.night, tension, alarm: scene.alarm });
 
@@ -434,7 +802,7 @@ export class AudioEngine {
       l.upY.setTargetAtTime(up.y, t, 0.02);
       l.upZ.setTargetAtTime(up.z, t, 0.02);
     }
-    void dt;
+    this.spots.update(p.x, p.y, p.z);
   }
 
   private panner(pos: THREE.Vector3, refDistance = 4, rolloff = 1.3) {
@@ -450,126 +818,69 @@ export class AudioEngine {
     return p;
   }
 
-  /** Spatial looping sources. Returns a handle to move / modulate / stop it. */
-  loop(kind: AmbientKind, pos: THREE.Vector3) {
+  /**
+   * A positional loop of `kind` at `pos` (see ./ambient.ts for the voices). Returns a handle to move,
+   * modulate or stop it. It only has nodes while the listener is within the kind's range.
+   */
+  loop(kind: AmbientKind, pos: THREE.Vector3): SpotHandle | null {
     if (!this.started) return null;
-    const ctx = this.ctx;
-    const pan = this.panner(pos, kind === 'neon' ? 2 : 5);
-    const out = ctx.createGain();
-    out.connect(pan).connect(this.sfx);
-    const nodes: AudioScheduledSourceNode[] = [];
-    let timer: number | undefined;
-    if (kind === 'drone') {
-      const lp = ctx.createBiquadFilter();
-      lp.type = 'lowpass';
-      lp.frequency.value = 1400;
-      lp.connect(out);
-      for (const [f, type] of [[118, 'sawtooth'], [121.5, 'sawtooth'], [236, 'square']] as const) {
-        const o = ctx.createOscillator();
-        o.type = type;
-        o.frequency.value = f;
-        const g = ctx.createGain();
-        g.gain.value = type === 'square' ? 0.02 : 0.05;
-        o.connect(g).connect(lp);
-        o.start();
-        nodes.push(o);
-      }
-      const n = this.noiseSource();
-      const bp = ctx.createBiquadFilter();
-      bp.type = 'bandpass';
-      bp.frequency.value = 2400;
-      const ng = ctx.createGain();
-      ng.gain.value = 0.08;
-      n.connect(bp).connect(ng).connect(out);
-      n.start();
-      nodes.push(n);
-      out.gain.value = 0.9;
-    } else if (kind === 'neon') {
-      const o = ctx.createOscillator();
-      o.type = 'square';
-      o.frequency.value = 120;
-      const bp = ctx.createBiquadFilter();
-      bp.type = 'bandpass';
-      bp.frequency.value = 240;
-      bp.Q.value = 3;
-      o.connect(bp).connect(out);
-      o.start();
-      nodes.push(o);
-      out.gain.value = 0.05;
-    } else if (kind === 'generator') {
-      const o = ctx.createOscillator();
-      o.type = 'sawtooth';
-      o.frequency.value = 42;
-      const lp = ctx.createBiquadFilter();
-      lp.type = 'lowpass';
-      lp.frequency.value = 160;
-      const am = ctx.createGain();
-      const lfo = ctx.createOscillator();
-      lfo.frequency.value = 7;
-      const lfoG = ctx.createGain();
-      lfoG.gain.value = 0.5;
-      lfo.connect(lfoG).connect(am.gain);
-      o.connect(lp).connect(am).connect(out);
-      o.start();
-      lfo.start();
-      nodes.push(o, lfo);
-      out.gain.value = 0.35;
-    } else if (kind === 'fire') {
-      // a soft, flickering bed (not a roar: that just reads as more wind) under crackles and pops
-      const n = this.noiseSource();
-      const lp = ctx.createBiquadFilter();
-      lp.type = 'lowpass';
-      lp.frequency.value = 420;
-      const g = ctx.createGain();
-      g.gain.value = 0.07;
-      const flick = ctx.createOscillator();
-      flick.frequency.value = 0.7;
-      const flickG = ctx.createGain();
-      flickG.gain.value = 0.03;
-      flick.connect(flickG).connect(g.gain);
-      n.connect(lp).connect(g).connect(out);
-      n.start();
-      flick.start();
-      nodes.push(n, flick);
-      const crackle = () => {
-        const t = ctx.currentTime;
-        const s = this.noiseSource(false);
-        const f = ctx.createBiquadFilter();
-        const pop = Math.random() < 0.08; // a knot in the wood: lower, louder, longer
-        f.type = pop ? 'bandpass' : 'highpass';
-        f.frequency.value = pop ? 500 + Math.random() * 400 : 1800 + Math.random() * 3000;
-        const cg = ctx.createGain();
-        cg.gain.setValueAtTime(pop ? 0.7 : 0.12 + Math.random() * 0.3, t);
-        cg.gain.exponentialRampToValueAtTime(0.001, t + (pop ? 0.09 : 0.02 + Math.random() * 0.04));
-        s.connect(f).connect(cg).connect(out);
-        s.start(t, Math.random() * 3, 0.12);
-        // crackles come in little clusters
-        timer = window.setTimeout(crackle, Math.random() < 0.3 ? 15 + Math.random() * 40 : 80 + Math.random() * 380);
-      };
-      crackle();
-      out.gain.value = 0.8;
+    if (!VOICES[kind]) return null;
+    return this.spots.add(kind, pos);
+  }
+
+  /** Positional loops: total and currently built (harness/bench). */
+  get spotStats() {
+    return this.started ? { count: this.spots.count, active: this.spots.active, roomSmall: this.roomSmall.active, roomLarge: this.roomLarge.active, enclosed: +this.enclosed.toFixed(2) } : null;
+  }
+
+  /**
+   * Dev: render `seconds` of the given voices in an OfflineAudioContext and time it, so a voice's DSP
+   * cost can be measured without the game. Returns milliseconds of CPU per second of audio.
+   */
+  async benchVoices(kinds: AmbientKind[], seconds = 10) {
+    if (!this.started) return null;
+    const sr = this.ctx.sampleRate;
+    const off = new OfflineAudioContext(2, Math.floor(sr * seconds), sr);
+    const env = this.voiceEnv(off, new Map());
+    const voices = kinds.map((k, i) => {
+      const spec = VOICES[k];
+      const out = off.createGain();
+      out.gain.value = spec.gain;
+      const pan = off.createPanner();
+      pan.panningModel = spec.hrtf ? 'HRTF' : 'equalpower';
+      pan.positionX.value = i * 2 - kinds.length;
+      pan.positionZ.value = -4;
+      out.connect(pan).connect(off.destination);
+      return spec.build(env, out);
+    });
+    // schedule as the game does (a short lookahead, every 0.1 s) by pausing the render
+    for (const v of voices) v.tick?.(0, 0.15);
+    for (let k = 1; k * 0.1 < seconds - 0.05; k++) {
+      const t = k * 0.1;
+      void off.suspend(t).then(() => {
+        for (const v of voices) v.tick?.(t, t + 0.15);
+        void off.resume();
+      });
     }
-    return {
-      setPosition(v: THREE.Vector3) {
-        const t = ctx.currentTime;
-        pan.positionX.setTargetAtTime(v.x, t, 0.05);
-        pan.positionY.setTargetAtTime(v.y, t, 0.05);
-        pan.positionZ.setTargetAtTime(v.z, t, 0.05);
-      },
-      setGain(g: number) {
-        out.gain.setTargetAtTime(g, ctx.currentTime, 0.1);
-      },
-      setPitch(mult: number) {
-        nodes.forEach((n) => {
-          if (n instanceof OscillatorNode) n.detune.setTargetAtTime(1200 * Math.log2(mult), ctx.currentTime, 0.1);
-        });
-      },
-      stop() {
-        if (timer) clearTimeout(timer);
-        nodes.forEach((n) => { try { n.stop(); } catch { /* already stopped */ } });
-        out.disconnect();
-      },
-    };
+    const t0 = performance.now();
+    await off.startRendering();
+    return +((performance.now() - t0) / seconds).toFixed(2);
+  }
+
+  // ---------- footsteps ----------
+
+  /** One footstep on `surface` (`k` = stride intensity from the camera). */
+  footstep(surface: Surface, k: number, opts: StepOpts = {}) {
+    if (!this.started) return;
+    this.stepFoot ^= 1;
+    // ×1.3: level-matched to the old single 'step' sfx (offline renders, mean RMS)
+    footstep({ ctx: this.ctx, noise: this.noiseBuf, dest: this.stepPan[this.stepFoot] }, surface, k * 1.3, opts);
+  }
+
+  /** Touchdown after a jump or fall on `surface`: `k` 0..1 how hard. */
+  land(surface: Surface, k: number) {
+    if (!this.started) return;
+    landing({ ctx: this.ctx, noise: this.noiseBuf, dest: this.foley }, surface, k);
   }
 
   // ---------- one-shots ----------
@@ -652,6 +963,7 @@ export class AudioEngine {
     if (opts.pos) {
       const p = this.panner(opts.pos, 3);
       p.connect(this.sfx);
+      p.connect(this.roomBus); // doors and impacts ring in the room you're in
       dest = p;
     }
     switch (name) {
@@ -837,4 +1149,5 @@ export type SfxName =
   | 'intel' | 'levelUp' | 'loot' | 'ui' | 'uiHover' | 'uiConfirm' | 'deny' | 'cans' | 'zap' | 'emp' | 'throw'
   | 'droneAlert' | 'droneSputter' | 'detectTick' | 'megaphone' | 'eat' | 'disarm' | 'thud' | 'bounce';
 
-export type LoopHandle = NonNullable<ReturnType<AudioEngine['loop']>>;
+
+export type LoopHandle = SpotHandle;
