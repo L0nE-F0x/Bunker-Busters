@@ -16,6 +16,7 @@ import { Landmarks } from './world/Landmarks';
 import { Scrub } from './world/Scrub';
 import { DustMotes, GroundHaze, DustPuffs, SandStreaks, DustDevils, Shockwave, heightTexture } from './world/effects';
 import { Weather } from './world/Weather';
+import { VirtualLight, lightPool } from './world/lights';
 import { updateRim, glow } from './world/materials';
 import { Garage } from './bunker/Garage';
 import { Settlement } from './town/Settlement';
@@ -37,6 +38,12 @@ import { damp } from '@/engine/noise';
 
 /** Debug: ?skip=props,landmarks,scrub,dust,haze,env,post,garage disables subsystems (for GPU bisecting). */
 const SKIP = new Set((new URLSearchParams(location.search).get('skip') ?? '').split(',').filter(Boolean));
+
+/**
+ * Real point lights lent out by the light pool. Fixed for the session: changing it recompiles every
+ * lit material, and each one is paid for by every lit pixel on screen.
+ */
+const POINT_LIGHTS: Record<string, number> = { low: 2, medium: 3, high: 4, ultra: 5 };
 
 /** Debug: ?bench logs frame-rate stats to the console every 2s (read by the desktop test runs). */
 const BENCH = new URLSearchParams(location.search).has('bench');
@@ -90,7 +97,7 @@ export class Game {
   private focus: Interactable | null = null;
   private grenades: Grenade[] = [];
   private shockwaves: Shockwave[] = [];
-  private flash: THREE.PointLight;
+  private flash: VirtualLight;
   private intelMeshes = new Map<string, THREE.Object3D>();
   private loops: LoopHandle[] = [];
   private loopsStarted = false;
@@ -124,8 +131,10 @@ export class Game {
     // WebGL: skip the GTAO pre-pass — it renders the whole scene a second time and draw calls are
     // the bottleneck there (especially in WebKitGTK). WebGPU keeps it.
     if (!isWebGPU) this.quality.ao = false;
-    this.flash = new THREE.PointLight(0x7fe8ff, 0, 18, 2);
-    this.scene.add(this.flash);
+    this.flash = new VirtualLight(0x7fe8ff, 0, 18, 2);
+    this.flash.priority = 10;
+    // every point light in the world is virtual; these few real ones are lent to what's near
+    lightPool.attach(this.scene, POINT_LIGHTS[this.quality.level] ?? 4);
     this.applyAudioSettings();
   }
 
@@ -987,8 +996,8 @@ export class Game {
 
     // world systems
     this.atmo.follow(this.camera);
-    this.landmarks.update(dt, this.t);
-    this.settlement?.update(dt);
+    this.landmarks.update(dt, this.t, this.camera.position);
+    this.settlement?.update(dt, this.camera.position);
     if (this.mode !== 'playing') this.garage.update(dt);
     this.props.update(dt, focusPos, this.atmo.wind);
     this.scrub.update(focusPos, this.atmo.wind);
@@ -1025,6 +1034,7 @@ export class Game {
     // step by the real frame time (the world default of 1/60 per frame ran physics 2.4× fast at 144 Hz)
     this.physics.world.timestep = Math.max(1 / 240, dt);
     this.physics.step();
+    lightPool.update(this.camera.position, dt);
     const tRender = performance.now();
     if (SKIP.has('post')) this.renderer.render(this.scene, this.camera); else this.post.render();
     if (BENCH) { this.benchUpd += tPhys - now; this.benchPhys += tRender - tPhys; this.benchRen += performance.now() - tRender; }

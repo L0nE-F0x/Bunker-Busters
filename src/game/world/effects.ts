@@ -9,6 +9,7 @@ import type { Atmosphere } from './Atmosphere';
 import type { Heightfield } from './Heightfield';
 import { noise } from '@/engine/noiseTex';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
+import { VirtualLight } from './lights';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 type N = any;
@@ -358,8 +359,12 @@ export class DustPuffs {
 /** Crossed-billboard fire with scrolling noise, embers and a flickering point light. */
 export class Fire {
   group = new THREE.Group();
-  light: THREE.PointLight;
+  light: VirtualLight;
   private t = Math.random() * 10;
+  /** Stones, logs and embers: only worth drawing up close. The flame cards carry the fire at range. */
+  private detail: THREE.Object3D[] = [];
+  private flame!: THREE.Object3D;
+  private readonly at = new THREE.Vector3();
 
   constructor(scale = 1, lightIntensity = 30) {
     // additive blending is order-independent, so one pass over both faces looks the same as three's
@@ -383,18 +388,22 @@ export class Fire {
       geo.translate(0, 0.8 * scale, 0);
       cards.push(at(geo, 0, 0, 0, 0, (i / 3) * Math.PI));
     }
-    this.group.add(new THREE.Mesh(mergeGeometries(cards, false)!, mat));
+    this.flame = new THREE.Mesh(mergeGeometries(cards, false)!, mat);
+    this.group.add(this.flame);
     // embers
     const em = new THREE.SpriteNodeMaterial({ transparent: true, depthWrite: false, blending: THREE.AdditiveBlending });
+    // scale as a uniform: a literal per fire size compiled one ember program per fire
+    const uS = uniform(scale);
     const life = fract(time.mul(0.35).add(hash(instanceIndex)));
     const ex = sin(time.mul(1.3).add(hash(instanceIndex.add(5)).mul(20))).mul(0.4).mul(life);
     const ez = sin(time.mul(1.1).add(hash(instanceIndex.add(9)).mul(20))).mul(0.4).mul(life);
-    em.positionNode = vec3(ex.add(hash(instanceIndex.add(1)).sub(0.5).mul(0.6)), life.mul(4 * scale), ez);
-    em.scaleNode = vec2(0.04 * scale, 0.04 * scale);
+    em.positionNode = vec3(ex.add(hash(instanceIndex.add(1)).sub(0.5).mul(0.6)), life.mul(uS.mul(4)), ez);
+    em.scaleNode = vec2(uS.mul(0.04), uS.mul(0.04));
     em.colorNode = vec4(vec3(1.0, 0.45, 0.1).mul(float(8).mul(float(1).sub(life))), smoothstep(1, 0.6, life));
     const embers = new THREE.Sprite(em);
     embers.count = 60;
     this.group.add(embers);
+    this.detail.push(embers);
 
     // stone ring
     const stone = new THREE.MeshStandardNodeMaterial({ color: '#4a4440', roughness: 0.9, flatShading: true });
@@ -406,23 +415,34 @@ export class Fire {
     const ring = new THREE.Mesh(mergeGeometries(stones, false)!, stone);
     ring.castShadow = true;
     this.group.add(ring);
+    this.detail.push(ring);
     const logMat = new THREE.MeshStandardNodeMaterial({ color: '#1a120c', roughness: 1 });
     logMat.emissiveNode = color('#ff4a10').mul(noise(positionWorld.xz.mul(0.8).add(time.mul(0.1))).r.sub(0.5).mul(2).mul(0.5).add(0.5).mul(1.5));
     const logs: THREE.BufferGeometry[] = [];
     for (let i = 0; i < 4; i++) {
       logs.push(at(new THREE.CylinderGeometry(0.07 * scale, 0.08 * scale, 0.9 * scale, 6).toNonIndexed(), 0, 0.15, 0, Math.PI / 2 - 0.3, (i / 4) * Math.PI * 2));
     }
-    this.group.add(new THREE.Mesh(mergeGeometries(logs, false)!, logMat));
+    const logMesh = new THREE.Mesh(mergeGeometries(logs, false)!, logMat);
+    this.group.add(logMesh);
+    this.detail.push(logMesh);
 
-    this.light = new THREE.PointLight(0xff8a3a, lightIntensity, 22, 1.6);
+    // a virtual light: the pool lends it a real one when this fire matters to the view
+    this.light = new VirtualLight(0xff8a3a, lightIntensity, 22, 1.6);
+    this.light.parent = this.group;
     this.light.position.y = 1.2 * scale;
-    this.group.add(this.light);
     this.baseIntensity = lightIntensity;
   }
 
   private baseIntensity: number;
 
-  update(dt: number) {
+  /** `cam`: hide the small parts past ~70 m and the whole fire past ~600 m. */
+  update(dt: number, cam?: THREE.Vector3) {
+    if (cam) {
+      const d = this.group.getWorldPosition(this.at).distanceTo(cam);
+      const near = d < 70;
+      for (const o of this.detail) o.visible = near;
+      this.flame.visible = d < 600;
+    }
     this.t += dt;
     const f = 0.75 + Math.sin(this.t * 13) * 0.08 + Math.sin(this.t * 7.3) * 0.1 + Math.sin(this.t * 23.1) * 0.06;
     this.light.intensity = this.baseIntensity * f;

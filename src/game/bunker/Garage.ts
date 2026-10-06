@@ -65,7 +65,7 @@ export class Garage {
     const [gx, , gz] = GARAGE.location.position;
     const origin = new THREE.Vector3(gx, ctx.hf.heightAt(gx, gz), gz);
     this.b = new GarageBuilder(ctx.physics, origin);
-    ctx.scene.add(this.b.group, this.b.interiorLight, this.b.vaultLight);
+    ctx.scene.add(this.b.group);
     for (const f of this.b.floodlights) ctx.scene.add(f.light, f.light.target);
 
     this.houseBox = new THREE.Box3(this.b.w(HOUSE.x0, 0, HOUSE.z0), this.b.w(HOUSE.x1, HOUSE.h, HOUSE.z1));

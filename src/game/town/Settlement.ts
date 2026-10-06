@@ -6,9 +6,10 @@ import type { GameContext, Interactable, Action } from '@/game/context';
 import { LANDMARKS, CAVE_TRAIL } from '@/content/world';
 import { ITEMS } from '@/content/items';
 import { XP_REWARDS } from '@/content/progression';
-import { box, cyl, MeshBatch, canvasTexture, grime, wire, norm } from '@/game/world/kit';
+import { box, cyl, MeshBatch, DistanceLod, canvasTexture, grime, wire, norm } from '@/game/world/kit';
 import { rustyMetal, concrete, corrugated, neon, plainStandard, fabric, wood, glow, warmWindow, leather } from '@/game/world/materials';
 import { Fire } from '@/game/world/effects';
+import { VirtualLight } from '@/game/world/lights';
 import { rockMaterial } from '@/game/world/Props';
 
 type Col = ReturnType<Physics['addBox']>;
@@ -21,6 +22,8 @@ interface Swing {
   sign: number;
   open: number;
   target: number;
+  /** Collider state last sent to Rapier (toggling it every frame dirties the broadphase). */
+  solid: boolean;
 }
 
 /** Local→world. Same composition Landmarks uses, so mesh and collider share one frame. */
@@ -59,6 +62,8 @@ export class Settlement {
   private blockers: { id: string; obj: THREE.Object3D; collider: Col }[] = [];
   private clinicGlow: { value: number } | null = null;
   private synced = false;
+  /** Detail up close, a one-draw silhouette from the highway. */
+  private lods: DistanceLod[] = [];
   private readonly world = new Map<string, THREE.Vector3>();
 
   constructor(private ctx: GameContext, private landmarks: Landmarks) {
@@ -154,7 +159,7 @@ export class Settlement {
     pivot.add(door);
     root.add(pivot);
     const collider = this.boxCol(f, (g0 + g1) / 2, doorH / 2, z, width / 2, doorH / 2, 0.06);
-    this.doors.push({ id, pivot, collider, sign, open: 0, target: 0 });
+    this.doors.push({ id, pivot, collider, sign, open: 0, target: 0, solid: true });
   }
 
   private person(b: MeshBatch, f: Frame, x: number, z: number, yaw: number, coat: string, scarf: string) {
@@ -175,6 +180,18 @@ export class Settlement {
     b.add(c, box(0.3, 0.07, 0.3, x + fx * 0.02, 1.72, z + fz * 0.02, yaw));
     b.add(c, box(0.16, 0.1, 0.16, x + fx * 0.02, 1.78, z + fz * 0.02, yaw));
     this.boxCol(f, x, 0.9, z, 0.32, 0.9, 0.26);
+  }
+
+  /**
+   * Everything under `root` except `keep` becomes the near set; `far` is the batch's stand-in.
+   * Fires stay out of it (they thin themselves by distance) so the glow still reads from the road.
+   */
+  private split(root: THREE.Group, f: Frame, radius: number, far: THREE.Group, keep: THREE.Object3D[]) {
+    const near = new THREE.Group();
+    near.name = root.name + '-near';
+    for (const c of [...root.children]) if (!keep.includes(c)) near.add(c);
+    root.add(near, far);
+    this.lods.push(new DistanceLod(new THREE.Vector3(f.x, f.y, f.z), radius, near, far));
   }
 
   // ------------------------------------------------------------------ Dry Creek
@@ -498,10 +515,11 @@ export class Settlement {
       new THREE.SphereGeometry(0.06, 8, 6).translate(16.3, 2.65, -7.1),
       new THREE.SphereGeometry(0.045, 8, 6).translate(14.6, 5.15, -12.2),
     );
+    // virtual: the light pool lends these a real light only when you are near enough to see it
     const hang = (x: number, y: number, z: number, intensity: number, dist: number) => {
-      const L = new THREE.PointLight(0xffb060, intensity, dist, 1.7);
+      const L = new VirtualLight(0xffb060, intensity, dist, 1.7);
+      L.parent = root;
       L.position.set(x, y, z);
-      root.add(L);
     };
     hang(-17.9, 2.9, -8.0, 7, 10);
     hang(0.15, 2.6, -8.2, 5, 8);
@@ -529,10 +547,12 @@ export class Settlement {
     washBoard.position.set(25.0, 1.7, 8.02);
     root.add(washBoard);
 
+    const far = b.buildFar('creek-far');
     root.add(b.build('creek'));
     const fire = new Fire(0.85, 28);
     fire.group.position.set(-0.4, 0.12, 2.3);
     root.add(fire.group);
+    this.split(root, f, 34, far, [fire.group, sign]);
     this.landmarks.fires.push(fire);
     this.landmarks.audioSpots.push({ kind: 'fire', pos: f.p(-0.4, 0.3, 2.3) });
     this.landmarks.audioSpots.push({ kind: 'generator', pos: f.p(5.5, 0.6, -7.4) });
@@ -615,10 +635,12 @@ export class Settlement {
     this.spot('rock', f, 3.5, 1.15, 3.35);
     this.spot('pocket', f, 7.4, 1.0, 3.4);
 
+    const far = b.buildFar('cave-far', { colors: new Map([[rock as THREE.Material, '#8a6a52']]) });
     root.add(b.build('cave'));
     const fire = new Fire(0.55, 18);
     fire.group.position.set(-3.1, 0.05, 5.4);
     root.add(fire.group);
+    this.split(root, f, 12, far, [fire.group]);
     this.landmarks.fires.push(fire);
     this.landmarks.audioSpots.push({ kind: 'fire', pos: f.p(-3.1, 0.3, 5.4) });
     this.group.add(root);
@@ -1181,6 +1203,7 @@ export class Settlement {
     if (snap) {
       d.open = d.sign;
       d.pivot.rotation.y = d.sign;
+      d.solid = false;
       d.collider.setEnabled(false);
     }
   }
@@ -1192,7 +1215,8 @@ export class Settlement {
     b.collider.setEnabled(false);
   }
 
-  update(dt: number) {
+  update(dt: number, cam?: THREE.Vector3) {
+    if (cam) for (const l of this.lods) l.update(cam);
     const s = this.ctx.state;
     if (s && !this.synced) {
       this.synced = true;
@@ -1204,7 +1228,8 @@ export class Settlement {
     for (const d of this.doors) {
       d.open += (d.target - d.open) * Math.min(1, dt * 7);
       d.pivot.rotation.y = d.open;
-      d.collider.setEnabled(Math.abs(d.target) < 0.2 && Math.abs(d.open) < 0.35);
+      const solid = Math.abs(d.target) < 0.2 && Math.abs(d.open) < 0.35;
+      if (solid !== d.solid) { d.solid = solid; d.collider.setEnabled(solid); }
     }
     if (this.clinicGlow) {
       const on = !!s?.has('creek.power');

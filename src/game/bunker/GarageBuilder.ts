@@ -5,6 +5,7 @@ import type { Physics } from '@/engine/physics';
 import { box, cyl, beam, MeshBatch, canvasTexture, grime, wire, merge, norm } from '../world/kit';
 import { rustyMetal, concrete, corrugated, neon, plainStandard, fabric, wood, glow, chainLink, warmWindow, GlowPalette } from '../world/materials';
 import { lightCone, GlowSprites } from '../world/effects';
+import { VirtualLight } from '../world/lights';
 import { dressHouse, dressRoof, dressYard, dressWorkshop, dressVault, CH, type Dress } from './garageDressing';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -31,8 +32,8 @@ export class GarageBuilder {
   lasers: Laser[] = [];
   doors: Record<'gateL' | 'gateR' | 'side' | 'vault' | 'gap', Door> = {} as any;
   floodlights: { light: THREE.SpotLight; cone: ReturnType<typeof lightCone> }[] = [];
-  interiorLight!: THREE.PointLight;
-  vaultLight!: THREE.PointLight;
+  interiorLight!: VirtualLight;
+  vaultLight!: VirtualLight;
   blinkers: { u: { value: number }; period: number; offset: number; on: number }[] = [];
   neonFlicker = { value: 1 };
   serverLeds!: { value: number };
@@ -806,9 +807,9 @@ export class GarageBuilder {
     this.col(-1.2, 0.9, z0 + 0.8, 0.3, 0.9, 0.3);
 
     // lights
-    this.interiorLight = new THREE.PointLight(0xffb070, 14, 16, 1.6);
+    this.interiorLight = new VirtualLight(0xffb070, 14, 16, 1.6);
     this.interiorLight.position.copy(this.w(0, 3.6, -3.2));
-    this.vaultLight = new THREE.PointLight(0xffc070, 10, 10, 1.8);
+    this.vaultLight = new VirtualLight(0xffc070, 10, 10, 1.8);
     this.vaultLight.position.copy(this.w(0, 3.4, -9.5));
     const tube = this.pal.slot('#ffe2b8', 5);
     this.tubeGlow = tube.intensity as unknown as { value: number };

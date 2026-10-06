@@ -1,6 +1,6 @@
 import * as THREE from 'three/webgpu';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
-import { batchSpec, familyMaterial, GLOW_SLOTS, type BatchSpec, type Family } from './materials';
+import { batchSpec, familyMaterial, plainStandard, GLOW_SLOTS, type BatchSpec, type Family } from './materials';
 
 /**
  * Geometry kit: helpers that produce transformed, attribute-normalised (position/normal/uv, non-indexed)
@@ -117,6 +117,63 @@ export class MeshBatch {
       }
     }
     return group;
+  }
+
+  /**
+   * A stand-in for viewing from far away, for DistanceLod. Every piece at least `minSize` across is
+   * flattened into the shared 'plain' family in its base colour, so the whole set is ONE draw on a
+   * program that already exists. Lit windows and glow keep their own merged meshes so a town still
+   * reads at night. Untagged materials (neon, one-off shaders) need a colour in `colors` or are left
+   * out. Call before build(): it reads the same parts.
+   */
+  buildFar(name = 'far', opts: { minSize?: number; colors?: Map<THREE.Material, THREE.ColorRepresentation> } = {}) {
+    const minSize = opts.minSize ?? 0.35;
+    const far = new MeshBatch();
+    const bb = new THREE.Vector3();
+    for (const [mat, list] of this.parts) {
+      const spec = batchSpec(mat);
+      const keep = spec && (spec.family === 'window' || spec.family === 'glow');
+      let flat: THREE.Material | null = null;
+      if (!keep) {
+        const c = spec ? new THREE.Color(spec.c[0], spec.c[1], spec.c[2]) : opts.colors?.has(mat) ? new THREE.Color(opts.colors.get(mat)!) : null;
+        if (!c) continue;
+        // the families shade their base down a little (grain, stains, pits); match the average
+        flat = plainStandard(c.multiplyScalar(0.85), 0.9);
+      }
+      for (const g of list) {
+        if (!g.boundingBox) g.computeBoundingBox();
+        g.boundingBox!.getSize(bb);
+        if (Math.max(bb.x, bb.y, bb.z) < minSize) continue;
+        far.add(flat ?? mat, g.clone());
+      }
+    }
+    return far.build(name, false, false);
+  }
+}
+
+/**
+ * Swaps a detailed group for a cheap stand-in by camera distance (measured from the edge of a site
+ * of `radius` around `center`), and hides the stand-in too past `hide`. Hysteresis stops flicker.
+ */
+export class DistanceLod {
+  private farOn = false;
+  constructor(
+    readonly center: THREE.Vector3,
+    readonly radius: number,
+    readonly near: THREE.Object3D,
+    readonly far: THREE.Object3D | null,
+    readonly swap = 140,
+    readonly hide = 650,
+  ) {
+    if (far) far.visible = false;
+  }
+
+  update(cam: THREE.Vector3) {
+    const d = Math.max(0, Math.hypot(cam.x - this.center.x, cam.z - this.center.z) - this.radius);
+    const band = this.swap * 0.08;
+    if (this.farOn ? d < this.swap - band : d > this.swap + band) this.farOn = !this.farOn;
+    this.near.visible = !this.farOn;
+    if (this.far) this.far.visible = this.farOn && d < this.hide;
   }
 }
 

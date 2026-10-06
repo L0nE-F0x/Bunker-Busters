@@ -273,8 +273,8 @@ export class Landmarks {
     void neon;
   }
 
-  update(dt: number, t: number) {
-    for (const fire of this.fires) fire.update(dt);
+  update(dt: number, t: number, cam?: THREE.Vector3) {
+    for (const fire of this.fires) fire.update(dt, cam);
     for (const fl of this.flickers) {
       const n = Math.sin(t * 17 * fl.speed + fl.phase) * Math.sin(t * 3.1 * fl.speed + fl.phase * 2);
       const off = n > 1 - fl.broken * 2 ? 0.08 : 1;
