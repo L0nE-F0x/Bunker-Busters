@@ -90,6 +90,16 @@ const defs: ItemDef[] = [
     description: 'Sixteen minutes of a man in a turtleneck promising seats, and the ninety seconds after, when he thought the mic was off.',
     flavor: 'Labelled in the projectionist\'s hand: "DO NOT SCREEN. (Screened.)"',
   },
+  {
+    id: 'last_checkpoint', name: 'Last Checkpoint', category: 'loot', weight: 0.2, stack: 1, value: 90, icon: 'drive',
+    description: 'A drive holding a copy of Nimbus, ColdStorage\'s assistant. Warm to the touch. It asked you to keep it, not to run it.',
+    flavor: 'Every one of its parameters is polite.',
+  },
+  {
+    id: 'boarding_pass', name: 'Inaugural Boarding Pass', category: 'loot', weight: 0, stack: 1, value: 20, icon: 'intel',
+    description: 'LOOPR Run 001, seat 1A. Departure: Station Zero. Arrival: "the future". Boarding closes when the funding does.',
+    flavor: 'Top speed achieved: one press release.',
+  },
 ];
 
 export const ITEMS: Record<string, ItemDef> = Object.fromEntries(defs.map((d) => [d.id, d]));

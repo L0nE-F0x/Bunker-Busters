@@ -46,7 +46,7 @@ export const LANDMARKS: LandmarkDef[] = [
   {
     id: 'datacenter', name: 'ColdStorage', kind: 'site', position: [290, 0, -262], rotation: -0.3,
     blurb: 'Where the cloud came down to earth. It is still warm inside.',
-    flatten: { r: 40, falloff: 28 },
+    flatten: { r: 47, falloff: 24 },
   },
   {
     id: 'tube', name: 'The Tube', kind: 'site', position: [318, 0, 118], rotation: 1.1,
