@@ -425,6 +425,7 @@ export class Atmosphere {
     this.envIntensity = lerp(a.env, b.env, t);
     this.exposure = lerp(a.exp, b.exp, t);
     this.applyGrade(i, t);
+    gradeU.heat.value = smoothN(0.22, 0.7, sunDir.y) * (1 - Math.min(1, this.storm * 2)) * (1 - this.dustiness * 0.4);
     this.uNight.value = smoothN(0.02, -0.2, sunDir.y);
     uDaylight.value = smoothN(-0.08, 0.06, sunDir.y);
     (uRimSunDir.value as THREE.Vector3).copy(sunDir);

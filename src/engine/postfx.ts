@@ -2,7 +2,7 @@ import * as THREE from 'three/webgpu';
 import {
   pass, mrt, output, normalView, uniform, screenUV, vec2, vec3, vec4, float, Fn, renderOutput,
   builtinAOContext, time, length, fract, sin, smoothstep, mix, dot, clamp, max, pow, convertToTexture,
-  renderGroup, getViewPosition, normalize, acesFilmicToneMapping,
+  renderGroup, getViewPosition, normalize, acesFilmicToneMapping, abs,
 } from 'three/tsl';
 import { bloom } from 'three/addons/tsl/display/BloomNode.js';
 import { ao } from 'three/addons/tsl/display/GTAONode.js';
@@ -10,6 +10,7 @@ import { smaa } from 'three/addons/tsl/display/SMAANode.js';
 import { godrays } from 'three/addons/tsl/display/GodraysNode.js';
 import { bilateralBlur } from 'three/addons/tsl/display/BilateralBlurNode.js';
 import type { QualitySettings } from './renderer';
+import { noise } from './noiseTex';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 type N = any;
@@ -29,6 +30,8 @@ export const gradeU = {
   sat: uniform(1.05).setGroup(renderGroup),
   /** display-space black lift (night: a little blue so the darks never go dead) */
   lift: uniform(new THREE.Color(0.004, 0.006, 0.01)).setGroup(renderGroup),
+  /** 0..1 heat shimmer over distant ground near the horizon (hot, clear afternoons) */
+  heat: uniform(0).setGroup(renderGroup),
 };
 
 /**
@@ -97,6 +100,7 @@ export class PostFX {
     }
 
     let hdr: N = scenePass.getTextureNode('output');
+    const camW = uniform(camera.matrixWorld), projInv = uniform(camera.projectionMatrixInverse);
 
     if (quality.godrays) {
       const gr: N = godrays(sceneDepth, camera, this.sun);
@@ -109,7 +113,6 @@ export class PostFX {
       // additive in-scatter: shafts brighten, occluded air stays clear. Weighted by a forward-scatter
       // phase around the light: the raw march is just "how much lit air", which without a phase
       // laid a flat milky veil over every view (noon included) instead of shafts toward the sun.
-      const camW = uniform(camera.matrixWorld), projInv = uniform(camera.projectionMatrixInverse);
       const vdir = normalize(camW.mul(vec4(getViewPosition(screenUV, float(0.5), projInv), 0)).xyz);
       const mu = max(dot(vdir, this.uLightDir), 0);
       const phase = float(0.16).add(pow(mu, 2).mul(0.3)).add(pow(mu, 10).mul(1.6));
@@ -132,7 +135,7 @@ export class PostFX {
     // the tonemap happens inside grade(); renderOutput only encodes to sRGB
     let ldr: N = renderOutput(graded, THREE.NoToneMapping, THREE.SRGBColorSpace);
     if (quality.smaa) ldr = smaa(ldr);
-    this.pipeline.outputNode = this.finish(convertToTexture(ldr));
+    this.pipeline.outputNode = this.finish(convertToTexture(ldr), sceneDepth, camW, projInv);
     this.pipeline.needsUpdate = true;
   }
 
@@ -163,11 +166,20 @@ export class PostFX {
     })();
   }
 
-  /** Lens + gameplay overlays in display space. */
-  private finish(ldr: N): N {
+  /** Lens + gameplay overlays in display space (plus the heat shimmer, folded into the CA taps). */
+  private finish(ldr: N, depth: N, camW: N, projInv: N): N {
     const { vignette, grain, aberration, damage, alert, emp, fade, menuShade } = this;
+    const heat = gradeU.heat as N;
     return Fn(() => {
-      const uv = screenUV;
+      // heat shimmer: distant ground (and the horizon line) wobbles over hot sand. Distance and ray
+      // elevation come from the scene depth; the wobble is a vertically stretched, rising noise.
+      const vp = getViewPosition(screenUV, depth.sample(screenUV).r, projInv);
+      const rdY = normalize(camW.mul(vec4(vp, 0)).xyz).y;
+      const hz = smoothstep(130, 450, length(vp)).mul(smoothstep(0.09, 0.0, abs(rdY.add(0.01))));
+      const w = noise(vec2(screenUV.x.mul(26), screenUV.y.mul(64).sub(time.mul(0.9)))).r.sub(0.5);
+      const w2 = noise(vec2(screenUV.x.mul(11).add(0.3), screenUV.y.mul(23).sub(time.mul(0.5)))).g.sub(0.5);
+      const shimmer = vec2(w2.mul(0.35), w.add(w2.mul(0.5))).mul(0.0035).mul(hz).mul(heat);
+      const uv = screenUV.add(shimmer);
       const centered = uv.sub(0.5);
       const r = length(centered);
       // radial chromatic aberration, pumped by EMP + damage
