@@ -3,20 +3,23 @@ import type { Heightfield } from '@/game/world/Heightfield';
 import type { Physics } from '@/engine/physics';
 import type { Landmarks } from '@/game/world/Landmarks';
 import type { GameContext, Interactable, Action } from '@/game/context';
-import { LANDMARKS, CAVE_TRAIL } from '@/content/world';
+import { LANDMARKS } from '@/content/world';
 import { ITEMS } from '@/content/items';
 import { XP_REWARDS } from '@/content/progression';
-import { box, cyl, MeshBatch, DistanceLod, canvasTexture, grime, wire, norm } from '@/game/world/kit';
-import { rustyMetal, concrete, corrugated, neon, plainStandard, fabric, wood, glow, warmWindow, leather } from '@/game/world/materials';
+import { DistanceLod, Frame } from '@/game/world/kit';
 import { Fire } from '@/game/world/effects';
-import { VirtualLight } from '@/game/world/lights';
-import { rockMaterial } from '@/game/world/Props';
+import { NpcCrowd, type NpcDef } from '@/game/world/npc';
+import { Site, HALO } from './townKit';
+import { buildDryCreek, type Hooks, type CreekLive } from './creek';
+import { buildCut } from './cave';
+import { buildWash } from './wash';
+import { uTownNight } from './townAtlas';
 
 type Col = ReturnType<Physics['addBox']>;
 
 interface Swing {
   id: string;
-  pivot: THREE.Group;
+  pivot: THREE.Object3D;
   collider: Col;
   /** Signed radians, inward. */
   sign: number;
@@ -26,29 +29,25 @@ interface Swing {
   solid: boolean;
 }
 
-/** Local→world. Same composition Landmarks uses, so mesh and collider share one frame. */
-class Frame {
-  readonly m: THREE.Matrix4;
-  constructor(public x: number, public y: number, public z: number, public yaw: number) {
-    this.m = new THREE.Matrix4().compose(
-      new THREE.Vector3(x, y, z),
-      new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), yaw),
-      new THREE.Vector3(1, 1, 1),
-    );
-  }
-  p(lx: number, ly: number, lz: number) {
-    return new THREE.Vector3(lx, ly, lz).applyMatrix4(this.m);
-  }
+/** Batched glow and lit windows never need to throw a sun shadow. */
+function noGlowShadows(g: THREE.Object3D) {
+  g.traverse((o) => {
+    const m = (o as THREE.Mesh).material as THREE.MeshStandardNodeMaterial | undefined;
+    if (m && (m as unknown as { emissiveNode?: unknown }).emissiveNode && m.color?.getHex?.() === 0x050505) (o as THREE.Mesh).castShadow = false;
+  });
 }
 
 /**
  * Dry Creek and the ridge cave.
  *
- * Built with the gas-station kit (memoized materials, MeshBatch, canvas signs, neon).
- * Rooms are wall slabs, not solid boxes, so you can stand inside them.
- * Door gaps are 1.5–1.6 m. The player capsule is 0.66 m wide and 1.66 m tall;
- * openings are 2.15 m high. Stair risers are 0.26 m, under the 0.45 m autostep.
- * The loft cache sits high enough that the ground floor cannot reach the prompt.
+ * The build half lives in ./creek.ts (buildings, interiors, street), ./townKit.ts (walls with
+ * openings, roofs, decks, the Site that batches everything), ./townProps.ts (furniture, vehicles,
+ * poles) and ./townAtlas.ts (one canvas for every sign, poster, stain and light pool). People are
+ * one animated mesh per site (src/game/world/npc.ts).
+ *
+ * Door gaps are 1.56–1.6 m and 2.2 m tall. The player capsule is 0.66 m wide and 1.66 m tall.
+ * Stair risers are 0.25 m, under the 0.45 m autostep. The loft cache sits high enough that the
+ * ground floor cannot reach the prompt.
  */
 export class Settlement {
   readonly group = new THREE.Group();
@@ -60,11 +59,13 @@ export class Settlement {
 
   private doors: Swing[] = [];
   private blockers: { id: string; obj: THREE.Object3D; collider: Col }[] = [];
-  private clinicGlow: { value: number } | null = null;
   private synced = false;
   /** Detail up close, a one-draw silhouette from the highway. */
   private lods: DistanceLod[] = [];
   private readonly world = new Map<string, THREE.Vector3>();
+  private crowds: NpcCrowd[] = [];
+  private sites: Site[] = [];
+  private creek: CreekLive | null = null;
 
   constructor(private ctx: GameContext, private landmarks: Landmarks) {
     this.group.name = 'settlement';
@@ -96,11 +97,6 @@ export class Settlement {
     return new Frame(x, this.hf.heightAt(x, z), z, lm.rotation);
   }
 
-  private boxCol(f: Frame, x: number, y: number, z: number, hx: number, hy: number, hz: number) {
-    const p = f.p(x, y, z);
-    return this.physics.addBox(p, { x: hx, y: hy, z: hz }, f.yaw);
-  }
-
   private spot(id: string, f: Frame, x: number, y: number, z: number) {
     const p = f.p(x, y, z);
     this.world.set(id, p);
@@ -114,84 +110,51 @@ export class Settlement {
     return p;
   }
 
-  private wallX(b: MeshBatch, mat: THREE.Material, f: Frame, x0: number, x1: number, z: number, y0: number, y1: number, thick: number) {
-    if (x1 - x0 < 0.04 || y1 - y0 < 0.04) return;
-    const xc = (x0 + x1) / 2, yc = (y0 + y1) / 2;
-    b.add(mat, box(x1 - x0, y1 - y0, thick, xc, yc, z));
-    this.boxCol(f, xc, yc, z, (x1 - x0) / 2, (y1 - y0) / 2, thick / 2);
-  }
-
-  private wallZ(b: MeshBatch, mat: THREE.Material, f: Frame, x: number, z0: number, z1: number, y0: number, y1: number, thick: number) {
-    if (z1 - z0 < 0.04 || y1 - y0 < 0.04) return;
-    const zc = (z0 + z1) / 2, yc = (y0 + y1) / 2;
-    b.add(mat, box(thick, y1 - y0, z1 - z0, x, yc, zc));
-    this.boxCol(f, x, yc, zc, thick / 2, (y1 - y0) / 2, (z1 - z0) / 2);
-  }
-
-  /** Wall along X with a door gap. Side piers are full height. The lintel starts at doorH. */
-  private gapX(b: MeshBatch, mat: THREE.Material, f: Frame, x0: number, x1: number, z: number, thick: number, g0: number, g1: number, doorH: number, wallH: number) {
-    this.wallX(b, mat, f, x0, g0, z, 0, wallH, thick);
-    this.wallX(b, mat, f, g1, x1, z, 0, wallH, thick);
-    this.wallX(b, mat, f, g0, g1, z, doorH, wallH, thick);
-  }
-
-  private gapZ(b: MeshBatch, mat: THREE.Material, f: Frame, x: number, z0: number, z1: number, thick: number, g0: number, g1: number, doorH: number, wallH: number) {
-    this.wallZ(b, mat, f, x, z0, g0, 0, wallH, thick);
-    this.wallZ(b, mat, f, x, g1, z1, 0, wallH, thick);
-    this.wallZ(b, mat, f, x, g0, g1, doorH, wallH, thick);
-  }
-
-  private slab(b: MeshBatch, mat: THREE.Material, f: Frame, x0: number, x1: number, z0: number, z1: number, top: number, thick = 0.16) {
-    const xc = (x0 + x1) / 2, zc = (z0 + z1) / 2, yc = top - thick / 2;
-    b.add(mat, box(x1 - x0, thick, z1 - z0, xc, yc, zc));
-    this.boxCol(f, xc, yc, zc, (x1 - x0) / 2, thick / 2, (z1 - z0) / 2);
-  }
-
-  /** Hinge at the west edge of the gap. `sign` < 0 swings the slab toward −Z. */
-  private swing(root: THREE.Group, f: Frame, id: string, g0: number, g1: number, z: number, doorH: number, sign: number, mat: THREE.Material) {
-    const width = g1 - g0;
-    const pivot = new THREE.Group();
-    pivot.position.set(g0, 0, z);
-    const door = new THREE.Mesh(new THREE.BoxGeometry(width - 0.04, doorH - 0.06, 0.07), mat);
-    door.position.set(width / 2, doorH / 2, 0);
-    door.castShadow = true;
-    door.receiveShadow = true;
-    pivot.add(door);
-    root.add(pivot);
-    const collider = this.boxCol(f, (g0 + g1) / 2, doorH / 2, z, width / 2, doorH / 2, 0.06);
-    this.doors.push({ id, pivot, collider, sign, open: 0, target: 0, solid: true });
-  }
-
-  private person(b: MeshBatch, f: Frame, x: number, z: number, yaw: number, coat: string, scarf: string) {
-    const c = fabric(coat);
-    const pants = fabric('#3a342c');
-    const skin = leather('#8a6450');
-    const boot = leather('#2a1f18');
-    const sc = fabric(scarf);
-    const fx = Math.sin(yaw), fz = Math.cos(yaw);
-    // Pieces overlap. A gap between the legs and the coat reads as a floating torso.
-    b.add(boot, box(0.16, 0.14, 0.28, x - 0.1, 0.07, z, yaw), box(0.16, 0.14, 0.28, x + 0.1, 0.07, z, yaw));
-    b.add(pants, box(0.17, 0.78, 0.18, x - 0.1, 0.46, z, yaw), box(0.17, 0.78, 0.18, x + 0.1, 0.46, z, yaw));
-    b.add(c, box(0.48, 0.66, 0.26, x, 1.12, z, yaw));
-    b.add(c, box(0.13, 0.52, 0.14, x - 0.3, 0.98, z, yaw), box(0.13, 0.52, 0.14, x + 0.3, 0.98, z, yaw));
-    b.add(skin, box(0.1, 0.42, 0.1, x - 0.3, 0.62, z, yaw), box(0.1, 0.42, 0.1, x + 0.3, 0.62, z, yaw));
-    b.add(sc, box(0.24, 0.1, 0.22, x, 1.42, z, yaw));
-    b.add(skin, box(0.2, 0.24, 0.2, x, 1.58, z, yaw));
-    b.add(c, box(0.3, 0.07, 0.3, x + fx * 0.02, 1.72, z + fz * 0.02, yaw));
-    b.add(c, box(0.16, 0.1, 0.16, x + fx * 0.02, 1.78, z + fz * 0.02, yaw));
-    this.boxCol(f, x, 0.9, z, 0.32, 0.9, 0.26);
+  /** What a site builder may touch: spots, doors and blockers keep their gameplay ids. */
+  private hooks(f: Frame, npcs: NpcDef[]): Hooks {
+    return {
+      spot: (id, x, y, z) => { this.spot(id, f, x, y, z); },
+      door: (id, pivot, collider, sign) => { this.doors.push({ id, pivot, collider, sign, open: 0, target: 0, solid: true }); },
+      blocker: (id, obj, collider) => { this.blockers.push({ id, obj, collider }); },
+      npc: (d) => { npcs.push(d); },
+      audio: (kind, x, y, z) => { this.landmarks.audioSpots.push({ kind, pos: f.p(x, y, z) }); },
+      flicker: (fl) => { this.landmarks.flickers.push(fl); },
+    };
   }
 
   /**
    * Everything under `root` except `keep` becomes the near set; `far` is the batch's stand-in.
-   * Fires stay out of it (they thin themselves by distance) so the glow still reads from the road.
+   * Fires, the big signs and the halo sprites stay out of it so the town still reads from the road.
    */
-  private split(root: THREE.Group, f: Frame, radius: number, far: THREE.Group, keep: THREE.Object3D[]) {
+  private split(root: THREE.Group, f: Frame, radius: number, far: THREE.Object3D | null, keep: THREE.Object3D[]) {
     const near = new THREE.Group();
     near.name = root.name + '-near';
     for (const c of [...root.children]) if (!keep.includes(c)) near.add(c);
-    root.add(near, far);
+    root.add(near);
+    if (far) root.add(far);
     this.lods.push(new DistanceLod(new THREE.Vector3(f.x, f.y, f.z), radius, near, far));
+  }
+
+  /** Turns a finished Site into meshes under its root: batch, signs, decals, pools, halos, people. */
+  private finish(S: Site, root: THREE.Group, name: string, npcs: NpcDef[], withFar = true) {
+    const far = withFar ? S.b.buildFar(name + '-far') : null;
+    const near = S.b.build(name);
+    noGlowShadows(near);
+    root.add(near);
+    const signs = S.s.build(name + '-signs');
+    const decals = S.d.build(name + '-decals', false, false);
+    decals.traverse((o) => { o.renderOrder = 2; });
+    const pools = S.p.build(name + '-pools', false, false);
+    pools.traverse((o) => { o.renderOrder = 3; });
+    const halos = S.halos.build();
+    root.add(signs, decals, pools, halos);
+    if (npcs.length) {
+      const crowd = new NpcCrowd(npcs, name + '-people');
+      root.add(crowd.mesh);
+      this.crowds.push(crowd);
+    }
+    this.sites.push(S);
+    return { far, signs, halos };
   }
 
   // ------------------------------------------------------------------ Dry Creek
@@ -200,362 +163,16 @@ export class Settlement {
     const root = new THREE.Group();
     root.name = 'dry-creek';
     root.applyMatrix4(f.m);
-    const b = new MeshBatch();
-    const stucco = concrete('#c4b8a4');
-    const stuccoDark = concrete('#8d8376');
-    const red = rustyMetal({ base: '#b8452c', rust: 0.5, metalness: 0.28, roughness: 0.58 });
-    const cream = rustyMetal({ base: '#d8d2c4', rust: 0.4, metalness: 0.25, roughness: 0.62 });
-    const metal = rustyMetal({ base: '#6d6a66', rust: 0.55 });
-    const roofDiner = corrugated('#8d4a3a', 0.62);
-    const roofClinic = corrugated('#6e7a6e', 0.75);
-    const roofStore = corrugated('#8b8a84', 0.7);
-    const roofMotel = corrugated('#5c6e72', 0.8);
-    const glass = warmWindow('#ffae5a', 2.1);
-    const clinicWin = glow('#d7fff2', 0.35);
-    this.clinicGlow = clinicWin.intensity as unknown as { value: number };
-    const dark = plainStandard('#121416', 0.15, 0.45);
-    const plank = wood('#6b4a2e');
-    const plankDark = wood('#3d2a1c');
-    const T = 0.28;
-    const DOOR = 2.15;
-
-    // street
-    b.add(stuccoDark, box(52, 0.1, 11, -2, 0.04, 3.2));
-    this.spot('street', f, -2, 0.25, 4.6);
-    this.spot('fire', f, -0.4, 0.3, 2.3);
-
-    // ---------- diner (west). Interior is −Z of the south wall.
-    {
-      const x0 = -23.6, x1 = -12.2, zS = -4.5, zN = -11.6, H = 3.7;
-      const g0 = -19.3, g1 = -17.7; // 1.6 m door
-      this.gapX(b, stucco, f, x0, x1, zS, T, g0, g1, DOOR, H);
-      this.wallX(b, stucco, f, x0, x1, zN, 0, H, T);
-      this.wallZ(b, stucco, f, x0, zN, zS, 0, H, T);
-      this.wallZ(b, stucco, f, x1, zN, zS, 0, H, T);
-      b.add(roofDiner, box(12, 0.18, 7.8, -17.9, H + 0.08, -8.05));
-      b.add(red, box(12.2, 0.55, 0.12, -17.9, H - 0.15, zS + 0.2));
-      b.add(glass, box(2.2, 1.15, 0.06, -21.4, 1.7, zS + 0.16), box(2.2, 1.15, 0.06, -14.6, 1.7, zS + 0.16));
-      b.add(red, box(3.4, 0.08, 1.3, -18.5, 2.45, zS + 0.7)); // awning, above eye line
-      // counter, with a west aisle so nobody is walled in
-      b.add(cream, box(5.2, 1.05, 0.55, -16.2, 0.55, -8.15));
-      this.boxCol(f, -16.2, 0.55, -8.15, 2.6, 0.52, 0.28);
-      b.add(plank, box(1.4, 0.75, 0.7, -21.6, 0.4, -6.2), box(0.9, 0.9, 0.9, -14.2, 0.5, -10.2));
-      this.boxCol(f, -21.6, 0.4, -6.2, 0.7, 0.38, 0.35);
-      b.add(dark, box(1.3, 1.5, 0.7, -20.4, 0.8, -9.7)); // freezer
-      this.boxCol(f, -20.4, 0.8, -9.7, 0.65, 0.75, 0.35);
-      this.spot('dinerIn', f, -18.2, 0.25, -6.2);
-      this.spot('nia', f, -16.4, 1.05, -6.55);
-      this.spot('freezer', f, -20.4, 1.05, -8.7);
-      this.person(b, f, -16.6, -9.55, 0, '#6b3a34', '#e6d2a2');
-    }
-
-    // ---------- clinic
-    {
-      const x0 = -4.3, x1 = 4.3, zS = -5.3, zN = -11.4, H = 3.35;
-      const g0 = -0.8, g1 = 0.8;
-      this.gapX(b, concrete('#d5d0c6'), f, x0, x1, zS, T, g0, g1, DOOR, H);
-      this.wallX(b, concrete('#d5d0c6'), f, x0, x1, zN, 0, H, T);
-      this.wallZ(b, concrete('#d5d0c6'), f, x0, zN, zS, 0, H, T);
-      this.wallZ(b, concrete('#d5d0c6'), f, x1, zN, zS, 0, H, T);
-      b.add(roofClinic, box(9.2, 0.16, 6.8, 0, H + 0.06, -8.35, 0, 0, 0.04));
-      b.add(clinicWin.material, box(1.8, 1.0, 0.06, -2.4, 1.75, zS + 0.16));
-      b.add(red, box(0.55, 0.16, 0.08, 2.5, 2.5, zS + 0.18), box(0.16, 0.55, 0.08, 2.5, 2.5, zS + 0.18));
-      b.add(plankDark, box(2.0, 0.45, 0.9, -2.2, 0.45, -9.8)); // cot
-      b.add(metal, box(1.3, 0.85, 0.75, 5.5, 0.5, -7.4)); // generator, outside
-      this.boxCol(f, 5.5, 0.5, -7.4, 0.65, 0.42, 0.38);
-      this.spot('clinicIn', f, 0, 0.25, -7.2);
-      this.spot('doc', f, -1.5, 1.05, -7.0);
-      this.spot('generator', f, 5.5, 1.05, -6.2);
-      this.person(b, f, -1.6, -9.2, 0, '#2c4a5c', '#c4552a');
-    }
-
-    // ---------- the Till (two storeys, stair in the back room)
-    {
-      const x0 = 10.6, x1 = 21.2, zS = -4.3, zN = -15.8, H = 6.25;
-      const g0 = 15.3, g1 = 16.9; // front door, 1.6 m
-      this.gapX(b, stucco, f, x0, x1, zS, T, g0, g1, DOOR, H);
-      this.wallX(b, stucco, f, x0, x1, zN, 0, H, T);
-      this.wallZ(b, stucco, f, x0, zN, zS, 0, H, T);
-      this.wallZ(b, stucco, f, x1, zN, zS, 0, H, T);
-      b.add(roofStore, box(11.2, 0.2, 12.1, 15.9, H + 0.08, -10.05));
-      b.add(glass, box(2.4, 1.3, 0.06, 13.0, 1.7, zS + 0.16), box(1.6, 1.05, 0.06, 18.8, 4.55, zS + 0.16));
-      b.add(glass, box(1.2, 0.8, 0.06, 12.4, 4.5, -10.2));
-      // partition under the loft, closet door west of centre. Gap 1.6 m, clear of the stair.
-      const pZ = -10.3, cg0 = 13.15, cg1 = 14.75;
-      this.gapX(b, stuccoDark, f, x0 + 0.2, x1 - 0.2, pZ, 0.16, cg0, cg1, DOOR, 3.05);
-      this.swing(root, f, 'closet', cg0, cg1, pZ, DOOR, -1.25, plank);
-      // counter, west aisle leads to the closet
-      b.add(cream, box(4.6, 1.05, 0.5, 17.4, 0.55, -7.15));
-      this.boxCol(f, 17.4, 0.55, -7.15, 2.3, 0.52, 0.25);
-      b.add(plank, box(0.9, 0.7, 0.7, 19.6, 0.4, -8.7));
-      // stair: 12 rises of 0.26 (top 3.12), tread 0.34, run 4.08. West of the closet door.
-      const sx0 = 11.2, sx1 = 12.65, sz = -15.5, tread = 0.34, riser = 0.26;
-      const stepMat = concrete('#9a9186');
-      for (let i = 0; i < 12; i++) {
-        const top = (i + 1) * riser;
-        const zA = sz + i * tread;
-        const xc = (sx0 + sx1) / 2, zc = zA + tread / 2;
-        b.add(stepMat, box(sx1 - sx0, riser, tread, xc, top - riser / 2, zc));
-        this.boxCol(f, xc, top - riser / 2, zc, (sx1 - sx0) / 2, riser / 2, tread / 2);
-      }
-      // loft. The hole over the stair is the absence of this slab. Tops match the last tread.
-      const loft = wood('#7a5a36');
-      this.slab(b, loft, f, 10.9, 21.0, -10.05, -4.6, 3.12);
-      this.slab(b, loft, f, 12.65, 21.0, -15.6, -10.05, 3.12);
-      // rail along the hole, open at the top step so you can step across
-      b.add(plankDark, box(0.08, 0.85, 3.2, 12.62, 3.54, -13.9));
-      this.boxCol(f, 12.62, 3.54, -13.9, 0.05, 0.42, 1.6);
-      b.add(plank, box(0.7, 0.35, 0.5, 18.6, 3.45, -6.4)); // high shelf
-      this.spot('storeIn', f, 16.2, 0.25, -6.0);
-      this.spot('inez', f, 17.6, 1.05, -6.4);
-      this.spot('closet', f, 13.95, 1.05, -9.5);
-      this.spot('backroom', f, 14.6, 0.25, -12.6);
-      this.spot('loft', f, 17.4, 3.28, -7.4);
-      this.spot('loftShelf', f, 18.6, 4.05, -6.4);
-      this.person(b, f, 18.2, -8.7, 0, '#3f4a3a', '#7a2f2a');
-    }
-
-    // ---------- motel row, doors face the street (−Z side of each room)
-    const rooms: { x0: number; x1: number; id: 'a' | 'b' | 'c' }[] = [
-      { x0: -10.6, x1: -6.0, id: 'a' },
-      { x0: -5.4, x1: -0.8, id: 'b' },
-      { x0: -0.2, x1: 4.4, id: 'c' },
-    ];
-    for (const room of rooms) {
-      const zN = 7.15, zS = 12.35, H = 3.15;
-      const mid = (room.x0 + room.x1) / 2;
-      const g0 = mid - 0.78, g1 = mid + 0.78; // 1.56 m
-      this.gapX(b, concrete('#b7c0c2'), f, room.x0, room.x1, zN, T, g0, g1, DOOR, H);
-      this.wallX(b, concrete('#b7c0c2'), f, room.x0, room.x1, zS, 0, H, T);
-      this.wallZ(b, concrete('#b7c0c2'), f, room.x0, zN, zS, 0, H, T);
-      this.wallZ(b, concrete('#b7c0c2'), f, room.x1, zN, zS, 0, H, T);
-      b.add(roofMotel, box(room.x1 - room.x0 + 0.5, 0.14, 5.7, mid, H + 0.05, 9.75));
-      b.add(dark, box(0.7, 0.9, 0.06, mid + 1.3, 1.6, zN + 0.16));
-      b.add(plank, box(1.8, 0.4, 0.85, mid, 0.35, 11.3));
-      if (room.id === 'b') this.swing(root, f, 'motelB', g0, g1, zN, DOOR, 1.2, plankDark);
-      if (room.id === 'c') {
-        const boards = new THREE.Group();
-        for (let i = 0; i < 4; i++) {
-          const plankMesh = new THREE.Mesh(new THREE.BoxGeometry(1.7, 0.16, 0.06), plankDark);
-          plankMesh.position.set(mid, 0.45 + i * 0.4, zN);
-          plankMesh.rotation.z = (i - 1.5) * 0.05;
-          plankMesh.castShadow = true;
-          boards.add(plankMesh);
-        }
-        root.add(boards);
-        const collider = this.boxCol(f, mid, DOOR / 2, zN, 0.78, DOOR / 2, 0.08);
-        this.blockers.push({ id: 'boards', obj: boards, collider });
-      }
-    }
-    this.spot('motelA', f, -8.3, 0.25, 8.6);
-    this.spot('guest', f, -9.4, 1.0, 8.3);
-    this.spot('motelB', f, -3.1, 1.05, 6.5);
-    this.spot('motelBloot', f, -3.1, 1.0, 11.0);
-    this.spot('motelC', f, 2.1, 1.05, 6.5);
-    this.spot('motelCloot', f, 2.1, 1.0, 11.0);
-
-    // water tower. Legs are thin; the gap between them is wider than the player.
-    {
-      const tx = -31, tz = 1.2;
-      for (const [dx, dz] of [[-0.9, -0.9], [0.9, -0.9], [-0.9, 0.9], [0.9, 0.9]] as const) {
-        b.add(metal, box(0.16, 6.4, 0.16, tx + dx, 3.2, tz + dz));
-        this.boxCol(f, tx + dx, 3.2, tz + dz, 0.1, 3.2, 0.1);
-      }
-      b.add(metal, cyl(1.55, 1.55, 2.1, tx, 7.2, tz, 16));
-      this.boxCol(f, tx, 7.2, tz, 1.5, 1.05, 1.5);
-      b.add(red, box(0.9, 0.7, 0.7, tx, 0.4, tz + 2.15));
-      this.spot('tower', f, tx, 1.0, tz + 2.15);
-    }
-
-    // a car that stays where it died, off the walking line between diner and motel
-    b.add(rustyMetal({ base: '#3d4a55', rust: 0.7, metalness: 0.4 }), box(1.7, 0.7, 4.1, -26.5, 0.55, 5.4), box(1.5, 0.55, 1.8, -26.5, 1.15, 5.0));
-    this.boxCol(f, -26.5, 0.7, 5.4, 0.9, 0.7, 2.05);
-    b.add(plainStandard('#1a120c', 0.3, 0.6), box(0.55, 0.55, 0.12, -26.5, 0.32, 7.5), box(0.55, 0.55, 0.12, -26.5, 0.32, 3.3));
-
-    // fire, two people, barrels
-    const barrel = rustyMetal({ base: '#2f4a5c', rust: 0.6, metalness: 0.45 });
-    b.add(barrel, cyl(0.4, 0.4, 1.05, 2.4, 0.6, 1.4, 12), cyl(0.4, 0.4, 1.05, 3.1, 0.6, 1.9, 12));
-    this.boxCol(f, 2.4, 0.6, 1.4, 0.4, 0.52, 0.4);
-    this.boxCol(f, 3.1, 0.6, 1.9, 0.4, 0.52, 0.4);
-    b.add(wood('#4a3424'), cyl(0.16, 0.16, 1.8, -2.3, 0.28, 3.5, 8, 0, 0, Math.PI / 2));
-    this.person(b, f, -2.15, 2.55, 0.4, '#4a3b2a', '#c4552a');
-    this.person(b, f, 1.55, 3.15, Math.PI, '#2c3338', '#d8d2c4');
-    this.spot('sol', f, -2.15, 1.05, 2.55);
-    this.spot('ren', f, 1.55, 1.05, 3.15);
-    this.spot('forage', f, 8.5, 0.8, 16.2);
-
-    // posts along the back, gaps you can walk
-    for (let i = 0; i < 8; i++) {
-      const px = -22 + i * 5.2;
-      b.add(wood('#3a2a1c'), box(0.14, 1.5, 0.14, px, 0.75, -17.4));
-      this.boxCol(f, px, 0.75, -17.4, 0.1, 0.75, 0.1);
-    }
-    b.add(wood('#3a2a1c'), box(36, 0.08, 0.08, -4, 1.35, -17.4));
-
-    // string lights, diner roof to the Till
-    const bulbs = glow('#ffcc88', 4.5);
-    const a = new THREE.Vector3(-14, 3.9, -4.2);
-    const c = new THREE.Vector3(12, 5.4, -4.2);
-    b.add(plainStandard('#15120f', 0.6), wire(a, c, 0.8, 0.012, 24));
-    for (let i = 1; i < 14; i++) {
-      const t = i / 14;
-      const p = a.clone().lerp(c, t);
-      p.y -= 0.8 * 4 * t * (1 - t);
-      const g = new THREE.SphereGeometry(0.055, 6, 4);
-      g.translate(p.x, p.y, p.z);
-      b.add(bulbs.material, g);
-    }
-    this.landmarks.flickers.push({ set: (v) => (bulbs.intensity.value = 4.5 * (0.8 + 0.2 * v)), phase: 1.2, speed: 0.4, broken: 0.08 });
-
-    // diner sign — same canvas language as Last Chance
-    const signTex = canvasTexture(1024, 512, (ctx, w, h) => {
-      ctx.fillStyle = '#1a100c';
-      ctx.fillRect(0, 0, w, h);
-      ctx.strokeStyle = '#e8d6b0';
-      ctx.lineWidth = 14;
-      ctx.strokeRect(18, 18, w - 36, h - 36);
-      ctx.fillStyle = '#e8d6b0';
-      ctx.textAlign = 'center';
-      ctx.font = '900 150px "Big Shoulders Stencil Display", Impact, sans-serif';
-      ctx.fillText('DRY CREEK', w / 2, 200);
-      ctx.fillStyle = '#ff9a2e';
-      ctx.font = '700 92px "Chakra Petch", Arial, sans-serif';
-      ctx.fillText('EATS  ·  OPEN', w / 2, 330);
-      ctx.fillStyle = '#c9b48a';
-      ctx.font = '500 36px "Chakra Petch", Arial, sans-serif';
-      ctx.fillText('THE CREEK IS DRY. THE COFFEE IS NOT.', w / 2, 430);
-      grime(ctx, w, h, 1.1, 7);
-    });
-    const signMat = new THREE.MeshStandardNodeMaterial({ map: signTex, roughness: 0.65, emissiveMap: signTex, emissive: new THREE.Color(0.32, 0.22, 0.14) });
-    const sign = new THREE.Mesh(new THREE.BoxGeometry(4.6, 2.3, 0.18), signMat);
-    sign.position.set(-17.9, 5.15, -4.15);
-    sign.castShadow = true;
-    root.add(sign);
-    const neonFlicker = { value: 1 };
-    const neonMat = neon('#ff3a6e', 6, neonFlicker);
-    b.add(neonMat,
-      cyl(0.035, 0.035, 4.8, -17.9, 6.4, -4.0, 6, 0, 0, Math.PI / 2),
-      cyl(0.035, 0.035, 4.8, -17.9, 3.95, -4.0, 6, 0, 0, Math.PI / 2),
-    );
-    this.landmarks.flickers.push({ set: (v) => (neonFlicker.value = v), phase: 2.2, speed: 1.1, broken: 0.35 });
-    this.landmarks.audioSpots.push({ kind: 'neon', pos: f.p(-17.9, 5.2, -4.0) });
-
-    const tillTex = canvasTexture(768, 384, (ctx, w, h) => {
-      ctx.fillStyle = '#24180f';
-      ctx.fillRect(0, 0, w, h);
-      ctx.fillStyle = '#f0e2c4';
-      ctx.textAlign = 'center';
-      ctx.font = '900 120px "Big Shoulders Stencil Display", Impact, sans-serif';
-      ctx.fillText('THE TILL', w / 2, 160);
-      ctx.fillStyle = '#ffb347';
-      ctx.font = '600 48px "Chakra Petch", Arial, sans-serif';
-      ctx.fillText('IF IT HAS A PRICE, ASK INEZ', w / 2, 250);
-      ctx.font = '500 32px "Chakra Petch", Arial, sans-serif';
-      ctx.fillStyle = '#c9b48a';
-      ctx.fillText('THE CLOSET IS A CLOSET', w / 2, 320);
-      grime(ctx, w, h, 0.8, 5);
-    });
-    const tillMat = new THREE.MeshStandardNodeMaterial({ map: tillTex, roughness: 0.7, emissiveMap: tillTex, emissive: new THREE.Color(0.2, 0.16, 0.1) });
-    const till = new THREE.Mesh(new THREE.BoxGeometry(3.2, 1.6, 0.12), tillMat);
-    till.position.set(18.4, 5.15, -4.05);
-    till.castShadow = true;
-    root.add(till);
-
-    const vacTex = canvasTexture(512, 256, (ctx, w, h) => {
-      ctx.fillStyle = '#101614';
-      ctx.fillRect(0, 0, w, h);
-      ctx.fillStyle = '#9ad7c8';
-      ctx.textAlign = 'center';
-      ctx.font = '700 72px "Chakra Petch", Arial, sans-serif';
-      ctx.fillText('VACANCY', w / 2, 110);
-      ctx.font = '500 36px "Chakra Petch", Arial, sans-serif';
-      ctx.fillStyle = '#e8d6b0';
-      ctx.fillText('TWO OF THREE. BRING A PICK.', w / 2, 185);
-      grime(ctx, w, h, 1.3, 6);
-    });
-    const vac = new THREE.Mesh(new THREE.BoxGeometry(2.4, 1.15, 0.1), new THREE.MeshStandardNodeMaterial({ map: vacTex, roughness: 0.75, emissiveMap: vacTex, emissive: new THREE.Color(0.05, 0.12, 0.1) }));
-    vac.position.set(-3.2, 3.55, 7.0);
-    root.add(vac);
-
-    // Porches, a west-aisle diner, a loft that looks slept in, and a shed that points at the wash.
-    b.add(roofDiner, box(13.4, 0.1, 1.15, -17.9, 3.52, -3.65));
-    for (const px of [-20.8, -15.0]) {
-      b.add(wood('#3a2a1c'), box(0.14, 2.55, 0.14, px, 1.28, -3.5));
-      this.boxCol(f, px, 1.28, -3.5, 0.09, 1.28, 0.09);
-    }
-    b.add(glass, box(0.06, 0.95, 1.5, -23.48, 1.75, -7.0), box(0.06, 0.95, 1.5, -23.48, 1.75, -9.8));
-    b.add(plank, box(0.95, 0.08, 0.9, -21.5, 0.76, -6.7), box(0.95, 0.08, 0.9, -21.5, 0.76, -9.3));
-    b.add(metal, cyl(0.045, 0.045, 0.72, -21.5, 0.36, -6.7, 6), cyl(0.045, 0.045, 0.72, -21.5, 0.36, -9.3, 6));
-    this.boxCol(f, -21.5, 0.4, -6.7, 0.48, 0.4, 0.46);
-    this.boxCol(f, -21.5, 0.4, -9.3, 0.48, 0.4, 0.46);
-    for (const sz of [-6.05, -7.35, -8.65, -9.95]) {
-      b.add(cream, cyl(0.16, 0.16, 0.08, -21.5, 0.5, sz, 8), cyl(0.04, 0.04, 0.46, -21.5, 0.24, sz, 5));
-    }
-    b.add(roofClinic, box(4.4, 0.1, 1.35, 0, 3.12, -4.35));
-    for (const px of [-1.55, 1.55]) {
-      b.add(wood('#3a2a1c'), box(0.12, 2.35, 0.12, px, 1.18, -4.45));
-      this.boxCol(f, px, 1.18, -4.45, 0.08, 1.18, 0.08);
-    }
-    b.add(fabric('#6b3a34'), box(1.15, 0.1, 2.05, 19.1, 3.18, -6.3));
-    b.add(plankDark, box(0.55, 0.38, 0.45, 15.4, 3.32, -5.5));
-    {
-      const x0 = 24.2, x1 = 29.6, z0 = 8.15, z1 = 12.7, Hs = 2.65;
-      this.wallX(b, stuccoDark, f, x0, x1, z1, 0, Hs, 0.22);
-      this.wallZ(b, stuccoDark, f, x0, z0, z1, 0, Hs, 0.22);
-      this.wallZ(b, stuccoDark, f, x1, z0, z1, 0, Hs, 0.22);
-      b.add(roofStore, box(6.0, 0.12, 5.1, 26.9, Hs + 0.04, 10.4));
-      b.add(plank, box(0.85, 0.55, 0.6, 27.8, 0.32, 10.5));
-      this.boxCol(f, 27.8, 0.32, 10.5, 0.42, 0.28, 0.3);
-      this.spot('shed', f, 26.9, 1.05, 7.35);
-    }
-    const bulb = glow('#ffb060', 2.8);
-    b.add(bulb.material,
-      new THREE.SphereGeometry(0.07, 8, 6).translate(-17.9, 3.15, -8.0),
-      new THREE.SphereGeometry(0.06, 8, 6).translate(0.15, 2.8, -8.2),
-      new THREE.SphereGeometry(0.06, 8, 6).translate(16.3, 2.65, -7.1),
-      new THREE.SphereGeometry(0.045, 8, 6).translate(14.6, 5.15, -12.2),
-    );
-    // virtual: the light pool lends these a real light only when you are near enough to see it
-    const hang = (x: number, y: number, z: number, intensity: number, dist: number) => {
-      const L = new VirtualLight(0xffb060, intensity, dist, 1.7);
-      L.parent = root;
-      L.position.set(x, y, z);
-    };
-    hang(-17.9, 2.9, -8.0, 7, 10);
-    hang(0.15, 2.6, -8.2, 5, 8);
-    hang(16.3, 2.45, -7.1, 6, 9);
-    hang(14.6, 4.9, -12.2, 3.5, 6);
-
-    const washTex = canvasTexture(512, 256, (ctx, w, h) => {
-      ctx.fillStyle = '#1c140e';
-      ctx.fillRect(0, 0, w, h);
-      ctx.fillStyle = '#e8d6b0';
-      ctx.textAlign = 'center';
-      ctx.font = '700 72px "Chakra Petch", Arial, sans-serif';
-      ctx.fillText('THE WASH', w / 2, 95);
-      ctx.font = '500 30px "Chakra Petch", Arial, sans-serif';
-      ctx.fillStyle = '#ffb347';
-      ctx.fillText('POSTS. NORTH OF THE SPIRE.', w / 2, 155);
-      ctx.fillStyle = '#c9b48a';
-      ctx.fillText('THE RIDGE DOES NOT HAVE A ROAD.', w / 2, 205);
-      grime(ctx, w, h, 1.2, 4);
-    });
-    const washBoard = new THREE.Mesh(
-      new THREE.BoxGeometry(1.55, 0.78, 0.06),
-      new THREE.MeshStandardNodeMaterial({ map: washTex, roughness: 0.8, emissiveMap: washTex, emissive: new THREE.Color(0.12, 0.08, 0.05) }),
-    );
-    washBoard.position.set(25.0, 1.7, 8.02);
-    root.add(washBoard);
-
-    const far = b.buildFar('creek-far');
-    root.add(b.build('creek'));
+    const S = new Site(f, this.physics, root);
+    const npcs: NpcDef[] = [];
+    this.creek = buildDryCreek(S, this.hooks(f, npcs));
+    const { far, signs, halos } = this.finish(S, root, 'creek', npcs);
+    if (!far) throw new Error('creek far set');
     const fire = new Fire(0.85, 28);
     fire.group.position.set(-0.4, 0.12, 2.3);
     root.add(fire.group);
-    this.split(root, f, 34, far, [fire.group, sign]);
+    this.split(root, f, 34, far, [fire.group, signs, halos]);
     this.landmarks.fires.push(fire);
-    this.landmarks.audioSpots.push({ kind: 'fire', pos: f.p(-0.4, 0.3, 2.3) });
-    this.landmarks.audioSpots.push({ kind: 'generator', pos: f.p(5.5, 0.6, -7.4) });
     this.group.add(root);
   }
 
@@ -565,105 +182,30 @@ export class Settlement {
     const root = new THREE.Group();
     root.name = 'the-cut';
     root.applyMatrix4(f.m);
-    const b = new MeshBatch();
-    const rock = rockMaterial();
-    const H = 4.3;
-    const MOUTH = 2.55;
-    // south wall is the mouth. Interior runs toward +Z, into the ridge.
-    this.gapX(b, rock, f, -5.4, 5.4, -1, 0.7, -1.45, 1.45, MOUTH, H);
-    this.wallX(b, rock, f, -5.4, 5.4, 9.6, 0, H, 0.7);
-    this.wallZ(b, rock, f, -5.4, -1, 9.6, 0, H, 0.7);
-    this.gapZ(b, rock, f, 5.4, -1, 9.6, 0.7, 2.0, 4.7, 2.4, H);
-    // side pocket
-    this.wallX(b, rock, f, 5.4, 9.4, 1.15, 0, 3.6, 0.55);
-    this.wallX(b, rock, f, 5.4, 9.4, 5.55, 0, 3.6, 0.55);
-    this.wallZ(b, rock, f, 9.4, 1.15, 5.55, 0, 3.6, 0.55);
-    b.add(rock, box(11.6, 0.45, 11.4, 0.2, 4.15, 4.2)); // ceiling
-    b.add(rock, box(4.6, 0.4, 4.8, 7.4, 3.55, 3.3));
-    // brow over the mouth, visual, above head height
-    b.add(rock, box(6.2, 1.1, 2.4, 0, 3.7, -2.3));
-    const flank = (x: number, z: number, s: number) => {
-      const g = new THREE.IcosahedronGeometry(s, 1);
-      g.scale(1.1, 0.72, 1);
-      g.translate(x, s * 0.45, z);
-      b.add(rock, norm(g));
-      this.boxCol(f, x, s * 0.4, z, s * 0.7, s * 0.45, s * 0.7);
-    };
-    flank(-3.5, -2.5, 1.35);
-    flank(3.6, -2.6, 1.45);
-    flank(-4.6, 2.2, 1.1);
-    flank(0.4, 8.2, 0.9);
-
-    const fall = new THREE.Group();
-    const rk = concrete('#5c534c');
-    for (const [x, y, z, sx, sy, sz] of [[5.3, 0.55, 2.7, 1.1, 1.0, 0.9], [5.5, 0.7, 3.7, 1.2, 1.3, 1.0], [5.2, 1.35, 3.2, 0.8, 0.7, 0.75]] as const) {
-      const m = new THREE.Mesh(new THREE.BoxGeometry(sx, sy, sz), rk);
-      m.position.set(x, y, z);
-      m.rotation.y = x;
-      m.castShadow = true;
-      fall.add(m);
-    }
-    root.add(fall);
-    const fallCol = this.boxCol(f, 5.35, 1.1, 3.35, 0.75, 1.15, 1.25);
-    this.blockers.push({ id: 'rockfall', obj: fall, collider: fallCol });
-
-    const ember = glow('#ff9a4a', 2.2);
-    b.add(ember.material, new THREE.SphereGeometry(0.12, 8, 6).translate(-3.1, 0.35, 5.4));
-    this.landmarks.flickers.push({ set: (v) => (ember.intensity.value = 2.2 * (0.7 + 0.3 * v)), phase: 0.4, speed: 0.8, broken: 0.1 });
-    b.add(wood('#3d2a1c'), box(0.7, 0.35, 0.45, 7.5, 0.25, 3.5));
-    this.person(b, f, -2.3, 6.4, Math.PI, '#3a332c', '#6b5a40');
-
-    // a flat that only shows once the fall is gone: painted, not beamed
-    const note = canvasTexture(512, 256, (ctx, w, h) => {
-      ctx.fillStyle = '#2a241c';
-      ctx.fillRect(0, 0, w, h);
-      ctx.fillStyle = '#e6d7b8';
-      ctx.textAlign = 'center';
-      ctx.font = '600 42px "Chakra Petch", Arial, sans-serif';
-      ctx.fillText('V. K. LOOKED.', w / 2, 100);
-      ctx.fillText("DIDN'T BUY.", w / 2, 160);
-      grime(ctx, w, h, 1.6, 8);
-    });
-    const noteMesh = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.5, 0.05), new THREE.MeshStandardNodeMaterial({ map: note, roughness: 0.85 }));
-    noteMesh.position.set(8.3, 1.5, 3.4);
-    noteMesh.rotation.y = -Math.PI / 2;
-    root.add(noteMesh);
-
-    this.spot('mouth', f, 0, 0.25, -4.2);
-    this.spot('caveIn', f, 0, 0.25, 4.2);
-    this.spot('wick', f, -2.3, 1.05, 6.4);
-    this.spot('rock', f, 3.5, 1.15, 3.35);
-    this.spot('pocket', f, 7.4, 1.0, 3.4);
-
-    const far = b.buildFar('cave-far', { colors: new Map([[rock as THREE.Material, '#8a6a52']]) });
-    root.add(b.build('cave'));
+    const S = new Site(f, this.physics, root);
+    const npcs: NpcDef[] = [];
+    const cave = buildCut(S, this.hooks(f, npcs), this.physics, f);
+    const { halos } = this.finish(S, root, 'cave', npcs, false);
     const fire = new Fire(0.55, 18);
-    fire.group.position.set(-3.1, 0.05, 5.4);
+    fire.group.position.set(cave.fire[0], cave.fire[1] + 0.02, cave.fire[2]);
     root.add(fire.group);
-    this.split(root, f, 12, far, [fire.group]);
+    this.split(root, f, 14, cave.far, [fire.group, halos]);
     this.landmarks.fires.push(fire);
-    this.landmarks.audioSpots.push({ kind: 'fire', pos: f.p(-3.1, 0.3, 5.4) });
+    this.landmarks.audioSpots.push({ kind: 'fire', pos: f.p(cave.fire[0], cave.fire[1] + 0.3, cave.fire[2]) });
     this.group.add(root);
   }
 
-  /** Posts along the carved wash, in world space. The group itself is unrotated. */
+  /** The posted wash up the ridge, in world space; hidden when you are nowhere near it. */
   private buildTrail() {
-    const posts = new MeshBatch();
-    const timber = wood('#3a2a1c');
-    const cap = rustyMetal({ base: '#8a4030', rust: 0.5, metalness: 0.35 });
-    const lamp = glow('#ffcc88', 2.2);
-    CAVE_TRAIL.forEach(([x, z], i) => {
-      if (i === CAVE_TRAIL.length - 1) return;
-      const y = this.hf.heightAt(x, z);
-      posts.add(timber, box(0.16, 1.7, 0.16, x, y + 0.85, z));
-      posts.add(cap, box(0.34, 0.22, 0.06, x, y + 1.55, z));
-      const g = new THREE.SphereGeometry(0.05, 6, 4);
-      g.translate(x, y + 1.72, z);
-      posts.add(lamp.material, g);
-      this.physics.addBox({ x, y: y + 0.85, z }, { x: 0.1, y: 0.85, z: 0.1 }, 0);
-    });
-    this.landmarks.flickers.push({ set: (v) => (lamp.intensity.value = 2.2 * (0.75 + 0.25 * v)), phase: 0.6, speed: 0.5, broken: 0.12 });
-    this.group.add(posts.build('trail'));
+    const root = new THREE.Group();
+    root.name = 'the-wash';
+    const f = new Frame(0, 0, 0, 0);
+    const S = new Site(f, this.physics, root);
+    const { center, length } = buildWash(S, this.hf);
+    this.finish(S, root, 'wash', [], false);
+    const c = new THREE.Vector3(center.x, this.hf.heightAt(center.x, center.z), center.z);
+    this.split(root, new Frame(c.x, c.y, c.z, 0), length / 2, null, []);
+    this.group.add(root);
   }
 
   // ------------------------------------------------------------------ interactions
@@ -1217,6 +759,7 @@ export class Settlement {
 
   update(dt: number, cam?: THREE.Vector3) {
     if (cam) for (const l of this.lods) l.update(cam);
+    if (cam) for (const c of this.crowds) c.update(dt, cam);
     const s = this.ctx.state;
     if (s && !this.synced) {
       this.synced = true;
@@ -1231,10 +774,29 @@ export class Settlement {
       const solid = Math.abs(d.target) < 0.2 && Math.abs(d.open) < 0.35;
       if (solid !== d.solid) { d.solid = solid; d.collider.setEnabled(solid); }
     }
-    if (this.clinicGlow) {
-      const on = !!s?.has('creek.power');
-      const flicker = 0.85 + 0.15 * Math.sin(performance.now() / 180);
-      this.clinicGlow.value = (on ? 3.4 : 0.25) * flicker;
+    this.tick(!!s?.has('creek.power'));
+  }
+
+  /** Night levels for glows, halos, signs and pools; the clinic follows its generator. */
+  private tick(power: boolean) {
+    const night = (this.ctx.atmo?.uNight?.value as number | undefined) ?? 0;
+    const k = THREE.MathUtils.smoothstep(night, 0.2, 0.45);
+    uTownNight.value = k;
+    const flick = 0.85 + 0.15 * Math.sin(performance.now() / 180);
+    for (const S of this.sites) {
+      for (const g of S.nightGlows) g.u.value = g.day + (g.night - g.day) * k;
+      const ch = S.halos.channels;
+      ch[HALO.ON] = 1;
+      ch[HALO.NIGHT] = 0.04 + k * 0.96;
+      ch[HALO.POWER] = power ? 0.4 + 0.6 * k : 0;
+      ch[HALO.NEON] = 0.25 + 0.75 * k;
+      ch[HALO.FIRE] = 1;
+    }
+    const c = this.creek;
+    if (c) {
+      c.power.value = (power ? 3.2 : 0.12) * flick;
+      c.clinicLight.intensity = power ? 7 * flick : 0;
+      c.generatorLed.value = power ? 0.3 : 3;
     }
   }
 }
