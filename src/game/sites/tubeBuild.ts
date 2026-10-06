@@ -5,6 +5,7 @@ import { box, cyl, beam, wire, place, norm, MeshBatch, type Frame } from '../wor
 import { rustyMetal, concrete, corrugated, plainStandard, glow, GlowPalette, type GlowSlot } from '../world/materials';
 import { GlowSprites } from '../world/effects';
 import { VirtualLight } from '../world/lights';
+import { surfaces } from '@/engine/surface';
 import { pvMaterial, glassMaterial, flipInside, rng, SplitBatch } from './datacenterAtlas';
 import { tubeAtlas, ChaseLights } from './tubeArt';
 
@@ -238,7 +239,7 @@ export class TubeBuild {
   private buildGround() {
     const { b, d, A } = this;
     b.add(M.apron(), box(40, 0.3, 26, 0, -0.1, -4));
-    this.col(0, -0.1, -4, 20, 0.15, 13);
+    surfaces.tag(this.col(0, -0.1, -4, 20, 0.15, 13), 'concrete');
     // the walk in from the approach, and a turning circle for shuttles that never came
     b.add(M.apron(), box(5, 0.3, 18, 6, -0.12, -25));
     d.add(A.decal(), A.floor('oil', 3, 3, 4, 0.07, -5), A.floor('dirt', 6, 5, 8, 0.07, -14), A.floor('cracks', 5, 5, -6, 0.07, -10, 1), A.floor('dirt', 5, 5, -10, 0.07, 2));
@@ -264,7 +265,8 @@ export class TubeBuild {
     const { x0, x1, z0, z1 } = STATION;
     const L = x1 - x0;
     // deck slab: top at DECK
-    this.solid(M.deck(), L, 0.4, z1 - z0, 0, DECK - 0.2, 0);
+    b.add(M.deck(), box(L, 0.4, z1 - z0, 0, DECK - 0.2, 0));
+    surfaces.tag(this.col(0, DECK - 0.2, 0, L / 2, 0.2, (z1 - z0) / 2), 'concrete');
     const wallH = 4.2, top = DECK + wallH;
     const clad = M.clad();
     // south wall: door at x∈[1.2, 2.8], ribbon window between DECK+1.2 and DECK+2.8

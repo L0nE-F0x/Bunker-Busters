@@ -5,6 +5,7 @@ import { box, cyl, beam, wire, place, norm, merge, MeshBatch, type Frame } from 
 import { rustyMetal, concrete, corrugated, plainStandard, chainLink, fabric, glow, GlowPalette, type GlowSlot } from '../world/materials';
 import { GlowSprites, lightCone } from '../world/effects';
 import { VirtualLight } from '../world/lights';
+import { surfaces } from '@/engine/surface';
 import { dcAtlas } from './datacenterArt';
 import { pvMaterial, glassMaterial, flipInside, rng, SplitBatch } from './datacenterAtlas';
 
@@ -423,7 +424,8 @@ export class ColdStorageBuild {
     const { x0, x1, z0, z1 } = INSIDE;
     const r = this.r;
     // raised floor: one collider; the tiles are atlas quads (perforated in the cold aisles)
-    this.col(0, FY / 2, (z0 + z1) / 2, (x1 - x0) / 2, FY / 2, (z1 - z0) / 2);
+    // a raised access floor rings hollow under your boots
+    surfaces.tag(this.col(0, FY / 2, (z0 + z1) / 2, (x1 - x0) / 2, FY / 2, (z1 - z0) / 2), 'metal');
     b.add(M.block(), box(x1 - x0, FY - 0.02, z1 - z0, 0, (FY - 0.02) / 2, (z0 + z1) / 2));
     const T = 0.6;
     const tiles = { tile: [] as THREE.BufferGeometry[], perf: [] as THREE.BufferGeometry[], dirty: [] as THREE.BufferGeometry[], frost: [] as THREE.BufferGeometry[] };
