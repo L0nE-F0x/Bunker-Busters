@@ -720,3 +720,48 @@ The desktop app is CPU-bound in WebKitGTK: draw submission, uniform uploads and 
   - Halving the grid saves ~0.5 ms on the 4050 and ~2–3 ms on the iGPU, but the desktop is CPU-bound.
   - Coarse far terrain needs crack-free stitching and error-driven selection to keep silhouettes intact.
 - Owner check in the desktop app: `scripts/dev/bench-desktop.sh high`.
+
+## v0.3.0 overhaul: lead notes (2026-10-07)
+
+**Why:** v0.2.0 (the Act I pass, cbace1a, written by another model) lagged badly on the desktop. Measured cause: six new point lights (16 in the scene; three.js evaluates every light in every lit fragment) and Dry Creek drawn in full from 200 m away. Its systems worked (radio, talk, camp and journal were clicked through without errors), but its new art was far below the Garage.
+
+**Shared mechanisms every pass now relies on:**
+- **`world/lights.ts`: VirtualLight + lightPool.** All point lights are data. A fixed set of real PointLights (2/3/4/5 by quality) is lent to the most important ones near the camera, with fades. The count never changes, so materials never recompile. Never `new THREE.PointLight` in world code.
+- **`kit.ts`:**
+  - `MeshBatch.buildFar()` + `DistanceLod`: one-draw stand-ins past ~140 m.
+  - `shadowProxy()`: a static set casts through one depth-pass draw (perf pass).
+  - `Frame`: a landmark's local-to-world frame.
+- **`src/game/sites/`:** one class per point of interest.
+  - Flag contract: `seen:<id>`, `site.<id>.found`, `site.<id>.done`. Quests in `content/quests.ts` hang off those flags.
+  - The sites are `jet`, `drivein`, `datacenter`, `tube`.
+- **`AmbientKind` (audio.ts):** names for positional loops. Places push `{ kind, pos }` into `landmarks.audioSpots`.
+- **`engine/surface.ts`:** footstep surfaces. `surfaces.tag(collider, kind)` for rotated floors, `surfaces.zone()` for axis boxes.
+- **The player's shadow body** is one SkinnedMesh whose bones are the animation joints (it was 16–17 casters).
+
+**How it was built:** seven parallel agents, one git worktree each, with file ownership agreed up front:
+- perf
+- graphics
+- town
+- story
+- sites A (jet, drive-in)
+- sites B (data centre, Tube)
+- audio
+
+Merged one at a time and tested after each. `Settlement.ts` was split by function: the build half belongs to the town pass, the interaction half to the story pass. Conflicts came only in appended lists (NOTES, items).
+
+**Numbers** (headless Chrome, Intel iGPU, 1600×900 High, draws per frame):
+
+| spot | v0.1.9 | v0.2.0 | v0.3.0 |
+|---|---|---|---|
+| spawn | 93 | 117 | 67 |
+| Garage gate | 173 | 173 | 109 |
+| Dry Creek street | n/a | 139 | 92 |
+| scene lights | 10 | 16 | 10 |
+
+The iGPU is GPU-bound in this test (~30 fps) since the graphics pass. The desktop on the 4050 is CPU/draw-bound (~5 ms GPU per frame per the perf pass), so draws are the number that matters there. Load is ~17 s headless (it was ~13 s); the town canvas, the cave and four sites add to the build.
+
+**Next:**
+- Terrain LOD (deferred: ~0.5 ms GPU on the 4050).
+- The post stack is a fixed 22 draws.
+- Watch load time.
+- The owner's ear on the ambience, and their eye on the night grade.

@@ -4,6 +4,11 @@ Each `## vX.Y.Z` section becomes the GitHub release notes and the "what's new" l
 update notice (the first few bullets). `scripts/release.sh` refuses to release a version without one.
 
 ## v0.3.0
+- **Smooth again, and lighter than ever.** v0.2.0 lit every pixel with sixteen lights and drew Dry Creek from across the map. Lights are now shared from a small pool, far places swap to cheap stand-ins, and shadows draw in a fraction of the passes. About 40% fewer draw calls than v0.1.9, with far more world
+- **Four new places to break into.** The Exit Strategy, a founder's private jet that tried to leave early. Starlite Drive-In, where you can restart the projector and watch the last keynote at night. ColdStorage, a data centre with an AI that still answers. The Tube, a hyperloop test track you can power up and ride to the broken end
+- **Dry Creek and The Cut, rebuilt.** Real buildings with dressed interiors (the diner has booths and a menu board), people who breathe and turn to look at you, and a cave that is an actual cave
+- **A new look.** Clearer air and real skies, a Milky Way at night, rock that shows its layers, dust that settles on everything after a storm, a time-of-day colour grade, and a drone that scans with a soft beam
+- **Places sound like places.** Cave drips, server hum, a radio murmuring to itself, voices round the fire, footsteps that know sand from metal, and an echo when you step indoors
 - **Act I has a real ending.** Find out who Tanner actually pays, why Dry Creek went dry, and whose name is on the last page of the Seed Manifest. Then Vesper Kade cuts into the debrief with an offer, and you decide what the camp does with the ledger
 - **A quest log.** The journal (J) tracks the main story and ten favours: one for each person in Dry Creek and the Cut, one for each new place on the map, and Pip's water ledger at the camp. Track one and the corner of the screen follows it
 - **People remember.** Every favour ends on a choice, and the town keeps score: a free plate at the diner, house calls, cheaper water, a better pick recipe, and who says yes when you ask them to walk west with you
