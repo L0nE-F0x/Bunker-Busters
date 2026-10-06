@@ -126,13 +126,14 @@ export class MeshBatch {
    * reads at night. Untagged materials (neon, one-off shaders) need a colour in `colors` or are left
    * out. Call before build(): it reads the same parts.
    */
-  buildFar(name = 'far', opts: { minSize?: number; colors?: Map<THREE.Material, THREE.ColorRepresentation> } = {}) {
+  buildFar(name = 'far', opts: { minSize?: number; colors?: Map<THREE.Material, THREE.ColorRepresentation>; keep?: THREE.Material[] } = {}) {
     const minSize = opts.minSize ?? 0.35;
     const far = new MeshBatch();
     const bb = new THREE.Vector3();
     for (const [mat, list] of this.parts) {
       const spec = batchSpec(mat);
-      const keep = spec && (spec.family === 'window' || spec.family === 'glow');
+      // `keep`: materials whose look can't be flattened (alpha-tested lattices) stay as they are
+      const keep = (spec && (spec.family === 'window' || spec.family === 'glow')) || opts.keep?.includes(mat);
       let flat: THREE.Material | null = null;
       if (!keep) {
         const c = spec ? new THREE.Color(spec.c[0], spec.c[1], spec.c[2]) : opts.colors?.has(mat) ? new THREE.Color(opts.colors.get(mat)!) : null;
@@ -149,6 +150,94 @@ export class MeshBatch {
     }
     return far.build(name, false, false);
   }
+}
+
+/**
+ * Layer for meshes only the sun's shadow camera renders (Game enables it on the shadow camera; the
+ * main camera never sees it). The third-person body and the shadow proxies below live here.
+ */
+export const SHADOW_LAYER = 1;
+
+const _proxyMats = new Map<THREE.Side, THREE.Material>();
+/** The material a proxy carries. Never drawn in a colour pass; in the depth pass only `side` counts. */
+export function proxyMaterial(side: THREE.Side = THREE.FrontSide) {
+  let m = _proxyMats.get(side);
+  if (!m) _proxyMats.set(side, (m = new THREE.MeshBasicNodeMaterial({ side })));
+  return m;
+}
+
+/**
+ * True when a material's shadow is nothing but its geometry: opaque, no alpha test, no vertex or
+ * mask nodes. Three's shadow pass draws every caster with one depth-only override material, so such
+ * meshes can share a single draw there whatever their colour shaders are.
+ */
+export function plainCaster(mat: THREE.Material | THREE.Material[]) {
+  if (Array.isArray(mat)) return false;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const m = mat as any;
+  if (m.transparent || m.alphaTest > 0 || m.alphaHash || m.side === THREE.BackSide || m.shadowSide != null) return false;
+  // anything that shapes alpha (the chain-link lattice: opacityNode + alphaTestNode) keeps its own
+  // shadow draw, whatever three makes of it there
+  if (m.alphaTestNode || m.opacityNode || m.alphaMap) return false;
+  return !(m.positionNode || m.castShadowPositionNode || m.castShadowNode || m.maskNode || m.maskShadowNode || m.depthNode || m.displacementMap);
+}
+
+/**
+ * Shadow-pass batching. Every static caster under `root` with a plainCaster material is merged into
+ * one position-only mesh that only the shadow camera sees (SHADOW_LAYER), and the originals stop
+ * casting. The shadow map is identical (same triangles, same cull side); the depth pass pays one
+ * draw instead of one per material. Hidden objects and the `skip` subtrees (moving parts, anything
+ * whose visibility is toggled on its own) are left alone. The proxy is added to `root`, so it follows
+ * root's own visibility (LOD swaps). Returns it, or null when nothing qualified.
+ */
+export function shadowProxy(root: THREE.Object3D, skip: THREE.Object3D[] = [], name = 'shadowProxy') {
+  root.updateMatrixWorld(true);
+  const inv = new THREE.Matrix4().copy(root.matrixWorld).invert();
+  const rel = new THREE.Matrix4();
+  const bySide = new Map<THREE.Side, { meshes: THREE.Mesh[]; parts: THREE.BufferGeometry[] }>();
+  const visit = (o: THREE.Object3D) => {
+    if (!o.visible || skip.includes(o)) return;
+    const mesh = o as THREE.Mesh;
+    if (mesh.isMesh && mesh.castShadow && !(o as THREE.InstancedMesh).isInstancedMesh && !(o as THREE.SkinnedMesh).isSkinnedMesh
+      && o.layers.isEnabled(0) && plainCaster(mesh.material) && !Object.keys(mesh.geometry.morphAttributes).length) {
+      const src = mesh.geometry;
+      const pos = src.attributes.position as THREE.BufferAttribute;
+      const start = src.drawRange.start, idx = src.index;
+      const count = Math.min(src.drawRange.count, idx ? idx.count : pos.count) - start;
+      if (pos && count > 0) {
+        const arr = new Float32Array(count * 3);
+        for (let i = 0; i < count; i++) {
+          const v = idx ? idx.getX(start + i) : start + i;
+          arr[i * 3] = pos.getX(v); arr[i * 3 + 1] = pos.getY(v); arr[i * 3 + 2] = pos.getZ(v);
+        }
+        const g = new THREE.BufferGeometry();
+        g.setAttribute('position', new THREE.BufferAttribute(arr, 3));
+        g.applyMatrix4(rel.multiplyMatrices(inv, mesh.matrixWorld));
+        const side = (mesh.material as THREE.Material).side;
+        let e = bySide.get(side);
+        if (!e) bySide.set(side, (e = { meshes: [], parts: [] }));
+        e.meshes.push(mesh);
+        e.parts.push(g);
+      }
+    }
+    for (const c of o.children) visit(c);
+  };
+  visit(root);
+  let out: THREE.Mesh | null = null;
+  for (const [side, { meshes, parts }] of bySide) {
+    const geo = parts.length === 1 ? parts[0] : mergeGeometries(parts, false);
+    if (!geo) continue;
+    geo.computeBoundingSphere();
+    const proxy = new THREE.Mesh(geo, proxyMaterial(side));
+    proxy.name = name;
+    proxy.layers.set(SHADOW_LAYER);
+    proxy.castShadow = true;
+    proxy.receiveShadow = false;
+    root.add(proxy);
+    for (const m of meshes) m.castShadow = false;
+    out ??= proxy;
+  }
+  return out;
 }
 
 /** A site's local frame (position on the terrain + yaw). `p()` maps local → world, `m` is the matrix. */
