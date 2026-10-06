@@ -4,6 +4,9 @@ Each `## vX.Y.Z` section becomes the GitHub release notes and the "what's new" l
 update notice (the first few bullets). `scripts/release.sh` refuses to release a version without one.
 
 ## v0.1.9
+- **Real music.** A generative soundtrack in the spirit of a spaghetti western: plucked guitar with echo, warm pads, bass and a whistled main theme on the title screen. Out in the wasteland it plays in pieces of a minute or two with quiet stretches between them, so it never wears thin
+- **Music follows the action:** a tense pulse and heartbeat rise as SeedBot gets suspicious, drums kick in when the alarm goes off, plus stingers for busting the vault and getting caught. The Music slider in Settings now does something
+- **The wind no longer drones on.** A soft breeze with gusts that swell and pass, quiet lulls in between, and wildlife: cicadas on hot afternoons, crickets and distant coyotes at night. The desert goes muffled when you're inside the bunker. Dust storms still roar
 - **Play on your phone.** Open the site on a phone and tap Play: the game goes full screen in landscape with touch controls. Drag on the left to walk (push past the ring to sprint), drag on the right to look, plus buttons for jump, crouch, use, flashlight, kit, map and pause. Prompts and hotbar items are tappable too
 - Lockpicking, the oscilloscope and keypads all work by touch (press and hold a pin to lift it)
 - Phones start on Low graphics and render below native resolution to keep the frame rate up. On iPhone, use Share → Add to Home Screen for full screen

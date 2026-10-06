@@ -27,7 +27,7 @@ export function findChrome() {
   throw new Error('No Chrome/Chromium found — set CHROME_PATH');
 }
 
-export async function launch(mode = process.env.GPU_MODE || 'nvidia') {
+export async function launch(mode = process.env.GPU_MODE || 'nvidia', extraArgs = []) {
   const env = { ...process.env };
   let args;
   if (mode === 'soft') args = ['--use-angle=swiftshader', '--enable-unsafe-swiftshader'];
@@ -35,7 +35,7 @@ export async function launch(mode = process.env.GPU_MODE || 'nvidia') {
     args = ['--use-angle=gl-egl', '--ignore-gpu-blocklist', '--enable-gpu'];
     if (mode === 'nvidia') env.__EGL_VENDOR_LIBRARY_FILENAMES = '/usr/share/glvnd/egl_vendor.d/10_nvidia.json';
   }
-  return chromium.launch({ executablePath: findChrome(), headless: true, env, args: ['--headless=new', ...args] });
+  return chromium.launch({ executablePath: findChrome(), headless: true, env, args: ['--headless=new', ...args, ...extraArgs] });
 }
 
 /** Wait until the game has finished loading (window.game.mode leaves 'loading'). */

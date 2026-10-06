@@ -1,8 +1,13 @@
 import * as THREE from 'three/webgpu';
+import { Music, type MusicMood } from './music';
+
+/** What the world sounds like right now (fed by the game every frame). */
+export interface SoundScene { mood: MusicMood; night: boolean; hour: number; inside: boolean; alarm: boolean }
 
 /**
- * Fully procedural audio: wind bed, ambient synth pad, spatialised loops (drone hum, fire, neon buzz)
- * and synthesised one-shots. No audio files.
+ * Fully procedural audio: an ambience that breathes (a soft breeze, passing gusts, insects by day,
+ * crickets and coyotes at night, dust storms), a generative score (./music.ts), spatialised loops
+ * (drone hum, fire, neon buzz) and synthesised one-shots. No audio files.
  */
 export class AudioEngine {
   ctx!: AudioContext;
@@ -13,11 +18,22 @@ export class AudioEngine {
   private reverb!: ConvolverNode;
   private reverbSend!: GainNode;
   private noiseBuf!: AudioBuffer;
-  private windGain!: GainNode;
-  private windFilters: BiquadFilterNode[] = [];
+  private ambLP!: BiquadFilterNode;
+  private ambOut!: GainNode;
+  private breeze!: { gain: GainNode; f: BiquadFilterNode };
+  private breezeLvl = 0.4;
+  private breezeTarget = 0.4;
+  private breezeT = 0;
+  private gustT = 5;
+  private cicadaT = 12;
+  private coyoteT = 35;
+  private crickets = [
+    { f: 4450, period: 0.82, pan: -0.55, on: false, t: 2, next: 0 },
+    { f: 4980, period: 1.07, pan: 0.6, on: false, t: 6, next: 0 },
+    { f: 4120, period: 0.64, pan: 0.15, on: false, t: 11, next: 0 },
+  ];
   private storm: { hiss: GainNode; howl: GainNode; howlF: BiquadFilterNode[]; rumble: GainNode } | null = null;
-  private padFilter!: BiquadFilterNode;
-  private padOscs: OscillatorNode[] = [];
+  private score: Music | null = null;
   private alarm: { osc: OscillatorNode; gain: GainNode; lfo: OscillatorNode } | null = null;
   private started = false;
   volume = { master: 0.8, music: 0.5, sfx: 0.9 };
@@ -38,7 +54,10 @@ export class AudioEngine {
     const comp = ctx.createDynamicsCompressor();
     comp.threshold.value = -14;
     comp.ratio.value = 4;
-    this.master.connect(comp).connect(ctx.destination);
+    // makeup gain: the mix is mostly quiet ambience now, so lift it back to a normal listening level
+    const makeup = ctx.createGain();
+    makeup.gain.value = 1.5;
+    this.master.connect(comp).connect(makeup).connect(ctx.destination);
     this.master.gain.value = this.volume.master;
 
     this.reverb = ctx.createConvolver();
@@ -51,24 +70,33 @@ export class AudioEngine {
     this.sfx.gain.value = this.volume.sfx;
     this.sfx.connect(this.master);
     this.sfx.connect(this.reverbSend);
+    // ambience bus → a lowpass that closes when you're indoors (walls muffle the desert)
     this.amb = ctx.createGain();
-    this.amb.gain.value = 0.9;
-    this.amb.connect(this.master);
+    this.amb.gain.value = 1;
+    this.ambLP = ctx.createBiquadFilter();
+    this.ambLP.type = 'lowpass';
+    this.ambLP.frequency.value = 18000;
+    this.ambOut = ctx.createGain();
+    this.amb.connect(this.ambLP).connect(this.ambOut).connect(this.master);
     this.music = ctx.createGain();
-    this.music.gain.value = this.volume.music * 0.5;
+    this.music.gain.value = this.volume.music;
     this.music.connect(this.master);
-    this.music.connect(this.reverbSend);
 
     this.noiseBuf = this.makeNoise(4);
     this.startWind();
-    this.startPad();
+    this.score = new Music(ctx, this.music, this.reverbSend, this.noiseBuf);
+  }
+
+  /** Musical stingers (bunker busted, caught). */
+  sting(kind: 'busted' | 'caught') {
+    this.score?.sting(kind);
   }
 
   setVolumes(v: Partial<typeof this.volume>) {
     Object.assign(this.volume, v);
     if (!this.started) return;
     this.master.gain.value = this.volume.master;
-    this.music.gain.value = this.volume.music * 0.5;
+    this.music.gain.value = this.volume.music;
     this.sfx.gain.value = this.volume.sfx;
   }
 
@@ -109,33 +137,164 @@ export class AudioEngine {
     return src;
   }
 
+  /** A soft, always-there breeze. Most of the wind's character comes from gusts (see `gust`). */
   private startWind() {
     const ctx = this.ctx;
-    this.windGain = ctx.createGain();
-    this.windGain.gain.value = 0.5;
-    this.windGain.connect(this.amb);
-    for (let i = 0; i < 2; i++) {
-      const src = this.noiseSource();
-      const f = ctx.createBiquadFilter();
-      f.type = 'bandpass';
-      f.frequency.value = 300 + i * 300;
-      f.Q.value = 0.8;
-      const p = ctx.createStereoPanner();
-      p.pan.value = i === 0 ? -0.6 : 0.6;
-      src.connect(f).connect(p).connect(this.windGain);
-      src.start(0, Math.random() * 3);
-      this.windFilters.push(f);
-    }
-    // low rumble bed
-    const rumble = this.noiseSource();
-    const lp = ctx.createBiquadFilter();
-    lp.type = 'lowpass';
-    lp.frequency.value = 90;
-    const g = ctx.createGain();
-    g.gain.value = 0.7;
-    rumble.connect(lp).connect(g).connect(this.amb);
-    rumble.start();
+    const src = this.noiseSource();
+    const f = ctx.createBiquadFilter();
+    f.type = 'lowpass';
+    f.frequency.value = 500;
+    f.Q.value = 0.5;
+    const gain = ctx.createGain();
+    gain.gain.value = 0;
+    src.connect(f).connect(gain).connect(this.amb);
+    src.start(0, Math.random() * 3);
+    this.breeze = { gain, f };
     this.startStorm();
+  }
+
+  /**
+   * One gust: a band of noise that swells over a couple of seconds, peaks, and dies away while it
+   * drifts across the stereo field. `k` 0..1 is how strong.
+   */
+  private gust(k: number) {
+    const ctx = this.ctx;
+    const t = ctx.currentTime;
+    const atk = 1.1 + Math.random() * 2.2, hold = 0.2 + Math.random() * 1.2, rel = 1.8 + Math.random() * 2.8;
+    const end = t + atk + hold + rel;
+    const src = this.noiseSource();
+    const bp = ctx.createBiquadFilter();
+    bp.type = 'bandpass';
+    bp.Q.value = 0.9;
+    const f0 = 170 + Math.random() * 120, f1 = 420 + Math.random() * 520 + k * 300;
+    bp.frequency.setValueAtTime(f0, t);
+    bp.frequency.exponentialRampToValueAtTime(f1, t + atk);
+    bp.frequency.exponentialRampToValueAtTime(f0 * 1.2, end);
+    // a faint whistle riding on top (wind through wire and wrecks), only in the stronger gusts
+    const wh = ctx.createBiquadFilter();
+    wh.type = 'bandpass';
+    wh.Q.value = 7;
+    wh.frequency.setValueAtTime(f1 * 2.1, t);
+    wh.frequency.linearRampToValueAtTime(f1 * (2.3 + Math.random() * 0.4), t + atk + hold);
+    wh.frequency.linearRampToValueAtTime(f1 * 1.8, end);
+    const whG = ctx.createGain();
+    whG.gain.value = k > 0.6 ? 0.35 : 0.12;
+    const g = ctx.createGain();
+    const peak = 0.035 + 0.11 * k;
+    g.gain.setValueAtTime(0, t);
+    g.gain.linearRampToValueAtTime(peak, t + atk);
+    g.gain.setValueAtTime(peak, t + atk + hold);
+    g.gain.linearRampToValueAtTime(0, end);
+    const pan = ctx.createStereoPanner();
+    const p0 = (Math.random() * 2 - 1) * 0.8;
+    pan.pan.setValueAtTime(p0, t);
+    pan.pan.linearRampToValueAtTime(-p0 * 0.6, end);
+    src.connect(bp).connect(g);
+    src.connect(wh).connect(whG).connect(g);
+    g.connect(pan).connect(this.amb);
+    src.start(t, Math.random() * 3);
+    src.stop(end + 0.1);
+  }
+
+  /** A cricket's chirp: three quick sine pulses. */
+  private chirp(t: number, f: number, pan: number, level: number) {
+    const ctx = this.ctx;
+    const o = ctx.createOscillator();
+    o.frequency.value = f * (0.99 + Math.random() * 0.02);
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0, t);
+    for (let k = 0; k < 3; k++) {
+      const a = t + k * 0.045;
+      g.gain.setValueAtTime(0, a);
+      g.gain.linearRampToValueAtTime(level, a + 0.006);
+      g.gain.linearRampToValueAtTime(0, a + 0.026);
+    }
+    const p = ctx.createStereoPanner();
+    p.pan.value = pan;
+    o.connect(g).connect(p).connect(this.amb);
+    o.start(t);
+    o.stop(t + 0.16);
+  }
+
+  /** Cicadas swelling somewhere off in the scrub on a hot afternoon. */
+  private cicada() {
+    const ctx = this.ctx;
+    const t = ctx.currentTime;
+    const rise = 2 + Math.random() * 2, hold = 2 + Math.random() * 4, fall = 2.5 + Math.random() * 2;
+    const end = t + rise + hold + fall;
+    const src = this.noiseSource();
+    const bp = ctx.createBiquadFilter();
+    bp.type = 'bandpass';
+    bp.frequency.value = 4300 + Math.random() * 1200;
+    bp.Q.value = 5;
+    // the buzz: noise amplitude-modulated by a fast square wave
+    const am = ctx.createGain();
+    am.gain.value = 0.5;
+    const lfo = ctx.createOscillator();
+    lfo.type = 'square';
+    lfo.frequency.value = 48 + Math.random() * 30;
+    const lfoG = ctx.createGain();
+    lfoG.gain.value = 0.5;
+    lfo.connect(lfoG).connect(am.gain);
+    const g = ctx.createGain();
+    const peak = 0.018 + Math.random() * 0.014;
+    g.gain.setValueAtTime(0, t);
+    g.gain.linearRampToValueAtTime(peak, t + rise);
+    g.gain.setValueAtTime(peak, t + rise + hold);
+    g.gain.linearRampToValueAtTime(0, end);
+    const p = ctx.createStereoPanner();
+    p.pan.value = (Math.random() * 2 - 1) * 0.8;
+    src.connect(bp).connect(am).connect(g).connect(p).connect(this.amb);
+    src.start(t, Math.random() * 3);
+    lfo.start(t);
+    src.stop(end + 0.1);
+    lfo.stop(end + 0.1);
+  }
+
+  /** A coyote howling far off (sometimes answered), soaked in the night air's reverb. */
+  private coyote() {
+    const ctx = this.ctx;
+    const pan = (Math.random() * 2 - 1) * 0.85;
+    const voice = (t: number, k: number, level: number) => {
+      const o = ctx.createOscillator();
+      o.type = 'triangle';
+      const f = (v: number) => v * k;
+      o.frequency.setValueAtTime(f(330), t);
+      o.frequency.exponentialRampToValueAtTime(f(690), t + 0.55);
+      o.frequency.linearRampToValueAtTime(f(760), t + 1.6);
+      o.frequency.exponentialRampToValueAtTime(f(500), t + 2.7);
+      o.frequency.exponentialRampToValueAtTime(f(290), t + 3.0);
+      const vib = ctx.createOscillator();
+      vib.frequency.value = 5.5 + Math.random();
+      const vibG = ctx.createGain();
+      vibG.gain.setValueAtTime(0, t);
+      vibG.gain.linearRampToValueAtTime(f(10), t + 1.2);
+      vib.connect(vibG).connect(o.frequency);
+      const g = ctx.createGain();
+      g.gain.setValueAtTime(0, t);
+      g.gain.linearRampToValueAtTime(level, t + 0.35);
+      g.gain.setValueAtTime(level, t + 2.4);
+      g.gain.linearRampToValueAtTime(0, t + 3.0);
+      const lp = ctx.createBiquadFilter();
+      lp.type = 'lowpass';
+      lp.frequency.value = 1500; // distance
+      const p = ctx.createStereoPanner();
+      p.pan.value = pan;
+      const dry = ctx.createGain();
+      dry.gain.value = 0.35;
+      const wet = ctx.createGain();
+      wet.gain.value = 0.9;
+      o.connect(lp).connect(g).connect(p);
+      p.connect(dry).connect(this.amb);
+      p.connect(wet).connect(this.reverbSend);
+      o.start(t);
+      vib.start(t);
+      o.stop(t + 3.1);
+      vib.stop(t + 3.1);
+    };
+    const t = ctx.currentTime + 0.1;
+    voice(t, 1, 0.022);
+    if (Math.random() < 0.55) voice(t + 1.4 + Math.random(), 1.12 + Math.random() * 0.1, 0.015);
   }
 
   /** Thunder for dry lightning: `k` 0..1 closeness. Far = late, soft, low rumble; near = crack + boom. */
@@ -178,50 +337,34 @@ export class AudioEngine {
     this.storm = { hiss, howl, howlF, rumble };
   }
 
-  private startPad() {
-    const ctx = this.ctx;
-    this.padFilter = ctx.createBiquadFilter();
-    this.padFilter.type = 'lowpass';
-    this.padFilter.frequency.value = 500;
-    this.padFilter.Q.value = 2;
-    const g = ctx.createGain();
-    g.gain.value = 0.06;
-    this.padFilter.connect(g).connect(this.music);
-    for (let i = 0; i < 4; i++) {
-      const o = ctx.createOscillator();
-      o.type = i % 2 ? 'sawtooth' : 'triangle';
-      o.detune.value = (i - 1.5) * 7;
-      o.connect(this.padFilter);
-      o.start();
-      this.padOscs.push(o);
-    }
-    // A minor-ish wasteland progression; one chord every ~9s
-    const chords = [
-      [110, 164.81, 220, 261.63],
-      [87.31, 130.81, 174.61, 220],
-      [98, 146.83, 196, 246.94],
-      [82.41, 123.47, 164.81, 207.65],
-    ];
-    let idx = 0;
-    const next = () => {
-      const t = ctx.currentTime;
-      chords[idx % chords.length].forEach((f, i) => this.padOscs[i].frequency.setTargetAtTime(f, t, 1.5));
-      idx++;
-    };
-    next();
-    setInterval(next, 9000);
-  }
-
   /** Called every frame. */
-  update(dt: number, camera: THREE.Camera, windStrength: number, tension: number, storm = 0) {
+  update(dt: number, camera: THREE.Camera, windStrength: number, tension: number, storm: number, scene: SoundScene) {
     if (!this.started) return;
     const t = this.ctx.currentTime;
-    const gust = 0.5 + 0.5 * Math.sin(t * 0.37) * Math.sin(t * 0.13 + 1.3);
-    this.windGain.gain.setTargetAtTime(0.18 + Math.min(windStrength, 1.6) * 0.45 * (0.5 + gust) + storm * 0.25, t, 0.3);
-    this.windFilters[0].frequency.setTargetAtTime(220 + gust * 500 + storm * 200, t, 0.5);
-    this.windFilters[1].frequency.setTargetAtTime(600 + gust * 900 + storm * 500, t, 0.5);
+    const wind = Math.min(windStrength, 1.6);
+    const outdoorsLife = !scene.inside && storm < 0.2;
+
+    // breeze: a slow random walk, from near-silent lulls to a steady blow
+    this.breezeT -= dt;
+    if (this.breezeT <= 0) {
+      this.breezeT = 4 + Math.random() * 8;
+      this.breezeTarget = Math.random() < 0.3 ? 0.05 : 0.2 + Math.random() * 0.8;
+    }
+    this.breezeLvl += (this.breezeTarget - this.breezeLvl) * Math.min(1, dt / 3);
+    this.breeze.gain.gain.setTargetAtTime(0.012 + 0.04 * this.breezeLvl * wind + storm * 0.22, t, 0.4);
+    this.breeze.f.frequency.setTargetAtTime(320 + this.breezeLvl * 300 + storm * 500, t, 0.8);
+
+    // gusts come and go; more of them (and stronger) as the wind picks up
+    this.gustT -= dt;
+    if (this.gustT <= 0) {
+      const k = Math.min(1, (0.25 + Math.random() * 0.6) * (0.5 + wind * 0.6) + storm * 0.5);
+      this.gust(k);
+      this.gustT = storm > 0.3 ? 1.5 + Math.random() * 3 : (8 + Math.random() * 16) / (0.5 + wind * 0.6);
+    }
+
+    // dust-storm layers (silent otherwise)
     if (this.storm) {
-      // fast, irregular buffeting on top of the slow gust cycle
+      const gust = 0.5 + 0.5 * Math.sin(t * 0.37) * Math.sin(t * 0.13 + 1.3);
       const buffet = 0.55 + 0.45 * Math.sin(t * 1.9) * Math.sin(t * 0.71 + 2.1);
       const s = this.storm;
       s.hiss.gain.setTargetAtTime(storm * 0.2 * (0.5 + buffet * 0.7), t, 0.25);
@@ -230,7 +373,41 @@ export class AudioEngine {
       s.howlF[1].frequency.setTargetAtTime(760 + gust * 380, t, 0.9);
       s.rumble.gain.setTargetAtTime(storm * 0.7 * (0.4 + buffet * 0.6), t, 0.3);
     }
-    this.padFilter.frequency.setTargetAtTime(380 + tension * 1400 + Math.sin(t * 0.1) * 120, t, 0.8);
+
+    // wildlife: crickets after dark (and by the campfire), cicadas on hot afternoons, coyotes far off
+    const h = scene.hour;
+    const cricketTime = scene.mood === 'camp' || (scene.mood === 'play' && (h > 19.4 || h < 5.3));
+    for (const c of this.crickets) {
+      c.t -= dt;
+      if (c.t <= 0) {
+        c.on = !c.on && cricketTime && outdoorsLife;
+        c.t = c.on ? 8 + Math.random() * 20 : 3 + Math.random() * 12;
+        c.next = t + Math.random() * c.period;
+      }
+      if (c.on && !(cricketTime && outdoorsLife)) c.on = false;
+      while (c.on && c.next < t + 0.2) {
+        if (c.next > t - 0.05) this.chirp(c.next, c.f, c.pan, 0.012);
+        c.next += c.period * (0.94 + Math.random() * 0.12);
+      }
+    }
+    if (scene.mood === 'play' && outdoorsLife) {
+      this.cicadaT -= dt;
+      if (this.cicadaT <= 0) {
+        this.cicadaT = 18 + Math.random() * 35;
+        if (h > 9.5 && h < 17.5) this.cicada();
+      }
+      this.coyoteT -= dt;
+      if (this.coyoteT <= 0) {
+        this.coyoteT = 55 + Math.random() * 100;
+        if (scene.night) this.coyote();
+      }
+    }
+
+    // indoors: the desert goes muffled and distant
+    this.ambLP.frequency.setTargetAtTime(scene.inside ? 650 : 18000, t, 0.25);
+    this.ambOut.gain.setTargetAtTime(scene.inside ? 0.55 : 1, t, 0.25);
+
+    this.score?.update({ mood: scene.mood, night: scene.night, tension, alarm: scene.alarm });
 
     const l = this.ctx.listener;
     const p = camera.position;
@@ -328,27 +505,36 @@ export class AudioEngine {
       nodes.push(o, lfo);
       out.gain.value = 0.35;
     } else if (kind === 'fire') {
+      // a soft, flickering bed (not a roar: that just reads as more wind) under crackles and pops
       const n = this.noiseSource();
       const lp = ctx.createBiquadFilter();
       lp.type = 'lowpass';
-      lp.frequency.value = 700;
+      lp.frequency.value = 420;
       const g = ctx.createGain();
-      g.gain.value = 0.25;
+      g.gain.value = 0.07;
+      const flick = ctx.createOscillator();
+      flick.frequency.value = 0.7;
+      const flickG = ctx.createGain();
+      flickG.gain.value = 0.03;
+      flick.connect(flickG).connect(g.gain);
       n.connect(lp).connect(g).connect(out);
       n.start();
-      nodes.push(n);
+      flick.start();
+      nodes.push(n, flick);
       const crackle = () => {
         const t = ctx.currentTime;
         const s = this.noiseSource(false);
-        const hp = ctx.createBiquadFilter();
-        hp.type = 'highpass';
-        hp.frequency.value = 1500 + Math.random() * 3000;
+        const f = ctx.createBiquadFilter();
+        const pop = Math.random() < 0.08; // a knot in the wood: lower, louder, longer
+        f.type = pop ? 'bandpass' : 'highpass';
+        f.frequency.value = pop ? 500 + Math.random() * 400 : 1800 + Math.random() * 3000;
         const cg = ctx.createGain();
-        cg.gain.setValueAtTime(0.3 + Math.random() * 0.5, t);
-        cg.gain.exponentialRampToValueAtTime(0.001, t + 0.03 + Math.random() * 0.05);
-        s.connect(hp).connect(cg).connect(out);
-        s.start(t, Math.random() * 3, 0.1);
-        timer = window.setTimeout(crackle, 40 + Math.random() * 260);
+        cg.gain.setValueAtTime(pop ? 0.7 : 0.12 + Math.random() * 0.3, t);
+        cg.gain.exponentialRampToValueAtTime(0.001, t + (pop ? 0.09 : 0.02 + Math.random() * 0.04));
+        s.connect(f).connect(cg).connect(out);
+        s.start(t, Math.random() * 3, 0.12);
+        // crackles come in little clusters
+        timer = window.setTimeout(crackle, Math.random() < 0.3 ? 15 + Math.random() * 40 : 80 + Math.random() * 380);
       };
       crackle();
       out.gain.value = 0.8;

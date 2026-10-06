@@ -327,3 +327,41 @@ Owner feedback: the hands looked like "zombie hook hands", and falling and other
 - a lower `MOBILE_PR` for Low
 - skipping godrays/bloom on mobile
 - fewer scrub instances
+
+## Sound pass (2026-10-06, v0.1.9)
+
+The owner found the constant wind annoying and could never hear any music. Both were real problems:
+- **Wind:** the old bed was two band-passed noise layers plus a 90 Hz rumble that never stopped (about −25 dB).
+- **Music:** the old "music" was a single four-oscillator drone at 6% gain, low-passed to 500 Hz and buried under the wind.
+
+**What works**
+- **Ambience** (`audio.ts`):
+  - a soft breeze on a random walk, with near-silent lulls
+  - discrete **gusts**: a swelling band-pass sweep with a faint whistle, drifting across the stereo field; more frequent in strong wind
+  - wildlife: crickets after 19:30 and at the campfire, cicadas on afternoons, an occasional distant coyote (sometimes answered) at night
+  - indoors (`garage.playerInside`) the ambience bus low-passes to 650 Hz and drops about 5 dB
+  - storm layers unchanged
+  - the campfire loop lost its noise roar: now a soft flicker with crackle clusters and pops
+- **Music** (`music.ts`): a beat-clock scheduler (72 BPM, 350 ms lookahead).
+  - Instruments: Karplus-Strong guitar, bass and palm-muted strings rendered into cached buffers (tuning measured within 5 cents up to E5), detuned-saw pads, a gliding sine whistle with vibrato and breath, synth kick/snare/hat/tom.
+  - A dotted-eighth echo and the shared reverb.
+  - Moods come from `Game.frame`:
+    - `title`: written 8-bar theme, then a guitar variation
+    - `camp`: sparse night guitar
+    - `play`: a cue (pad → arpeggios → bass → melody → outro, 26–34 bars), then 10–21 bars of rest
+  - Stems on the same clock: a palm-muted pulse with a heartbeat (from drone suspicion) and drums (alarm).
+  - Stingers: `audio.sting('busted' | 'caught')`.
+  - Mood changes fade the bus and kill held voices.
+- **Levels** (headless capture, master tap before the compressor):
+
+  | Scene | Music | Ambience |
+  |---|---|---|
+  | Title | about −31 dB RMS | −45 dB |
+  | Daytime cue | −31 to −35 dB | −39 to −50 dB |
+  | Alarm | about −27 dB | |
+  | Campfire | −36.5 dB | fire −39 dB |
+
+  A 1.5× makeup gain after the master compressor brings the quieter mix back to a normal level.
+- **Tooling:** `scripts/dev/audio-capture.mjs` records the master mix to a WAV, with per-bus dB once a second. `--during` scripts the scene. `ffmpeg … showspectrumpic` turns the WAV into a spectrogram to look at. `browser.mjs`'s `launch()` takes extra Chrome args.
+
+**Not verified:** how it actually sounds. Nobody has listened yet; only levels, spectrograms and pitch were checked. Owner feedback decides the next tuning (melody taste, whistle level, gust frequency).

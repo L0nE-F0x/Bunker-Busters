@@ -348,6 +348,7 @@ export class Garage {
       this.s.data.stats.busted++;
       setTimeout(() => {
         this.s.addXP(table.xp, 'BUNKER BUSTED: The Garage');
+        ctx.audio.sting('busted');
         ctx.ui.banner('BUNKER BUSTED', 'The Garage · Tier 1 cleared. Tier 2 "Apex Vault" intel arrives in v0.2.', 'good');
         this.s.events.emit('bunkerComplete', { id: 'garage' });
         this.taunt('Fine. FINE. I am pivoting. To grief.');

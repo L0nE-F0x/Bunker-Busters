@@ -534,6 +534,7 @@ export class Game {
   }
 
   private caught(reason: string) {
+    this.audio.sting('caught');
     if (!this.state || !this.player) return;
     const s = this.state;
     s.data.stats.caught++;
@@ -850,7 +851,14 @@ export class Game {
     const alertTarget = this.mode === 'playing' && this.garage.drone.state === 'alert' ? 0.8 : this.mode === 'playing' ? this.garage.drone.detection * 0.4 : 0;
     this.post.alert.value = damp(this.post.alert.value as number, alertTarget, 4, dt);
     const tension = this.mode === 'playing' ? Math.max(this.garage.drone.detection, this.garage.alarm > 0 ? 1 : 0) : 0;
-    this.audio.update(dt, this.camera, this.atmo.windStrength, tension, this.weather.intensity);
+    const playing = this.mode === 'playing';
+    this.audio.update(dt, this.camera, this.atmo.windStrength, tension, this.weather.intensity, {
+      mood: this.mode === 'title' ? 'title' : this.mode === 'charselect' ? 'camp' : playing ? 'play' : 'off',
+      night: this.atmo.isNight,
+      hour: this.atmo.hour,
+      inside: playing && this.garage.playerInside,
+      alarm: playing && this.garage.alarm > 0,
+    });
     if (!this.loopsStarted && this.audio.ready && this.mode !== 'loading') this.startLoops();
 
     if (BENCH) this.bench(now);

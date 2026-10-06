@@ -85,7 +85,7 @@ Rebuild a tag's release without retagging: Actions → Release → *Run workflow
 ```
 src/main.ts                 boot → createRenderer → Game.build()
 src/engine/                 renderer (backend chain, canvas sizing), postfx (TSL post stack), audio (procedural
-                            Web Audio), physics (Rapier), input, noise + noiseTex (baked noise atlas)
+                            Web Audio: ambience, sfx) + music (generative score), physics (Rapier), input, noise + noiseTex (baked noise atlas)
 src/game/Game.ts            orchestrator: modes title → charselect → playing, frame loop, items, saves, HUD feed
 src/game/world/             Atmosphere (sky, fog, sun, day/night), Heightfield + Terrain, Props, Landmarks,
                             Scrub, effects (dust, haze, fire, light cones, shockwave), materials (factories), kit (geometry)
@@ -113,6 +113,7 @@ node scripts/dev/marketing-shots.mjs [hero night interior camp lockpick]   # reg
 node scripts/dev/og-card.mjs                                               # regenerate public/og.jpg
 node scripts/dev/mobile-shot.mjs "http://localhost:5173/play/?webgl" out.png --tap 230,207 --twin "150,250,150,150;600,200,700,200"   # phone emulation + touch gestures
 node scripts/dev/walk-probe.mjs 150 [--sprint]   # movement regression: logs every stall + contacts (FPS=144 env)
+node scripts/dev/audio-capture.mjs "http://localhost:5173/play/?webgl&autostart" out.wav 60 --eval "game.atmo.hour = 22"   # record the mix + per-bus dB; then ffmpeg showspectrumpic
 scripts/dev/bench-desktop.sh [high|medium]   # real desktop-app perf: opens a window ~40 s, self-closes
 ```
 
