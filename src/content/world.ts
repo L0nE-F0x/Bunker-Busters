@@ -39,9 +39,9 @@ export const LANDMARKS: LandmarkDef[] = [
     flatten: { r: 30, falloff: 26 },
   },
   {
-    id: 'drivein', name: 'Starlite Drive-In', kind: 'site', position: [-20, 0, -132], rotation: 0.2,
+    id: 'drivein', name: 'Starlite Drive-In', kind: 'site', position: [-20, 0, -132], rotation: -0.45,
     blurb: 'The last screening was a keynote. Nobody left before the end.',
-    flatten: { r: 38, falloff: 26 },
+    flatten: { r: 46, falloff: 24 },
   },
   {
     id: 'datacenter', name: 'ColdStorage', kind: 'site', position: [290, 0, -262], rotation: -0.3,

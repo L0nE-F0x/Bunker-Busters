@@ -79,6 +79,17 @@ const defs: ItemDef[] = [
     description: 'The landlord\'s deed to the Till, signed over to "whoever is still here". Inez wants it. So does the rest of Dry Creek. Give it to one of them.',
     flavor: 'Property law, post-apocalypse edition: a pencil and a guess.',
   },
+  // --- Sites: The Exit Strategy, Starlite Drive-In ---
+  {
+    id: 'exit_pass', name: 'EXIT Platinum Pass', category: 'loot', weight: 0.05, stack: 1, value: 80, icon: 'intel',
+    description: 'Gold foil. Seat 1A on the last flight out. Non-transferable. Flight status: exited.',
+    flavor: 'Hunter Vale packed his own seat, then took the parachute instead.',
+  },
+  {
+    id: 'keynote_reel', name: 'Keynote Reel (Uncut)', category: 'loot', weight: 1.2, stack: 1, value: 50, icon: 'drive',
+    description: 'Sixteen minutes of a man in a turtleneck promising seats, and the ninety seconds after, when he thought the mic was off.',
+    flavor: 'Labelled in the projectionist\'s hand: "DO NOT SCREEN. (Screened.)"',
+  },
 ];
 
 export const ITEMS: Record<string, ItemDef> = Object.fromEntries(defs.map((d) => [d.id, d]));
