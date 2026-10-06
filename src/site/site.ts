@@ -92,7 +92,7 @@ fetch(`https://api.github.com/repos/${REPO}/releases/latest`, { headers: { Accep
 
 // reveal-on-scroll
 const io = new IntersectionObserver((entries) => entries.forEach((e) => e.isIntersecting && e.target.classList.add('in')), { threshold: 0.15 });
-document.querySelectorAll('.feature, .garage-inner, .tiers li, .dl-card').forEach((el) => io.observe(el));
+document.querySelectorAll('.feature, .place, .garage-inner, .tiers li, .dl-card').forEach((el) => io.observe(el));
 
 // nav background once scrolled
 const nav = document.querySelector('.nav')!;

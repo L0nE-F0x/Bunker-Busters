@@ -106,6 +106,18 @@ blockquote { margin: 26px 0; padding: 16px 22px; border-left: 3px solid var(--ho
 .ticks li { padding-left: 28px; position: relative; color: var(--dim); }
 .ticks li::before { content: ''; position: absolute; left: 4px; top: 9px; width: 10px; height: 10px; border: 2px solid var(--teal); transform: rotate(45deg); }
 
+/* ---------- places ---------- */
+.places { padding: 60px 6vw 120px; text-align: center; }
+.places h2 { font-family: var(--display); font-weight: 900; font-size: clamp(40px, 5vw, 72px); line-height: 1; margin: 10px 0 14px; }
+.places .lede { color: var(--dim); max-width: 640px; margin: 0 auto; }
+.place-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 40px 36px; max-width: 1240px; margin: 56px auto 0; text-align: left; }
+.place { margin: 0; opacity: 0; transform: translateY(30px); transition: opacity 0.8s ease, transform 0.8s ease; }
+.place.in { opacity: 1; transform: none; }
+.place.wide { grid-column: 1 / -1; }
+.place.wide .shot { aspect-ratio: 21 / 9; }
+.place figcaption { margin-top: 18px; color: var(--dim); font-size: 15px; line-height: 1.5; }
+.place figcaption b { display: block; font-family: var(--display); font-weight: 900; font-size: 30px; letter-spacing: 0.01em; color: var(--ink); margin-bottom: 4px; }
+
 /* ---------- ladder ---------- */
 .ladder { padding: 120px 6vw; text-align: center; }
 .tiers { list-style: none; padding: 0; margin: 50px auto 0; max-width: 1100px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; text-align: left; }
@@ -150,11 +162,13 @@ details pre { background: #050403; border: 1px solid var(--line); padding: 10px;
   .links a:not(.cta-small) { display: none; }
   .feature, .feature.rev { grid-template-columns: 1fr; gap: 26px; }
   .feature.rev .shot { order: 0; }
+  .place-grid { grid-template-columns: 1fr; gap: 34px; }
+  .place.wide .shot { aspect-ratio: 16 / 9; }
   .tiers { grid-template-columns: 1fr 1fr; }
   .dl-cards, .reqs { grid-template-columns: 1fr; }
   .garage-inner { margin-left: 0; }
 }
 @media (prefers-reduced-motion: reduce) {
   .hero-bg, .grain, .scroll-hint { animation: none; }
-  .feature, .garage-inner, .tiers li, .dl-card { opacity: 1; transform: none; transition: none; }
+  .feature, .place, .garage-inner, .tiers li, .dl-card { opacity: 1; transform: none; transition: none; }
 }
