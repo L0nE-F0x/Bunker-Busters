@@ -60,6 +60,13 @@ export class Garage {
   private shownCrouchHint = false;
   /** World-time of the last "go check your battery" order. */
   private recallAt = -999;
+  // per-frame scratch (update() runs every frame; no garbage in the hot path)
+  private readonly feet2 = new THREE.Vector2();
+  private readonly twA = new THREE.Vector2();
+  private readonly twB = new THREE.Vector2();
+  private readonly probe = new THREE.Vector3();
+  private readonly chest = new THREE.Vector3();
+  private readonly feet = new THREE.Vector3();
 
   constructor(private ctx: GameContext) {
     const [gx, , gz] = GARAGE.location.position;
@@ -592,6 +599,19 @@ export class Garage {
   }
 
   // ------------------------------------------------------------------ per-frame
+  /**
+   * Draw culling only (no gameplay): the far stand-in past ~140 m from the fence, and the interior's
+   * own draws (vault door, whiteboard, lasers, loot) whenever nobody can see in. The house is closed
+   * except the side door, so the interior shows from inside, or from near that door once it's open.
+   */
+  cull(cam: THREE.Vector3) {
+    this.b.lod.update(cam);
+    const hb = this.houseBox, side = this.b.doors.side;
+    const inside = cam.x > hb.min.x - 0.5 && cam.x < hb.max.x + 0.5 && cam.z > hb.min.z - 0.5 && cam.z < hb.max.z + 0.5 && cam.y < hb.max.y + 1;
+    const throughDoor = (side.open > 0.01 || side.target > 0) && cam.distanceToSquared(this.b.points.sideDoor) < 32 * 32;
+    this.b.interior.visible = inside || throughDoor;
+  }
+
   update(dt: number) {
     const { ctx } = this;
     this.t += dt;
@@ -599,10 +619,10 @@ export class Garage {
     const player = ctx.player as GameContext['player'] | null;
     if (!player) { this.updateAmbient(dt); return; }
     const p = player.position;
-    const feet2 = new THREE.Vector2(p.x, p.z);
+    const feet2 = this.feet2.set(p.x, p.z);
 
-    this.playerInside = this.houseBox.containsPoint(p.clone().setY(this.houseBox.min.y + 1));
-    this.playerInYard = this.yardBox.containsPoint(p.clone().setY(this.yardBox.min.y + 1));
+    this.playerInside = this.houseBox.containsPoint(this.probe.copy(p).setY(this.houseBox.min.y + 1));
+    this.playerInYard = this.yardBox.containsPoint(this.probe.copy(p).setY(this.yardBox.min.y + 1));
     this.b.roof.visible = true; // first person: the roof stays (interior is lit by lamps + your torch)
     // the halo sprite is never frustum-culled (instanced), so drop it when the Garage is far away
     this.b.halos.sprite.visible = p.distanceTo(this.b.origin) < 260;
@@ -620,7 +640,7 @@ export class Garage {
     for (const tw of this.b.tripwires) {
       this.twCooldown[tw.id] = Math.max(0, (this.twCooldown[tw.id] ?? 0) - dt);
       if (!tw.armed || this.twCooldown[tw.id] > 0) continue;
-      const a = new THREE.Vector2(tw.a.x, tw.a.z), b = new THREE.Vector2(tw.b.x, tw.b.z);
+      const a = this.twA.set(tw.a.x, tw.a.z), b = this.twB.set(tw.b.x, tw.b.z);
       if (segIntersect(this.prevFeet, feet2, a, b) && player.grounded) {
         if (player.crouching) {
           if (!this.shownCrouchHint) { this.shownCrouchHint = true; this.s.events.emit('toast', { text: 'Carefully stepped over a tripwire.', kind: 'info' }); }
@@ -629,7 +649,7 @@ export class Garage {
           ctx.audio.play('cans', { pos: tw.a.clone().lerp(tw.b, 0.5) });
           this.triggerAlarm(tw.a.clone().lerp(tw.b, 0.5), 'You tripped a wire! Tin cans everywhere.');
         }
-      } else if (!this.shownCrouchHint && feet2.distanceTo(a.clone().lerp(b, 0.5)) < 4.5) {
+      } else if (!this.shownCrouchHint && Math.hypot(feet2.x - (a.x + b.x) / 2, feet2.y - (a.y + b.y) / 2) < 4.5) {
         this.shownCrouchHint = true;
         this.s.events.emit('toast', { text: `Tripwire ahead — ${CROUCH_KEY} to step over it.`, kind: 'info' });
       }
@@ -657,8 +677,8 @@ export class Garage {
     const night = ctx.atmo.uNight.value as number;
     const stealthMult = ctx.state.archetype.stats.stealth * stealthMeter(this.s.skill('stealth')) * (this.s.skill('electronics') >= 3 ? 0.85 : 1);
     this.drone.update(dt, {
-      playerChest: p.clone().add(new THREE.Vector3(0, player.crouching ? 0.7 : 1.2, 0)),
-      playerFeet: p.clone(),
+      playerChest: this.chest.copy(p).setY(p.y + (player.crouching ? 0.7 : 1.2)),
+      playerFeet: this.feet.copy(p),
       noise: player.noise,
       stealthMult,
       playerCollider: player.collider,
@@ -716,6 +736,7 @@ export class Garage {
       const on = night > 0.3 ? 1 : 0;
       f.light.intensity = on * 90;
       f.cone.intensity.value = on * (this.alarm > 0 ? 0.7 : 0.35);
+      f.cone.mesh.visible = on > 0; // by day the cone adds nothing: skip its draw
       if (this.alarm > 0) f.light.color.setHSL(0.0, 1, 0.5 + 0.5 * Math.max(0, Math.sin(this.t * 10)));
       else f.light.color.set(0xffe6c0);
     }

@@ -2,7 +2,7 @@ import * as THREE from 'three/webgpu';
 import { uniform, vec2, vec3, vec4, float, time, sin, uv, smoothstep, abs, Fn, texture, color, mix, step, normalize, cameraPosition, positionWorld, normalWorld, dot, pow, clamp } from 'three/tsl';
 import { noise } from '@/engine/noiseTex';
 import type { Physics } from '@/engine/physics';
-import { box, cyl, beam, MeshBatch, canvasTexture, grime, wire, merge, norm } from '../world/kit';
+import { box, cyl, beam, MeshBatch, DistanceLod, canvasTexture, grime, wire, merge, norm, shadowProxy } from '../world/kit';
 import { rustyMetal, concrete, corrugated, neon, plainStandard, fabric, wood, glow, chainLink, warmWindow, GlowPalette } from '../world/materials';
 import { lightCone, GlowSprites } from '../world/effects';
 import { VirtualLight } from '../world/lights';
@@ -54,6 +54,14 @@ export class GarageBuilder {
   /** blinker index → halo channel */
   blinkChannel: number[] = [];
   private D!: Dress;
+  /** The detailed compound; `lod` swaps it for a one-draw stand-in when far (see Garage.cull). */
+  near = new THREE.Group();
+  lod!: DistanceLod;
+  /** Separate draws only visible from inside the house (or through the open side door). Garage.cull
+   *  hides the whole group; its children keep their own gameplay visibility (lasers off, etc.). */
+  interior = new THREE.Group();
+  /** Separate draws that still read from far away (kept out of the LOD swap). */
+  private farDetail: THREE.Object3D[] = [];
 
   constructor(private physics: Physics, origin: THREE.Vector3) {
     this.origin = origin.clone();
@@ -91,12 +99,31 @@ export class GarageBuilder {
     this.buildHouse(b);
     this.buildYard(b);
     this.buildInterior(b);
-    this.group.add(b.build('garageStatic'));
+    // the chain-link lattice is what makes the compound read from the road: it stays as itself
+    const far = b.buildFar('garage-far', { keep: [chainLink()] });
+    const statics = b.build('garageStatic');
+    this.group.add(statics);
     const decals = d.build('garageDecals', false, false);
     decals.traverse((o) => { o.renderOrder = 2; });
     this.group.add(decals);
     this.group.add(this.halos.build());
     this.group.add(this.roof);
+    this.interior.name = 'garage-interior';
+    this.group.add(this.interior);
+
+    // Shadow pass: the static set is one draw, and so is each moving part (its pieces move together).
+    // Separate textured planes stay as they are (they don't cast).
+    shadowProxy(statics);
+    for (const o of [...Object.values(this.doors).map((dr) => dr.pivot), this.gateLockMesh, ...this.tripwires.map((t) => t.mesh)]) shadowProxy(o);
+
+    // Far LOD: past ~140 m from the fence the whole compound is one flat-shaded draw (plus its lit
+    // windows). The halos (own distance rule), the floodlight cones and the two big signs that still
+    // read from the road stay out of the swap.
+    const keep = new Set<THREE.Object3D>([this.halos.sprite, ...this.floodlights.map((f) => f.cone.mesh), ...this.farDetail]);
+    this.near.name = 'garage-near';
+    for (const c of [...this.group.children]) if (!keep.has(c)) this.near.add(c);
+    this.group.add(this.near, far);
+    this.lod = new DistanceLod(this.origin.clone(), 24, this.near, far);
 
     // patrol loop around the house inside the fence (world space), y = hover height
     const hy = 3.2;
@@ -334,6 +361,7 @@ export class GarageBuilder {
     graf.position.set(0, 1.75, z1 + 0.066);
     graf.renderOrder = 3;
     this.group.add(graf);
+    this.farDetail.push(graf);
 
     // neon sign "THE GARAGE" above door + Bunkr.ly logo box
     const neonTex = canvasTexture(1024, 256, (ctx, w, hh) => {
@@ -355,6 +383,7 @@ export class GarageBuilder {
     const neonSign = new THREE.Mesh(new THREE.PlaneGeometry(7.5, 1.9), neonMat);
     neonSign.position.set(0, 3.75 + 0.15, z1 + 0.06);
     this.group.add(neonSign);
+    this.farDetail.push(neonSign);
     b.add(plainStandard('#1a1a1a', 0.6, 0.6), box(7.8, 1.2, 0.08, 0, 3.85, z1 + 0.0));
 
     // window slits with warm light on west + front
@@ -427,7 +456,7 @@ export class GarageBuilder {
     }
     for (const by of [0.45, 1.2, 1.95]) vb.add(brass, cyl(0.05, 0.05, 0.3, W + 0.1, by, 0, 10, 0, 0, Math.PI / 2));
     vPivot.add(vb.build('vaultDoor'));
-    this.group.add(vPivot);
+    this.interior.add(vPivot);
     const vdPos = this.w(0, 1.2, vaultZ);
     const vdHalf = new THREE.Vector3(vdw, 1.2, 0.2);
     this.doors.vault = { pivot: vPivot, open: 0, target: 0, collider: this.physics.addBox(vdPos, vdHalf), axis: 'y', amount: -1.6, colliderSpec: { pos: vdPos, half: vdHalf } };
@@ -632,7 +661,7 @@ export class GarageBuilder {
     });
     const wb = new THREE.Mesh(new THREE.PlaneGeometry(3, 1.75), new THREE.MeshStandardNodeMaterial({ map: wbTex, roughness: 0.3 }));
     wb.position.set(3.35, 2.0, vaultZ + 0.21);
-    this.group.add(wb);
+    this.interior.add(wb);
 
     // "HUSTLE" neon on east wall
     const hustleTex = canvasTexture(1024, 256, (ctx, w, h) => {
@@ -650,7 +679,7 @@ export class GarageBuilder {
     const hustle = new THREE.Mesh(new THREE.PlaneGeometry(3.2, 0.8), hm);
     hustle.position.set(x1 - 0.2, 3.0, -1.6);
     hustle.rotation.y = -Math.PI / 2;
-    this.group.add(hustle);
+    this.interior.add(hustle);
 
     // ping-pong table + bean bags (startup culture)
     const tableMat = plainStandard('#1d4a3a', 0.6);
@@ -675,7 +704,7 @@ export class GarageBuilder {
     const ledPanel = new THREE.Mesh(new THREE.PlaneGeometry(0.85, 1.6), leds);
     ledPanel.position.set(x1 - 1.02, 1.05, -8.2);
     ledPanel.rotation.y = -Math.PI / 2;
-    this.group.add(ledPanel);
+    this.interior.add(ledPanel);
 
     // laser tripwires across the workshop: one additive mesh per beam holding a soft cylinder
     // (bright core + glow by view angle, shimmer and dust glints along it) and a red line of light
@@ -688,7 +717,8 @@ export class GarageBuilder {
     for (const [id, lz, ly] of laserDefs) {
       const u = uniform(7);
       const uLy = uniform(ly), uSeed = uniform(lz); // uniforms, not literals: both beams share a program
-      const lm = new THREE.MeshBasicNodeMaterial({ transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide });
+      // additive: one pass over both faces equals the default back-then-front pair (half the draws)
+      const lm = new THREE.MeshBasicNodeMaterial({ transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide, forceSinglePass: true });
       lm.colorNode = Fn(() => {
         const isFloor = step(1.5, uv().y);
         const along = uv().x.mul(uLen);
@@ -718,7 +748,7 @@ export class GarageBuilder {
       const laser = new THREE.Mesh(merge([lg, fg]), lm);
       laser.position.set(0, ly, lz);
       laser.renderOrder = 21;
-      this.group.add(laser);
+      this.interior.add(laser);
       // emitter housings with a lens, mounting plate and a cable drop
       for (const [ex, dir] of [[x0 + 0.36, 1], [x1 - 0.36, -1]] as const) {
         b.add(emitterMat, box(0.12, 0.14, 0.14, ex, ly, lz), box(0.03, 0.26, 0.22, ex - dir * 0.06, ly, lz));
@@ -757,7 +787,7 @@ export class GarageBuilder {
         g.add(lp);
         lid = lp;
       }
-      this.group.add(g);
+      this.interior.add(g);
       this.col(cx, 0.5, cz, 0.7, 0.5, 0.5);
       this.lootSpots.push({ id, pos: this.w(cx, 0.8, cz + 0.9), mesh: g, lid });
     }
@@ -786,7 +816,7 @@ export class GarageBuilder {
     });
     const cover = new THREE.Mesh(new THREE.PlaneGeometry(0.7, 0.95), new THREE.MeshStandardNodeMaterial({ map: coverTex, roughness: 0.4 }));
     cover.position.set(0.2, 2.0, z0 + 0.39);
-    this.group.add(cover);
+    this.interior.add(cover);
     b.add(wood('#3a2616'), box(0.82, 1.07, 0.04, 0.2, 2.0, z0 + 0.37));
     const ring = this.pal.slot('#ffffff', 5);
     ring.add(b, place(new THREE.TorusGeometry(0.35, 0.03, 8, 32), 1.6, 1.7, z0 + 0.9, 0, 0.4));

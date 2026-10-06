@@ -1003,6 +1003,7 @@ export class Game {
     this.settlement?.update(dt, this.camera.position);
     for (const site of this.sites) site.update(dt, this.camera.position);
     if (this.mode !== 'playing') this.garage.update(dt);
+    this.garage.cull(this.camera.position);
     this.props.update(dt, focusPos, this.atmo.wind);
     this.scrub.update(focusPos, this.atmo.wind);
     this.dust.update(dt);
