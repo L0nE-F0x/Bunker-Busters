@@ -405,3 +405,85 @@ The sheet from the systems pass had nowhere new to be spent, and the map still h
 
 **Next**
 - The owner's live pass: which Dry Creek door is free, which one is miserable, and whether the wash is obvious enough from the spire.
+
+## Ambience pass (2026-10-06)
+
+Places should sound like places. Every reserved `AmbientKind` now has a voice, footsteps know what they land on, rooms ring, and the outdoor bed follows the weather. Everything is still procedural: native Web Audio nodes only, no worklets, no samples.
+
+**What works**
+- **Positional voices** (`src/engine/ambient.ts`). Each is a handful of nodes on the shared noise buffer:
+
+  | Kind | What you hear |
+  |---|---|
+  | `drip` | Three drip points on irregular clocks. Each drop is a rising sine "plink" (the bubble resonance), with the odd low plop, through a short dark echo. |
+  | `hum` | 120 Hz with harmonics, two near-unison partials beating slowly (~0.4 and ~0.9 Hz), fan air, and a faint coil whine that wanders and drops out. |
+  | `wind-hollow` | Noise into narrow pipe resonances (f0, 2f0, and a whistle at 3f0). Level and pitch ride the weather wind and gusts. |
+  | `radio` | AM-band babble under static: a sawtooth through two moving formants, in syllables with a falling phrase pitch. It fades like a far station, with a tuning sweep every 25–60 s. |
+  | `projector` | One rendered second of 24 fps claw-and-sprocket clatter on a loop, a motor whir, a cooling fan, and a speed that wanders ±1.5%. |
+  | `crowd` | Two voice chains taking turns among three speakers, muffled to a murmur and sparse. Every 30–80 s someone laughs, and another often joins in. |
+  | `sparks` | Quiet, then runs of arcing: a stuttering 120 Hz buzz, crackle, and a pop. |
+
+  The four old kinds (drone, fire, neon, generator) moved here unchanged, except the generator (see below).
+- **Distance gating** (`SpotManager`):
+  - A spot has no nodes until the listener is inside its kind's range (14 m for neon … 90 m for the drone).
+  - It fades in over the last 30% of the range. Beyond 1.08× the range it is torn down: sources stopped, panner disconnected.
+  - Intermittent sounds are scheduled from `tick()` with a 0.15 s lookahead, so they stop with the spot.
+  - `audio.loop()` keeps its handle API (`setPosition/setGain/setPitch/stop`).
+- **Footsteps by surface** (`src/engine/surface.ts` + `src/engine/foley.ts`). One Rapier ray goes down per step.
+  - **Terrain:** sand by default. Asphalt on the highway (< 3.9 m from `HIGHWAY`), gravel on the dirt tracks and the ridge wash, rock on slopes over ~30°.
+  - **Floors on the terrain:** most floors in this world are visual slabs on the terrain, so terrain under an *enclosed* player takes the landmark's interior floor: Garage concrete, Dry Creek wood, the Cut rock, and the sites from a table. The gas forecourt and the Garage apron are concrete zones.
+  - **Other colliders:** first a tag or zone, then the landmark table, then the collider's shape: balls are boulders (rock), cylinders are wood, loose boxes are car wrecks (metal). Sites that want exact floors can use `surfaces.tag(collider, kind)` or `surfaces.zone(min, max, kind)` from `@/engine/surface`.
+  - **The sounds:** seven surfaces, each a heel knock, the surface's own voice and a toe scuff. Crouched steps roll the foot: 5–8 dB quieter, darker, no scuff. Jumps push off. Landings put both feet down with a surface layer (grit spray, board boom, plate ring).
+  - Sprinting now raises dust only on sand and gravel.
+- **Rooms:**
+  - **The probe:** `Acoustics.update` casts one ray up and a fan of 12 rays at 2.6 m above the feet, half of them every 0.15 s. At 2.6 m the fan clears pumps and cars and passes over door lintels. Most roofs have no collider, so the walls decide.
+  - **Probe tour:** 1.0 in every Dry Creek room, the Garage house and the cave; 0.0 on the forecourt, the Garage yard, the street and open ground.
+  - **Two convolution reverbs:** small (0.5 s RT, bright) and large (1.9 s, dark), blended by mean wall distance. A rock floor pushes toward the large one. Each reverb is connected only while it's being fed, and disconnects once its tail has rung out, so outdoors it costs nothing.
+  - Footsteps, loops and positional one-shots feed the reverbs through a 150 Hz high-pass.
+  - Enclosure also drives the old indoor muffle and switches off the crickets.
+- **Outdoor bed:**
+  - Gusts also ride the weather's own surges (the wind above its running mean), so you hear the storm's gusts when the dust leans.
+  - Night adds a quiet two-band insect chorus behind the crickets.
+  - A distant hawk calls on hot days, every 2–5 min. The coyote is rarer (every 100–260 s).
+  - The storm layers, plus a new sand-grain tick, are built when a storm starts and torn down after it clears. They used to run silent all session.
+  - The storm wall on the horizon (`Weather.front`) brings a low roar, panned from upwind.
+
+**Changes to existing sound**
+- **Generator loop: −9 dB.** It was −18.6 LUFS at 4 m, 17 LU over the fire, and pumped the master compressor.
+- **Footsteps are drier outdoors.** Their hall send went from 0.35 to about 0.1. Their level matches the old `step` sfx (offline renders, mean RMS).
+- **Indoors, the desert bed drops 7 dB** (was 5).
+
+**Levels** (headless, master tap, each loop 4 m away with ambience and music muted, EBU R128):
+
+| Voice | LUFS |
+|---|---|
+| fire (reference) | −36.7 |
+| generator (after −9 dB) | −27.6 |
+| drip | −41.8 |
+| hum | −36.5 |
+| wind-hollow (calm) | −41.6 |
+| radio | −38.4 |
+| projector | −40.1 |
+| crowd | −36.0 |
+| sparks | −38.9 (peaks like the fire's crackle) |
+
+- **Night bed:** ambience −41 to −48 dB RMS against music at −34 to −35.
+- **Storm front:** −36 to −38 dB.
+
+**CPU**
+- **Frame update:** `?bench` with 20 loops on the map (the game's 10 plus 10 test loops) gives update 0.42–0.52 ms whether all are far or all 10 are within 9 m. The audio engine's own per-frame JS is 0.03–0.05 ms.
+- **DSP:** `game.audio.benchVoices(kinds, secs)` renders offline with incremental scheduling. Each voice costs about 1–9 ms per second of audio (radio and crowd cost the most); all 11 at once is about 60 ms/s. In play, only the 1–3 spots near you exist.
+
+**Tooling**
+- `audio-capture.mjs` also taps the new `foley` bus (footsteps + loops).
+- `game.audio.spotStats`: how many spots exist, how many are live, and the reverb state.
+- `game.acoustics.room` / `.surface`: the probe's current reading.
+
+**Not verified**
+- How any of it sounds. As before, only spectrograms, R128 loudness and offline renders were checked.
+- The desktop app's (WebKitGTK) audio thread was not measured.
+- `sparks` runs on its own clock, so a site's visual sparks won't line up with it unless they share a trigger.
+
+**Next**
+- The owner's ear: voice taste (the radio and crowd babble especially), the night chorus level, the generator cut.
+- Sites can tag exact floors with `surfaces.zone(...)` and place spots by kind. Nothing else is needed.
