@@ -971,9 +971,10 @@ export class ColdStorageBuild {
       b.add(M.cable(), wire(new THREE.Vector3(ax, H + 0.25, az), new THREE.Vector3(bx, H + 0.25, bz), 0.05, 0.008, 16));
       this.col((ax + bx) / 2, H / 2, (az + bz) / 2, Math.abs(bx - ax) / 2 + 0.05, H / 2 + 0.3, Math.abs(bz - az) / 2 + 0.05);
     }
-    panels.push(this.linkPanel(x1, 0, -7.4, x1 + 2.0, 0, -6.6, H - 0.2));
+    // the gate leaf swung back into the yard
+    panels.push(this.linkPanel(x1, 0, -7.4, x1 - 2.0, 0, -6.5, H - 0.2));
     this.d.add(link, ...panels);
-    this.col(x1 + 1.0, H / 2, -7.0, 1.05, H / 2, 0.08, Math.atan2(0.8, 2.0) * -1);
+    this.col(x1 - 1.0, H / 2, -6.95, 1.05, H / 2, 0.08, -Math.atan2(0.9, -2.0));
     this.b.add(this.A.paint(), A.quad('hvSign', 0.9, 0.68, x1 + 0.05, 1.5, -9.4, 0, Math.PI / 2, 0), A.quad('hvSign', 0.9, 0.68, -37.5, 1.5, z1 + 0.05));
     // switchgear in the gap between the yard and the hall (the electronics interaction)
     const sw = new THREE.Vector3(-27.2, 0, -10.5);

@@ -120,6 +120,8 @@ export class TubeBuild {
   locker!: Swing;
   lockerLoot!: THREE.Object3D;
   lockerHome = new THREE.Vector3();
+  /** Where the blown locker door lands (local). */
+  lockerFall = new THREE.Vector3();
   /** Local points for interactions. */
   readonly pts: Record<string, THREE.Vector3> = {};
   private readonly b = new SplitBatch();
@@ -551,17 +553,17 @@ export class TubeBuild {
     for (let i = 0; i < 3; i++) b.add(M.dark(), cyl(0.04, 0.04, ix1 - ix0, (ix0 + ix1) / 2, PY + 0.2 + i * 0.12, TZ + 1.45, 6, 0, 0, Math.PI / 2));
     this.lens.add(this.chase.material, this.chase.strip(box(ix1 - ix0 - 0.4, 0.03, 0.1, (ix0 + ix1) / 2, PY + R - 0.16, TZ)));
     for (let x = ix0 + 3; x < ix1; x += 6) this.chase.halo(new THREE.Vector3(x, PY + R - 0.3, TZ), Math.abs(x) / 240, 0.8);
-    b.add(M.yellow(), box(1.2, 0.5, 0.8, -30, fl + 0.45, TZ - 0.3));
-    b.add(M.rubber(), cyl(0.12, 0.12, 0.08, -30.5, fl + 0.12, TZ - 0.75, 10, Math.PI / 2), cyl(0.12, 0.12, 0.08, -29.5, fl + 0.12, TZ - 0.75, 10, Math.PI / 2));
-    this.col(-30, fl + 0.45, TZ - 0.3, 0.6, 0.45, 0.4);
+    b.add(M.yellow(), box(1.2, 0.5, 0.6, -30, fl + 0.45, TZ - 0.78));
+    b.add(M.rubber(), cyl(0.12, 0.12, 0.08, -30.5, fl + 0.12, TZ - 1.05, 10, Math.PI / 2), cyl(0.12, 0.12, 0.08, -29.5, fl + 0.12, TZ - 1.05, 10, Math.PI / 2));
+    this.col(-30, fl + 0.45, TZ - 0.78, 0.6, 0.45, 0.3);
     d.add(A.decal(), A.floor('oil', 1.4, 1.2, -22, fl + 0.02, TZ), A.floor('dirt', 1.8, 1.4, -40, fl + 0.02, TZ));
     this.b.indoor = false;
     this.pts.inner = new THREE.Vector3(-20, fl, TZ);
 
     // the break: the pylon at -60 gave out; both spans sag into a V and tore at the bottom
     const gA = Math.max(this.ground(BREAK.mid, TZ - 1.2), this.ground(BREAK.mid, TZ + 1.2), this.ground(BREAK.mid, TZ));
-    const yA = PY, yLow = gA + 1.45, yB = trackY(BREAK.b);
-    const tA = BREAK.mid + 0.6;
+    const yA = PY, yLow = gA + 1.18, yB = trackY(BREAK.b);
+    const tA = BREAK.mid + 1.2;
     b.add(tube, this.cylX(tA, yLow + 0.12, BREAK.a, yA, R, 32));
     this.b.indoor = true;
     b.add(M.tubeIn(), flipInside(this.cylX(tA, yLow + 0.12, BREAK.a, yA, R - 0.06, 32)));
@@ -572,6 +574,11 @@ export class TubeBuild {
     this.colPitch(cxA, cyA, TZ, lenA / 2, 0.1, fw / 2, phiA);
     for (const s of [-1, 1]) this.colPitch(cxA, cyA + 1.35, TZ + s * 1.32, lenA / 2, 1.3, 0.1, phiA);
     this.colPitch(cxA, cyA + 2.75, TZ, lenA / 2, 0.1, 1.0, phiA);
+    // a lip of sand and debris at the torn mouth so you can step up into it
+    const lipX = tA - 0.6, lipTop = yLow + 0.12 - 1.15;
+    const gl = this.ground(lipX - 0.6, TZ);
+    this.colPitch(lipX, (gl + lipTop) / 2 - 0.1, TZ, 0.75, 0.12, fw / 2, Math.atan2(lipTop - gl, 1.5));
+    b.add(M.concDark(), place(new THREE.BoxGeometry(1.5, 0.24, fw), lipX, (gl + lipTop) / 2 - 0.1, TZ, 0, 0, Math.atan2(lipTop - gl, 1.5)));
     // grated ramp inside the fallen span
     for (let t = 0.04; t < 0.98; t += 0.09) {
       const x = THREE.MathUtils.lerp(tA, BREAK.a, t), y = THREE.MathUtils.lerp(yLow + 0.12, yA, t) - 1.15;
@@ -582,15 +589,19 @@ export class TubeBuild {
       b.add(A.paint(), norm(g));
     }
     // the far span, crushed shut at the bottom; torn petals of skin at the open end
-    b.add(tube, this.cylX(BREAK.b, yB, BREAK.mid - 0.6, yLow + 0.3, R, 32));
-    const phiB = Math.atan2(yLow + 0.3 - yB, BREAK.mid - 0.6 - BREAK.b);
-    const lenB = Math.hypot(BREAK.b - BREAK.mid + 0.6, yB - yLow - 0.3);
-    this.colPitch((BREAK.b + BREAK.mid - 0.6) / 2, (yB + yLow + 0.3) / 2, TZ, lenB / 2, R * 0.9, R * 0.9, phiB);
+    const bEnd = BREAK.mid - 1.2;
+    b.add(tube, this.cylX(BREAK.b, yB, bEnd, yLow + 0.3, R, 32));
+    const phiB = Math.atan2(yLow + 0.3 - yB, bEnd - BREAK.b);
+    const lenB = Math.hypot(bEnd - BREAK.b, yB - yLow - 0.3);
+    // collider stops short of the crushed end so the gap at the bottom of the V stays open
+    const cB = new THREE.Vector3(BREAK.b, yB, 0).lerp(new THREE.Vector3(bEnd, yLow + 0.3, 0), 0.45);
+    this.colPitch(cB.x, cB.y, TZ, lenB * 0.45, R * 0.9, R * 0.9, phiB);
+    this.col(bEnd - 0.5, yLow + 0.3, TZ, 0.45, R * 0.75, R * 0.85);
     const cap = new THREE.SphereGeometry(R, 20, 10, 0, Math.PI * 2, 0, Math.PI / 2);
     cap.scale(1, 0.45, 1);
     cap.rotateZ(-Math.PI / 2);
     cap.rotateZ(phiB);
-    cap.translate(BREAK.mid - 0.6, yLow + 0.3, TZ);
+    cap.translate(bEnd, yLow + 0.3, TZ);
     b.add(M.flange(), norm(cap));
     for (let i = 0; i < 7; i++) {
       const a = (i / 7) * Math.PI * 2 + 0.3;
@@ -617,7 +628,7 @@ export class TubeBuild {
     this.col(BREAK.mid + 2.5, pg + 0.5, TZ + 5.5, 2.9, 0.5, 0.6, 0.5);
     this.col(BREAK.mid, this.ground(BREAK.mid, TZ) + 0.4, TZ + 2.6, 0.6, 0.65, 0.5);
     d.add(A.decal(), A.floor('dirt', 8, 7, BREAK.mid, gA + 0.05, TZ), A.floor('soot', 3, 3, BREAK.mid + 1, gA + 0.05, TZ - 2));
-    this.pts.breakIn = new THREE.Vector3(tA - 1.6, gA, TZ);
+    this.pts.breakIn = new THREE.Vector3(BREAK.mid, gA, TZ - 3.2);
   }
 
   // ------------------------------------------------------------------ the track: segments, joints, pylons, PV, lights
@@ -747,8 +758,8 @@ export class TubeBuild {
     b.add(A.decal(), A.quad('soot', 4, 5, x - 0.01, y + 1.5, TZ, 0, -Math.PI / 2, 0));
     // the locker bolted to the headwall: steel cabinet, sign, padlock LED
     const lz = TZ - 4.2, ly = gl;
-    this.solid(M.concDark(), 2.4, 0.3, 2.2, x - 1.1, ly + 0.15, lz);
-    const ly0 = ly + 0.3;
+    const ly0 = Math.max(ly, this.ground(x - 0.3, lz)) + 0.12;
+    this.b.add(M.concDark(), box(0.9, 0.5, 1.8, x - 0.3, ly0 - 0.25, lz));
     b.add(M.steel(), box(0.6, 2.1, 1.5, x - 0.3, ly0 + 1.05, lz));
     this.col(x - 0.3, ly0 + 1.05, lz, 0.3, 1.05, 0.75);
     b.add(A.paint(), A.quad('portalSign', 1.3, 0.65, x - 0.015, ly0 + 2.65, lz, 0, -Math.PI / 2, 0));
@@ -776,7 +787,8 @@ export class TubeBuild {
     this.lockerLoot.position.set(x - 0.3, ly0, lz);
     this.lockerLoot.visible = false;
     this.near.add(this.lockerLoot);
-    this.pts.locker = new THREE.Vector3(x - 1.6, ly + 0.3, lz);
+    this.pts.locker = new THREE.Vector3(x - 1.7, this.ground(x - 1.7, lz), lz);
+    this.lockerFall.set(x - 2.5, this.ground(x - 2.5, lz + 0.8) + 0.07, lz + 0.8);
     // a work lamp on the headwall
     b.add(M.dark(), box(0.35, 0.25, 0.3, x - 0.15, ly0 + 3.2, lz + 1.4));
     this.slots.night.add(this.d, box(0.3, 0.03, 0.22, x - 0.15, ly0 + 3.06, lz + 1.4));

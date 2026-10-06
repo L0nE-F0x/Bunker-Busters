@@ -507,6 +507,7 @@ export class DataCenterSite extends Site {
     const s = this.ctx.state;
     if (s && s !== this.synced) this.sync(s);
     this.t += dt;
+    this.doors(dt);
     const B = this.b;
     const far = !B.near.visible;
     const night = THREE.MathUtils.smoothstep(this.ctx.atmo.uNight.value as number, 0.2, 0.45);
@@ -611,7 +612,12 @@ export class DataCenterSite extends Site {
       B.fans.instanceMatrix.needsUpdate = true;
     }
 
-    // doors
+    void CAGE;
+  }
+
+  /** Doors run even while the site is drawn as its stand-in: a loaded save must open its colliders. */
+  private doors(dt: number) {
+    const B = this.b;
     for (const d of [B.coreDoor, B.cageGate]) {
       d.open += (d.target - d.open) * Math.min(1, dt * 3);
       const solid = d.target < 0.5 && d.open < 0.3;
@@ -619,6 +625,5 @@ export class DataCenterSite extends Site {
     }
     B.coreDoor.obj.position.z = (-6.2 + -4.6) / 2 - B.coreDoor.open * 1.62;
     B.cageGate.obj.rotation.y = B.cageGate.open * 1.45;
-    void CAGE;
   }
 }

@@ -473,7 +473,7 @@ export class TubeSite extends Site {
       l.col.setEnabled(false);
       // blown clean off its hinges, lying face down in the sand
       l.obj.rotation.set(0.1, 0.8, Math.PI / 2 - 0.08);
-      l.obj.position.add(new THREE.Vector3(-1.9, 0.07, 0.8));
+      l.obj.position.copy(B.lockerFall);
     } else if (l.target < 0.5 && !l.solid) {
       l.solid = true;
       l.col.setEnabled(true);
