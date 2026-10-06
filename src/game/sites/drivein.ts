@@ -1109,7 +1109,8 @@ export class DriveInSite extends Site {
     }
     const k = running ? 1 : 0;
     this.uProj.value = k * (0.35 + 1.9 * night) * flick;
-    this.beam.intensity.value = k * (0.02 + 0.32 * night) * flick;
+    // side-on you look through the whole 50 m of it, so keep it a haze, not a wall
+    this.beam.intensity.value = k * (0.02 + 0.22 * night) * flick;
     (this.beam.color.value as THREE.Color).copy(this.tint).lerp(new THREE.Color(1, 1, 1), 0.45);
     this.beamMesh.visible = running && inRange;
     this.screenMesh.visible = inRange;
