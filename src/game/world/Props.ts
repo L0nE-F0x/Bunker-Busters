@@ -6,7 +6,7 @@ import { Simplex2, mulberry32 } from '@/engine/noise';
 import type { Heightfield } from './Heightfield';
 import type { Physics } from '@/engine/physics';
 import { HIGHWAY, WORLD_SEED } from '@/content/world';
-import { box, cyl, beam, merge, MeshBatch, wire, canvasTexture, grime, norm, plainCaster, proxyMaterial, SHADOW_LAYER } from './kit';
+import { box, cyl, beam, merge, MeshBatch, wire, canvasTexture, grime, norm, place, plainCaster, proxyMaterial, SHADOW_LAYER } from './kit';
 import { rustyMetal, plainStandard, wood } from './materials';
 import { bumpFromHeight } from './Terrain';
 import { noise, noiseTexture } from '@/engine/noiseTex';
@@ -229,7 +229,7 @@ const BILLBOARDS = [
 export class Props {
   group = new THREE.Group();
   /** Tumbleweeds share one InstancedMesh (one draw call + one shadow call instead of ten each). */
-  tumbleweeds: { pos: THREE.Vector3; rot: THREE.Euler; scale: number; vel: THREE.Vector3; r: number }[] = [];
+  tumbleweeds: { pos: THREE.Vector3; rot: THREE.Euler; scale: number; vel: THREE.Vector3; r: number; zoneT?: number }[] = [];
   private tumbleMesh!: THREE.InstancedMesh;
   /** Rock variants with every placed instance; update() keeps only the ones big enough to see. */
   private rocks: { mesh: THREE.InstancedMesh; all: RockInstance[] }[] = [];
@@ -315,8 +315,11 @@ export class Props {
     m.normalNode = bumpFromHeight(noise(vec2(positionWorld.x.add(positionWorld.z).mul(2.5), positionWorld.y.mul(0.25))).r, float(0.03));
     const variants = [deadTreeGeometry(7), deadTreeGeometry(19), deadTreeGeometry(42)];
     const dummy = new THREE.Object3D();
+    // Every tree is baked into ONE static mesh (was three instanced draws, one per variant). The trees
+    // don't move and all 90 stay drawn, so instancing bought nothing. clone().applyMatrix4() carries the
+    // normals through the normal matrix like the instancing path did (uniform scale: same direction).
+    const placed: THREE.BufferGeometry[] = [];
     variants.forEach((geo) => {
-      const mesh = new THREE.InstancedMesh(geo, m, 30);
       let c = 0, guard = 0;
       while (c < 30 && guard++ < 5000) {
         const x = (rand() - 0.5) * this.hf.size * 0.8;
@@ -330,15 +333,16 @@ export class Props {
         dummy.rotation.set((rand() - 0.5) * 0.15, rand() * Math.PI * 2, (rand() - 0.5) * 0.15);
         dummy.scale.setScalar(s);
         dummy.updateMatrix();
-        mesh.setMatrixAt(c++, dummy.matrix);
+        placed.push(geo.clone().applyMatrix4(dummy.matrix));
+        c++;
         this.physics.addCylinder({ x, y: y + 1.5, z }, 1.5, 0.25 * s);
       }
-      mesh.count = c;
-      mesh.castShadow = true;
-      mesh.receiveShadow = true;
-      mesh.computeBoundingSphere();
-      this.group.add(mesh);
     });
+    const mesh = new THREE.Mesh(merge(placed), m);
+    mesh.name = 'trees';
+    mesh.castShadow = true;
+    mesh.receiveShadow = true;
+    this.group.add(mesh);
   }
 
   /** Point & tangent along the highway at arc length t (0..1). */
@@ -452,6 +456,7 @@ export class Props {
       [258, -58, 0.62],
     ];
     const postMat = rustyMetal({ base: '#5a5550', rust: 0.7 });
+    const frames = new MeshBatch();
     placements.forEach(([bx, bz, yaw], i) => {
       const ad = BILLBOARDS[i % BILLBOARDS.length];
       const tex = canvasTexture(1024, 512, (ctx, w, h) => {
@@ -488,9 +493,12 @@ export class Props {
       });
       const y = this.hf.heightAt(bx, bz);
       const grp = new THREE.Group();
-      const b = new MeshBatch();
-      b.add(postMat, box(0.35, 9, 0.35, -4, 4.5, 0), box(0.35, 9, 0.35, 4, 4.5, 0), box(10.6, 0.3, 0.3, 0, 5.8, -0.2), box(10.6, 0.2, 1.2, 0, 5.7, 0.5));
-      grp.add(b.build('billboardFrame'));
+      // frame + painted back of every billboard: one batch in world space (was two draws each)
+      const at = new THREE.Matrix4().compose(new THREE.Vector3(bx, y - 0.2, bz), new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), yaw), new THREE.Vector3(1, 1, 1));
+      frames.add(postMat, ...[
+        box(0.35, 9, 0.35, -4, 4.5, 0), box(0.35, 9, 0.35, 4, 4.5, 0), box(10.6, 0.3, 0.3, 0, 5.8, -0.2), box(10.6, 0.2, 1.2, 0, 5.7, 0.5),
+        place(new THREE.PlaneGeometry(10, 5), 0, 8.4, 0, 0, Math.PI, 0),
+      ].map((g) => g.applyMatrix4(at)));
       const panelMat = new THREE.MeshStandardNodeMaterial({ map: tex, roughness: 0.8 });
       const panel = new THREE.Mesh(new THREE.PlaneGeometry(10, 5), panelMat);
       panel.position.set(0, 8.4, 0.05);
@@ -498,10 +506,6 @@ export class Props {
       panel.receiveShadow = true;
       // tear a corner by rotating a small flap
       grp.add(panel);
-      const back = new THREE.Mesh(new THREE.PlaneGeometry(10, 5), postMat);
-      back.rotation.y = Math.PI;
-      back.position.set(0, 8.4, 0.0);
-      grp.add(back);
       grp.position.set(bx, y - 0.2, bz);
       grp.rotation.y = yaw;
       this.group.add(grp);
@@ -510,6 +514,7 @@ export class Props {
         this.physics.addCylinder({ x: bx + p.x, y: y + 4.5, z: bz + p.z }, 4.5, 0.3);
       }
     });
+    this.group.add(frames.build('billboardFrames'));
   }
 
   private buildTumbleweeds() {
@@ -674,7 +679,14 @@ export class Props {
     for (const tw of this.tumbleweeds) {
       const p = tw.pos;
       const dx = p.x - focus.x, dz = p.z - focus.z;
-      if (dx * dx + dz * dz > 120 * 120 || p.x > 9000 || this.hf.zoneDistance(p.x, p.z) < 2) {
+      // the zone test walks every flatten zone and the trail polyline: ten times a second is plenty
+      // (the margin covers the ~1 m a fast tumbleweed rolls in between)
+      let inZone = false;
+      if ((tw.zoneT = (tw.zoneT ?? 0) - dt) <= 0) {
+        tw.zoneT = 0.1;
+        inZone = p.x < 9000 && this.hf.zoneDistance(p.x, p.z) < 2 + Math.hypot(tw.vel.x, tw.vel.z) * 0.1;
+      }
+      if (dx * dx + dz * dz > 120 * 120 || p.x > 9000 || inZone) {
         const a = Math.random() * Math.PI * 2;
         const upwind = new THREE.Vector2(-wind.x, -wind.y).normalize();
         p.set(focus.x + upwind.x * 70 + Math.cos(a) * 50, 0, focus.z + upwind.y * 70 + Math.sin(a) * 50);

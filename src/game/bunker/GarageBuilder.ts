@@ -2,7 +2,8 @@ import * as THREE from 'three/webgpu';
 import { uniform, vec2, vec3, vec4, float, time, sin, uv, smoothstep, abs, Fn, texture, color, mix, step, normalize, cameraPosition, positionWorld, normalWorld, dot, pow, clamp } from 'three/tsl';
 import { noise } from '@/engine/noiseTex';
 import type { Physics } from '@/engine/physics';
-import { box, cyl, beam, MeshBatch, DistanceLod, canvasTexture, grime, wire, merge, norm, shadowProxy } from '../world/kit';
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
+import { box, cyl, beam, MeshBatch, DistanceLod, canvasTexture, grime, wire, merge, norm, shadowProxy, proxyMaterial, SHADOW_LAYER } from '../world/kit';
 import { rustyMetal, concrete, corrugated, neon, plainStandard, fabric, wood, glow, chainLink, warmWindow, GlowPalette } from '../world/materials';
 import { lightCone, GlowSprites } from '../world/effects';
 import { VirtualLight } from '../world/lights';
@@ -114,7 +115,7 @@ export class GarageBuilder {
     // Shadow pass: the static set is one draw, and so is each moving part (its pieces move together).
     // Separate textured planes stay as they are (they don't cast).
     shadowProxy(statics);
-    for (const o of [...Object.values(this.doors).map((dr) => dr.pivot), this.gateLockMesh, ...this.tripwires.map((t) => t.mesh)]) shadowProxy(o);
+    for (const o of [...Object.values(this.doors).map((dr) => dr.pivot), this.gateLockMesh]) shadowProxy(o);
 
     // Far LOD: past ~140 m from the fence the whole compound is one flat-shaded draw (plus its lit
     // windows). The halos (own distance rule), the floodlight cones and the two big signs that still
@@ -270,20 +271,23 @@ export class GarageBuilder {
     const stakeMat = wood('#5a4028');
     const wireMat = new THREE.MeshStandardNodeMaterial({ color: '#d8d0c0', roughness: 0.2, metalness: 1 });
     wireMat.emissiveNode = vec3(1.0, 0.85, 0.6).mul(sin(time.mul(2.5)).mul(0.5).add(0.5).pow(8).mul(0.6));
+    // all three share one mesh per material (3 draws, was 9); each wire's `mesh` is a handle whose
+    // `visible` re-merges the set without it
+    const twSet = new TripwireSet();
     for (const [id, [ax, az], [bx2, bz2]] of tw) {
-      const g = new THREE.Group();
       const a = new THREE.Vector3(ax, 0.22, az), c = new THREE.Vector3(bx2, 0.22, bz2);
-      const tb = new MeshBatch();
-      tb.add(stakeMat, cyl(0.025, 0.03, 0.5, ax, 0.2, az, 5), cyl(0.025, 0.03, 0.5, bx2, 0.2, bz2, 5));
-      tb.add(wireMat, beam(a, c, 0.006, 3));
+      const parts: [THREE.Material, THREE.BufferGeometry][] = [
+        [stakeMat, cyl(0.025, 0.03, 0.5, ax, 0.2, az, 5)], [stakeMat, cyl(0.025, 0.03, 0.5, bx2, 0.2, bz2, 5)],
+        [wireMat, beam(a, c, 0.006, 3)],
+      ];
       for (let i = 0; i < 3; i++) {
         const p = a.clone().lerp(c, 0.25 + i * 0.25);
-        tb.add(canMat, cyl(0.035, 0.035, 0.12, p.x, 0.12 + (i % 2) * 0.03, p.z, 8));
+        parts.push([canMat, cyl(0.035, 0.035, 0.12, p.x, 0.12 + (i % 2) * 0.03, p.z, 8)]);
       }
-      g.add(tb.build(id, true, true));
-      this.group.add(g);
-      this.tripwires.push({ id, a: this.w(a.x, a.y, a.z), b: this.w(c.x, c.y, c.z), mesh: g, armed: true });
+      this.tripwires.push({ id, a: this.w(a.x, a.y, a.z), b: this.w(c.x, c.y, c.z), mesh: twSet.add(id, parts), armed: true });
     }
+    twSet.rebuild();
+    this.group.add(twSet.group);
 
     // sign on the fence
     const signTex = canvasTexture(512, 320, (ctx, w, h) => {
@@ -864,6 +868,73 @@ export class GarageBuilder {
     this.points.interior = this.w(0, 1, -3);
     this.points.vaultCenter = this.w(0, 1, -9.5);
     void neon;
+  }
+}
+
+/**
+ * The tripwires as one mesh per material plus one shadow proxy. Disarming one (its handle's
+ * `visible = false`) re-merges the rest: a few hundred triangles, once per disarm.
+ */
+class TripwireSet {
+  readonly group = new THREE.Group();
+  private parts = new Map<string, [THREE.Material, THREE.BufferGeometry][]>();
+  private shown = new Set<string>();
+  private meshes = new Map<THREE.Material, THREE.Mesh>();
+  private shadow = new THREE.Mesh(new THREE.BufferGeometry(), proxyMaterial());
+
+  constructor() {
+    this.group.name = 'tripwires';
+    this.shadow.name = 'tripwireShadows';
+    this.shadow.layers.set(SHADOW_LAYER);
+    this.shadow.castShadow = true;
+    this.group.add(this.shadow);
+  }
+
+  /** Register a wire's pieces (local metres); returns the handle that stands in for its mesh. */
+  add(id: string, parts: [THREE.Material, THREE.BufferGeometry][]) {
+    this.parts.set(id, parts);
+    this.shown.add(id);
+    for (const [mat] of parts) {
+      if (this.meshes.has(mat)) continue;
+      const m = new THREE.Mesh(new THREE.BufferGeometry(), mat);
+      m.receiveShadow = true;
+      this.meshes.set(mat, m);
+      this.group.add(m);
+    }
+    const handle = new THREE.Object3D();
+    handle.name = id;
+    Object.defineProperty(handle, 'visible', {
+      get: () => this.shown.has(id),
+      set: (v: boolean) => {
+        if (v === this.shown.has(id)) return;
+        if (v) this.shown.add(id); else this.shown.delete(id);
+        this.rebuild();
+      },
+    });
+    return handle;
+  }
+
+  rebuild() {
+    const byMat = new Map<THREE.Material, THREE.BufferGeometry[]>();
+    const all: THREE.BufferGeometry[] = [];
+    for (const id of this.shown) {
+      for (const [mat, g] of this.parts.get(id)!) {
+        let list = byMat.get(mat);
+        if (!list) byMat.set(mat, (list = []));
+        list.push(g);
+        all.push(new THREE.BufferGeometry().setAttribute('position', g.attributes.position));
+      }
+    }
+    for (const [mat, mesh] of this.meshes) {
+      const list = byMat.get(mat);
+      mesh.geometry.dispose();
+      mesh.geometry = list ? merge(list) : new THREE.BufferGeometry();
+      mesh.visible = !!list;
+    }
+    this.shadow.geometry.dispose();
+    this.shadow.geometry = all.length ? mergeGeometries(all, false) ?? new THREE.BufferGeometry() : new THREE.BufferGeometry();
+    this.shadow.geometry.computeBoundingSphere();
+    this.shadow.visible = all.length > 0;
   }
 }
 
