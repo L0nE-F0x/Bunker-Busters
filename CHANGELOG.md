@@ -3,6 +3,10 @@
 Each `## vX.Y.Z` section becomes the GitHub release notes and the "what's new" list in the in-app
 update notice (the first few bullets). `scripts/release.sh` refuses to release a version without one.
 
+## v0.1.8
+- **Fixed: invisible walls in the open desert.** Walking up even a gentle dune could slow you to a dead stop with nothing in the way (worse at high frame rates). You now walk and sprint freely over the sand, and only real obstacles stop you
+- **Fixed: jumping did nothing at high frame rates** (100+ fps, e.g. the browser build on a 144 Hz screen)
+
 ## v0.1.7
 - **Dust storms** roll in and out: brown-out visibility, blowing sand, howling wind, dry lightning with distant thunder, and SeedBot's optics are half-blind in them (a stealth opportunity)
 - **Sky and light**: eye adaptation, deeper day sky, longer twilight afterglow, a milky way and a cratered moon; dust devils on calm afternoons; a dead megacity skyline on the horizon; pebbles and grit underfoot

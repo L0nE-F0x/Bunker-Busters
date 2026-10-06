@@ -111,6 +111,7 @@ node scripts/dev/shot.mjs "http://localhost:5173/play/?webgl&autostart" out.png 
 node scripts/dev/hands-lab.mjs sheet.png "pose=reach" "pose=lockpick&look=engineer" "pose=idle&torch" "pose=flat&view=palm"
 node scripts/dev/marketing-shots.mjs [hero night interior camp lockpick]   # regenerate site screenshots
 node scripts/dev/og-card.mjs                                               # regenerate public/og.jpg
+node scripts/dev/walk-probe.mjs 150 [--sprint]   # movement regression: logs every stall + contacts (FPS=144 env)
 scripts/dev/bench-desktop.sh [high|medium]   # real desktop-app perf: opens a window ~40 s, self-closes
 ```
 

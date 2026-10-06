@@ -14,6 +14,8 @@ const SPRINT_ACCEL = 5; // m/s² building from a jog to a full sprint
 const GROUND_DECEL = 16; // m/s² stopping / reversing (feet planted)
 const AIR_ACCEL = 1.2; // m/s² of mid-air steering
 const DRAG = GRAVITY / (55 * 55); // quadratic drag coefficient → terminal velocity ~55 m/s
+const MAX_CLIMB = (50 * Math.PI) / 180;
+const WALL_NY = Math.cos(MAX_CLIMB); // contact normals flatter than this are walls
 
 /** Rapier kinematic character controller + procedural model. */
 export class Player {
@@ -63,7 +65,7 @@ export class Player {
     this.controller = physics.world.createCharacterController(0.03);
     this.controller.enableAutostep(0.45, 0.2, true);
     this.controller.enableSnapToGround(0.4);
-    this.controller.setMaxSlopeClimbAngle((50 * Math.PI) / 180);
+    this.controller.setMaxSlopeClimbAngle(MAX_CLIMB);
     this.controller.setMinSlopeSlideAngle((60 * Math.PI) / 180);
     this.controller.setApplyImpulsesToDynamicBodies(false);
   }
@@ -190,19 +192,36 @@ export class Player {
     }
     if (this.grounded && this.velocity.y < 0 && !jumped) { this.velocity.y = -2; this.snapping = true; }
 
-    const desired = { x: this.velocity.x * dt, y: this.velocity.y * dt, z: this.velocity.z * dt };
+    // on the ground, snapToGround keeps the feet planted. Pushing down into a slope instead makes the
+    // controller slide that push along it, i.e. downhill, every frame (it read as an invisible wall uphill)
+    const desired = { x: this.velocity.x * dt, y: this.snapping ? 0 : this.velocity.y * dt, z: this.velocity.z * dt };
     this.controller.computeColliderMovement(this.collider, desired, this.physics.R.QueryFilterFlags.EXCLUDE_DYNAMIC);
     const mv = this.controller.computedMovement();
     const wasGrounded = this.grounded;
     const prevVy = this.velocity.y;
-    this.grounded = this.controller.computedGrounded();
+    // still rising isn't standing: at high frame rates a frame of jump is less than the controller's
+    // skin, so it reports "grounded" and the landing below would cancel the jump (no jumping at 144 Hz)
+    this.grounded = this.controller.computedGrounded() && this.velocity.y <= 0;
     const t = this.body.translation();
     const next = { x: t.x + mv.x, y: t.y + mv.y, z: t.z + mv.z };
     this.body.setNextKinematicTranslation(next);
     if (dt > 0) {
-      // blocked by a wall: lose the velocity into it (no sticking, no sliding back out)
+      // blocked by a wall or a face too steep to climb: lose the velocity into it (no sticking, no
+      // sliding back out). Ground contacts don't count, or every upslope would read as a wall.
+      for (let i = 0, n = this.controller.numComputedCollisions(); i < n; i++) {
+        const nrm = this.controller.computedCollision(i)?.normal1; // points from the obstacle to us
+        if (!nrm || Math.abs(nrm.y) > WALL_NY) continue;
+        const h = Math.hypot(nrm.x, nrm.z);
+        if (h < 1e-4) continue;
+        const nx = nrm.x / h, nz = nrm.z / h;
+        const into = this.velocity.x * nx + this.velocity.z * nz;
+        if (into < 0) { this.velocity.x -= into * nx; this.velocity.z -= into * nz; }
+      }
+      // pinned against something whose contact still reads as floor (the shoulder of a boulder):
+      // slopes we can climb keep well over a quarter of the motion, so this is an obstacle too
       const ax = mv.x / dt, az = mv.z / dt;
-      if (Math.hypot(ax, az) < Math.hypot(this.velocity.x, this.velocity.z) - 0.05) { this.velocity.x = ax; this.velocity.z = az; }
+      const want = Math.hypot(this.velocity.x, this.velocity.z);
+      if (want > 0.5 && Math.hypot(ax, az) < want * 0.25) { this.velocity.x = ax; this.velocity.z = az; }
       // bumped your head
       if (this.velocity.y > 0 && mv.y / dt < this.velocity.y - 0.5) this.velocity.y = Math.max(0, mv.y / dt);
       // terrain grade along the direction of travel (rise / run), smoothed

@@ -20,6 +20,13 @@ URL flags: `?webgl` forces WebGL2. `?gpu=high` / `?gpu=low` force WebGPU on the 
 - WebGPU on the Intel iGPU works. Headless at 1280×720: High runs at WebGPU 30 fps vs WebGL2 27 fps, Medium at 45 vs 42.
 - Pinning all of Chrome to NVIDIA (render-node override + PRIME offload) froze the desktop session during testing. Don't do that on a live session.
 
+### Invisible walls in the open desert + no jumping at high fps (2026-10-06)
+The owner reported walking in a straight line across open sand and being stopped dead, "like an invisible wall". There was nothing in the way. `scripts/dev/walk-probe.mjs` (new) holds W from random spots and logs every stall with the contacts: **122–136 of 150 lines stalled** on bare 5–10° slopes, touching only the heightfield.
+- **Cause 1 (the wall):** while grounded we pushed down at 2 m/s to hug the terrain. The Rapier controller slides that push along the slope, which moves you downhill a little every frame. The "blocked by a wall" check (`actual < velocity − 0.05` → velocity = actual) then read every upslope as a wall, and the cut was bigger than a frame of acceleration, so speed decayed to zero. Higher fps stalls on gentler slopes, because acceleration per frame shrinks while the cut doesn't: about 2° at 144 Hz, about 6° at 40 fps.
+- **Fix:** grounded frames ask for no vertical motion (`snapToGround` already keeps the feet planted). Velocity is cut only against contacts flatter than the 50° climb limit (walls and too-steep faces), and only the part going into them. A fallback zeroes it when you keep under 25% of the motion (pinned on a boulder's shoulder, whose contact reads as floor).
+- **Cause 2 (no jumping at ≥ 100 fps):** one frame of jump rise (2.3 cm at 144 Hz) is less than the controller's 3 cm skin, so it still reported grounded and the landing branch reset vy. Now you're never grounded while vy > 0. The jump apex is 0.50–0.54 m from 30 to 240 fps.
+- **After:** the probe covers 10.9 km instead of 3.7–5.2 km on the same 150 lines at 40/60/144 fps. The remaining ~33 stalls are all real: rocks, wrecks, the Garage fence and terrain faces over 45°. Average sprint speed over rough ground went from 3.2–3.8 to 5.1 m/s. No new airborne flicker or false landings.
+
 ### Garage graphics & VFX pass (2026-10-06)
 - **Set dressing** (`src/game/bunker/garageDressing.ts`, called from `GarageBuilder`):
   - Building: ribbed roll-up door with guide rails and an inside barrel housing, plinth, roof fascia, gutters and downspouts, a meter box and conduit, a fake CCTV camera with a blinking LED, barred windows, roof AC unit, vents, a hatch and sandbags.
