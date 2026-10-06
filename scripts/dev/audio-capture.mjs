@@ -31,6 +31,7 @@ const pcm = await p.evaluate(async ({ secs, during }) => {
   const a = window.game.audio;
   const ctx = a.ctx;
   const taps = { master: a.master, music: a.music, amb: a.ambOut, sfx: a.sfx };
+  if (a.foley) taps.foley = a.foley; // footsteps + positional loops (since the ambience pass)
   const rec = { left: [], right: [] };
   const levels = [];
   const acc = {};
