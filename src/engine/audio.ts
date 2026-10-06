@@ -2,6 +2,16 @@ import * as THREE from 'three/webgpu';
 import { Music, type MusicMood } from './music';
 
 /** What the world sounds like right now (fed by the game every frame). */
+/**
+ * Positional ambience loops (Landmarks/sites push `{ kind, pos }` into `landmarks.audioSpots`).
+ * The first four are synthesized; the rest are reserved names for places that are being built, and
+ * play nothing until the audio pass gives them a voice.
+ *   drip: water in a cave · hum: server/transformer hum · wind-hollow: wind through a hull or pipe
+ *   radio: a radio murmuring to itself · projector: film projector clatter · crowd: low voices round a fire
+ *   sparks: a shorting cable
+ */
+export type AmbientKind = 'drone' | 'fire' | 'neon' | 'generator' | 'drip' | 'hum' | 'wind-hollow' | 'radio' | 'projector' | 'crowd' | 'sparks';
+
 export interface SoundScene { mood: MusicMood; night: boolean; hour: number; inside: boolean; alarm: boolean }
 
 /**
@@ -441,7 +451,7 @@ export class AudioEngine {
   }
 
   /** Spatial looping sources. Returns a handle to move / modulate / stop it. */
-  loop(kind: 'drone' | 'fire' | 'neon' | 'generator', pos: THREE.Vector3) {
+  loop(kind: AmbientKind, pos: THREE.Vector3) {
     if (!this.started) return null;
     const ctx = this.ctx;
     const pan = this.panner(pos, kind === 'neon' ? 2 : 5);

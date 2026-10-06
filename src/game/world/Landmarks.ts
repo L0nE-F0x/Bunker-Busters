@@ -1,4 +1,5 @@
 import * as THREE from 'three/webgpu';
+import type { AmbientKind } from '@/engine/audio';
 import type { Heightfield } from './Heightfield';
 import type { Physics } from '@/engine/physics';
 import { LANDMARKS } from '@/content/world';
@@ -26,7 +27,7 @@ export class Landmarks {
   flickers: Flicker[] = [];
   blinkers: { u: { value: number }; period: number; offset: number }[] = [];
   campPosition = new THREE.Vector3();
-  audioSpots: { kind: 'fire' | 'neon' | 'generator'; pos: THREE.Vector3 }[] = [];
+  audioSpots: { kind: AmbientKind; pos: THREE.Vector3 }[] = [];
 
   constructor(private hf: Heightfield, private physics: Physics) {
     for (const lm of LANDMARKS) {

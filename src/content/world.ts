@@ -32,6 +32,27 @@ export const LANDMARKS: LandmarkDef[] = [
     id: 'cave', name: 'The Cut', kind: 'cave', position: [48, 0, 352], rotation: 0.05,
     blurb: 'A mouth in the ridge. Someone has been living with the view.',
   },
+  // Sites: one class each in src/game/sites/. Keep ids stable; story flags hang off them.
+  {
+    id: 'jet', name: 'The Exit Strategy', kind: 'site', position: [-300, 0, 255], rotation: 0.6,
+    blurb: 'A founder\'s jet that tried to leave early. The desert disagreed.',
+    flatten: { r: 30, falloff: 26 },
+  },
+  {
+    id: 'drivein', name: 'Starlite Drive-In', kind: 'site', position: [-20, 0, -132], rotation: 0.2,
+    blurb: 'The last screening was a keynote. Nobody left before the end.',
+    flatten: { r: 38, falloff: 26 },
+  },
+  {
+    id: 'datacenter', name: 'ColdStorage', kind: 'site', position: [290, 0, -262], rotation: -0.3,
+    blurb: 'Where the cloud came down to earth. It is still warm inside.',
+    flatten: { r: 40, falloff: 28 },
+  },
+  {
+    id: 'tube', name: 'The Tube', kind: 'site', position: [318, 0, 118], rotation: 1.1,
+    blurb: 'A hyperloop test track. Top speed achieved: one press release.',
+    flatten: { r: 22, falloff: 20 },
+  },
 ];
 
 /**

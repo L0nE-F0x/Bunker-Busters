@@ -20,6 +20,7 @@ import { VirtualLight, lightPool } from './world/lights';
 import { updateRim, glow } from './world/materials';
 import { Garage } from './bunker/Garage';
 import { Settlement } from './town/Settlement';
+import { buildSites, type Site } from './sites';
 import { Player } from './player/Player';
 import { FirstPersonCamera } from './player/FirstPersonCamera';
 import { Hands, HAND_LOOKS } from './player/Hands';
@@ -36,7 +37,7 @@ import { ITEMS, HOTBAR_ITEMS } from '@/content/items';
 import { XP_REWARDS, fallFactor } from '@/content/progression';
 import { damp } from '@/engine/noise';
 
-/** Debug: ?skip=props,landmarks,scrub,dust,haze,env,post,garage disables subsystems (for GPU bisecting). */
+/** Debug: ?skip=props,landmarks,scrub,dust,haze,env,post,garage,sites disables subsystems (for GPU bisecting). */
 const SKIP = new Set((new URLSearchParams(location.search).get('skip') ?? '').split(',').filter(Boolean));
 
 /**
@@ -87,6 +88,7 @@ export class Game {
   weather!: Weather;
   garage!: Garage;
   settlement!: Settlement;
+  sites: Site[] = [];
   map!: MapData;
   player: Player | null = null;
   cam!: FirstPersonCamera;
@@ -195,6 +197,7 @@ export class Game {
     await step(0.7, 'Building a doomsday bunker (pre-revenue)');
     this.garage = new Garage(this.ctx);
     this.settlement = new Settlement(this.ctx, this.landmarks);
+    if (!SKIP.has('sites')) this.sites = buildSites(this.ctx, this.landmarks);
     this.buildIntel();
     if (!SKIP.has('env')) this.buildEnvironment();
     if (SKIP.has('garage')) this.scene.remove(this.garage.b.group, this.garage.drone.group);
@@ -384,7 +387,7 @@ export class Game {
         primary: { label: c.label, available: () => true, run: () => this.takeCache(c.id) },
       });
     }
-    this.interactables.push(...this.garage.interactables, ...this.settlement.interactables);
+    this.interactables.push(...this.garage.interactables, ...this.settlement.interactables, ...this.sites.flatMap((s) => s.interactables));
   }
 
   private collectIntel(id: string) {
@@ -998,6 +1001,7 @@ export class Game {
     this.atmo.follow(this.camera);
     this.landmarks.update(dt, this.t, this.camera.position);
     this.settlement?.update(dt, this.camera.position);
+    for (const site of this.sites) site.update(dt, this.camera.position);
     if (this.mode !== 'playing') this.garage.update(dt);
     this.props.update(dt, focusPos, this.atmo.wind);
     this.scrub.update(focusPos, this.atmo.wind);

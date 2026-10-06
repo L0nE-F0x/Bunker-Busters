@@ -106,9 +106,11 @@ export interface Bunker {
 export interface LandmarkDef {
   id: string;
   name: string;
-  kind: 'gas-station' | 'radio-tower' | 'town' | 'cave';
+  kind: 'gas-station' | 'radio-tower' | 'town' | 'cave' | 'site';
   position: Vec3;
   rotation: number;
   camp?: boolean;
   blurb: string;
+  /** Terrain flattened around the landmark (Heightfield). Defaults depend on `kind`. */
+  flatten?: { r: number; falloff: number };
 }

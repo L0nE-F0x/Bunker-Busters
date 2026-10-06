@@ -151,6 +151,21 @@ export class MeshBatch {
   }
 }
 
+/** A site's local frame (position on the terrain + yaw). `p()` maps local → world, `m` is the matrix. */
+export class Frame {
+  readonly m: THREE.Matrix4;
+  constructor(public x: number, public y: number, public z: number, public yaw: number) {
+    this.m = new THREE.Matrix4().compose(
+      new THREE.Vector3(x, y, z),
+      new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), yaw),
+      new THREE.Vector3(1, 1, 1),
+    );
+  }
+  p(lx: number, ly: number, lz: number) {
+    return new THREE.Vector3(lx, ly, lz).applyMatrix4(this.m);
+  }
+}
+
 /**
  * Swaps a detailed group for a cheap stand-in by camera distance (measured from the edge of a site
  * of `radius` around `center`), and hides the stand-in too past `hide`. Hysteresis stops flicker.

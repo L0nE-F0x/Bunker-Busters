@@ -56,10 +56,10 @@ export class Heightfield {
     const g = GARAGE.location.position;
     this.zones.push({ x: g[0], z: g[2], r: 34, falloff: 26 });
     for (const lm of LANDMARKS) {
-      const spec = lm.kind === 'gas-station' ? { r: 30, falloff: 22 }
+      const spec = lm.flatten ?? (lm.kind === 'gas-station' ? { r: 30, falloff: 22 }
         : lm.kind === 'town' ? { r: 44, falloff: 28 }
         : lm.kind === 'cave' ? { r: 14, falloff: 18 }
-        : { r: 16, falloff: 22 };
+        : { r: 16, falloff: 22 });
       const zn: FlattenZone = { x: lm.position[0], z: lm.position[2], ...spec };
       // Sit the cave on the ridge, then blend a walkable ramp down toward the flats.
       if (lm.kind === 'cave') zn.target = this.rawHeight(lm.position[0], lm.position[2]);
