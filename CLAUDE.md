@@ -85,10 +85,15 @@ Rebuild a tag's release without retagging: Actions → Release → *Run workflow
 ```
 src/main.ts                 boot → createRenderer → Game.build()
 src/engine/                 renderer (backend chain, canvas sizing), postfx (TSL post stack), audio (procedural
-                            Web Audio: ambience, sfx) + music (generative score), physics (Rapier), input, noise + noiseTex (baked noise atlas)
+                            Web Audio: ambience, sfx) + ambient (positional loop voices) + foley/surface (footsteps by
+                            surface, room reverb) + music (generative score), physics (Rapier), input, noise + noiseTex
 src/game/Game.ts            orchestrator: modes title → charselect → playing, frame loop, items, saves, HUD feed
+src/game/Story.ts           quest runtime (steps from flags, rewards, banter); data in content/quests.ts + story.ts
 src/game/world/             Atmosphere (sky, fog, sun, day/night), Heightfield + Terrain, Props, Landmarks,
-                            Scrub, effects (dust, haze, fire, light cones, shockwave), materials (factories), kit (geometry)
+                            Scrub, effects (dust, haze, fire, light cones, shockwave), materials (factories), kit (geometry,
+                            MeshBatch + buildFar, DistanceLod, shadowProxy, Frame), lights (VirtualLight pool), npc (people)
+src/game/town/              Dry Creek, The Cut and the wash (Settlement.ts: build half + NPC dialogue/quests half)
+src/game/sites/             points of interest, one class each: jet, drivein, datacenter, tube (Site.ts: flag contract)
 src/game/bunker/            GarageBuilder (Tier 1 geometry), Garage (locks, hazards, loot, taunts), Drone (SeedBot AI)
 src/game/player/            Player (Rapier controller), FirstPersonCamera, Hands (procedural viewmodel + poses),
                             CharacterModel (third-person body, now a shadow-only caster), ThirdPersonCamera (unused)
@@ -156,6 +161,7 @@ The webview's `console.log` goes to stdout.
   - **Never mutate a factory material.** Use `rustyMetalUnique`/`fabricUnique`.
   - No GTAO pass on WebGL.
   - **No CSS `filter`, `backdrop-filter` or `mix-blend-mode` in WebKitGTK**: they're redrawn on the CPU over the canvas every frame and took menus to ~13 fps. `html.lowfx` (auto in the Linux app, `?lowfx=1` to test) must neutralise any new ones. Throttle per-frame canvas/DOM updates.
+- **Lights and distance:** never `new THREE.PointLight` in world code. Use `VirtualLight` (world/lights.ts): a fixed pool of real lights is lent to the nearest, so the light count (and every shader) never changes. New places get a `buildFar()` stand-in under a `DistanceLod` and a `shadowProxy()` for their static batch (skip anything that moves or hides).
 - **TSL shaders:**
   - Put tweakable values in `uniform()`, not literals, so instances share one program. Unique literals mean one compile per material, which made loading take 73 s once.
   - Sample the baked noise atlas (`noise()`/`fbm2()` in `src/engine/noiseTex.ts`) instead of per-pixel `mx_*` noise.
