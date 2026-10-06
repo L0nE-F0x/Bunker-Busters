@@ -169,10 +169,6 @@ export class SiteKit {
       m.castShadow = true;
       m.name = name + '-sand';
       near.add(m);
-      // the drifts are part of the silhouette from the road too
-      const fm = new THREE.Mesh(g, sandMaterial(scene));
-      fm.receiveShadow = true;
-      far.add(fm);
     }
     near.add(this.halos.build());
     root.add(near, far);
@@ -226,6 +222,14 @@ export function sandMaterial(scene: THREE.Scene) {
   const t = scene.getObjectByName('terrain') as THREE.Mesh | undefined;
   _sand = (t?.material as THREE.Material) ?? plainStandard('#a8784a', 0.95);
   return _sand;
+}
+
+let _glass: THREE.Material | null = null;
+/** Thin tinted glass (cabin windows, windscreens, car glass). Transparent, so it draws apart. */
+export function glassMat() {
+  if (_glass) return _glass;
+  _glass = new THREE.MeshStandardNodeMaterial({ color: '#8fa6ae', roughness: 0.04, metalness: 0.4, transparent: true, opacity: 0.32, depthWrite: false });
+  return _glass;
 }
 
 // ------------------------------------------------------------------ hull
@@ -372,6 +376,33 @@ export function frustum(src: THREE.Vector3[], dst: THREE.Vector3[]) {
   g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
   g.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
   g.computeVertexNormals();
+  return g;
+}
+
+/**
+ * A rounded frustum between two superellipse sections (rounder than a box, so the facing term in
+ * beamMaterial shades it like a volume). `a`/`b` = section centres, (ra, rb) = their half extents,
+ * axes `ux`/`uy` span both sections. uv.x runs around, uv.y 0 at `a` → 1 at `b`.
+ */
+export function beamTube(a: THREE.Vector3, ra: [number, number], b: THREE.Vector3, rb: [number, number], ux: THREE.Vector3, uy: THREE.Vector3, segs = 28, n = 4) {
+  const ring = (c: THREE.Vector3, r: [number, number]) => Array.from({ length: segs + 1 }, (_, i) => {
+    const t = (i / segs) * Math.PI * 2;
+    const ct = Math.cos(t), st = Math.sin(t);
+    const x = Math.sign(ct) * Math.pow(Math.abs(ct), 2 / n) * r[0];
+    const y = Math.sign(st) * Math.pow(Math.abs(st), 2 / n) * r[1];
+    return c.clone().addScaledVector(ux, x).addScaledVector(uy, y);
+  });
+  const A = ring(a, ra), B = ring(b, rb);
+  const pos: number[] = [], uvs: number[] = [];
+  for (let i = 0; i < segs; i++) {
+    const q: [THREE.Vector3, number, number][] = [[A[i], i / segs, 0], [A[i + 1], (i + 1) / segs, 0], [B[i + 1], (i + 1) / segs, 1], [A[i], i / segs, 0], [B[i + 1], (i + 1) / segs, 1], [B[i], i / segs, 1]];
+    for (const [p, u, w] of q) { pos.push(p.x, p.y, p.z); uvs.push(u, w); }
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  g.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
+  g.computeVertexNormals();
+  smoothNormals(g);
   return g;
 }
 

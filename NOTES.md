@@ -405,3 +405,25 @@ The sheet from the systems pass had nowhere new to be spent, and the map still h
 
 **Next**
 - The owner's live pass: which Dry Creek door is free, which one is miserable, and whether the wash is obvious enough from the spire.
+
+## Sites: Exit Strategy & Starlite (2026-10-06)
+
+Two points of interest by the same founder. Hunter Vale (Ascend, "EXIT: evacuation as a service") launched at the Starlite with a keynote, then left early in his own jet, alone, by parachute. Code: `src/game/sites/jet.ts`, `drivein.ts`, art in `jetArt.ts` / `driveinArt.ts`, shared kit in `jetKit.ts`.
+
+**What works** (headless Chrome, teleports, scripted walks, screenshots by day, golden hour and night):
+- **The Exit Strategy** (−300, 255). A business jet broken in three along a ploughed gouge: the nose dug into a sand mound (airstair down, galley, a cockpit you can see out of), the cabin (cream leather club seats, divan, credenza, oxygen masks, a roof tear and windows that let the sun in as shafts), the tail (lav, wardrobe, baggage hold, T-tail with a red ELT strobe). The right wing stands tip-down in the dune. The SafeExit airframe parachute lies half-inflated on the slope behind, gold and cream, trailing risers to the tail: it is the silhouette from the road, and you can walk under it. Debris: suitcases, champagne crates, seats, an exercise bike, the gold EXIT brochure.
+- Jet interactions: the napkin on the yoke, the flight recorder (Electronics 1 + circuit; the transcript gives the hold code), the Ascend concierge sat phone (Social 2 remote-opens the hold), the hold itself (Lockpicking 2 pick, Demolition 2 charge, or the keypad code `0000`), the go bag inside (crouch in), the raft survival kit (Survival 2), the galley, the brochure. Flags: `site.jet.found` (inside the cabin), `.note`, `.cvr`, `.code`, `.phone`, `.hold`, `.done` (go bag taken), `.raft`, `.galley`, `.brochure`.
+- **Starlite Drive-In** (−20, −132). Rotation changed 0.2 → −0.45 so the screen faces the spawn, the gas station and the west highway instead of a 22 m mesa; flatten r 38 → 46. A 30 × 14 m screen on a lattice tower with missing and hanging panels and the faded ASCEND print; four arcs of car ramps with procedural rusted cars and speaker posts; snack bar and projection booth (menu, popcorn machine, projector with reels, rewind bench); generator; ticket booth and barrier; the STARLITE marquee with missing letters, a pink/cyan neon header and a chaser-bulb star; fence, light poles, playground.
+- **The signature**: power the generator (Electronics 1 circuit, or swap in a Lithium Cell), get into the booth (Lockpicking 2, Demolition 1, or the staff key from the manager's wagon with Survival 1), start the projector. A volumetric beam (rounded frustum, dust, flicker) throws a 62 s keynote loop (film leader, slides, an APPLAUSE sign, a backstage hot mic), drawn on a 512×240 canvas at ~10 fps, onto the screen as emission. The screen tints a 90 m light over the cars, and subtitles run while you are in the lot. The hot mic points at the jet ("wheels up at eleven, north-west, one passenger").
+- Drive-in flags: `site.drivein.found` (in the rows), `.power`, `.key`, `.booth`, `.screening` (projector on; it toggles), `.started`, `.done` (heard the hot mic in the lot), `.reel`, `.note`, `.tickets`, `.snacks`.
+- New items: `exit_pass` (EXIT Platinum Pass), `keynote_reel` (Keynote Reel, Uncut).
+- Ambience: static `wind-hollow`, `radio`, `sparks` (jet) and `wind-hollow`, `neon` (drive-in). The drive-in starts its own `generator`, `projector` and `crowd` loops only while powered or screening.
+- Colliders are oriented Rapier boxes and trimeshes (sand drifts, ramps) built from the same geometry. Walks tested: every jet section in and out (ramps, airstair, crouching into the hold); the drive-in side doors, booth, ramps and entrance lane.
+- Draw calls (A/B against `?skip=sites`, same camera): jet heart +28, drive-in heart +25 (+27 at night with the projector), snack bar +31, each far stand-in ≤ 4, nothing past ~650 m.
+
+**Stubbed**
+- Doors snap to their flags on load. The keynote has no audio of its own beyond the audio agent's `crowd`/`projector` voices and the subtitles.
+
+**Next**
+- The owner's eye on the beam strength at night and on the golden-hour backlight (the sun sets behind the screen).
+- Story hooks: `site.drivein.done` points at the jet. `exit_pass` and `keynote_reel` are trinkets with no use yet.

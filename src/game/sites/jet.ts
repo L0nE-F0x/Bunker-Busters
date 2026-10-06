@@ -10,7 +10,7 @@ import { ITEMS } from '@/content/items';
 import { XP_REWARDS } from '@/content/progression';
 import {
   SiteKit, hull, ringStrip, mat4, xf, v3, rng, decal, floorDecal, decalMat, glowDecalMat, atlasSolid, atlasMap,
-  beamMaterial, uSiteNight, uSiteFlicker, type Col,
+  beamMaterial, uSiteNight, uSiteFlicker, glassMat, type Col,
 } from './jetKit';
 import './jetArt';
 
@@ -1480,12 +1480,6 @@ export class JetSite extends Site {
 }
 
 // ------------------------------------------------------------------ helpers
-let _glass: THREE.Material | null = null;
-function glassMat() {
-  if (_glass) return _glass;
-  _glass = new THREE.MeshStandardNodeMaterial({ color: '#8fa6ae', roughness: 0.04, metalness: 0.4, transparent: true, opacity: 0.32, depthWrite: false });
-  return _glass;
-}
 
 const droopTail = (z: number) => (z > 2.6 ? 0.55 * ((z - 2.6) / 7) ** 2 : 0);
 const bell = (u: number, c: number, w: number) => { const t = Math.max(0, 1 - Math.abs(u - c) / w); return t * t * (3 - 2 * t); };
