@@ -1,7 +1,7 @@
 import * as THREE from 'three/webgpu';
 import {
   uniform, vec3, vec4, float, Fn, positionLocal, positionWorld, cameraPosition, normalize, dot, max, pow, mix,
-  smoothstep, exp, abs, select, length, time, clamp, fog, vec2, atan, renderGroup, fract, sin, step, fwidth,
+  smoothstep, exp, abs, select, length, time, clamp, fog, vec2, atan, renderGroup, fract, sin, step, fwidth, If,
 } from 'three/tsl';
 import { clamp as clampN, lerp, smoothstep as smoothN } from '@/engine/noise';
 import { noise } from '@/engine/noiseTex';
@@ -276,55 +276,58 @@ export class Atmosphere {
 
       // night sky: a detailed milky way (bright core, mottled glow, dark dust lanes, a warm galactic
       // centre), round anti-aliased stars with a real magnitude spread, and a crisp cratered moon
-      const dark = pow(this.uNight, 4).mul(pow(clear, 4)).mul(float(1).sub(cloud)).mul(smoothstep(0.0, 0.25, h)).toVar();
-      const mwN = vec3(0.32, 0.55, 0.77).normalize();
-      const mwT = vec3(0.86, -0.5, 0).normalize();
-      const mwB = mwN.cross(mwT);
-      const md = dot(rd, mwN);
-      const mwU = atan(dot(rd, mwB), dot(rd, mwT)).div(Math.PI * 2);
-      const band = exp(md.mul(md).mul(-16));
-      const core = exp(md.mul(md).mul(-70));
-      // integer frequencies in u so the atlas wraps seamlessly around the band
-      const m1 = noise(vec2(mwU.mul(6), md.mul(2.2))).r;
-      const m2 = noise(vec2(mwU.mul(17), md.mul(6.5)).add(0.31)).g;
-      const m3 = noise(vec2(mwU.mul(41), md.mul(15)).add(0.73)).r;
-      const lanes = smoothstep(0.42, 0.68, m2.mul(0.55).add(m3.mul(0.45))).mul(core);
-      const gc = exp(mwU.mul(mwU).mul(-30));
-      const milky = band.mul(m1.mul(0.8).add(0.25)).mul(m3.mul(0.5).add(0.6)).mul(float(1).add(gc.mul(core).mul(1.5)))
-        .mul(float(1).sub(lanes.mul(0.75)));
-      const mwCol = mix(vec3(0.5, 0.58, 0.85), vec3(0.95, 0.8, 0.62), gc.mul(core));
-      col.addAssign(mwCol.mul(milky).mul(0.13).mul(dark));
-      const starLayer = (k: number, dens0: N, seed: number) => {
-        const p = rd.mul(k);
-        const cell = p.floor();
-        const hs = (v: N) => fract(sin(dot(cell, v)).mul(43758.5453));
-        const hA = hs(vec3(127.1, 311.7, 74.7).add(seed)), hB = hs(vec3(269.5, 183.3, 246.1).add(seed));
-        const hC = hs(vec3(113.5, 271.9, 124.6).add(seed)), hD = hs(vec3(419.2, 371.9, 168.2).add(seed));
-        const pos = normalize(cell.add(vec3(hA, hB, hC).mul(0.4).add(0.3))).mul(k);
-        const px = length(fwidth(p)).max(1e-4);
-        const d = length(p.sub(pos)).div(px);
-        const on = step(float(1).sub(dens0), hD);
-        // magnitude: mostly faint, a few bright
-        const mag = pow(fract(hD.mul(91.7)), 7).mul(5).add(0.25);
-        return vec4(on.mul(mag).mul(smoothstep(1.3, 0.0, d)), hA, hB, hC);
-      };
-      // cells several pixels wide so a star never gets clipped by its cell
-      const sF = starLayer(150, float(0.03).add(band.mul(0.05)), 0);
-      const sB = starLayer(55, float(0.02), 17.3);
-      const twinkle = time.mul(float(2.1).add(sB.y.mul(3))).add(sB.z.mul(60)).sin().mul(0.35).add(0.75);
-      const tintF = mix(vec3(1.0, 0.84, 0.7), vec3(0.75, 0.85, 1.0), sF.y);
-      const tintB = mix(vec3(1.0, 0.8, 0.62), vec3(0.72, 0.84, 1.0), sB.z);
-      col.addAssign(tintF.mul(sF.x).mul(0.5).add(tintB.mul(sB.x).mul(twinkle).mul(1.4)).mul(dark));
-      const mmu = dot(rd, this.uMoonDir);
-      const moonDisk = smoothstep(0.99936, 0.99952, mmu);
-      // crater/maria pattern in the disk's own tangent frame, darkened toward the limb
-      const mT = this.uMoonDir.cross(vec3(0, 1, 0.001)).normalize();
-      const mB = this.uMoonDir.cross(mT);
-      const mUv = vec2(dot(rd, mT), dot(rd, mB)).mul(28);
-      const maria = smoothstep(0.38, 0.62, noise(mUv.add(0.21)).r).mul(-0.42).add(noise(mUv.mul(2.7)).b.mul(0.22)).add(0.9);
-      const limb = smoothstep(0.99936, 0.99985, mmu).mul(0.3).add(0.7);
-      const moonGlow = pow(max(mmu, 0), 3000).mul(0.12).add(pow(max(mmu, 0), 120).mul(0.03));
-      col.addAssign(vec3(0.86, 0.9, 1.0).mul(moonDisk.mul(maria).mul(limb).mul(2.4).add(moonGlow)).mul(this.uNight).mul(pow(clear, 3)));
+      // (a uniform branch: by day none of this runs)
+      If(this.uNight.greaterThan(0.001), () => {
+        const dark = pow(this.uNight, 4).mul(pow(clear, 4)).mul(float(1).sub(cloud)).mul(smoothstep(0.0, 0.25, h)).toVar();
+        const mwN = vec3(0.32, 0.55, 0.77).normalize();
+        const mwT = vec3(0.86, -0.5, 0).normalize();
+        const mwB = mwN.cross(mwT);
+        const md = dot(rd, mwN);
+        const mwU = atan(dot(rd, mwB), dot(rd, mwT)).div(Math.PI * 2);
+        const band = exp(md.mul(md).mul(-16));
+        const core = exp(md.mul(md).mul(-70));
+        // integer frequencies in u so the atlas wraps seamlessly around the band
+        const m1 = noise(vec2(mwU.mul(6), md.mul(2.2))).r;
+        const m2 = noise(vec2(mwU.mul(17), md.mul(6.5)).add(0.31)).g;
+        const m3 = noise(vec2(mwU.mul(41), md.mul(15)).add(0.73)).r;
+        const lanes = smoothstep(0.42, 0.68, m2.mul(0.55).add(m3.mul(0.45))).mul(core);
+        const gc = exp(mwU.mul(mwU).mul(-30));
+        const milky = band.mul(m1.mul(0.8).add(0.25)).mul(m3.mul(0.5).add(0.6)).mul(float(1).add(gc.mul(core).mul(1.5)))
+          .mul(float(1).sub(lanes.mul(0.75)));
+        const mwCol = mix(vec3(0.5, 0.58, 0.85), vec3(0.95, 0.8, 0.62), gc.mul(core));
+        col.addAssign(mwCol.mul(milky).mul(0.13).mul(dark));
+        const starLayer = (k: number, dens0: N, seed: number) => {
+          const p = rd.mul(k);
+          const cell = p.floor();
+          const hs = (v: N) => fract(sin(dot(cell, v)).mul(43758.5453));
+          const hA = hs(vec3(127.1, 311.7, 74.7).add(seed)), hD = hs(vec3(419.2, 371.9, 168.2).add(seed));
+          const hB = fract(hA.mul(13.13).add(hD.mul(3.7))), hC = fract(hD.mul(7.77).add(hA.mul(5.3)));
+          const pos = normalize(cell.add(vec3(hA, hB, hC).mul(0.4).add(0.3))).mul(k);
+          const px = length(fwidth(p)).max(1e-4);
+          const d = length(p.sub(pos)).div(px);
+          const on = step(float(1).sub(dens0), hD);
+          // magnitude: mostly faint, a few bright
+          const mag = pow(fract(hD.mul(91.7)), 7).mul(5).add(0.25);
+          return vec4(on.mul(mag).mul(smoothstep(1.3, 0.0, d)), hA, hB, hC);
+        };
+        // cells several pixels wide so a star never gets clipped by its cell
+        const sF = starLayer(150, float(0.03).add(band.mul(0.05)), 0);
+        const sB = starLayer(55, float(0.02), 17.3);
+        const twinkle = time.mul(float(2.1).add(sB.y.mul(3))).add(sB.z.mul(60)).sin().mul(0.35).add(0.75);
+        const tintF = mix(vec3(1.0, 0.84, 0.7), vec3(0.75, 0.85, 1.0), sF.y);
+        const tintB = mix(vec3(1.0, 0.8, 0.62), vec3(0.72, 0.84, 1.0), sB.z);
+        col.addAssign(tintF.mul(sF.x).mul(0.5).add(tintB.mul(sB.x).mul(twinkle).mul(1.4)).mul(dark));
+        const mmu = dot(rd, this.uMoonDir);
+        const moonDisk = smoothstep(0.99936, 0.99952, mmu);
+        // crater/maria pattern in the disk's own tangent frame, darkened toward the limb
+        const mT = this.uMoonDir.cross(vec3(0, 1, 0.001)).normalize();
+        const mB = this.uMoonDir.cross(mT);
+        const mUv = vec2(dot(rd, mT), dot(rd, mB)).mul(28);
+        const maria = smoothstep(0.38, 0.62, noise(mUv.add(0.21)).r).mul(-0.42).add(noise(mUv.mul(2.7)).b.mul(0.22)).add(0.9);
+        const limb = smoothstep(0.99936, 0.99985, mmu).mul(0.3).add(0.7);
+        const moonGlow = pow(max(mmu, 0), 3000).mul(0.12).add(pow(max(mmu, 0), 120).mul(0.03));
+        col.addAssign(vec3(0.86, 0.9, 1.0).mul(moonDisk.mul(maria).mul(limb).mul(2.4).add(moonGlow)).mul(this.uNight).mul(pow(clear, 3)));
+      });
 
       // faint dust band glow near horizon
       col.addAssign(hz.mul(smoothstep(0.08, 0.0, abs(h)).mul(0.08)));

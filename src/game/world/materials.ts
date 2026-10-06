@@ -153,8 +153,9 @@ function settle(m: THREE.MeshStandardNodeMaterial, base: N, amount: N = float(1)
   const wp = positionWorld;
   const ground = groundTex.sample(wp.xz.div(uGroundSize).add(0.5)).r;
   const above = wp.y.sub(ground);
-  const patch = noise(wp.xz.mul(0.43).add(wp.y.mul(0.13))).r;
-  const speck = noise(wp.xz.mul(3.1).add(wp.y.mul(0.9))).g;
+  const pTap = noise(wp.xz.mul(0.43).add(wp.y.mul(0.13)));
+  const patch = pTap.r;
+  const speck = pTap.a; // the atlas' per-texel grain (~1 cm here), mip-averaged with distance
   const ny = normalWorld.y;
   const up = smoothstep(0.4, 0.95, ny);
   // a fine, even dusting everywhere that faces up, heavier in drifts (and after a storm)

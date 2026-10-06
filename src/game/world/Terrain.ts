@@ -197,7 +197,7 @@ export class Terrain {
     const rippleAA = smoothstep(1.1, 0.3, fwidth(rPhase));
     const ripple = sin(rPhase.add(warp)).mul(0.5).add(0.5).sub(0.5).mul(rippleAA).add(0.5);
     // a broader ripple field (~4-6 m crests) that survives into the mid-ground and catches low sun
-    const mPhase = xz.x.mul(0.62).add(xz.y.mul(0.78)).mul(1.15).add(fbm2(xz.div(70)).mul(9));
+    const mPhase = xz.x.mul(0.62).add(xz.y.mul(0.78)).mul(1.15).add(midTap.g.sub(0.5).mul(9));
     const macro = sin(mPhase).mul(0.5).add(0.5).sub(0.5).mul(smoothstep(1.2, 0.3, fwidth(mPhase))).add(0.5);
     const rippleH = pow(ripple, 2.0).mul(0.6).add(fine.mul(0.3)).add(grain.mul(0.15)).add(pow(macro, 1.6).mul(1.4));
     // long wind streaks: lighter sand blown into tails, darker coarse lag between them
@@ -236,24 +236,29 @@ export class Terrain {
     const rockH = layerFine.mul(0.5).add(rockTap.r.mul(0.9)).add(rockTap.b.mul(0.4)).add(ledge.mul(0.8));
 
     // scrub patches
-    const scrubMask = smoothstep(0.05, 0.25, fbm2(xz.div(80).add(0.3))).mul(float(1).sub(rockMask)).mul(0.5);
+    const scrubTap = noise(xz.div(80).add(0.3));
+    const scrubMask = smoothstep(0.05, 0.25, scrubTap.r.sub(0.5)).mul(float(1).sub(rockMask)).mul(0.5);
 
     // highway: old, sun-greyed asphalt. Alligator cracking only in patches (a crack network
     // everywhere read as paving tiles), darker tar repairs, crumbling edges, faded paint, drifting sand
-    const edgeNoise = fbm2(xz.div(9)).mul(2.4);
+    const t9 = noise(xz.div(9));
+    const edgeNoise = t9.r.sub(0.5).mul(2.4);
     const asphaltMask = smoothstep(4.6, 3.8, roadD.add(edgeNoise)).mul(inside);
-    const sandDrift = smoothstep(0.45, 0.7, noise(xz.div(22).add(0.5)).g);
-    const crackZone = smoothstep(0.52, 0.72, noise(xz.div(34).add(0.83)).g).add(smoothstep(3.0, 4.2, roadD).mul(0.6));
+    // (taps shared between masks where the scale allows: every fetch costs the whole ground)
+    const driftTap = noise(xz.div(22).add(0.5));
+    const sandDrift = smoothstep(0.45, 0.7, driftTap.g);
+    const crackZone = smoothstep(0.52, 0.72, driftTap.r).add(smoothstep(3.0, 4.2, roadD).mul(0.6));
     const roadCracks = smoothstep(0.07, 0.015, noise(xz.div(5).add(0.25)).b).mul(clamp(crackZone, 0, 1));
-    const tarPatch = smoothstep(0.68, 0.7, noise(xz.div(7).add(0.9)).r);
+    const tarPatch = smoothstep(0.68, 0.7, crackTap.g);
     const dash = smoothstep(0.1, 0.25, d.b).mul(smoothstep(0.22, 0.12, roadD));
     const sideLine = smoothstep(0.18, 0.06, abs(roadD.sub(3.3)));
-    const paintWear = smoothstep(0.35, 0.6, noise(xz.div(3)).r);
+    const t3 = noise(xz.div(3));
+    const paintWear = smoothstep(0.35, 0.6, t3.r);
     const aggregate = grain.add(0.5).mul(0.35).add(fine.add(0.5).mul(0.65));
     // sun-bleached blotches, darker wheel paths either side of each lane centre, oil drips between them
-    const bleach = noise(xz.div(16).add(0.4)).r.sub(0.5);
+    const bleach = scrubTap.g.sub(0.5);
     const wheel = smoothstep(0.55, 0.0, abs(abs(roadD.sub(1.65)).sub(0.55))).mul(0.5);
-    const oil = smoothstep(0.62, 0.8, noise(xz.div(2.2).add(0.6)).g).mul(smoothstep(0.35, 0.0, abs(roadD.sub(1.65))));
+    const oil = smoothstep(0.62, 0.8, t3.g).mul(smoothstep(0.35, 0.0, abs(roadD.sub(1.65))));
     const asphaltBase = mix(vec3(0.095, 0.092, 0.088), vec3(0.19, 0.18, 0.17), aggregate)
       .mul(float(1).add(bleach.mul(0.5)).sub(wheel.mul(0.3)).sub(oil.mul(0.45)))
       .mul(float(1).sub(tarPatch.mul(0.25)));
@@ -274,7 +279,7 @@ export class Terrain {
     // pebbles and grit scattered over sand and dirt (cell blobs, thinned by a second tap; they fade
     // out before they shrink below a pixel so the far ground doesn't sparkle)
     const pebTap = noise(xz.div(2.8).add(0.13));
-    const pebMask = smoothstep(0.62, 0.8, noise(xz.div(9).add(0.71)).r.add(mid.mul(0.6)));
+    const pebMask = smoothstep(0.62, 0.8, t9.g.add(mid.mul(0.6)));
     const pebNear = smoothstep(0.5, 0.15, fwidth(xz.x.div(2.8)).mul(12));
     const pebble = smoothstep(0.5, 0.8, pebTap.b).mul(step(0.72, pebTap.a)).mul(pebMask).mul(pebNear)
       .mul(float(1).sub(rockMask)).mul(float(1).sub(roadFinal)).mul(float(1).sub(lowMask));
