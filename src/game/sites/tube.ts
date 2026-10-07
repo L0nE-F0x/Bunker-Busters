@@ -1,4 +1,5 @@
 import * as THREE from 'three/webgpu';
+import { Interior } from '../world/interiors';
 import type { GameContext, TalkChoiceView } from '../context';
 import type { Landmarks } from '../world/Landmarks';
 import type { GameState } from '../State';
@@ -6,7 +7,7 @@ import { Sparks } from '../world/effects';
 import { ITEMS } from '@/content/items';
 import { XP_REWARDS } from '@/content/progression';
 import { Site } from './Site';
-import { TubeBuild, CH, DECK, TZ, STATION, INNER, AIRLOCK, EAST_END, WEST_END, POD } from './tubeBuild';
+import { TubeBuild, CH, DECK, TZ, STATION, INNER, AIRLOCK, EAST_END, WEST_END, POD, R } from './tubeBuild';
 
 /** Story flags (see Site.ts). */
 const F = {
@@ -78,6 +79,20 @@ export class TubeSite extends Site {
     this.b.root.add(this.sparks.sprite);
     this.line = new LineLod(this.frame.p(WEST_END - 28, 0, TZ), this.frame.p(EAST_END + 18, 0, TZ), this.b.near, this.b.far, this.b.lights);
     this.inv.copy(this.frame.m).invert();
+    // the sealed west tube: its openings are the airlock and the torn mouth at the break
+    const ax = this.b.innerAxis;
+    const cy = (x: number) => {
+      for (let i = 0; i < ax.length - 1; i++) if (x <= ax[i + 1][0]) return ax[i][1] + ((x - ax[i][0]) / (ax[i + 1][0] - ax[i][0])) * (ax[i + 1][1] - ax[i][1]);
+      return ax[ax.length - 1][1];
+    };
+    const [mx, my] = ax[0];
+    this.interior = new Interior('tube', this.frame.m,
+      (p) => p.x > mx + 0.8 && p.x < ax[ax.length - 1][0] && (p.y - cy(p.x)) ** 2 + (p.z - TZ) ** 2 < (R - 0.05) ** 2,
+      [
+        { box: new THREE.Box3(new THREE.Vector3(mx - 2, my - 2, TZ - R - 0.8), new THREE.Vector3(mx + 2, my + 2.2, TZ + R + 0.8)) },
+        { box: new THREE.Box3(new THREE.Vector3(AIRLOCK.x0 - 0.4, AIRLOCK.floor - 0.4, TZ - R - 0.8), new THREE.Vector3(AIRLOCK.x1 + 0.4, AIRLOCK.floor + 2.6, TZ - R + 0.6)) },
+      ],
+      [this.group]);
 
     const P = this.b.pts;
     this.spot('heart', 0, DECK, -3.5);

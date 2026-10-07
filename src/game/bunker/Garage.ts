@@ -1,4 +1,5 @@
 import * as THREE from 'three/webgpu';
+import { Interior } from '../world/interiors';
 import { GarageBuilder, YARD, HOUSE, type Door } from './GarageBuilder';
 import { Drone, type DroneState } from './Drone';
 import { CH } from './garageDressing';
@@ -609,6 +610,23 @@ export class Garage {
    * own draws (vault door, whiteboard, lasers, loot) whenever nobody can see in. The house is closed
    * except the side door, so the interior shows from inside, or from near that door once it's open.
    */
+  private _interior: Interior | null = null;
+  /**
+   * The house as a sealed interior (see world/interiors.ts): block walls, the roll-up welded shut,
+   * window slits that are solid glowing panels. The one way out is the east side door, a portal
+   * while it's open.
+   */
+  get interior() {
+    if (this._interior) return this._interior;
+    const hb = this.houseBox, side = this.b.doors.side;
+    const { pos, half } = side.colliderSpec;
+    const door = new THREE.Box3(pos.clone().sub(half), pos.clone().add(half)).expandByVector(new THREE.Vector3(0.6, 0.15, 0.2));
+    return (this._interior = new Interior('garage', new THREE.Matrix4(),
+      (p) => p.x > hb.min.x + 0.05 && p.x < hb.max.x - 0.05 && p.z > hb.min.z + 0.05 && p.z < hb.max.z - 0.05 && p.y < hb.max.y,
+      [{ box: door, open: () => side.open > 0.005 || side.target > 0 }],
+      [this.b.group, this.drone.group]));
+  }
+
   cull(cam: THREE.Vector3) {
     this.b.lod.update(cam);
     const hb = this.houseBox, side = this.b.doors.side;

@@ -1,5 +1,5 @@
 import * as THREE from 'three/webgpu';
-import { positionLocal, positionGeometry, uniform, vec3, sin, mix, color, float, smoothstep, positionWorld, length, cameraPosition } from 'three/tsl';
+import { positionLocal, positionGeometry, uniform, vec3, sin, mix, color, float, smoothstep, positionWorld, length, cameraPosition, uv, step, varying, instancedBufferAttribute } from 'three/tsl';
 import { noise } from '@/engine/noiseTex';
 import type { Heightfield } from './Heightfield';
 import { Simplex2 } from '@/engine/noise';
@@ -7,24 +7,51 @@ import { norm, merge } from './kit';
 
 const CELL = 1.5; // scatter grid (m)
 
+/**
+ * One tuft holds every part any tuft might show; each instance hides what it doesn't have (uv.x tags
+ * the part: 0 blade, 1 seed stalk, 2 flower). Blades vary in width, height, lean and curl.
+ */
 function tuftGeometry() {
   const parts: THREE.BufferGeometry[] = [];
-  const blades = 7;
-  for (let i = 0; i < blades; i++) {
-    const h = 0.35 + Math.random() * 0.4;
-    const w = 0.035;
+  const tag = (g: THREE.BufferGeometry, k: number) => {
+    const u = g.attributes.uv as THREE.BufferAttribute;
+    for (let i = 0; i < u.count; i++) u.setX(i, k);
+    return g;
+  };
+  const blade = (h: number, w: number, curl: number, yaw: number, tilt: number, kind = 0) => {
     const g = new THREE.PlaneGeometry(w, h, 1, 3);
     const p = g.attributes.position as THREE.BufferAttribute;
     for (let k = 0; k < p.count; k++) {
       const y = p.getY(k) + h / 2;
       const t = y / h;
-      p.setX(k, p.getX(k) * (1 - t * 0.9));
+      p.setX(k, p.getX(k) * (1 - t * 0.92));
       p.setY(k, y);
-      p.setZ(k, t * t * 0.18); // curl outward
+      p.setZ(k, t * t * curl);
     }
-    g.rotateY((i / blades) * Math.PI * 2 + Math.random() * 0.5);
-    g.rotateZ((Math.random() - 0.5) * 0.4);
-    parts.push(norm(g));
+    g.rotateY(yaw);
+    g.rotateZ(tilt);
+    return tag(norm(g), kind);
+  };
+  const blades = 12;
+  for (let i = 0; i < blades; i++) {
+    const tall = Math.random();
+    parts.push(blade(0.22 + tall * 0.55, 0.022 + Math.random() * 0.03, 0.08 + Math.random() * 0.22, (i / blades) * Math.PI * 2 + Math.random() * 0.5, (Math.random() - 0.5) * 0.5));
+  }
+  // seed stalks: thin straight stems with a spindle of seeds on top
+  for (let i = 0; i < 3; i++) {
+    const h = 0.6 + Math.random() * 0.3, yaw = Math.random() * 6.3, tilt = (Math.random() - 0.5) * 0.35;
+    parts.push(blade(h, 0.012, 0.05, yaw, tilt, 1));
+    const head = new THREE.CylinderGeometry(0.002, 0.007, 0.14, 3, 1, true).translate(0, h + 0.04, 0.045);
+    head.rotateY(yaw);
+    head.rotateZ(tilt);
+    parts.push(tag(norm(head), 1));
+  }
+  // flowers: short stems with small heads
+  for (let i = 0; i < 3; i++) {
+    const h = 0.2 + Math.random() * 0.2, a = Math.random() * 6.3, rr = 0.06 + Math.random() * 0.08;
+    const stem = new THREE.CylinderGeometry(0.003, 0.004, h, 3).translate(Math.cos(a) * rr, h / 2, Math.sin(a) * rr);
+    const head = new THREE.IcosahedronGeometry(0.022, 0).scale(1, 0.55, 1).translate(Math.cos(a) * rr, h, Math.sin(a) * rr);
+    parts.push(tag(norm(stem), 2), tag(norm(head), 2));
   }
   return merge(parts);
 }
@@ -41,31 +68,50 @@ export class Scrub {
   readonly uGust = uniform(new THREE.Vector2());
   private lastT = performance.now();
   private capacity: number;
+  private vars: THREE.InstancedBufferAttribute;
 
   constructor(private hf: Heightfield, density = 1) {
     this.capacity = Math.floor(9000 * density);
+    this.vars = new THREE.InstancedBufferAttribute(new Float32Array(this.capacity * 4), 4);
     const mat = new THREE.MeshStandardNodeMaterial({ side: THREE.DoubleSide, roughness: 0.9 });
     // instancing is applied before positionNode, so positionLocal is already in world space here
     const hgt = positionGeometry.y;
     const sway = sin(this.uPhase.add(positionLocal.x.mul(0.35)).add(positionLocal.z.mul(0.27))).mul(0.5).add(0.6);
     const gust = noise(positionLocal.xz.mul(0.012).sub(this.uGust)).r;
     const bend = hgt.mul(hgt).mul(sway.add(gust)).mul(0.9);
-    mat.positionNode = positionLocal.add(vec3(this.uWind.x.mul(bend), bend.mul(-0.15), this.uWind.y.mul(bend)));
+    // parts this tuft doesn't have collapse to one far point: degenerate triangles never rasterise
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const vv = instancedBufferAttribute(this.vars) as any;
+    const part0 = uv().x;
+    const hidden = float(1).sub(mix(float(1), mix(vv.y, vv.z, step(1.5, part0)), step(0.5, part0)));
+    mat.positionNode = mix(positionLocal.add(vec3(this.uWind.x.mul(bend), bend.mul(-0.15), this.uWind.y.mul(bend))), vec3(0, -9999, 0), step(0.5, hidden));
+    // per tuft: x = greenness, y = seed stalks shown, z = flowers shown, w = flower hue
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const v = varying(instancedBufferAttribute(this.vars)) as any;
+    const part = uv().x;
     const tint = noise(positionWorld.xz.mul(0.02)).g;
-    const base = mix(color('#6b5434'), color('#b89a5e'), tint);
-    mat.colorNode = mix(base.mul(0.45), base.mul(1.15), smoothstep(0.0, 0.6, hgt));
-    // fade out at the edge of the streaming radius
+    const dry = mix(color('#6b5434'), color('#b89a5e'), tint);
+    const green = mix(color('#4b5a2a'), color('#8a9450'), tint);
+    const base = mix(dry, green, v.x);
+    let col = mix(base.mul(0.45), base.mul(1.15), smoothstep(0.0, 0.6, hgt));
+    // stalks are paler straw, their seed heads a warm brown
+    col = mix(col, mix(color('#c2a670'), color('#8a6a40'), smoothstep(0.55, 0.7, hgt)), step(0.5, part).mul(step(part, 1.5)));
+    const petal = mix(mix(color('#f0c43a'), color('#9a5ad0'), smoothstep(0.3, 0.6, v.w)), color('#f2eee0'), smoothstep(0.7, 0.9, v.w));
+    col = mix(col, mix(color('#4a5a2a'), petal, smoothstep(0.12, 0.18, hgt)), step(1.5, part));
+    mat.colorNode = col;
+    // fade out at the edge of the streaming radius; parts this tuft doesn't have are cut away
     const d = length(positionWorld.xz.sub(cameraPosition.xz));
     mat.opacityNode = smoothstep(62, 50, d);
     mat.alphaTestNode = float(0.5);
     this.mesh = new THREE.InstancedMesh(tuftGeometry(), mat, this.capacity);
+    this.mesh.geometry.setAttribute('aVar', this.vars);
     this.mesh.count = 0;
     this.mesh.castShadow = false;
     this.mesh.receiveShadow = true;
     this.mesh.frustumCulled = false;
   }
 
-  private cells = new Map<number, { x: number; z: number; m: THREE.Matrix4 } | null>();
+  private cells = new Map<number, { x: number; z: number; m: THREE.Matrix4; v: [number, number, number, number] } | null>();
 
   /** The tuft for grid cell (ix, iz), or null if the cell stays empty. Deterministic. */
   private cell(ix: number, iz: number) {
@@ -76,16 +122,26 @@ export class Scrub {
     const hsh = Math.abs(Math.sin(ix * 127.1 + iz * 311.7) * 43758.5453) % 1;
     const hsh2 = Math.abs(Math.sin(ix * 269.5 + iz * 183.3) * 12543.123) % 1;
     const x = (ix + hsh) * CELL, z = (iz + hsh2) * CELL;
-    let out: { x: number; z: number; m: THREE.Matrix4 } | null = null;
+    let out: { x: number; z: number; m: THREE.Matrix4; v: [number, number, number, number] } | null = null;
     const dens = this.noise.fbm(x * 0.02, z * 0.02, 2) * 0.5 + 0.5;
     if (!(hsh * hsh2 > dens * 0.55) && !(this.hf.roadDistanceAt(x, z) < 5) && !(this.hf.zoneDistance(x, z) < -6) && !(this.hf.normalAt(x, z).y < 0.82)) {
-      const sc = 0.6 + hsh2 * 0.9;
+      const y = this.hf.heightAt(x, z);
+      // low ground holds the last moisture: greener, taller, and that's where the flowers are
+      const moist = Math.min(1, Math.max(0, (-1.5 - y) / 4));
+      const patch = this.noise.fbm(x * 0.05 + 17, z * 0.05 - 9, 2) * 0.5 + 0.5;
+      const h3 = (hsh * 7.31 + hsh2 * 3.7) % 1;
+      const green = Math.min(1, moist * 0.9 + Math.max(0, patch - 0.6) * 1.2) * (0.6 + h3 * 0.4);
+      const seeds = h3 < 0.25 + patch * 0.3 ? 1 : 0;
+      const flowers = h3 > 1 - (0.03 + moist * 0.25 + Math.max(0, patch - 0.7) * 0.4) ? 1 : 0;
+      const sc = (0.6 + hsh2 * 0.9) * (1 + moist * 0.3);
+      // some tufts low and spreading, some tall and narrow
+      const shape = 0.75 + ((hsh * 13.7) % 1) * 0.6;
       const m = new THREE.Matrix4().compose(
-        new THREE.Vector3(x, this.hf.heightAt(x, z) - 0.03, z),
+        new THREE.Vector3(x, y - 0.03, z),
         new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), hsh * 6.283),
-        new THREE.Vector3(sc, sc * (0.8 + hsh * 0.5), sc),
+        new THREE.Vector3(sc * shape, sc * (0.8 + hsh * 0.5) / shape, sc * shape),
       );
-      out = { x, z, m };
+      out = { x, z, m, v: [green, seeds, flowers, (hsh2 * 9.17) % 1] };
     }
     this.cells.set(key, out);
     return out;
@@ -115,10 +171,88 @@ export class Scrub {
       for (let ix = x0; ix <= x1 && n < this.capacity; ix++) {
         const c = this.cell(ix, iz);
         if (!c || (c.x - focus.x) ** 2 + (c.z - focus.z) ** 2 > R * R) continue;
+        this.vars.setXYZW(n, c.v[0], c.v[1], c.v[2], c.v[3]);
         this.mesh.setMatrixAt(n++, c.m);
       }
     }
     this.mesh.count = n;
     this.mesh.instanceMatrix.needsUpdate = true;
+    this.vars.needsUpdate = true;
+  }
+}
+
+/**
+ * Pebbles and gravel streamed close around the player (one instanced draw): denser in stony
+ * patches and on slopes, never on the road. Each stone gets its own size, squash and tint.
+ */
+export class Pebbles {
+  readonly mesh: THREE.InstancedMesh;
+  private center = new THREE.Vector2(1e9, 1e9);
+  private noise = new Simplex2(777);
+  private cells = new Map<number, { m: THREE.Matrix4; c: THREE.Color }[]>();
+  private static readonly CELL = 1.2;
+  private static readonly R = 24;
+
+  constructor(private hf: Heightfield, geometry: THREE.BufferGeometry, material: THREE.Material, private capacity = 4000) {
+    this.mesh = new THREE.InstancedMesh(geometry, material, capacity);
+    this.mesh.name = 'pebbles';
+    this.mesh.count = 0;
+    this.mesh.castShadow = false;
+    this.mesh.receiveShadow = true;
+    this.mesh.frustumCulled = false;
+    this.mesh.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(capacity * 3), 3);
+  }
+
+  private cell(ix: number, iz: number) {
+    const key = (ix + 32768) * 65536 + (iz + 32768);
+    const hit = this.cells.get(key);
+    if (hit) return hit;
+    let s = (ix * 73856093) ^ (iz * 19349663);
+    const r = () => ((s = (Math.imul(s, 1103515245) + 12345) | 0) >>> 0) / 4294967296;
+    const out: { m: THREE.Matrix4; c: THREE.Color }[] = [];
+    const C = Pebbles.CELL;
+    const x0 = ix * C, z0 = iz * C;
+    const stony = this.noise.fbm(x0 * 0.04, z0 * 0.04, 2) * 0.5 + 0.5;
+    const ny = this.hf.normalAt(x0, z0).y;
+    const n = Math.floor((0.35 + stony * stony * 5 + (1 - ny) * 8) * (0.6 + r() * 0.8));
+    if (this.hf.roadDistanceAt(x0, z0) > 4.5 && this.hf.zoneDistance(x0, z0) > -2) {
+      for (let k = 0; k < n; k++) {
+        const x = x0 + r() * C, z = z0 + r() * C;
+        const sz = 0.025 + Math.pow(r(), 3) * 0.11;
+        const m = new THREE.Matrix4().compose(
+          new THREE.Vector3(x, this.hf.heightAt(x, z) - sz * 0.25, z),
+          new THREE.Quaternion().setFromEuler(new THREE.Euler((r() - 0.5) * 0.6, r() * 6.3, (r() - 0.5) * 0.6)),
+          new THREE.Vector3(sz * (0.8 + r() * 0.6), sz * (0.5 + r() * 0.4), sz * (0.8 + r() * 0.6)),
+        );
+        const t = r();
+        out.push({ m, c: new THREE.Color().setRGB(0.42 + t * 0.5, 0.38 + t * 0.48, 0.36 + t * 0.46) });
+      }
+    }
+    this.cells.set(key, out);
+    return out;
+  }
+
+  update(focus: THREE.Vector3) {
+    if (Math.hypot(focus.x - this.center.x, focus.z - this.center.y) < 4) return;
+    this.center.set(focus.x, focus.z);
+    if (this.cells.size > 40000) this.cells.clear();
+    const { CELL: C, R } = Pebbles;
+    let n = 0;
+    const x0 = Math.floor((focus.x - R) / C), x1 = Math.ceil((focus.x + R) / C);
+    const z0 = Math.floor((focus.z - R) / C), z1 = Math.ceil((focus.z + R) / C);
+    for (let iz = z0; iz <= z1 && n < this.capacity; iz++) {
+      for (let ix = x0; ix <= x1 && n < this.capacity; ix++) {
+        const cx = (ix + 0.5) * C - focus.x, cz = (iz + 0.5) * C - focus.z;
+        if (cx * cx + cz * cz > R * R) continue;
+        for (const p of this.cell(ix, iz)) {
+          if (n >= this.capacity) break;
+          this.mesh.setMatrixAt(n, p.m);
+          this.mesh.setColorAt(n++, p.c);
+        }
+      }
+    }
+    this.mesh.count = n;
+    this.mesh.instanceMatrix.needsUpdate = true;
+    this.mesh.instanceColor!.needsUpdate = true;
   }
 }

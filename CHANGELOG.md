@@ -3,6 +3,13 @@
 Each `## vX.Y.Z` section becomes the GitHub release notes and the "what's new" list in the in-app
 update notice (the first few bullets). `scripts/release.sh` refuses to release a version without one.
 
+## v0.4.0
+- **Everything holds up close now.** The wrecks along the highway, in Dry Creek, at the data centre and at the drive-in are real cars: rounded bodies, dusty glass with wiper arcs and cracked windshields, chrome bumpers, quad headlights, tyres and hubcaps, seats and dashboards inside, engines under open hoods. Sedans, coupes, wagons, pickups, vans and convertibles, some burnt, some on their roof, some on flat tyres, all sun-bleached and rusting up from the bottom
+- **A living desert.** Gnarled dead cottonwoods and shaggy Joshua trees, with creosote, sagebrush, prickly pear, barrel cactus, yucca, ocotillo and mesquite between them. Each grows where it should: cacti on the stony slopes, green mesquite and wildflowers down in the wash
+- **Wildlife.** Vultures circle overhead, ravens sit on the power poles and caw at you, jackrabbits bolt when you get close, lizards dart between the rocks, butterflies drift over the wash and flies buzz around the wrecks. A wolf pack roams at a distance, stops to watch you, runs if you approach and howls at night. None of them will hurt you
+- **Better ground.** Finer grass with seed heads, pebbles and gravel underfoot, and rocks that look like broken stone, with cracks, desert varnish and lichen
+- **Faster indoors.** Inside the Garage, The Cut, the Tube and the data centre's server hall, the game stops drawing the world outside whenever you can't see it, so they run noticeably smoother. In the desktop app, about 50 fps went to about 63 inside the Garage
+
 ## v0.3.1
 - **No more freezing when you start moving (desktop app).** The game used to prepare each piece of the world's graphics the first time it came into view, and the desktop app stops while it does. Pressing W, sprinting, turning around or switching on the torch could freeze it for a second or more, so walking felt stuck. All of that now happens on the loading screen, and the loading bar keeps moving while it does
 - **The run starts cleanly.** Your hands, the torch and everything you can hold are ready before the fade lifts, so the first sprint no longer hitches

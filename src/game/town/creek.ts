@@ -1098,8 +1098,8 @@ function street(S: Site, H: Hooks) {
     }
   }
   // the dead sedan and the pickup by the shed
-  sedan(S, -26.5, 5.4, 0.08, M.carBlue());
-  pickup(S, 20.8, 6.9, Math.PI / 2 + 0.12, M.carRed());
+  sedan(S, -26.5, 5.4, 0.08, '#4a6a7a');
+  pickup(S, 20.8, 6.9, Math.PI / 2 + 0.12, '#8a3a2a');
   // town sign at the east end, facing the highway
   for (const z of [-0.9, 0.9]) post(S, M.woodDark(), 31.5, z, 0, 2.4, 0.07, false);
   S.sign('town', 2.2, 0.96, 0.06, 31.55, 1.85, 0, Math.PI / 2);

@@ -1,4 +1,5 @@
 import * as THREE from 'three/webgpu';
+import type { Interior } from '../world/interiors';
 import type { GameContext, Interactable } from '../context';
 import type { Landmarks } from '../world/Landmarks';
 import { DistanceLod, Frame } from '../world/kit';
@@ -20,6 +21,8 @@ import { LANDMARKS } from '@/content/world';
  */
 export abstract class Site {
   readonly group = new THREE.Group();
+  /** A sealed interior in this site, for interior mode (see world/interiors.ts). */
+  interior: Interior | null = null;
   readonly interactables: Interactable[] = [];
   /** Feet positions the dev harness can teleport to (`game.sites.find(s => s.id === 'jet').spots`). */
   readonly spots: Record<string, THREE.Vector3> = {};

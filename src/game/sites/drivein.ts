@@ -6,6 +6,7 @@ import { Site } from './Site';
 import { box, cyl, beam, wire, norm, MeshBatch } from '../world/kit';
 import { rustyMetal, concrete, corrugated, plainStandard, fabric, wood, type GlowSlot } from '../world/materials';
 import { VirtualLight } from '../world/lights';
+import { buildCar, type CarKind } from '../world/vehicles';
 import { ITEMS } from '@/content/items';
 import { XP_REWARDS } from '@/content/progression';
 import {
@@ -280,82 +281,20 @@ export class DriveInSite extends Site {
     this.kit.col(x, y + 0.65, z, 0.08, 0.65, 0.08);
   }
 
-  /** A rusted 60s car, procedurally. `ry` faces the nose; `pitch` lifts it on the ramp. */
+  /** A rusted 60s car (world/vehicles.ts). `ry` faces the nose; `pitch` lifts it on the ramp. */
   private car(x: number, z: number, ry: number, pitch: number, paint: string, kind: string, r: () => number) {
-    const k = this.mats;
-    const y = this.g(x, z) + 0.34;
+    const y = this.g(x, z);
     const m = mat4(x, y, z, pitch, ry, (r() - 0.5) * 0.03);
-    const add = (mat: THREE.Material, g: THREE.BufferGeometry) => this.kit.b.add(mat, xf(g, m.clone()));
-    const thin = (mat: THREE.Material, g: THREE.BufferGeometry) => this.kit.nb.add(mat, xf(g, m.clone()));
-    const body = kind === 'burnt' ? rustyMetal({ base: '#2a2420', rust: 0.9, metalness: 0.4, roughness: 0.8 }) : rustyMetal({ base: paint, rust: 0.55, metalness: 0.45, roughness: 0.55 });
-    const W = 1.86, L = 5.0;
-    const wagon = kind === 'wagon';
-    // side profile (x along the car, nose at −x... we build nose at +x, then turn)
-    const pts: [number, number][] = [
-      [-2.5, 0.0], [-2.5, 0.52], [-1.55, 0.6],
-      ...(wagon ? [[-2.35, 0.62], [-2.3, 1.08], [0.6, 1.1]] as [number, number][] : kind === 'convertible' ? [[-0.9, 0.62], [0.85, 0.66]] as [number, number][] : [[-1.25, 0.64], [-0.6, 1.06], [0.55, 1.08]] as [number, number][]),
-      [1.0, 0.66], [2.45, 0.56], [2.5, 0.22], [2.4, 0.0],
-    ];
-    if (wagon) pts.splice(2, 1);
-    const shape = new THREE.Shape();
-    shape.moveTo(pts[0][0], pts[0][1]);
-    for (let i = 1; i < pts.length; i++) shape.lineTo(pts[i][0], pts[i][1]);
-    // wheel arches
-    shape.lineTo(1.95, 0.0);
-    shape.absarc(1.5, 0.0, 0.45, 0, Math.PI, false);
-    shape.lineTo(-1.05, 0.0);
-    shape.absarc(-1.5, 0.0, 0.45, 0, Math.PI, false);
-    shape.closePath();
-    const ext = new THREE.ExtrudeGeometry(shape, { depth: W, bevelEnabled: true, bevelThickness: 0.05, bevelSize: 0.05, bevelSegments: 1, curveSegments: 6 });
-    ext.translate(0, 0, -W / 2);
-    const bodyGeo = norm(ext);
-    // everything is authored with the nose toward +x; turn so the nose faces local −z
+    // the builder authors the nose toward +x; turn it to face local −z
     const turn = mat4(0, 0, 0, 0, Math.PI / 2, 0);
-    const T = (g: THREE.BufferGeometry) => xf(g, turn.clone());
-    add(body, T(bodyGeo));
-    // glass: windscreen, rear, sides (missing on some)
-    const broken = r() < 0.4 || kind === 'burnt';
-    if (kind !== 'convertible' && !broken) {
-      const roofF = wagon ? 0.6 : 0.55, roofB = wagon ? -2.3 : -0.6;
-      thin(glassMat(), T(quad(v3(1.0, 0.67, -W / 2 + 0.1), v3(1.0, 0.67, W / 2 - 0.1), v3(roofF + 0.02, 1.07, W / 2 - 0.12), v3(roofF + 0.02, 1.07, -W / 2 + 0.12))));
-      if (!wagon) thin(glassMat(), T(quad(v3(-1.25, 0.65, W / 2 - 0.1), v3(-1.25, 0.65, -W / 2 + 0.1), v3(roofB - 0.02, 1.05, -W / 2 + 0.12), v3(roofB - 0.02, 1.05, W / 2 - 0.12))));
-      for (const s of [-1, 1]) {
-        const ws = new THREE.Shape();
-        const x0 = wagon ? -2.2 : -1.1, x1 = 0.92;
-        ws.moveTo(x0, 0.7); ws.lineTo(x1, 0.7); ws.lineTo(roofF - 0.04, 1.02); ws.lineTo(wagon ? -2.2 : roofB + 0.06, 1.02); ws.closePath();
-        const sg = new THREE.ShapeGeometry(ws);
-        thin(glassMat(), T(xf(sg, mat4(0, 0, s * (W / 2 + 0.056), 0, s > 0 ? 0 : Math.PI, 0).multiply(new THREE.Matrix4().makeScale(s > 0 ? 1 : -1, 1, 1)))));
-      }
-    }
-    // interior: bench seats, wheel
-    add(k.seatFab, T(box(0.5, 0.4, W - 0.3, 0.1, 0.55, 0)));
-    add(k.seatFab, T(box(0.12, 0.45, W - 0.3, -0.15, 0.85, 0, 0, 0, 0.15)));
-    add(k.seatFab, T(box(0.5, 0.4, W - 0.3, -1.0, 0.55, 0)));
-    add(k.dark, T(xf(new THREE.TorusGeometry(0.19, 0.025, 6, 16), mat4(0.75, 0.82, 0.4, 0, Math.PI / 2 + 0.5, 0))));
-    // bumpers, grille, lights
-    if (kind !== 'burnt') {
-      add(k.chrome, T(box(0.14, 0.16, W + 0.1, 2.56, 0.28, 0)));
-      add(k.chrome, T(box(0.14, 0.16, W + 0.1, -2.56, 0.28, 0)));
-      add(k.dark, T(box(0.04, 0.2, 1.1, 2.52, 0.42, 0)));
-      for (const s of [-1, 1]) {
-        add(k.chrome, T(cyl(0.13, 0.13, 0.05, 2.5, 0.42, s * 0.7, 12, 0, 0, Math.PI / 2)));
-        thin(glassMat(), T(cyl(0.1, 0.1, 0.02, 2.53, 0.42, s * 0.7, 12, 0, 0, Math.PI / 2)));
-        add(k.taillight, T(box(0.05, 0.14, 0.3, -2.53, 0.44, s * 0.7)));
-      }
-    }
-    // wheels (one car sits on blocks)
-    const blocks = r() < 0.15;
-    for (const [wx, wz] of [[1.5, 0.82], [1.5, -0.82], [-1.5, 0.82], [-1.5, -0.82]]) {
-      if (blocks) { add(k.plank, T(box(0.3, 0.3, 0.3, wx, -0.18, wz))); continue; }
-      const flat = r() < 0.25;
-      add(k.rubber, T(xf(new THREE.TorusGeometry(0.27, 0.11, 8, 16), mat4(wx, flat ? -0.06 : 0, wz, 0, 0, 0).multiply(new THREE.Matrix4().makeScale(1, flat ? 0.85 : 1, 1)))));
-      if (kind !== 'burnt') add(k.chrome, T(cyl(0.17, 0.17, 0.04, wx, flat ? -0.06 : 0, wz + Math.sign(wz) * 0.06, 12, Math.PI / 2)));
-    }
-    // sand on the roof, rust run decals would be overkill at this scale
-    if (kind !== 'convertible') this.kit.d.add(decalMat(), decal('sandpile', 1.6, 1.2, m.clone().multiply(turn).multiply(mat4(wagon ? -0.9 : 0, 1.13, 0, -Math.PI / 2, 0, 0))));
-    if (kind === 'convertible') add(k.redVinyl, T(box(0.8, 0.12, W - 0.2, -0.4, 0.78, 0)));
-    // collider
-    this.kit.ocol(m.clone().multiply(mat4(0, 0.5, 0)), W / 2 + 0.05, 0.62, L / 2 + 0.1);
+    const burnt = kind === 'burnt';
+    const res = buildCar(this.kit.b, m.clone().multiply(turn), {
+      kind: burnt ? 'sedan' : (kind as CarKind), paint, rand: r, burnt, rust: 0.55, fade: 0.6, broken: 0.4,
+      blocks: r() < 0.12, thin: this.kit.nb,
+    });
+    // sand on the roof
+    if (kind !== 'convertible') this.kit.d.add(decalMat(), decal('sandpile', 1.6, 1.2, m.clone().multiply(turn).multiply(mat4(kind === 'wagon' ? -0.9 : -0.4, res.half.y * 2 + 0.01, 0, -Math.PI / 2, 0, 0))));
+    this.kit.ocol(m.clone().multiply(turn).multiply(mat4(res.center.x, res.center.y, res.center.z)), res.half.x, res.half.y, res.half.z);
   }
 
   // ================================================================ snack bar + projection booth
@@ -1151,13 +1090,6 @@ export class DriveInSite extends Site {
 const clamp01 = (x: number) => Math.max(0, Math.min(1, x));
 const bump = (d: number, w: number) => { const t = clamp01(1 - Math.abs(d) / w); return t * t * (3 - 2 * t); };
 
-function quad(a: THREE.Vector3, b: THREE.Vector3, c: THREE.Vector3, d: THREE.Vector3) {
-  const g = new THREE.BufferGeometry();
-  const p = [a, b, c, a, c, d].flatMap((q) => [q.x, q.y, q.z]);
-  g.setAttribute('position', new THREE.Float32BufferAttribute(p, 3));
-  g.computeVertexNormals();
-  return norm(g);
-}
 
 function mergeGeo(list: THREE.BufferGeometry[]) {
   const n = list.reduce((a, g) => a + g.attributes.position.count, 0);

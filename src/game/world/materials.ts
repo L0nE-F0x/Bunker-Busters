@@ -2,7 +2,7 @@ import * as THREE from 'three/webgpu';
 import {
   Fn, vec2, float, positionWorld, positionLocal, normalWorld, mix, smoothstep, abs, sin, uniform, time, pow, max,
   fract, step, uv, cameraPosition, normalize, dot, attribute, uniformArray, int, vertexStage, varying, texture,
-  renderGroup, materialColor,
+  renderGroup, materialColor, floor,
 } from 'three/tsl';
 import { bumpFromHeight } from './Terrain';
 import { noise } from '@/engine/noiseTex';
@@ -30,7 +30,7 @@ const k = (name: string, ...args: unknown[]) => name + JSON.stringify(args, (_, 
 // them into ONE mesh whose parameters come from per-vertex attributes (bColor/bParam) instead of
 // uniforms. The shader math is the same, so the picture is the same, for a fraction of the draws.
 
-export type Family = 'rust' | 'corr-x' | 'corr-y' | 'corr-z' | 'concrete' | 'plain' | 'fabric' | 'leather' | 'wood' | 'window' | 'glow';
+export type Family = 'paint' | 'rust' | 'corr-x' | 'corr-y' | 'corr-z' | 'concrete' | 'plain' | 'fabric' | 'leather' | 'wood' | 'window' | 'glow';
 export interface BatchSpec {
   family: Family;
   /** linear rgb + one family-specific extra (rust: rim strength) */
@@ -79,6 +79,11 @@ export function familyMaterial(f: Family, glowSources: { value: number }[] = [])
       case 'concrete': {
         const m = new THREE.MeshStandardNodeMaterial({ roughness: 0.92, metalness: 0 });
         concreteSetup(m, bC().xyz, bP().x, bP().y);
+        return m;
+      }
+      case 'paint': {
+        const m = new THREE.MeshStandardNodeMaterial();
+        paintSetup(m, bC().xyz, bP().x, bP().y);
         return m;
       }
       case 'plain': {
@@ -236,6 +241,168 @@ function rustSetup(m: THREE.MeshStandardNodeMaterial, P: { base: N; rustAmt: N; 
   m.normalNode = bumpFromHeight(rustMask.mul(0.6).add(t2.r.mul(0.25)), float(0.05));
   m.emissiveNode = rim(3).mul(rimK).add(sunRim());
 }
+
+/**
+ * Old car paint, fifty summers in the desert: sun-bleached and chalky on everything facing up,
+ * the clear coat peeling in sheets, primer showing through, and rust that climbs from the rockers and
+ * arches (the bottom half metre) and bleeds down from seams. `rust` 0..1, `fade` 0..1.
+ */
+export const carPaint = (base: THREE.ColorRepresentation, rust = 0.5, fade = 0.5) =>
+  memo(k('paint', base, rust, fade), () => {
+    const m = new THREE.MeshStandardNodeMaterial();
+    paintSetup(m, uniform(new THREE.Color(base)), uniform(rust), uniform(fade));
+    return tag(m, 'paint', base, 0, [rust, fade]);
+  });
+
+function paintSetup(m: THREE.MeshStandardNodeMaterial, base: N, rustAmt: N, fade: N) {
+  const wp = positionWorld;
+  const c = triCoord();
+  const big = noise(c.mul(0.21));
+  const fine = noise(c.mul(1.3));
+  const ground = groundTex.sample(wp.xz.div(uGroundSize).add(0.5)).r;
+  const above = wp.y.sub(ground);
+  // sun: the roof, hood and trunk lose their colour first (chalky, lighter, desaturated)
+  const up = smoothstep(0.55, 0.95, normalWorld.y);
+  const lum = base.dot(vec3c(0.3, 0.59, 0.11));
+  const chalk = mix(base, lum.mul(0.75).add(0.18), 0.45);
+  const bleach = up.mul(fade).mul(big.g.mul(0.5).add(0.6)).clamp(0, 1);
+  let col: N = mix(base.mul(float(0.88).add(fine.r.mul(0.14))), chalk, bleach);
+  // peeled clear coat: flat matte islands with crisp edges
+  const peel = smoothstep(0.6, 0.63, big.r.add(fine.g.mul(0.12)).add(fade.mul(0.12)));
+  col = mix(col, col.mul(0.82).add(0.04), peel);
+  // primer patches (grey), only where the paint wore through
+  const primer = smoothstep(0.7, 0.72, noise(c.mul(0.09).add(0.4)).g.add(fade.mul(0.08)));
+  col = mix(col, vec3c(0.36, 0.36, 0.34), primer.mul(0.9));
+  // rust: low on the body (rockers, arches, valance), at the bottom of every panel's run-off, and
+  // only in a few soft blooms on top (the sun-baked paint there chalks rather than rusts)
+  const low = smoothstep(0.7, 0.12, above);
+  const mid = noise(c.mul(0.55).add(0.3));
+  const runs = noise(vec2((wp.x.add(wp.z) as N).mul(1.6), wp.y.mul(0.22))).r;
+  const field = big.r.mul(0.45).add(mid.g.mul(0.3)).add(low.mul(0.5)).add(runs.sub(0.5).mul(0.25))
+    .add(rustAmt.mul(0.4)).sub(up.mul(0.12));
+  const rust = smoothstep(0.86, 0.94, field);
+  const scale = smoothstep(0.95, 1.08, field); // deep scale: dark, pitted
+  const rustCol = mix(mix(vec3c(0.3, 0.13, 0.055), vec3c(0.46, 0.21, 0.08), mid.r), vec3c(0.13, 0.065, 0.035), scale);
+  // a brown stain where the rust bleeds into the paint around it (and streaks below it)
+  const halo = smoothstep(0.72, 0.86, field).sub(rust).clamp(0, 1).max(smoothstep(0.62, 0.8, runs).mul(low).mul(0.5));
+  col = mix(col, col.mul(vec3c(0.7, 0.55, 0.4)), halo.mul(0.55));
+  col = mix(col, rustCol, rust.mul(fine.r.mul(0.25).add(0.75)));
+  const sd = settle(m, col, float(1));
+  m.colorNode = sd.color;
+  const gloss = mix(float(0.42), float(0.7), bleach.max(peel));
+  m.roughnessNode = mix(mix(gloss, float(0.92), rust.max(primer)), float(0.95), sd.dust);
+  m.metalnessNode = mix(float(0.25), float(0.05), rust.max(primer).max(bleach.mul(0.6)));
+  m.normalNode = bumpFromHeight(rust.mul(0.5).add(scale.mul(0.4)).add(fine.a.mul(rust).mul(0.4)).sub(peel.mul(0.08)), float(0.04));
+  m.emissiveNode = rim(3).mul(0.25).add(sunRim());
+}
+
+/**
+ * Car glass: dark and glossy under a film of dust, thickest along the bottom and at the edges, with
+ * the two arcs the wipers cleared on a windshield and a spider-web crack on some. The pane's uv is
+ * 0..1 across it; uv.x is offset by 2 × the pane kind (0 windshield, 1 other, 2 cracked windshield).
+ */
+export const carGlass = () => memo('carGlass', () => {
+  const m = new THREE.MeshStandardNodeMaterial({ metalness: 0.15 });
+  const u = uv();
+  const kind = floor(u.x.mul(0.5));
+  const p = vec2(u.x.sub(kind.mul(2)), u.y);
+  const wind = step(kind, 0.5).add(step(1.5, kind)).clamp(0, 1); // windshields (plain or cracked)
+  const n = noise(p.mul(vec2(1.7, 0.9)).add(positionWorld.xz.mul(0.05)));
+  // dust: heavy low and at the edges of the pane, streaky where rain once ran
+  const edge = max(abs(p.x.sub(0.5)), abs(p.y.sub(0.5)).mul(1.4));
+  let dust: N = smoothstep(0.55, 0.0, p.y).mul(0.55).add(smoothstep(0.32, 0.5, edge).mul(0.4)).add(n.r.mul(0.3)).add(0.06);
+  // wipers: two arcs pivoting on the bottom edge
+  const arc = (cx: number) => {
+    const d = vec2(p.x.sub(cx), p.y.add(0.05).mul(0.75)).length();
+    return smoothstep(0.52, 0.48, d).mul(smoothstep(0.08, 0.12, d));
+  };
+  const wiped = arc(0.27).max(arc(0.73)).mul(wind);
+  dust = dust.mul(float(1).sub(wiped.mul(0.75)));
+  // the crack: rays from an impact, plus a few concentric rings
+  const crackK = step(1.5, kind);
+  const d = p.sub(vec2(0.32, 0.55));
+  const r = d.length();
+  const ang = d.y.atan(d.x);
+  const ray = smoothstep(0.035, 0.0, abs(fract(ang.mul(2.2).add(n.g.mul(0.6))).sub(0.5)).mul(r.mul(6).add(0.4)));
+  const ring = smoothstep(0.012, 0.0, abs(fract(r.mul(9).add(n.r.mul(0.6))).sub(0.5)).mul(0.12)).mul(step(r, 0.33));
+  const crack = ray.mul(smoothstep(0.7, 0.05, r)).max(ring).mul(crackK);
+  const film = dust.clamp(0, 1).mul(0.85);
+  m.colorNode = mix(mix(vec3c(0.03, 0.04, 0.045), uDustColor.mul(0.75), film), vec3c(0.75, 0.78, 0.76), crack.mul(0.8));
+  m.roughnessNode = mix(float(0.06), float(0.85), film).max(crack.mul(0.5));
+  return m;
+});
+
+/**
+ * Desert stone: red-tan sediment in uneven bands, a crack network, dark desert varnish streaking the
+ * sides, orange and grey-green lichen in the sheltered spots, and sand settled on top.
+ */
+export const desertRock = () => memo('desertRock', () => {
+  const m = new THREE.MeshStandardNodeMaterial({ roughness: 0.92, metalness: 0 });
+  const p = positionWorld;
+  const c = triCoord();
+  const big = noise(c.mul(0.09));
+  const mid = noise(c.mul(0.45).add(0.21));
+  const fine = noise(c.mul(2.1));
+  const bandsN = noise(vec2(p.y.mul(0.55).add(big.r.mul(1.6)), (p.x.add(p.z) as N).mul(0.02))).r;
+  const bands = smoothstep(0.3, 0.75, bandsN);
+  let col: N = mix(vec3c(0.3, 0.17, 0.1), vec3c(0.55, 0.37, 0.24), bands).mul(float(0.8).add(mid.g.mul(0.4)));
+  // cracks: the atlas' cell edges at a large scale, thinned to a sparse network
+  const crackN = noise(c.mul(0.16).add(0.6));
+  const crack = smoothstep(0.035, 0.0, crackN.b).mul(smoothstep(0.4, 0.62, big.g));
+  const fineCrack = float(0);
+  // varnish: manganese-dark streaks down the steeper faces
+  const steep = smoothstep(0.75, 0.25, abs(normalWorld.y));
+  const varnish = smoothstep(0.45, 0.75, noise(vec2((p.x.add(p.z) as N).mul(0.7), p.y.mul(0.08)).add(0.4)).r).mul(steep);
+  col = mix(col, vec3c(0.12, 0.07, 0.045), varnish.mul(0.65));
+  // lichen: crusty orange and grey-green islands, not on the very top (sand) or in the cracks
+  const lichenN = noise(c.mul(0.8).add(0.77));
+  const lichen = smoothstep(0.7, 0.74, lichenN.r.add(mid.r.mul(0.08))).mul(smoothstep(0.9, 0.4, normalWorld.y));
+  const lichenCol = mix(vec3c(0.62, 0.4, 0.16), vec3c(0.42, 0.44, 0.36), step(0.4, lichenN.g));
+  col = mix(col, lichenCol, lichen.mul(0.55));
+  col = col.mul(float(1).sub(crack.mul(0.6)).sub(fineCrack.mul(0.25)));
+  const sd = settle(m, col, float(0.6));
+  m.colorNode = sd.color;
+  m.roughnessNode = mix(mix(float(0.9), float(0.55), varnish.mul(0.6)), float(0.98), sd.dust);
+  m.normalNode = bumpFromHeight(mid.r.mul(0.4).add(fine.r.mul(0.25)).add(fine.a.mul(0.12)).sub(crack.mul(0.7)).sub(fineCrack.mul(0.3)).add(lichen.mul(0.15)), float(0.05));
+  m.emissiveNode = sunRim().mul(0.5);
+  return m;
+});
+
+/**
+ * Every plant in one program: the geometry carries its colour and kind per vertex (`fColor`, rgba8:
+ * rgb + kind, 0 dead wood · 0.2 fur · 0.33 live bark · 0.66 foliage · 1 cactus), so trees, shrubs, cacti
+ * and the animals
+ * share one shader and the streamed shrubs draw in a single call.
+ */
+export const floraMaterial = () => memo('flora', () => {
+  const m = new THREE.MeshStandardNodeMaterial({ metalness: 0 });
+  const fc: N = attribute('fColor', 'vec4');
+  const kind = fc.w;
+  const p = positionWorld;
+  const c = triCoord();
+  const plant = noise(p.xz.mul(0.045).add(0.17)).r;
+  const fine = noise(c.mul(3.1));
+  const wood = step(kind, 0.5);
+  const leaf = step(0.5, kind).mul(step(kind, 0.85));
+  const cactus = step(0.85, kind);
+  // bark: long fissures and peeled, bleached patches (dead wood greys toward silver)
+  // fur (kind 0.2, the animals) is soft and unfissured
+  const fur = step(0.15, kind).mul(step(kind, 0.25));
+  const fiss = noise(vec2((p.x.add(p.z) as N).mul(4.2), p.y.mul(0.55))).r;
+  const furrow = smoothstep(0.55, 0.72, fiss).mul(wood).mul(float(1).sub(fur));
+  const peel = smoothstep(0.62, 0.66, noise(c.mul(0.7).add(0.5)).g).mul(step(kind, 0.15));
+  let col: N = fc.xyz.mul(float(0.82).add(plant.mul(0.36)));
+  col = col.mul(float(1).sub(furrow.mul(0.4)));
+  col = mix(col, vec3c(0.62, 0.6, 0.55), peel.mul(0.5));
+  col = col.mul(float(0.9).add(fine.r.mul(0.2)));
+  const sd = settle(m, col, float(0.55));
+  m.colorNode = sd.color;
+  m.roughnessNode = mix(mix(mix(mix(float(0.92), float(0.97), fur), float(0.72), leaf), float(0.5), cactus), float(0.97), sd.dust);
+  m.normalNode = bumpFromHeight(furrow.mul(-0.6).add(fine.r.mul(0.3)).add(fine.a.mul(0.15)), mix(float(0.02), float(0.008), leaf.max(cactus)));
+  // a low sun shines through leaves and pads
+  m.emissiveNode = sunRim().mul(float(1).add(leaf.add(cactus.mul(0.5)).mul(2.2)));
+  return m;
+});
 
 /** Weathered concrete with stains, pitting and water streaks. */
 export const concrete = (tint: THREE.ColorRepresentation = '#9a9184', opts: { scale?: number; stains?: number } = {}) =>

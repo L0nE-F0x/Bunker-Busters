@@ -1,6 +1,7 @@
 import * as THREE from 'three/webgpu';
 import { concrete, corrugated, fabric, leather, plainStandard, rustyMetal, wood } from '@/game/world/materials';
 import { norm } from '@/game/world/kit';
+import { buildCar, type CarOpts } from '@/game/world/vehicles';
 import { type Pen, type Site, V, HALO } from './townKit';
 
 type Mat = THREE.Material;
@@ -29,8 +30,6 @@ export const M = {
   drumBlue: () => rustyMetal({ base: '#2d5275', rust: 0.55, metalness: 0.5, roughness: 0.5 }),
   drumRed: () => rustyMetal({ base: '#a3301f', rust: 0.5, metalness: 0.5, roughness: 0.5 }),
   yellow: () => rustyMetal({ base: '#c79a2a', rust: 0.5 }),
-  carBlue: () => rustyMetal({ base: '#4a6a7a', rust: 0.75, metalness: 0.4 }),
-  carRed: () => rustyMetal({ base: '#8a3a2a', rust: 0.8, metalness: 0.4 }),
   roofRed: () => corrugated('#8d4a3a', 0.62),
   roofGrey: () => corrugated('#8b8a84', 0.7),
   roofGreen: () => corrugated('#6e7a6e', 0.75),
@@ -363,52 +362,30 @@ export function utilityPole(site: Site, x: number, z: number, h = 8.2, ry = 0) {
   return anchors;
 }
 
-/** A 70s sedan shell (side profile extruded), sunk on flat tyres. Long axis along local Z. */
-export function sedan(site: Site, x: number, z: number, ry: number, paint: Mat) {
+/** A rotting car (world/vehicles.ts) standing in a town. Long axis along local Z, nose toward −z. */
+function townCar(site: Site, x: number, z: number, ry: number, o: Omit<CarOpts, 'rand'>, seed: number) {
   const P = site.pen(x, 0, z, ry);
-  const s = new THREE.Shape();
-  const L = 4.6;
-  s.moveTo(-L / 2, 0.35); s.lineTo(-L / 2, 0.85); s.lineTo(-L / 2 + 0.15, 0.95); s.lineTo(-1.0, 1.0); s.lineTo(-0.55, 1.42);
-  s.lineTo(0.75, 1.42); s.lineTo(1.2, 1.0); s.lineTo(L / 2 - 0.1, 0.92); s.lineTo(L / 2, 0.75); s.lineTo(L / 2, 0.35);
-  s.lineTo(1.75, 0.35); s.absarc(1.35, 0.35, 0.42, 0, Math.PI, false); s.lineTo(-0.95, 0.35); s.absarc(-1.35, 0.35, 0.42, 0, Math.PI, false); s.lineTo(-L / 2, 0.35);
-  const g = new THREE.ExtrudeGeometry(s, { depth: 1.7, bevelEnabled: true, bevelThickness: 0.06, bevelSize: 0.05, bevelSegments: 2, curveSegments: 8 });
-  g.translate(0, -0.12, -0.85);
-  P.put(paint, g, 0, 0, 0, 0, Math.PI / 2, 0);
-  // glass (dark, one window smashed out) and chrome
-  P.box(M.glassDark(), 1.62, 0.34, 0.9, 0, 1.12, 0.12, 0, 0, 0);
-  P.box(M.glassDark(), 1.5, 0.4, 0.05, 0, 1.1, -0.82, -0.75).box(M.glassDark(), 1.5, 0.38, 0.05, 0, 1.08, 1.07, 0.8);
-  P.box(M.chrome(), 1.9, 0.12, 0.1, 0, 0.42, 2.38).box(M.chrome(), 1.9, 0.12, 0.1, 0, 0.42, -2.36);
-  for (const sz of [-1.35, 1.35]) for (const sx of [-0.84, 0.84]) {
-    P.put(M.rubber(), new THREE.TorusGeometry(0.27, 0.12, 6, 14), sx, 0.24, sz, 0, Math.PI / 2, 0, 1, 0.82, 1);
-    P.cyl(M.steelDark(), 0.16, 0.16, 0.2, sx * 1.02, 0.25, sz, 10, 0, 0, Math.PI / 2);
-  }
-  P.sign('plate', 0.36, 0.18, 0.02, 0, 0.62, -2.42, Math.PI);
-  P.col(0, 0.7, 0, 0.92, 0.7, 2.35);
+  let s = seed;
+  const rand = () => ((s = (s * 16807) % 2147483647) / 2147483647);
+  const res = buildCar({ add: (mat, ...g) => P.geo(mat, ...g) }, new THREE.Matrix4().makeRotationY(Math.PI / 2), { ...o, rand });
+  P.col(-res.center.z, res.center.y, -res.center.x, res.half.z, res.half.y, res.half.x);
+  return P;
+}
+
+/** A 70s sedan, sunk on flat tyres. Long axis along local Z. */
+export function sedan(site: Site, x: number, z: number, ry: number, paint: string) {
+  townCar(site, x, z, ry, { kind: 'sedan', paint, rust: 0.75, fade: 0.8, wheels: ['flat', 'flat', 'ok', 'flat'], broken: 0.5 }, 4242);
 }
 
 /** An old pickup with junk in the bed. Long axis along local Z. */
-export function pickup(site: Site, x: number, z: number, ry: number, paint: Mat) {
-  const P = site.pen(x, 0, z, ry);
-  P.box(paint, 1.86, 0.62, 1.7, 0, 0.82, 1.45).box(paint, 1.82, 0.2, 1.68, 0, 0.6, 1.45);
-  P.box(paint, 1.8, 0.7, 1.5, 0, 1.28, 0.25).box(paint, 1.84, 0.1, 1.4, 0, 1.67, 0.25);
-  P.box(M.glassDark(), 1.6, 0.48, 0.05, 0, 1.36, 1.0, -0.3).box(M.glassDark(), 0.05, 0.4, 1.0, 0.91, 1.36, 0.25).box(M.glassDark(), 0.05, 0.4, 1.0, -0.91, 1.36, 0.25);
-  // bed
-  P.box(paint, 1.86, 0.08, 2.2, 0, 0.62, -1.4);
-  for (const sx of [-0.9, 0.9]) P.box(paint, 0.06, 0.5, 2.2, sx, 0.9, -1.4);
-  P.box(paint, 1.86, 0.5, 0.06, 0, 0.9, -2.48, 0.25);
-  P.box(M.chrome(), 1.95, 0.16, 0.12, 0, 0.55, 2.35);
-  P.box(M.black(), 1.6, 0.32, 0.03, 0, 0.92, 2.31);
-  for (const sz of [-1.6, 1.4]) for (const sx of [-0.85, 0.85]) {
-    P.put(M.rubber(), new THREE.TorusGeometry(0.3, 0.13, 6, 14), sx, 0.33, sz, 0, Math.PI / 2, 0);
-    P.cyl(M.steelDark(), 0.18, 0.18, 0.22, sx * 1.02, 0.33, sz, 10, 0, 0, Math.PI / 2);
-  }
-  // junk: tyres, a drum, a crate, a tarp
-  tire(P, -0.4, 0.75, -1.9, Math.PI / 2, 0.2, 0.3);
-  tire(P, -0.4, 0.98, -1.85, Math.PI / 2, 0.5, 0.3);
-  drum(P, 0.45, -0.9, M.drumBlue(), 0.4, false, 0.66);
-  crate(P, 0.35, 0.66, -2.0, 0.55, 0.42, 0.45, 0.3);
-  P.box(M.canvas(), 0.9, 0.08, 0.8, -0.35, 0.86, -0.85, 0.2, 0.15, 0.1);
-  P.col(0, 0.85, 0, 0.95, 0.85, 2.45);
+export function pickup(site: Site, x: number, z: number, ry: number, paint: string) {
+  const P = townCar(site, x, z, ry, { kind: 'pickup', paint, rust: 0.8, fade: 0.7, wheels: ['ok', 'flat', 'ok', 'ok'], hood: 'shut', broken: 0.3 }, 777);
+  // junk in the bed (bed floor at 0.66, bed runs from z = 0.5 to 2.65): tyres, a drum, a crate, a tarp
+  tire(P, -0.4, 0.84, 1.9, Math.PI / 2, 0.2, 0.3);
+  tire(P, -0.4, 1.07, 1.85, Math.PI / 2, 0.5, 0.3);
+  drum(P, 0.45, 1.0, M.drumBlue(), 0.4, false, 0.69);
+  crate(P, 0.35, 0.69, 2.1, 0.55, 0.42, 0.45, 0.3);
+  P.box(M.canvas(), 0.9, 0.08, 0.8, -0.35, 0.9, 1.0, 0.2, 0.15, 0.1);
 }
 
 /** A soft heap of windblown sand against something, along local X. */

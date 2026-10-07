@@ -508,10 +508,18 @@ export class AudioEngine {
     n.start(t, Math.random() * 3, dur + 0.05);
   }
 
-  /** A coyote howling far off (sometimes answered), soaked in the night air's reverb. */
-  private coyote() {
+  /** A wolf of the pack you can see howls from `pos` (a second one often answers). */
+  howl(pos: THREE.Vector3) {
+    if (!this.started) return;
+    this.coyote(pos);
+  }
+
+  /** A coyote howling far off (sometimes answered), soaked in the night air's reverb. From `pos` when given. */
+  private coyote(pos?: THREE.Vector3) {
     const ctx = this.ctx;
     const pan = (Math.random() * 2 - 1) * 0.85;
+    const out: AudioNode = pos ? this.panner(pos, 25, 0.8) : this.amb;
+    if (pos) out.connect(this.amb);
     const voice = (t: number, k: number, level: number) => {
       const o = ctx.createOscillator();
       o.type = 'triangle';
@@ -534,15 +542,15 @@ export class AudioEngine {
       g.gain.linearRampToValueAtTime(0, t + 3.0);
       const lp = ctx.createBiquadFilter();
       lp.type = 'lowpass';
-      lp.frequency.value = 1500; // distance
+      lp.frequency.value = pos ? 2600 : 1500; // distance
       const p = ctx.createStereoPanner();
-      p.pan.value = pan;
+      p.pan.value = pos ? 0 : pan;
       const dry = ctx.createGain();
-      dry.gain.value = 0.35;
+      dry.gain.value = pos ? 0.6 : 0.35;
       const wet = ctx.createGain();
       wet.gain.value = 0.9;
       o.connect(lp).connect(g).connect(p);
-      p.connect(dry).connect(this.amb);
+      p.connect(dry).connect(out);
       p.connect(wet).connect(this.reverbSend);
       o.start(t);
       vib.start(t);
@@ -550,8 +558,9 @@ export class AudioEngine {
       vib.stop(t + 3.1);
     };
     const t = ctx.currentTime + 0.1;
-    voice(t, 1, 0.022);
-    if (Math.random() < 0.55) voice(t + 1.4 + Math.random(), 1.12 + Math.random() * 0.1, 0.015);
+    const lv = pos ? 0.05 : 0.022;
+    voice(t, pos ? 0.85 : 1, lv);
+    if (Math.random() < 0.55) voice(t + 1.4 + Math.random(), (pos ? 0.95 : 1.12) + Math.random() * 0.1, lv * 0.7);
   }
 
   /** Thunder for dry lightning: `k` 0..1 closeness. Far = late, soft, low rumble; near = crack + boom. */
@@ -1087,6 +1096,24 @@ export class AudioEngine {
       case 'eat':
         for (let i = 0; i < 3; i++) this.burst('bandpass', 600, 2, 0.25, 0.08, i * 0.16);
         break;
+      case 'caw': {
+        // a raven: two or three hoarse, falling croaks (a sawtooth through a nasal band, roughened)
+        const n = 2 + Math.floor(Math.random() * 2), f0 = 520 + Math.random() * 120;
+        for (let i = 0; i < n; i++) {
+          const w = i * (0.28 + Math.random() * 0.08);
+          this.tone(f0, 'sawtooth', 0.05 * k, 0.17, w, dest, f0 * 0.72);
+          this.burst('bandpass', 1300, 3, 0.07 * k, 0.16, w, dest);
+        }
+        break;
+      }
+      case 'flap':
+        // wings beating up off a perch: a few soft whumps of air
+        for (let i = 0; i < 4; i++) this.burst('lowpass', 500 + Math.random() * 300, 0.8, (0.22 - i * 0.04) * k, 0.07, i * 0.11, dest);
+        break;
+      case 'scurry':
+        // something small dashing through dry brush
+        for (let i = 0; i < 5; i++) this.burst('bandpass', 2500 + Math.random() * 2500, 1.5, 0.05 * k, 0.03, i * 0.05 + Math.random() * 0.02, dest);
+        break;
       case 'disarm':
         this.burst('highpass', 3000, 3, 0.3, 0.04);
         this.tone(600, 'triangle', 0.06, 0.15, 0.05);
@@ -1147,7 +1174,7 @@ export class AudioEngine {
 export type SfxName =
   | 'step' | 'stepMetal' | 'land' | 'click' | 'pinSet' | 'pickStrain' | 'pickBreak' | 'unlock' | 'door' | 'pickup'
   | 'intel' | 'levelUp' | 'loot' | 'ui' | 'uiHover' | 'uiConfirm' | 'deny' | 'cans' | 'zap' | 'emp' | 'throw'
-  | 'droneAlert' | 'droneSputter' | 'detectTick' | 'megaphone' | 'eat' | 'disarm' | 'thud' | 'bounce';
+  | 'droneAlert' | 'droneSputter' | 'detectTick' | 'megaphone' | 'eat' | 'disarm' | 'thud' | 'bounce' | 'caw' | 'flap' | 'scurry';
 
 
 export type LoopHandle = SpotHandle;

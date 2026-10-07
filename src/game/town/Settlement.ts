@@ -1,4 +1,5 @@
 import * as THREE from 'three/webgpu';
+import { Interior } from '../world/interiors';
 import type { Heightfield } from '@/game/world/Heightfield';
 import type { Physics } from '@/engine/physics';
 import type { Landmarks } from '@/game/world/Landmarks';
@@ -196,7 +197,18 @@ export class Settlement {
     this.landmarks.fires.push(fire);
     this.landmarks.audioSpots.push({ kind: 'fire', pos: f.p(cave.fire[0], cave.fire[1] + 0.3, cave.fire[2]) });
     this.group.add(root);
+    // the chamber, the side pocket and the neck to it, and the inner half of the mouth tunnel (the
+    // same ellipsoids caveField carves); the mouth is the one way out
+    const e = (p: THREE.Vector3, cx: number, cy: number, cz: number, rx: number, ry: number, rz: number) =>
+      ((p.x - cx) / rx) ** 2 + ((p.y - cy) / ry) ** 2 + ((p.z - cz) / rz) ** 2 < 1;
+    this.caveInterior = new Interior('cut', f.m,
+      (p) => e(p, 0, 1.7, 5.0, 5.4, 3.9, 5.2) || e(p, 7.6, 1.3, 3.4, 2.3, 2.4, 2.4) || e(p, 5.6, 1.15, 3.35, 1.7, 1.95, 1.5) || (p.z > -2.6 && e(p, 0, 1.2, -1.2, 2.35, 2.5, 3.8)),
+      [{ box: new THREE.Box3(new THREE.Vector3(-3.2, -0.6, -7), new THREE.Vector3(3.2, 4.4, -2.2)) }],
+      [root]);
   }
+
+  /** The Cut's chamber as a sealed interior (interior mode). */
+  caveInterior: Interior | null = null;
 
   /** The posted wash up the ridge, in world space; hidden when you are nowhere near it. */
   private buildTrail() {

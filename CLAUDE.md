@@ -89,9 +89,11 @@ src/engine/                 renderer (backend chain, canvas sizing), postfx (TSL
                             surface, room reverb) + music (generative score), physics (Rapier), input, noise + noiseTex
 src/game/Game.ts            orchestrator: modes title → charselect → playing, frame loop, items, saves, HUD feed
 src/game/Story.ts           quest runtime (steps from flags, rewards, banter); data in content/quests.ts + story.ts
-src/game/world/             Atmosphere (sky, fog, sun, day/night), Heightfield + Terrain, Props, Landmarks,
-                            Scrub, effects (dust, haze, fire, light cones, shockwave), materials (factories), kit (geometry,
-                            MeshBatch + buildFar, DistanceLod, shadowProxy, Frame), lights (VirtualLight pool), npc (people)
+src/game/world/             Atmosphere (sky, fog, sun, day/night), Heightfield + Terrain, Props (rocks, trees, cars,
+                            poles, billboards), Landmarks, Scrub (grass + Pebbles), Shrubs (streamed), flora (plant builders),
+                            vehicles (buildCar: every wreck), Fauna (all animals, one mesh), effects (dust, haze, fire, light
+                            cones, shockwave), materials (factories), kit (geometry, MeshBatch + buildFar, DistanceLod,
+                            shadowProxy, Frame), lights (VirtualLight pool), npc (people)
 src/game/town/              Dry Creek, The Cut and the wash (Settlement.ts: build half + NPC dialogue/quests half)
 src/game/sites/             points of interest, one class each: jet, drivein, datacenter, tube (Site.ts: flag contract)
 src/game/bunker/            GarageBuilder (Tier 1 geometry), Garage (locks, hazards, loot, taunts), Drone (SeedBot AI)
@@ -114,6 +116,8 @@ Headless harness. It needs `npm run dev` running, and nothing appears on screen:
 node scripts/dev/shot.mjs "http://localhost:5173/play/?webgl&autostart" out.png \
   --wait 3000 --eval "game.atmo.hour = 21.5" --wait 2000 --fps --shot night.png
 node scripts/dev/hands-lab.mjs sheet.png "pose=reach" "pose=lockpick&look=engineer" "pose=idle&torch" "pose=flat&view=palm"
+node scripts/dev/props-lab.mjs sheet.png "what=car&kind=pickup&hood=open" "what=tree&kind=joshua" "what=shrub&kind=all" "what=fauna"   # prop lab (debug/props.ts)
+node scripts/dev/closeups.mjs outdir car tree grass rock pole wide   # in-game close-ups of the nearest of each
 node scripts/dev/marketing-shots.mjs [hero night interior camp lockpick]   # regenerate site screenshots
 node scripts/dev/og-card.mjs                                               # regenerate public/og.jpg
 node scripts/dev/mobile-shot.mjs "http://localhost:5173/play/?webgl" out.png --tap 230,207 --twin "150,250,150,150;600,200,700,200"   # phone emulation + touch gestures
@@ -134,7 +138,8 @@ Game URL flags:
 - `?q=low|medium|high|ultra`
 - `?touch=1|0`: force the phone/touch build on or off (on-screen controls, compact layout, mobile quality caps)
 - `?webgl`, `?gpu=high|low|reset`: backend override
-- `?skip=ui,post,env,dust,haze,props,landmarks,scrub,garage,terrain,sky,shadows,fog`: subsystem bisecting
+- `?skip=ui,post,env,dust,haze,props,landmarks,scrub,fauna,garage,terrain,sky,shadows,fog`: subsystem bisecting
+- `?interior=off`: never skip the exterior (A/B for interior mode). `?at=garage`: start the run inside the Garage
 
 Desktop dev hooks (env vars):
 - `BB_START_URL`: open another URL
@@ -168,6 +173,15 @@ The webview's `console.log` goes to stdout.
   - Anything that joins the scene later compiles lazily. Add it at boot (hidden is fine) or add it to a warm-up.
   - Never create a light per instance or at runtime. Lit shaders key on each light's id (`torchLight()` is the shared torch).
   - Check with a pipeline-count hook on `renderer._pipelines.getForRender`, as in NOTES "can't move was shader compiles".
+- **Interior mode** (`world/interiors.ts`):
+  - Inside a sealed interior whose portals are all out of the frustum, `Game` hides the exterior around the render only, keeping the interior's own roots.
+  - The interiors are the Garage, The Cut, the Tube's west tube and the data centre hall.
+  - New outdoor systems must be added to `Game.exteriorRoots()`.
+  - A new opening in a sealed interior must become a portal, or the exterior vanishes behind it.
+  - A new sealed interior gets an `Interior` (sites: `Site.interior`).
+  - Never let it hide an object holding a light (`hideExcept` guards this).
+  - A/B with `?interior=off`; `?at=garage` starts inside.
+- **Plants and animals** share `floraMaterial()` (per-vertex `fColor`: rgb + kind). Add new ones as `Plant` geometry (flora.ts) or a `Rig` (Fauna.ts), not new materials. Streamed scatter must be filled before the boot warm-up (`Game.build` calls each `update` with the boot camera).
 - **TSL shaders:**
   - Put tweakable values in `uniform()`, not literals, so instances share one program. Unique literals mean one compile per material, which made loading take 73 s once.
   - Sample the baked noise atlas (`noise()`/`fbm2()` in `src/engine/noiseTex.ts`) instead of per-pixel `mx_*` noise.

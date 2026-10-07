@@ -1,4 +1,5 @@
 import * as THREE from 'three/webgpu';
+import { Interior } from '../world/interiors';
 import type { GameContext, TalkChoiceView } from '../context';
 import type { Landmarks } from '../world/Landmarks';
 import type { GameState } from '../State';
@@ -6,7 +7,7 @@ import { Sparks } from '../world/effects';
 import { ITEMS } from '@/content/items';
 import { XP_REWARDS } from '@/content/progression';
 import { Site } from './Site';
-import { ColdStorageBuild, CH, FY, INSIDE, CAGE } from './datacenterBuild';
+import { ColdStorageBuild, CH, FY, INSIDE, CAGE, HALL, LOBBY } from './datacenterBuild';
 
 /** Story flags (see Site.ts). */
 const F = {
@@ -56,6 +57,11 @@ export class DataCenterSite extends Site {
     this.b.root.add(this.sparks.sprite);
     this.lod(this.b.near, this.b.far, 52);
     this.inv.copy(this.frame.m).invert();
+    // the server hall: sealed panels, solid louvres, a ceiling; the one way out is the lobby doorway
+    this.interior = new Interior('datacenter', this.frame.m,
+      (p) => p.x > INSIDE.x0 && p.x < INSIDE.x1 && p.z > INSIDE.z0 && p.z < INSIDE.z1 - 0.05 && p.y > -1 && p.y < HALL.h,
+      [{ box: new THREE.Box3(new THREE.Vector3(LOBBY.door0 - 0.4, -0.3, HALL.z1 - 1.0), new THREE.Vector3(LOBBY.door1 + 0.4, 2.9, HALL.z1 + 0.8)) }],
+      [this.group]);
 
     const P = this.b.pts;
     this.spot('heart', -3, FY, -5.5);

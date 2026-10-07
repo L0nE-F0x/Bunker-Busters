@@ -125,6 +125,8 @@ export class TubeBuild {
   lockerFall = new THREE.Vector3();
   /** Local points for interactions. */
   readonly pts: Record<string, THREE.Vector3> = {};
+  /** The walkable inside of the west tube as a centreline [x, y] from the torn mouth to the bulkhead. */
+  readonly innerAxis: [number, number][] = [];
   private readonly b = new SplitBatch();
   private readonly d = new MeshBatch();
   private readonly lens = new MeshBatch();
@@ -568,6 +570,7 @@ export class TubeBuild {
     const gA = Math.max(this.ground(BREAK.mid, TZ - 1.2), this.ground(BREAK.mid, TZ + 1.2), this.ground(BREAK.mid, TZ));
     const yA = PY, yLow = gA + 1.18, yB = trackY(BREAK.b);
     const tA = BREAK.mid + 1.2;
+    this.innerAxis.push([tA, yLow + 0.12], [BREAK.a, yA], [INNER.x1, PY]);
     b.add(tube, this.cylX(tA, yLow + 0.12, BREAK.a, yA, R, 32));
     this.b.indoor = true;
     b.add(M.tubeIn(), flipInside(this.cylX(tA, yLow + 0.12, BREAK.a, yA, R - 0.06, 32)));

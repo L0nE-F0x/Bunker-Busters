@@ -12,7 +12,7 @@
 
 export type AmbientKind =
   | 'drone' | 'fire' | 'neon' | 'generator'
-  | 'drip' | 'hum' | 'wind-hollow' | 'radio' | 'projector' | 'crowd' | 'sparks';
+  | 'drip' | 'hum' | 'wind-hollow' | 'radio' | 'projector' | 'crowd' | 'sparks' | 'flies';
 
 export interface VoiceEnv {
   ctx: BaseAudioContext;
@@ -276,6 +276,36 @@ export const VOICES: Record<AmbientKind, VoiceSpec> = {
             if (pop) burst(env, out, next, 'bandpass', rand(500, 900), 0.7, 0.7, 0.001, 0.09);
             else burst(env, out, next, 'highpass', rand(1800, 4800), 0.7, rand(0.12, 0.42), 0.001, rand(0.02, 0.06));
             next += Math.random() < 0.3 ? rand(0.015, 0.055) : rand(0.08, 0.46); // crackles come in clusters
+          }
+        },
+        stop: (w) => S.stop(w),
+      };
+    },
+  },
+
+  // a few flies over a wreck: wing tones that wander in pitch and drop in and out as they circle
+  flies: {
+    range: 9, ref: 0.8, rolloff: 1.4, hrtf: true, gain: 0.05,
+    build(env, out) {
+      const { ctx } = env;
+      const S = new Sources();
+      const t0 = ctx.currentTime;
+      const flies = [0, 1, 2].map(() => {
+        const o = S.add(osc(ctx, 'sawtooth', rand(170, 240)));
+        const g = gain(ctx, 0);
+        o.connect(filt(ctx, 'bandpass', 420, 1.2)).connect(g).connect(out);
+        o.start(t0);
+        return { o, g, next: t0 };
+      });
+      return {
+        tick(now, until) {
+          for (const f of flies) {
+            while (f.next < until) {
+              const t = Math.max(now, f.next), d = rand(0.15, 0.7);
+              f.o.frequency.setTargetAtTime(rand(160, 260), t, 0.08);
+              f.g.gain.setTargetAtTime(Math.random() < 0.3 ? 0 : rand(0.3, 1), t, 0.05);
+              f.next = t + d;
+            }
           }
         },
         stop: (w) => S.stop(w),

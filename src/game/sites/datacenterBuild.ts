@@ -5,6 +5,7 @@ import { box, cyl, beam, wire, place, norm, merge, MeshBatch, shadowProxy, type 
 import { rustyMetal, concrete, corrugated, plainStandard, chainLink, fabric, glow, GlowPalette, type GlowSlot } from '../world/materials';
 import { GlowSprites, lightCone } from '../world/effects';
 import { VirtualLight } from '../world/lights';
+import { buildCar } from '../world/vehicles';
 import { surfaces } from '@/engine/surface';
 import { dcAtlas } from './datacenterArt';
 import { pvMaterial, glassMaterial, flipInside, rng, SplitBatch } from './datacenterAtlas';
@@ -44,8 +45,6 @@ const M = {
   yellow: () => rustyMetal({ base: '#e2b523', rust: 0.0, metalness: 0.3, roughness: 0.55 }),
   red: () => rustyMetal({ base: '#ad2b1f', rust: 0.05, metalness: 0.4 }),
   blue: () => rustyMetal({ base: '#2c6db0', rust: -0.1, metalness: 0.4 }),
-  carWhite: () => rustyMetal({ base: '#e4e2dc', rust: -0.2, metalness: 0.5, roughness: 0.35 }),
-  carRed: () => rustyMetal({ base: '#8c1d1a', rust: 0.1, metalness: 0.5, roughness: 0.35 }),
   carSteel: () => rustyMetal({ base: '#9ea3a6', rust: -0.3, metalness: 0.85, roughness: 0.3 }),
   louvre: () => corrugated('#5a615f', 0.35, 'y'),
   roller: () => corrugated('#8f9497', 0.5, 'y'),
@@ -1096,34 +1095,16 @@ export class ColdStorageBuild {
       b.add(pv, norm(g));
     }
     // cars: two sedans, a wedge truck with a tent on it
-    this.sedan(-36.5, 13.6, 0.05, M.carWhite());
-    this.sedan(-25.4, 21.8, -0.08, M.carRed());
+    this.sedan(-36.5, 13.6, 0.05, '#e4e2dc', 31);
+    this.sedan(-25.4, 21.8, -0.08, '#8c1d1a', 32);
     this.wedge(-19.5, 13.3, 0.12);
   }
 
-  private sedan(x: number, z: number, ry: number, paint: THREE.Material) {
-    const { b } = this;
-    const grp: THREE.BufferGeometry[] = [];
-    const body = new THREE.BoxGeometry(1.86, 0.62, 4.6, 1, 1, 4);
-    const cab = new THREE.BoxGeometry(1.6, 0.55, 2.4, 1, 1, 2);
-    const cp = cab.attributes.position as THREE.BufferAttribute;
-    for (let i = 0; i < cp.count; i++) if (cp.getY(i) > 0) cp.setXYZ(i, cp.getX(i) * 0.82, cp.getY(i), cp.getZ(i) * 0.62 - 0.15);
-    cab.computeVertexNormals();
-    const xf = (g: THREE.BufferGeometry, y: number, zz = 0) => {
-      g.translate(0, y, zz);
-      g.rotateY(ry);
-      g.translate(x, 0, z);
-      return norm(g);
-    };
-    grp.push(xf(body, 0.66));
-    b.add(paint, ...grp);
-    b.add(M.carGlass(), xf(cab, 1.24, -0.1));
-    for (const [wx, wz] of [[-0.85, 1.45], [0.85, 1.45], [-0.85, -1.45], [0.85, -1.45]]) {
-      b.add(M.rubber(), xf(new THREE.CylinderGeometry(0.34, 0.34, 0.24, 14).rotateZ(Math.PI / 2).translate(wx, 0, wz), 0.34));
-    }
-    b.add(M.tail(), xf(new THREE.BoxGeometry(1.7, 0.08, 0.04).translate(0, 0, -2.31), 0.8));
-    b.add(M.white(), xf(new THREE.BoxGeometry(1.6, 0.06, 0.04).translate(0, 0, 2.31), 0.75));
-    this.col(x, 0.75, z, 0.95, 0.75, 2.3, ry);
+  private sedan(x: number, z: number, ry: number, paint: string, seed: number) {
+    const rand = rng(seed);
+    const m = new THREE.Matrix4().makeRotationY(ry + Math.PI / 2).setPosition(x, 0, z);
+    const res = buildCar(this.b, m, { kind: 'coupe', paint, rand, rust: 0.2, fade: 0.35, broken: 0.15, hood: 'shut', wheels: ['ok', 'ok', 'flat', 'ok'] });
+    this.col(x, res.center.y, z, res.half.z, res.half.y, res.half.x, ry);
   }
 
   private wedge(x: number, z: number, ry: number) {

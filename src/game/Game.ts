@@ -12,13 +12,16 @@ import { Acoustics, isSoft } from '@/engine/surface';
 import { Atmosphere } from './world/Atmosphere';
 import { Heightfield } from './world/Heightfield';
 import { Terrain } from './world/Terrain';
-import { Props } from './world/Props';
+import { Props, rockGeometry } from './world/Props';
 import { Landmarks } from './world/Landmarks';
-import { Scrub } from './world/Scrub';
+import { Scrub, Pebbles } from './world/Scrub';
+import { Shrubs } from './world/Shrubs';
+import { Fauna } from './world/Fauna';
+import { Interior, hideExcept } from './world/interiors';
 import { DustMotes, GroundHaze, DustPuffs, SandStreaks, DustDevils, Shockwave, heightTexture } from './world/effects';
 import { Weather } from './world/Weather';
 import { VirtualLight, lightPool } from './world/lights';
-import { updateRim, glow } from './world/materials';
+import { updateRim, glow, desertRock } from './world/materials';
 import { Garage } from './bunker/Garage';
 import { Settlement } from './town/Settlement';
 import { buildSites, type Site } from './sites';
@@ -40,6 +43,8 @@ import { ITEMS, HOTBAR_ITEMS } from '@/content/items';
 import { XP_REWARDS, fallFactor } from '@/content/progression';
 import { damp } from '@/engine/noise';
 
+/** Debug: ?interior=off draws the exterior even from inside sealed interiors (A/B for interior mode). */
+const NO_INTERIOR = typeof location !== 'undefined' && new URLSearchParams(location.search).get('interior') === 'off';
 /** Debug: ?skip=props,landmarks,scrub,dust,haze,env,post,garage,sites disables subsystems (for GPU bisecting). */
 const SKIP = new Set((new URLSearchParams(location.search).get('skip') ?? '').split(',').filter(Boolean));
 
@@ -85,6 +90,9 @@ export class Game {
   props!: Props;
   landmarks!: Landmarks;
   scrub!: Scrub;
+  shrubs!: Shrubs;
+  pebbles!: Pebbles;
+  fauna!: Fauna;
   dust!: DustMotes;
   haze!: GroundHaze;
   puffs!: DustPuffs;
@@ -180,6 +188,12 @@ export class Game {
     if (!SKIP.has('landmarks')) this.scene.add(this.landmarks.group);
     this.scrub = new Scrub(this.hf, this.quality.grassDensity);
     if (!SKIP.has('scrub')) this.scene.add(this.scrub.mesh);
+    this.shrubs = new Shrubs(this.hf, Math.min(1, 0.5 + this.quality.grassDensity * 0.5));
+    if (!SKIP.has('scrub')) this.scene.add(this.shrubs.group);
+    this.fauna = new Fauna(this.hf, this.props.perches, this.props.wrecks);
+    if (!SKIP.has('fauna')) this.scene.add(this.fauna.mesh);
+    this.pebbles = new Pebbles(this.hf, rockGeometry(5, 0), desertRock(), Math.round(4000 * Math.min(1, this.quality.grassDensity)));
+    if (!SKIP.has('scrub')) this.scene.add(this.pebbles.mesh);
     await step(0.55, 'Kicking up dust');
     const ht = heightTexture(this.hf);
     this.dust = new DustMotes(this.atmo, this.quality.dustCount);
@@ -229,6 +243,10 @@ export class Game {
     this.physics.step();
     this.setTitleCamera(0);
     this.atmo.update(0, this.camera.position);
+    // streamed scatter must hold something before the warm-up, or its programs compile mid-play
+    this.scrub.update(this.camera.position, this.atmo.wind);
+    this.shrubs.update(this.camera.position);
+    this.pebbles.update(this.camera.position);
     // in batches, a frame each, so the loading bar keeps moving through a cold start (~20 s in WebKit)
     const drawn: THREE.Object3D[] = [];
     this.scene.traverse((o) => { if ((o as THREE.Mesh).isMesh || (o as THREE.Sprite).isSprite || (o as THREE.Points).isPoints || (o as THREE.Line).isLine) drawn.push(o); });
@@ -662,7 +680,9 @@ export class Game {
     if (hourOverride) this.atmo.hour = hourOverride;
     this.map.deserialize(state.data.discovered);
     const [x, , z] = state.data.position;
-    const spawn = new THREE.Vector3(x, this.hf.heightAt(x, z) + 0.1, z);
+    let spawn = new THREE.Vector3(x, this.hf.heightAt(x, z) + 0.1, z);
+    // debug: ?at=garage starts the run inside the Garage (benching interior mode)
+    if (new URLSearchParams(location.search).get('at') === 'garage') spawn = this.garage.b.points.interior.clone().setY(this.garage.b.points.interior.y - 0.9);
     this.player = new Player(this.physics, state.data.archetype, spawn);
     this.player.yaw = state.data.yaw;
     this.player.speedMult = state.archetype.stats.speed;
@@ -736,12 +756,16 @@ export class Game {
     // (this renders the frame, so it stands in for a render: the scene pass only runs once per frame)
     const shown: THREE.Object3D[] = [];
     const culled: THREE.Object3D[] = [];
+    const empty: THREE.InstancedMesh[] = [];
     const show = (o: THREE.Object3D) => { if (!o.visible) { o.visible = true; shown.push(o); } };
     for (const root of roots) {
       root.traverse((o) => {
         if ((o as THREE.Light).isLight) return;
         show(o);
         if (o.frustumCulled) { o.frustumCulled = false; culled.push(o); }
+        // streamed scatter can be empty where the boot camera stands: draw one instance anyway
+        const im = o as THREE.InstancedMesh;
+        if (im.isInstancedMesh && im.count === 0) { im.count = 1; empty.push(im); }
       });
       for (let a = root.parent; a; a = a.parent) show(a);
     }
@@ -753,8 +777,36 @@ export class Game {
     } finally {
       for (const o of shown) o.visible = false;
       for (const o of culled) o.frustumCulled = true;
+      for (const o of empty) o.count = 0;
     }
     return performance.now() - t0;
+  }
+
+  /** Frames drawn in interior mode, and the interior of the last frame (debug). */
+  interiorFrames = 0;
+  interiorName = '';
+  private _hidden: THREE.Object3D[] = [];
+  private _exterior: THREE.Object3D[] | null = null;
+  private _interiors: Interior[] | null = null;
+  /** Everything outdoors: what interior mode skips. */
+  private exteriorRoots() {
+    if (this._exterior) return this._exterior;
+    const inside = (o: THREE.Object3D) => this.garage.houseBox.containsPoint(o.getWorldPosition(new THREE.Vector3()));
+    this._exterior = [
+      this.atmo.sky, this.terrain.mesh, this.terrain.far, this.props.group, this.landmarks.group, this.garage.b.group,
+      this.scrub.mesh, this.shrubs.group, this.pebbles.mesh, this.fauna.mesh,
+      this.haze.sprite, this.streaks.sprite, this.devils.sprite,
+      ...[...this.intelMeshes.values()].filter((g) => !inside(g)),
+    ].filter((o): o is THREE.Object3D => !!o);
+    return this._exterior;
+  }
+
+  /** The sealed interior the camera is in and can't see out of, if any (interior mode). */
+  private activeInterior() {
+    if (this.mode !== 'playing' || NO_INTERIOR) return null;
+    this._interiors ??= [this.garage.interior, this.settlement.caveInterior, ...this.sites.map((s) => s.interior)].filter((x): x is Interior => !!x);
+    for (const it of this._interiors) if (it.hides(this.camera)) return it;
+    return null;
   }
 
   /** Touchdown. Above ~3 m (7.7 m/s) a fall starts to hurt; ~11 m will put you down. */
@@ -1174,6 +1226,9 @@ export class Game {
     this.garage.cull(this.camera.position);
     this.props.update(dt, focusPos, this.atmo.wind);
     this.scrub.update(focusPos, this.atmo.wind);
+    this.shrubs.update(focusPos);
+    this.pebbles.update(focusPos);
+    this.fauna.update(dt, focusPos, this.atmo.hour, this.mode === 'playing' ? this.audio : undefined, !!this.player?.sprinting);
     this.dust.update(dt);
     this.haze.update(dt);
     this.puffs.update(dt);
@@ -1222,7 +1277,16 @@ export class Game {
       const ms = this.warmShaders(...roots);
       unstage?.();
       console.log(`[BunkerBusters] shader warm-up (run start): ${ms.toFixed(0)} ms`);
-    } else if (SKIP.has('post')) this.renderer.render(this.scene, this.camera); else this.post.render();
+    } else {
+      // interior mode: inside a sealed building that can't see out, the exterior isn't drawn (nor cast
+      // into the shadow map). Hidden only around the render, so no system's own visibility is touched.
+      const inner = this.activeInterior();
+      const hidden = inner ? hideExcept(this.exteriorRoots(), inner.keep, this._hidden) : null;
+      if (SKIP.has('post')) this.renderer.render(this.scene, this.camera); else this.post.render();
+      if (hidden) { for (const o of hidden) o.visible = true; hidden.length = 0; }
+      if (inner) this.interiorFrames++;
+      this.interiorName = inner?.name ?? '';
+    }
     if (BENCH) { this.benchUpd += tPhys - now; this.benchPhys += tRender - tPhys; this.benchRen += performance.now() - tRender; }
     this.input.endFrame();
   }

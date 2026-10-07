@@ -791,3 +791,84 @@ The iGPU is GPU-bound in this test (~30 fps) since the graphics pass. The deskto
   - `?trace` now logs per second: speed, sprint/crouch/winded/stamina, frames, the longest frame gap and key auto-repeats.
   - Owner traced sessions run on a *copy* of the save. WebKit's localStorage file for the dev-server origin is `http_localhost_5173.localstorage` (copy `tauri_localhost_0.*` to that name under an isolated `XDG_DATA_HOME`).
 - **Next:** loading is ~20 s in WebKit, mostly compiling about 160 pipelines. Fewer unique shaders would shorten it.
+
+## Close-up detail pass: cars, flora, rocks, fauna (2026-10-07)
+**Why (owner):** from a distance the world reads "borderline AAA", but walking up to props, trees, grass and cars it looked cheap. The owner asked for more detail and variety, plus fauna if it wouldn't hurt performance.
+
+**What's new:**
+- **Cars** (`world/vehicles.ts`, `buildCar`): one builder for the highway, Dry Creek, the data centre and the drive-in (four separate low-detail versions before).
+  - The body is a loft: a superellipse section with tumblehome, a crease and a tucked rocker, with the arches pushed into it.
+  - The greenhouse is patches whose cells are glass or paint, so pillars and frames fall out of one surface.
+  - Detail: bumpers, quad headlights, grille, trim, door seams and handles, mirror, antenna, plates.
+  - Lathe tyres with optional whitewalls, steel wheels, hubcaps or lug nuts, an interior, an engine bay under open or missing hoods, and a chassis for cars on their roof.
+  - Kinds: sedan, coupe, wagon, pickup (real bed), van, convertible, burnt.
+  - Wheel states (ok/flat/gone/blocks) settle the body's pitch and roll.
+  - New materials: `carPaint` is a batch family (sun-bleached tops, peeling clear coat, primer, rust climbing from the rockers). `carGlass` has a dust film, wiper arcs and a spider-web crack.
+  - Highway cars cast shadows through coarse hulls fed to the prop shadow stream. Collider boxes come from the hull's bounds.
+- **Flora** (`world/flora.ts`, a `Plant` builder with indexed triangles and per-vertex `fColor` = rgb + kind):
+  - Dead cottonwoods: gnarled, with root flare, limbs along the trunk and bleached twigs.
+  - Joshua trees: a shaggy dead-leaf skirt and spiky rosettes.
+  - Shrubs: creosote, sagebrush, dead brush, prickly pear, barrel cactus, yucca, ocotillo, mesquite.
+  - Every plant (and every animal) shades with one `floraMaterial()`.
+  - Trees are one static mesh. The shadow stream copies their lo LOD (`userData.shadowGeometry`, which `ShadowStream.take` now honours).
+- **Shrubs stream** (`world/Shrubs.ts`): 16 m cells, deterministic. Near (≤38 m) is full detail and casts shadows; far (≤135 m) is lo. Two draws plus one shadow draw.
+  - Species are weighted by moisture (height-based: the wash gets mesquite), slope (cacti, yucca and ocotillo on stony slopes) and clustering noise.
+- **Grass** (`Scrub.ts`): more, finer blades, plus seed stalks and wildflowers per instance (`aVar`: greenness, stalks, flowers, hue).
+  - Parts a tuft doesn't have collapse to a far point in the vertex shader, so they never rasterise.
+  - It's greener and taller in low ground, where the flowers grow.
+- **Pebbles** (`Pebbles` in `Scrub.ts`): an instanced, streamed 24 m gravel scatter, denser on stony patches and slopes.
+- **Rocks:** fractured shapes (planar cuts and smooth normals instead of a faceted icosahedron) and a new `desertRock` material (bands, cracks, desert varnish, lichen). Stones are detail 2; a boulder mesh is detail 3.
+- **Fauna** (`world/Fauna.ts`):
+  - The cast:
+    - vultures soaring by day
+    - ravens perched on crossarms, billboards and car roofs; they caw and take off when you come within 10 m (16 m sprinting)
+    - jackrabbits that sit and then bolt in zig-zag hops
+    - lizards that dart in bursts
+    - butterflies in the low green ground
+    - flies over the nearest wreck, with a new `flies` ambient voice
+    - a wolf pack that passes at a distance, stops to watch you, flees inside about 32 m and howls at night (positional, via `audio.howl`)
+  - Nothing is hostile. Every animal is a rig of rigid procedural parts posed on the CPU into ONE shared dynamic mesh with the flora material: one draw plus one shadow draw, no new shader.
+  - Debug: `game.fauna.census()`, `game.fauna.summonPack(game.player.position, 60)`.
+- **Audio:** sfx `caw`, `flap`, `scurry`; `howl(pos)`; ambient kind `flies`.
+
+**Performance** (headless, 1600×900 High; v0.3.1 → now):
+- Draws: +10 (spawn 73 → 83, Garage gate 109 → 119). The parts: shrubs 2, fauna 1, pebbles 1, a boulder mesh, and the car batches' extra families (paint, glass, fabric).
+- Triangles: ~1.1M → ~2.0–2.25M. Grass is the biggest share, then cars (~10k each), shrubs, trees.
+- RTX 4050 headless: vsync-bound at 60 everywhere except the Garage gate (60 → 57).
+- Intel iGPU: within ~0–10%, but noisy run to run because the owner's desktop shares that GPU. Interleaved per-system costs at spawn: grass 1.9 ms (about half of it new), cars 0.7, pebbles 0.5, rocks 0.4, fauna 0.25, shrubs 0.1.
+- No new pipelines compile mid-game: the pipeline-count hook was checked against a positive control. `warmShaders` now forces count ≥ 1 on empty InstancedMeshes, so streamed scatter compiles at boot.
+
+**Tools:**
+- `debug/props.html` is a prop lab. `what=car|tree|shrub|rock|fauna`, plus kind/seed/hood/wheels/flip/burnt, and an orbit camera around tx/ty/tz.
+- `scripts/dev/props-lab.mjs` makes contact sheets from it.
+- `scripts/dev/closeups.mjs` takes in-game close-ups of the nearest car, tree, grass, rock and pole.
+
+**Next:**
+- Desktop bench (`scripts/dev/bench-desktop.sh high`) to confirm WebKit cost; +10 draws is the number to watch there.
+- Car LOD (far highway cars could drop interiors and wheels detail) if the draw/tri budget tightens.
+- Wolves as a threat is an open design question for the owner (it needs combat or evasion rules).
+- More ground litter (bones, cans, tyres) in the same scatter style.
+
+## Interior mode: the Garage skips the outside world (2026-10-07)
+**Why (owner):** "zones with loading screens so it only draws what's needed". Outdoors that's already done seamlessly (DistanceLod, streamed scatter, culling). The one gap: inside a sealed building the whole exterior was still drawn and cast into the shadow map.
+
+**How:**
+- `Garage.hidesExterior(camera)` returns true when the camera is inside the house and the side door, the only opening (the roll-up is welded shut and the window slits are solid glow), is shut or out of view. The door test is a frustum test on the doorway's box, enlarged; it's conservative, so nothing pops.
+- `Game` hides the exterior roots (sky, terrain, far terrain, props, landmarks/sites/town, grass, shrubs, pebbles, fauna, haze, streaks, dust devils, outdoor intel) only around `post.render()`, then restores them. No system's own visibility logic is touched, and the shadow pass skips them too. Dust motes, puffs, the drone, the player and the Garage group stay.
+- No loading screen: everything was compiled at boot.
+- Debug: `?interior=off` for an A/B; `?at=garage` starts a run inside the house; `game.interiorFrames` counts frames drawn in interior mode.
+
+**Verified:**
+- Inside the Garage (headless 4050): draws 144 → 64, triangles 2.36M → 0.13M.
+- A 16-view 360° sheet with the mode off vs on: the pixel diff shows only animated things (laser sweep, tube flicker, monitor). No holes, no light leaks.
+- With the side door open, the exterior is drawn whenever any sliver of the doorway is in frame.
+- Desktop app (`BB_DEV=1 scripts/dev/bench-desktop.sh high`, 4050): inside the Garage, ~50 fps with 7.2 ms render submit → ~63 fps with 4.2 ms. Outdoors at spawn, with this session's detail and fauna: 51–58 fps, 5.1–6.3 ms.
+
+**Then all four interiors** (`world/interiors.ts`: `Interior` = local frame + inside test + portal boxes + `keep` roots; `hideExcept` walks the path to each kept root and hides its siblings, and never hides anything holding a light, since that would change the light set and recompile every lit shader):
+- **Garage** (`Garage.interior`): the house box; portal is the side door, while it's open.
+- **The Cut** (`Settlement.caveInterior`): the chamber, pocket and neck ellipsoids plus the inner half of the mouth tunnel (the shapes `caveField` carves); portal is the mouth.
+- **Tube** (`TubeSite.interior`): within R of the inner centreline (`TubeBuild.innerAxis`: torn mouth → break → bulkhead); portals are the torn mouth and the airlock. The station has glass walls, so it isn't an interior.
+- **Data centre** (`DataCenterSite.interior`): the server hall (`INSIDE`, below the ceiling); portal is the lobby doorway. The lobby has glass walls, so it stays "outside".
+- **Headless results** (draws off → on, k-tris): Garage 143 → 63 (2355 → 129), Cut 89 → 44 (1685 → 75), Tube 109 → 38 (2271 → 145), hall 114 → 57 (2066 → 227). Exterior was skipped in 16/16, 10/16, 10/16 and 12/16 of a 16-view sweep; the rest face a portal.
+- **Pixel diffs off vs on** show only animated things (lasers, the fire's embers, LEDs).
+- **No new pipelines** with the hook across all four.
