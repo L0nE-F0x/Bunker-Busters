@@ -696,8 +696,8 @@ export class Hands {
     this.root.scale.setScalar(Hands.VIEW_SCALE);
     this.root.renderOrder = 5;
     // flashlight beam emitted from the torch in the left hand (light lives at camera scale)
-    this.flashlight = new THREE.SpotLight(0xfff1d8, 0, 32, 0.5, 0.65, 1.6);
-    this.flashlight.castShadow = false;
+    this.flashlight = torchLight();
+    this.flashlight.intensity = 0;
     // emitted just ahead of the (shrunken) hands so it lights the world, not your own glove
     this.flashlight.position.set(-0.05, -0.05, -0.35);
     this.flashlight.target.position.set(-0.02, -0.12, -6);
@@ -705,7 +705,15 @@ export class Hands {
 
   /** Attach to a camera (call once). */
   attach(camera: THREE.Camera) {
-    camera.add(this.root, this.flashlight, this.flashlight.target);
+    camera.add(this.root);
+    if (this.flashlight.parent !== camera) camera.add(this.flashlight, this.flashlight.target);
+  }
+
+  /** Hold every item at once, for one frame (shader warm-up). Returns the undo. */
+  stageItems() {
+    const staged = Object.values(this.items).filter((obj) => !obj.parent);
+    for (const obj of staged) this.root.add(obj);
+    return () => { for (const obj of staged) obj.removeFromParent(); };
   }
 
   setBase(pose: string) {
@@ -856,9 +864,22 @@ export class Hands {
 
   dispose() {
     this.root.removeFromParent();
-    this.flashlight.removeFromParent();
-    this.flashlight.target.removeFromParent();
+    this.flashlight.intensity = 0; // the light itself stays on the camera (see torchLight)
   }
+}
+
+let torch: THREE.SpotLight | null = null;
+/**
+ * The torch's beam: one SpotLight for the whole session, shared by every Hands and parented to the
+ * camera from boot. Lit shaders are keyed on each light's id, so a fresh light per Hands (title →
+ * character select → play) recompiled every lit material in view the moment a run started.
+ */
+export function torchLight() {
+  if (!torch) {
+    torch = new THREE.SpotLight(0xfff1d8, 0, 32, 0.5, 0.65, 1.6);
+    torch.castShadow = false;
+  }
+  return torch;
 }
 
 const _sway = new THREE.Vector2();

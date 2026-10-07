@@ -129,6 +129,7 @@ scripts/dev/bench-desktop.sh [high|medium]   # real desktop-app perf: opens a wi
 
 Game URL flags:
 - `?autostart`: skip menus into a fresh run
+- `?continue`: skip the title into the saved run (desktop tests can't aim a click at Continue)
 - `?bench`: log fps and update/physics/render ms every 2 s
 - `?q=low|medium|high|ultra`
 - `?touch=1|0`: force the phone/touch build on or off (on-screen controls, compact layout, mobile quality caps)
@@ -162,6 +163,11 @@ The webview's `console.log` goes to stdout.
   - No GTAO pass on WebGL.
   - **No CSS `filter`, `backdrop-filter` or `mix-blend-mode` in WebKitGTK**: they're redrawn on the CPU over the canvas every frame and took menus to ~13 fps. `html.lowfx` (auto in the Linux app, `?lowfx=1` to test) must neutralise any new ones. Throttle per-frame canvas/DOM updates.
 - **Lights and distance:** never `new THREE.PointLight` in world code. Use `VirtualLight` (world/lights.ts): a fixed pool of real lights is lent to the nearest, so the light count (and every shader) never changes. New places get a `buildFar()` stand-in under a `DistanceLod` and a `shadowProxy()` for their static batch (skip anything that moves or hides).
+- **Shader warm-up (desktop freezes):** WebKitGTK compiles shaders on the main thread, so a material seen for the first time freezes the app. Freezes like that made v0.3.0 feel like "can't move".
+  - `Game.warmShaders` compiles everything that's in the scene at boot (during "Compiling shaders"), plus the hands, held items and body at run start.
+  - Anything that joins the scene later compiles lazily. Add it at boot (hidden is fine) or add it to a warm-up.
+  - Never create a light per instance or at runtime. Lit shaders key on each light's id (`torchLight()` is the shared torch).
+  - Check with a pipeline-count hook on `renderer._pipelines.getForRender`, as in NOTES "can't move was shader compiles".
 - **TSL shaders:**
   - Put tweakable values in `uniform()`, not literals, so instances share one program. Unique literals mean one compile per material, which made loading take 73 s once.
   - Sample the baked noise atlas (`noise()`/`fbm2()` in `src/engine/noiseTex.ts`) instead of per-pixel `mx_*` noise.

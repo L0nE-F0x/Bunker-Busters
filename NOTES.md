@@ -765,3 +765,29 @@ The iGPU is GPU-bound in this test (~30 fps) since the graphics pass. The deskto
 - The post stack is a fixed 22 draws.
 - Watch load time.
 - The owner's ear on the ambience, and their eye on the night grade.
+
+## Desktop: "can't move" was shader compiles (2026-10-07, v0.3.1)
+- **Symptom (owner):** in the installed app, W "moves, but very slowly" and Shift doesn't run. Mouse look worked. "Everything looks beautiful, but I can't do anything."
+- **Ruled out:**
+  - Physics: `walk-probe` at 20 and 144 fps, stalls only at real obstacles.
+  - Input: keys and the owner's save were fine headless and in the desktop shell. The owner's traced session showed W/Shift held, 3.3 m/s walking and 6.1 m/s sprinting.
+- **Cause:** nothing compiled shaders ahead of time. The boot `compileAsync` only covered the title view, and it renders to a different target than the post stack's scene pass, so its programs didn't match.
+  - Every material compiled the first time it came into view: turning, walking toward something, hands rising for a sprint, the torch. WebKitGTK compiles on the main thread, so each one froze the app.
+  - The traced session (warm driver cache) froze 2.3 s on the first W and 0.6 s on the first sprint.
+  - Cold cache (`__GL_SHADER_DISK_CACHE=0`), v0.3.0: a 7.8 s freeze entering the game and 0.3–1.3 s per camera turn.
+  - Frame `dt` is capped at 50 ms, so time lost in a freeze isn't caught up. On the first launch of a new version that adds up to barely moving. Chrome hides most of it by compiling in parallel.
+- **Second cause:** lit shaders key on each light's **id** (three's `LightsNode.customCacheKey`). Every `new Hands()` made a new torch SpotLight, and the title had none. Starting a run changed the light set and rebuilt lit materials.
+- **Fix:**
+  - **One torch light for the session.** `torchLight()` in Hands.ts is on the camera from boot.
+  - **`Game.warmShaders(...roots)`** renders one real frame through the post stack with everything under the roots shown (plus hidden ancestors) and not frustum-culled, then restores it all. Lights are left alone.
+  - At boot it runs on every renderable in 10 batches, one frame each, so the loading bar moves. At run start (`warmNext`, the first frame) it covers the camera subtree, with every held item staged by `Hands.stageItems()`, and the shadow body.
+  - Gotcha: the scene pass runs once per animation frame (`nodeFrame.frameId`). A second `post.render()` in the same frame silently skips it, so a warm-up called from a click handler did nothing.
+- **Verified:**
+  - Headless: zero pipelines compiled mid-game across all eight landmarks (360° look at each), night, storm, lightning, walk, sprint and torch.
+  - Desktop, cold cache: no stall over 64 ms in gameplay. That run covered walking, sprinting, a 180° turn and the torch at 44–49 fps.
+  - The only pause left is about 2 s under the fade at run start. Load time to playable is unchanged (~28–31 s cold in the desktop app vs 28 s before), because the compile cost moved from play into the loading bar (~20 s of it in WebKit).
+- **Tooling:**
+  - `?continue` skips the title into the saved run, since desktop tests can't aim a click.
+  - `?trace` now logs per second: speed, sprint/crouch/winded/stamina, frames, the longest frame gap and key auto-repeats.
+  - Owner traced sessions run on a *copy* of the save. WebKit's localStorage file for the dev-server origin is `http_localhost_5173.localstorage` (copy `tauri_localhost_0.*` to that name under an isolated `XDG_DATA_HOME`).
+- **Next:** loading is ~20 s in WebKit, mostly compiling about 160 pipelines. Fewer unique shaders would shorten it.

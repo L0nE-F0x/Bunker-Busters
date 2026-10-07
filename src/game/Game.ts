@@ -24,7 +24,7 @@ import { Settlement } from './town/Settlement';
 import { buildSites, type Site } from './sites';
 import { Player } from './player/Player';
 import { FirstPersonCamera } from './player/FirstPersonCamera';
-import { Hands, HAND_LOOKS } from './player/Hands';
+import { Hands, HAND_LOOKS, torchLight } from './player/Hands';
 import { GameState, saveGame, loadGame, loadSettings, saveSettings, clearSave, type Settings } from './State';
 import type { GameContext, Interactable, UIBridge } from './context';
 import { UI, type HudFrame } from '@/ui/UI';
@@ -120,6 +120,8 @@ export class Game {
   private autosaveTimer = 60;
   private titleT = 0;
   private busy = false; // minigame/modal in progress
+  /** Warm these on the next frame's render (see warmShaders), staging anything not yet in the scene. */
+  private warmNext: { roots: THREE.Object3D[]; stage?: () => (() => void) | undefined } | null = null;
   private cubeRT: THREE.CubeRenderTarget | null = null;
   private cubeCam: THREE.CubeCamera | null = null;
   private envScene = new THREE.Scene();
@@ -204,6 +206,8 @@ export class Game {
     this.camera.fov = this.cam.baseFov;
     this.camera.updateProjectionMatrix();
     this.scene.add(this.camera); // viewmodel hands + flashlight are children of the camera
+    const torch = torchLight(); // on the camera from boot, so the light set never changes (see torchLight)
+    this.camera.add(torch, torch.target);
     // the third-person body is rendered into the sun's shadow map only (layer 1)
     this.atmo.sun.shadow.camera.layers.enable(1);
     this.ctx = this.makeContext();
@@ -225,8 +229,17 @@ export class Game {
     this.physics.step();
     this.setTitleCamera(0);
     this.atmo.update(0, this.camera.position);
-    // best-effort precompile; can stall in background tabs, so cap it
-    await Promise.race([this.renderer.compileAsync(this.scene, this.camera).catch(() => null), new Promise((r) => setTimeout(r, 5000))]);
+    // in batches, a frame each, so the loading bar keeps moving through a cold start (~20 s in WebKit)
+    const drawn: THREE.Object3D[] = [];
+    this.scene.traverse((o) => { if ((o as THREE.Mesh).isMesh || (o as THREE.Sprite).isSprite || (o as THREE.Points).isPoints || (o as THREE.Line).isLine) drawn.push(o); });
+    const batches = 10, per = Math.ceil(drawn.length / batches);
+    let warmMs = 0;
+    for (let i = 0; i < batches; i++) {
+      warmMs += this.warmShaders(...drawn.slice(i * per, (i + 1) * per));
+      this.ui.progress(0.8 + (0.15 * (i + 1)) / batches, 'Compiling shaders');
+      for (let f = 0; f < 2; f++) await new Promise((r) => requestAnimationFrame(r)); // a fresh frame for the scene pass
+    }
+    console.log(`[BunkerBusters] shader warm-up: ${drawn.length} objects in ${batches} frames, ${warmMs.toFixed(0)} ms`);
     await step(0.95, 'Polishing neon');
     this.renderer.setAnimationLoop(() => this.frame());
     window.addEventListener('resize', () => this.resize());
@@ -598,6 +611,11 @@ export class Game {
       setTimeout(() => this.startGame(GameState.fresh('infiltrator', SPAWN)), 50);
       return;
     }
+    if (save && new URLSearchParams(location.search).has('continue')) {
+      // debug: skip the title into the saved run (desktop tests can't aim a click at Continue)
+      setTimeout(() => this.startGame(new GameState(save)), 50);
+      return;
+    }
     // debug: ?open=controls|settings opens a menu over the title (desktop perf testing)
     const open = new URLSearchParams(location.search).get('open');
     if (open) setTimeout(() => (open === 'settings' ? this.ui.openSettings(this.settings, (s) => this.applySettings(s)) : this.ui.showControls()), 1500);
@@ -673,6 +691,8 @@ export class Game {
       if (this.player) this.audio.footstep(this.acoustics?.surfaceAt(this.player.position) ?? 'sand', 0.6, { kind: 'jump' });
     };
     this.cam.snap(state.data.yaw + Math.PI, -0.05);
+    // hands, everything they can hold, and the shadow body compile on the first frame, under the fade
+    this.warmNext = { roots: [this.camera, this.player.model.root], stage: () => this.hands?.stageItems() };
     this.garage.applyFlags(true);
     for (const it of WORLD_INTEL) {
       const m = this.intelMeshes.get(it.id);
@@ -702,6 +722,39 @@ export class Game {
       });
     }
     this.startLoops();
+  }
+
+  /**
+   * Compile every pipeline under `roots` now, instead of the first time each thing comes into view.
+   * WebKitGTK (the desktop app) links shaders on the main thread, so every lazy compile froze the
+   * game for 0.3–3 s: on a cold start, walking off felt like being stuck. One real frame through
+   * the normal post stack, with everything shown and nothing culled, builds exactly the pipelines
+   * play asks for (same targets, same shadow pass); then it's all put back. Lights stay as they are,
+   * since they're part of every lit shader's key.
+   */
+  private warmShaders(...roots: THREE.Object3D[]) {
+    // (this renders the frame, so it stands in for a render: the scene pass only runs once per frame)
+    const shown: THREE.Object3D[] = [];
+    const culled: THREE.Object3D[] = [];
+    const show = (o: THREE.Object3D) => { if (!o.visible) { o.visible = true; shown.push(o); } };
+    for (const root of roots) {
+      root.traverse((o) => {
+        if ((o as THREE.Light).isLight) return;
+        show(o);
+        if (o.frustumCulled) { o.frustumCulled = false; culled.push(o); }
+      });
+      for (let a = root.parent; a; a = a.parent) show(a);
+    }
+    const t0 = performance.now();
+    try {
+      if (SKIP.has('post')) this.renderer.render(this.scene, this.camera); else this.post.render();
+    } catch (e) {
+      console.warn('[BunkerBusters] shader warm-up failed', e);
+    } finally {
+      for (const o of shown) o.visible = false;
+      for (const o of culled) o.frustumCulled = true;
+    }
+    return performance.now() - t0;
   }
 
   /** Touchdown. Above ~3 m (7.7 m/s) a fall starts to hurt; ~11 m will put you down. */
@@ -1162,7 +1215,14 @@ export class Game {
     this.physics.step();
     lightPool.update(this.camera.position, dt);
     const tRender = performance.now();
-    if (SKIP.has('post')) this.renderer.render(this.scene, this.camera); else this.post.render();
+    if (this.warmNext) {
+      const { roots, stage } = this.warmNext;
+      this.warmNext = null;
+      const unstage = stage?.();
+      const ms = this.warmShaders(...roots);
+      unstage?.();
+      console.log(`[BunkerBusters] shader warm-up (run start): ${ms.toFixed(0)} ms`);
+    } else if (SKIP.has('post')) this.renderer.render(this.scene, this.camera); else this.post.render();
     if (BENCH) { this.benchUpd += tPhys - now; this.benchPhys += tRender - tPhys; this.benchRen += performance.now() - tRender; }
     this.input.endFrame();
   }

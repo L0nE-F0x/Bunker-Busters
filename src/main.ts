@@ -20,6 +20,10 @@ if (TRACE !== null) {
   // mouse stats per second: event count and summed movementX/Y (0 while locked = mouse look is dead)
   let mm = 0, mdx = 0, mdy = 0;
   window.addEventListener('mousemove', (e) => { mm++; mdx += Math.abs(e.movementX); mdy += Math.abs(e.movementY); }, true);
+  // frame pacing and key auto-repeat per second (repeats aren't logged one by one)
+  let frames = 0, gap = 0, lastF = 0, reps = 0;
+  const tick = (t: number) => { frames++; if (lastF) gap = Math.max(gap, t - lastF); lastF = t; requestAnimationFrame(tick); };
+  requestAnimationFrame(tick);
   window.addEventListener('keyup', (e) => console.log(`[trace] keyup ${e.code}`), true);
   document.addEventListener('pointerlockchange', () => console.log(`[trace] pointerlockchange locked=${!!document.pointerLockElement}`));
   document.addEventListener('bb-lockchange', () => console.log(`[trace] bb-lockchange locked=${(window as any).game?.input.locked}`));
@@ -32,13 +36,15 @@ if (TRACE !== null) {
     const p = g.player, b = document.querySelector('#title .menu .btn') as HTMLElement | null;
     const r = b?.getBoundingClientRect();
     console.log(`[trace] mode=${g.mode} locked=${g.input.locked} enabled=${g.input.enabled} modal=${g.ui.modalOpen} mg=${g.ui.minigameOpen}` +
-      (p ? ` pos=${p.position.x.toFixed(2)},${p.position.z.toFixed(2)} yaw=${g.cam.yaw.toFixed(2)} frozen=${p.frozen} down=[${[...g.input.down].join(',')}]` : '') +
-      ` mouse=${mm}ev dx=${mdx.toFixed(0)} dy=${mdy.toFixed(0)} raw=${g.input.rawLive}` +
+      (p ? ` pos=${p.position.x.toFixed(2)},${p.position.z.toFixed(2)} yaw=${g.cam.yaw.toFixed(2)} frozen=${p.frozen} down=[${[...g.input.down].join(',')}]` +
+        ` hs=${Math.hypot(p.velocity.x, p.velocity.z).toFixed(2)} sm=${p.speedMult.toFixed(2)} crouch=${p.crouching} sprint=${p.sprinting} winded=${p.winded} stam=${p.stamina.toFixed(2)} grounded=${p.grounded} busy=${g.busy}` : '') +
+      ` mouse=${mm}ev dx=${mdx.toFixed(0)} dy=${mdy.toFixed(0)} raw=${g.input.rawLive} fps=${frames} maxgap=${gap.toFixed(0)}ms reps=${reps}` +
       (r ? ` btn0=${(r.x + r.width / 2).toFixed(0)},${(r.y + r.height / 2).toFixed(0)} inner=${innerWidth}x${innerHeight} dpr=${devicePixelRatio}` : ''));
-    mm = mdx = mdy = 0;
+    mm = mdx = mdy = frames = gap = reps = 0;
   }, 1000);
   for (const t of ['pointerdown', 'mousedown', 'mouseup', 'click', 'touchstart', 'keydown'] as const) {
     window.addEventListener(t, (e) => {
+      if (t === 'keydown' && (e as KeyboardEvent).repeat) { reps++; return; }
       const el = e.target as HTMLElement;
       console.log(`[trace] ${t} ${(e as KeyboardEvent).code ?? ''} → <${el.tagName?.toLowerCase()} class="${el.className}">${(el.textContent ?? '').trim().slice(0, 24)}`);
     }, true);

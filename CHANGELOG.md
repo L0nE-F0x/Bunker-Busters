@@ -3,6 +3,10 @@
 Each `## vX.Y.Z` section becomes the GitHub release notes and the "what's new" list in the in-app
 update notice (the first few bullets). `scripts/release.sh` refuses to release a version without one.
 
+## v0.3.1
+- **No more freezing when you start moving (desktop app).** The game used to prepare each piece of the world's graphics the first time it came into view, and the desktop app stops while it does. Pressing W, sprinting, turning around or switching on the torch could freeze it for a second or more, so walking felt stuck. All of that now happens on the loading screen, and the loading bar keeps moving while it does
+- **The run starts cleanly.** Your hands, the torch and everything you can hold are ready before the fade lifts, so the first sprint no longer hitches
+
 ## v0.3.0
 - **Smooth again, and lighter than ever.** v0.2.0 lit every pixel with sixteen lights and drew Dry Creek from across the map. Lights are now shared from a small pool, far places swap to cheap stand-ins, and shadows draw in a fraction of the passes. About 40% fewer draw calls than v0.1.9, with far more world
 - **Four new places to break into.** The Exit Strategy, a founder's private jet that tried to leave early. Starlite Drive-In, where you can restart the projector and watch the last keynote at night. ColdStorage, a data centre with an AI that still answers. The Tube, a hyperloop test track you can power up and ride to the broken end
