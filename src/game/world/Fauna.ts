@@ -3,11 +3,15 @@ import { Plant, FUR, LEAF } from './flora';
 import { floraMaterial } from './materials';
 import type { Heightfield } from './Heightfield';
 import type { AudioEngine, LoopHandle } from '@/engine/audio';
+import type { Combat, Hostile, HostileProvider, NoiseKind, RayHit, Damage } from '../combat/Combat';
+import { capsuleRay, sphereRay } from '../combat/Combat';
 
 /**
  * The desert's wildlife: vultures on the thermals, ravens on the poles and wrecks, jackrabbits,
- * lizards, butterflies down in the wash, flies over the wrecks, and a wolf pack that keeps its
- * distance. Ambient: nothing here can hurt you, and everything is shy of you.
+ * lizards, butterflies down in the wash, flies over the wrecks, and a wolf pack that hunts you.
+ * Everything else is shy of you. The wolves are not: they track you by noise and scent, stalk,
+ * circle and take turns lunging in, flinch from torchlight and fire, and break when they lose
+ * enough of the pack (see Pack).
  *
  * Every animal is a rig of rigid procedural parts posed on the CPU each frame and written into ONE
  * shared mesh (the plant material: per-vertex colour), so the whole menagerie costs one draw and
@@ -173,6 +177,48 @@ function fliesRig(n: number) {
   return { R, flies };
 }
 
+function snakeRig() {
+  const tan: RGB = [0.62, 0.52, 0.38], dia: RGB = [0.3, 0.24, 0.17], belly: RGB = [0.78, 0.7, 0.56];
+  // diamonds down the back, pale belly
+  const skin = (p: THREE.Vector3, c: RGB): RGB => (p.y < -0.005 ? belly : Math.sin(p.z * 70) * Math.sin(p.x * 120 + 1) > 0.25 ? dia : c);
+  const R = new Rig();
+  const segs: number[] = [];
+  let parent = -1;
+  const n = 10, L = 0.11;
+  for (let k = 0; k < n; k++) {
+    const r0 = 0.036 * (1 - Math.abs(k - 3) / 9), r1 = r0 * 0.94;
+    parent = R.add(parent, [0, 0, k === 0 ? 0 : -L], (P) => P.tube([V(0, 0, 0), V(0, 0, -L)], [r0, r1], 6, () => tan, FUR), skin);
+    segs.push(parent);
+  }
+  // the rattle on the last segment
+  R.add(parent, [0, 0, -L], (P) => { for (let i = 0; i < 4; i++) P.blob(V(0, 0, -i * 0.012), V(0.011, 0.008, 0.008), 0, [0.7, 0.6, 0.42], FUR, r, 0); });
+  // head on the first, facing +z
+  const head = R.add(segs[0], [0, 0, 0], (P) => {
+    P.blob(V(0, 0.006, 0.04), V(0.038, 0.022, 0.055), 1, tan, FUR, r, 0.05);
+    for (const s of [-1, 1]) P.blob(V(s * 0.022, 0.016, 0.06), V(0.006, 0.006, 0.006), 0, [0.08, 0.06, 0.04], LEAF, r, 0);
+  }, skin);
+  return { R, segs, head };
+}
+
+function scorpionRig() {
+  const c: RGB = [0.68, 0.56, 0.32], dk: RGB = [0.42, 0.32, 0.18];
+  const R = new Rig();
+  const body = R.add(-1, [0, 0.025, 0], (P) => P.blob(V(0, 0, 0), V(0.028, 0.012, 0.05), 1, c, FUR, r, 0.05));
+  const tail: number[] = [];
+  let parent = body;
+  for (let k = 0; k < 5; k++) {
+    parent = R.add(parent, [0, 0.004, k === 0 ? -0.045 : -0.022], (P) => P.blob(V(0, 0, -0.011), V(0.01 - k * 0.0012, 0.009, 0.013), 0, k === 4 ? dk : c, FUR, r, 0));
+    tail.push(parent);
+  }
+  const sting = R.add(parent, [0, 0, -0.022], (P) => P.spike(V(0, 0, 0), V(0, -0.4, -1), 0.02, 0.006, dk, [0.1, 0.06, 0.03], FUR));
+  const claws = [-1, 1].map((sx) => R.add(body, [sx * 0.02, 0, 0.04], (P) => {
+    P.tube([V(0, 0, 0), V(sx * 0.02, 0, 0.025), V(sx * 0.012, 0, 0.05)], [0.005, 0.005, 0.004], 4, () => c, FUR);
+    P.blob(V(sx * 0.012, 0, 0.06), V(0.009, 0.006, 0.014), 0, c, FUR, r, 0);
+  }));
+  const legs = [[1, 0.02], [-1, 0.02], [1, 0], [-1, 0], [1, -0.02], [-1, -0.02]].map(([sx, z]) => R.add(body, [sx * 0.022, 0, z], (P) => P.spike(V(0, 0, 0), V(sx, -0.7, 0.2), 0.035, 0.004, c, dk, FUR)));
+  return { R, body, tail, sting, claws, legs };
+}
+
 // ------------------------------------------------------------------ the shared mesh
 
 /** One posed creature: a slice of the shared buffers. */
@@ -240,7 +286,7 @@ class Body {
 
 // ------------------------------------------------------------------ creatures
 
-interface Ctx { hf: Heightfield; player: THREE.Vector3; hour: number; dt: number; t: number; audio?: AudioEngine; sprinting: boolean }
+interface Ctx { hf: Heightfield; player: THREE.Vector3; hour: number; dt: number; t: number; audio?: AudioEngine; sprinting: boolean; combat?: Combat; safe: { p: THREE.Vector3; r: number }[]; camFwd?: THREE.Vector3 }
 const DAY = (h: number) => h > 6.8 && h < 18.6;
 
 class Vulture {
@@ -569,25 +615,123 @@ class Flies {
   }
 }
 
-class Wolf {
+class Wolf implements Hostile {
+  readonly kind = 'wolf' as const;
+  readonly surface = 'flesh' as const;
+  readonly center = new THREE.Vector3(0, -999, 0);
+  radius = 1.1;
   pos = new THREE.Vector3();
   yaw = 0;
   phase = Math.random() * 6;
   speed = 0;
   howl = 0;
   look = 0;
+  // --- the hunt
+  alive = true;
+  /** Out in the world this cycle (false: unspawned, so it can't be shot or seen). */
+  out = false;
+  hp = 60;
+  /** Seconds since it died (−1 alive): the fall plays out, then it lies there. */
+  dead = -1;
+  deadSide = 1;
+  role: 'ring' | 'lunge' | 'retreat' = 'ring';
+  roleT = 0;
+  ringA = Math.random() * 6.28;
+  ringR = 9;
+  fear = 0;
+  stagger = 0;
+  bite = 0;
+  bitten = false;
+  snarlT = rnd(1, 4);
+  pack: Pack | null = null;
   constructor(readonly b: Body, readonly rig: ReturnType<typeof wolfRig>) {}
+
+  private readonly _a = new THREE.Vector3();
+  private readonly _b = new THREE.Vector3();
+  private readonly _f = new THREE.Vector3();
+  /** Body capsule (hips → chest) and head sphere, in world space. */
+  private shape() {
+    const s = Math.sin(this.yaw), c = Math.cos(this.yaw);
+    const y = this.center.y;
+    this._a.set(this.pos.x - s * 0.5, y, this.pos.z - c * 0.5);
+    this._b.set(this.pos.x + s * 0.55, y + 0.05, this.pos.z + c * 0.55);
+    return { head: this._f.set(this.pos.x + s * 0.95, y + 0.28, this.pos.z + c * 0.95) };
+  }
+  raycast(o: THREE.Vector3, d: THREE.Vector3, max: number): RayHit | null {
+    if (!this.out) return null;
+    const { head } = this.shape();
+    const th = sphereRay(o, d, head, 0.17);
+    const tb = capsuleRay(o, d, this._a, this._b, this.dead >= 0 ? 0.2 : 0.27);
+    let best: RayHit | null = null;
+    if (tb !== null && tb <= max) best = { t: tb, zone: 'body' };
+    if (th !== null && th <= max && (!best || th < best.t)) best = { t: th, zone: 'head' };
+    return best;
+  }
+  damage(d: Damage): boolean {
+    if (!this.alive) return false;
+    this.hp -= d.amount;
+    const at = d.point;
+    if (this.hp <= 0) {
+      this.alive = false;
+      this.dead = 0;
+      this.hp = 0;
+      // fall away from the hit
+      const side = Math.sin(this.yaw) * d.dir.z - Math.cos(this.yaw) * d.dir.x;
+      this.deadSide = side > 0 ? 1 : -1;
+      this.pack?.onWolfDown(this, at, d);
+      return true;
+    }
+    this.stagger = 0.45;
+    // a hit drives it back a step
+    this.pos.addScaledVector(this._a.set(d.dir.x, 0, d.dir.z).normalize(), d.melee ? 0.9 : 0.35);
+    this.pack?.onWolfHurt(this, at, d);
+    return false;
+  }
+  unaware() {
+    return !this.pack || this.pack.state === 'travel' || this.pack.state === 'gone';
+  }
+  facing() {
+    return this._f.set(Math.sin(this.yaw), 0, Math.cos(this.yaw));
+  }
+  awareness() {
+    if (!this.alive || !this.out || !this.pack) return 0;
+    const st = this.pack.state;
+    return st === 'circle' || st === 'stalk' ? 1 : st === 'watch' ? 0.5 : 0;
+  }
+
   /** Pose for this frame at `speed` (m/s); `watch` turns the head toward `target`. */
   animate(c: Ctx, target: THREE.Vector3 | null) {
+    const g = c.hf.heightAt(this.pos.x, this.pos.z);
+    if (this.dead >= 0) {
+      // the legs go, the body rolls onto its side and settles
+      this.dead += c.dt;
+      const k = Math.min(1, this.dead / 0.55);
+      const e = k * k * (3 - 2 * k);
+      const roll = this.deadSide * e * 1.45;
+      this.b.place(V(this.pos.x, g + 0.8 - e * 0.52, this.pos.z), this.yaw, 0, roll, 1.3);
+      const { legs, neck, head, tail } = this.rig;
+      legs.forEach((l, i) => {
+        this.b.pose(l.upper, (l.hind ? -0.6 : 0.5) * e + (i % 2 ? 0.15 : -0.1) * e, 0, 0);
+        this.b.pose(l.lower, (l.hind ? 0.9 : 0.4) * e, 0, 0);
+      });
+      this.b.pose(neck, 0.45 * e, 0, 0);
+      this.b.pose(head, 0.3 * e, 0, 0);
+      this.b.pose(tail, 0.4 * e, 0, 0);
+      this.center.set(this.pos.x, g + 0.32, this.pos.z);
+      return;
+    }
     const sp = this.speed;
     this.phase += c.dt * (sp > 6 ? 9.5 : 3 + sp * 1.6);
     const A = sp < 0.2 ? 0 : sp > 6 ? 0.85 : 0.45;
-    const g = c.hf.heightAt(this.pos.x, this.pos.z);
     const bob = A ? Math.abs(Math.sin(this.phase)) * 0.035 : 0;
     // body pitch follows the ground under the shoulders and hips
     const fx = Math.sin(this.yaw) * 0.4, fz = Math.cos(this.yaw) * 0.4;
     const pitch = -Math.atan2(c.hf.heightAt(this.pos.x + fx, this.pos.z + fz) - c.hf.heightAt(this.pos.x - fx, this.pos.z - fz), 0.8);
-    this.b.place(V(this.pos.x, g + 0.8 + bob, this.pos.z), this.yaw, pitch, 0, 1.3);
+    // stalking: low to the ground; a lunge stretches out; a hit rocks it
+    const low = this.pack && (this.pack.state === 'stalk' || this.pack.state === 'circle') && this.role !== 'lunge' ? 0.08 : 0;
+    const rock = this.stagger > 0 ? Math.sin(this.stagger * 30) * this.stagger * 0.5 : 0;
+    this.b.place(V(this.pos.x, g + 0.8 + bob - low, this.pos.z), this.yaw, pitch + (this.bite > 0 ? 0.12 : 0), rock, 1.3);
+    this.center.set(this.pos.x, g + 0.8 - low, this.pos.z);
     const { legs, neck, head, tail } = this.rig;
     legs.forEach((l, k) => {
       // trot: diagonal pairs move together
@@ -595,60 +739,370 @@ class Wolf {
       const swing = Math.sin(ph) * A;
       const lift = Math.max(0, Math.cos(ph)) * A;
       if (l.hind) {
-        this.b.pose(l.upper, -0.25 + swing, 0, 0);
-        this.b.pose(l.lower, 0.55 - lift * 0.9, 0, 0);
+        this.b.pose(l.upper, -0.25 + swing - low * 2, 0, 0);
+        this.b.pose(l.lower, 0.55 - lift * 0.9 + low * 3, 0, 0);
       } else {
-        this.b.pose(l.upper, swing, 0, 0);
-        this.b.pose(l.lower, lift * 1.1, 0, 0);
+        this.b.pose(l.upper, swing + low * 2, 0, 0);
+        this.b.pose(l.lower, lift * 1.1 + low * 2, 0, 0);
       }
     });
     let lookYaw = 0;
     if (target) lookYaw = clamp(angDiff(this.yaw, Math.atan2(target.x - this.pos.x, target.z - this.pos.z)), -1.1, 1.1);
     this.look = lerp(this.look, lookYaw, Math.min(1, c.dt * 3));
     const howling = this.howl > 0;
-    this.b.pose(neck, howling ? -0.9 : sp > 6 ? 0.35 : 0.05, this.look * 0.5, 0);
-    this.b.pose(head, howling ? -0.55 : 0.1 + (A ? Math.sin(this.phase * 2) * 0.04 : 0), this.look * 0.5, 0);
-    this.b.pose(tail, (sp > 6 ? -0.35 : 0.15) + Math.sin(c.t * 2 + this.phase) * 0.05, Math.sin(c.t * 1.3) * 0.12, 0);
+    const snap = this.bite > 0 ? Math.sin((1 - this.bite / 0.3) * Math.PI) : 0;
+    // hackles: head low and forward while it hunts; the bite snaps forward
+    this.b.pose(neck, howling ? -0.9 : sp > 6 ? 0.35 : 0.05 + low * 3 + snap * 0.5, this.look * 0.5, 0);
+    this.b.pose(head, howling ? -0.55 : 0.1 + low * 2 - snap * 0.6 + (A ? Math.sin(this.phase * 2) * 0.04 : 0), this.look * 0.5, 0);
+    this.b.pose(tail, (sp > 6 ? -0.35 : low ? 0.55 : 0.15) + Math.sin(c.t * 2 + this.phase) * 0.05, Math.sin(c.t * 1.3) * 0.12, 0);
   }
 }
 
-/** The pack: a leader picks a line across the land; the others keep station on it. */
-class Pack {
-  state: 'gone' | 'travel' | 'watch' | 'flee' = 'gone';
+/** Venom: what a bite or a sting does on top of the damage (seconds of poison). */
+const VENOM = { snake: 26, scorpion: 14 };
+
+/**
+ * A rattlesnake in the scrub. Coiled and still until you come close; then it rattles (the warning),
+ * rears, and if you keep coming it strikes: a bite plus venom. It can be shot or clubbed. After a
+ * strike it slithers off. Daytime and dusk, away from roads.
+ */
+class Snake implements Hostile {
+  readonly kind = 'snake' as const;
+  readonly surface = 'flesh' as const;
+  readonly center = new THREE.Vector3(0, -999, 0);
+  radius = 0.7;
+  alive = false;
+  state: 'gone' | 'coiled' | 'rattle' | 'strike' | 'slither' | 'dead' = 'gone';
+  pos = new THREE.Vector3();
+  yaw = 0;
+  wait = rnd(10, 40);
+  t = 0;
+  near = 0;
+  rattleT = 0;
+  hp = 18;
+  constructor(readonly b: Body, readonly rig: ReturnType<typeof snakeRig>) {}
+  raycast(o: THREE.Vector3, d: THREE.Vector3, max: number): RayHit | null {
+    if (!this.alive) return null;
+    const t = sphereRay(o, d, this.center, 0.22);
+    return t !== null && t <= max ? { t, zone: 'body' } : null;
+  }
+  damage(d: Damage) {
+    if (!this.alive) return false;
+    this.hp -= d.amount;
+    if (this.hp <= 0) { this.alive = false; this.state = 'dead'; this.t = 0; return true; }
+    this.state = 'slither';
+    this.t = 0;
+    return false;
+  }
+  unaware() { return this.state === 'coiled'; }
+  facing() { return V(Math.sin(this.yaw), 0, Math.cos(this.yaw)); }
+  awareness() { return this.state === 'rattle' ? 0.8 : 0; }
+
+  update(c: Ctx) {
+    if (this.state === 'gone') {
+      this.b.visible = false;
+      if ((this.wait -= c.dt) > 0 || !(c.hour > 9 && c.hour < 20)) return;
+      const p = openSpot(c, 9, 28, 2);
+      if (!p || c.safe.some((s) => Math.hypot(p.x - s.p.x, p.z - s.p.z) < s.r)) { this.wait = 4; return; }
+      this.pos.copy(p);
+      this.yaw = Math.random() * 6.28;
+      this.state = 'coiled';
+      this.alive = true;
+      this.hp = 18;
+      return;
+    }
+    const d = Math.hypot(this.pos.x - c.player.x, this.pos.z - c.player.z);
+    this.b.visible = d < 45;
+    this.t += c.dt;
+    if (d > 55 && this.state !== 'dead') { this.state = 'gone'; this.alive = false; this.wait = rnd(20, 60); return; }
+    if (this.state === 'dead' && (d > 40 || this.t > 90)) { this.state = 'gone'; this.wait = rnd(30, 80); return; }
+    const toP = Math.atan2(c.player.x - this.pos.x, c.player.z - this.pos.z);
+    if (this.state === 'coiled' || this.state === 'rattle') {
+      if (d < 6.5) {
+        if (this.state === 'coiled') { this.state = 'rattle'; this.rattleT = 0; }
+        this.yaw += angDiff(this.yaw, toP) * Math.min(1, c.dt * 3);
+        if ((this.rattleT -= c.dt) <= 0) { this.rattleT = 1.25; c.audio?.combat?.voice('rattle', this.pos.clone().setY(this.pos.y + 0.2), 1, d < 3 ? 1.4 : 1); }
+        this.near = d < 2.3 ? this.near + c.dt : 0;
+        if (this.near > 0.35 || (c.sprinting && d < 2.6)) { this.state = 'strike'; this.t = 0; c.audio?.combat?.voice('hiss', this.pos, 1); }
+      } else if (this.state === 'rattle' && d > 8) this.state = 'coiled';
+    } else if (this.state === 'strike') {
+      if (this.t > 0.18 && this.t - c.dt <= 0.18 && d < 2.6 && c.combat) {
+        c.combat.hurtPlayer(9, this.pos.clone().setY(this.pos.y + 0.3), 'bite');
+        c.combat.venom(VENOM.snake);
+      }
+      if (this.t > 0.6) { this.state = 'slither'; this.t = 0; }
+    } else if (this.state === 'slither') {
+      const away = toP + Math.PI + Math.sin(this.t * 0.7) * 0.6;
+      this.yaw += angDiff(this.yaw, away) * Math.min(1, c.dt * 2);
+      this.pos.x += Math.sin(this.yaw) * 0.9 * c.dt;
+      this.pos.z += Math.cos(this.yaw) * 0.9 * c.dt;
+      if (this.t > 8) { this.state = 'coiled'; }
+    }
+    this.pos.y = c.hf.heightAt(this.pos.x, this.pos.z);
+    this.pose(c);
+  }
+
+  private pose(c: Ctx) {
+    const { segs, head } = this.rig;
+    const st = this.state;
+    const coil = st === 'coiled' || st === 'rattle' || st === 'strike';
+    const rear = st === 'rattle' ? 1 : st === 'strike' ? 1 : 0;
+    const strike = st === 'strike' ? Math.sin(Math.min(1, this.t / 0.2) * Math.PI) : 0;
+    const dead = st === 'dead';
+    this.b.place(V(this.pos.x, this.pos.y + 0.022, this.pos.z), this.yaw, 0, dead ? 2.6 : 0, 1);
+    this.center.copy(this.pos).setY(this.pos.y + (rear ? 0.18 : 0.05));
+    segs.forEach((sg, k) => {
+      let yaw: number, pitch = 0;
+      if (dead) { yaw = Math.sin(k * 0.9) * 0.25; }
+      else if (coil) {
+        // a spiral: the tail wraps round, the neck makes an S and rears
+        yaw = k < 3 ? (k === 0 ? 0 : 0.9) : 0.85 + k * 0.02;
+        if (k < 3) { pitch = -rear * (k === 0 ? 0.5 : 0.35) + strike * (k === 0 ? 0.6 : 0.4); yaw = k === 0 ? -0.6 + strike * 0.6 : 0.9 - strike * 0.6; }
+      } else yaw = Math.sin(this.t * 6 - k * 0.8) * 0.5;
+      this.b.pose(sg, k === 0 ? pitch : pitch, k === 0 ? 0 : yaw, 0);
+    });
+    this.b.pose(head, -rear * 0.3 + strike * 0.2, 0, 0);
+    void c;
+  }
+}
+
+/**
+ * Bark scorpions: out at night under the wrecks and rocks, sting if you stand on them. Small, quick,
+ * a crowbar or a boot fixes them (they die to anything).
+ */
+class Scorpion implements Hostile {
+  readonly kind = 'scorpion' as const;
+  readonly surface = 'flesh' as const;
+  readonly center = new THREE.Vector3(0, -999, 0);
+  radius = 0.4;
+  alive = false;
+  state: 'gone' | 'idle' | 'scuttle' | 'sting' | 'dead' = 'gone';
+  pos = new THREE.Vector3();
+  yaw = 0;
+  wait = rnd(5, 30);
+  t = 0;
+  cd = 0;
+  phase = 0;
+  constructor(readonly b: Body, readonly rig: ReturnType<typeof scorpionRig>, readonly spots: THREE.Vector3[]) {}
+  raycast(o: THREE.Vector3, d: THREE.Vector3, max: number): RayHit | null {
+    if (!this.alive) return null;
+    const t = sphereRay(o, d, this.center, 0.14);
+    return t !== null && t <= max ? { t, zone: 'body' } : null;
+  }
+  damage() {
+    if (!this.alive) return false;
+    this.alive = false;
+    this.state = 'dead';
+    this.t = 0;
+    return true;
+  }
+  unaware() { return this.state === 'idle'; }
+  facing() { return V(Math.sin(this.yaw), 0, Math.cos(this.yaw)); }
+
+  update(c: Ctx) {
+    const night = c.hour > 19.5 || c.hour < 5.5;
+    if (this.state === 'gone') {
+      this.b.visible = false;
+      if ((this.wait -= c.dt) > 0 || !night) return;
+      // near a wreck if there's one close, else open ground
+      let p: THREE.Vector3 | null = null;
+      for (const sp of this.spots) if (sp.distanceTo(c.player) < 30 && Math.random() < 0.5) { p = sp.clone().add(V(rnd(-3, 3), 0, rnd(-3, 3))); break; }
+      p ??= openSpot(c, 6, 20, 1);
+      if (!p) { this.wait = 4; return; }
+      this.pos.copy(p);
+      this.state = 'idle';
+      this.alive = true;
+      this.t = 0;
+      return;
+    }
+    const d = Math.hypot(this.pos.x - c.player.x, this.pos.z - c.player.z);
+    this.b.visible = d < 25;
+    this.t += c.dt;
+    this.cd = Math.max(0, this.cd - c.dt);
+    if (d > 35 || (!night && this.state !== 'dead')) { this.state = 'gone'; this.alive = false; this.wait = rnd(10, 40); return; }
+    if (this.state === 'dead') { if (this.t > 40) { this.state = 'gone'; this.wait = rnd(20, 60); } }
+    else if (d < 0.9 && this.cd <= 0) {
+      this.state = 'sting';
+      this.t = 0;
+      this.cd = 2.2;
+      c.combat?.hurtPlayer(5, this.pos.clone().setY(this.pos.y + 0.2), 'bite');
+      c.combat?.venom(VENOM.scorpion);
+      c.audio?.combat?.voice('click', this.pos, 1);
+    } else if (this.state === 'sting' && this.t > 0.4) this.state = 'idle';
+    else if (this.state === 'idle' && Math.random() < c.dt * 0.4) { this.state = 'scuttle'; this.t = 0; this.yaw += rnd(-2, 2); }
+    else if (this.state === 'scuttle') {
+      this.pos.x += Math.sin(this.yaw) * 0.6 * c.dt;
+      this.pos.z += Math.cos(this.yaw) * 0.6 * c.dt;
+      this.phase += c.dt * 30;
+      if (this.t > rnd(0.4, 1.4)) this.state = 'idle';
+    }
+    this.pos.y = c.hf.heightAt(this.pos.x, this.pos.z);
+    const dead = this.state === 'dead';
+    this.b.place(this.pos, this.yaw, 0, dead ? Math.PI : 0, 1.8);
+    this.center.copy(this.pos).setY(this.pos.y + 0.06);
+    const sting = this.state === 'sting' ? Math.sin(Math.min(1, this.t / 0.25) * Math.PI) : 0;
+    this.rig.tail.forEach((tl, k) => this.b.pose(tl, -0.55 - k * 0.12 - sting * 0.25, 0, 0));
+    this.b.pose(this.rig.sting, 0.3 + sting * 0.6, 0, 0);
+    this.rig.legs.forEach((l, k) => this.b.pose(l, 0, (this.state === 'scuttle' ? Math.sin(this.phase + k * 1.7) * 0.35 : 0), 0));
+    this.rig.claws.forEach((cl, k) => this.b.pose(cl, 0, (k ? 1 : -1) * (0.2 + Math.sin(c.t * 2 + k) * 0.1), 0));
+  }
+}
+
+/** Snakes and scorpions, as one hostile provider. */
+class Critters implements HostileProvider {
+  constructor(readonly snakes: Snake[], readonly scorpions: Scorpion[]) {}
+  hostiles() {
+    return [...this.snakes, ...this.scorpions];
+  }
+}
+
+/**
+ * The pack. Out on the flats it passes at a distance (travel), stops to watch you (watch), and if it
+ * decides you're prey it stalks in low and fast (stalk), rings you at 8–12 m (circle) and sends one
+ * wolf at a time in on a lunge while the rest keep pressure. Each wolf has 60 hp: a hurt one yelps
+ * and backs off, and losing wolves breaks the pack's nerve (flee). Torchlight on a wolf makes it
+ * hesitate; a gunshot rattles them (less at night); they won't go near a fire or a town.
+ */
+class Pack implements HostileProvider {
+  state: 'gone' | 'travel' | 'watch' | 'stalk' | 'circle' | 'flee' = 'gone';
   wait = rnd(30, 80);
   goal = new THREE.Vector3();
   watchT = 0;
   nextWatch = 0;
   howlT = 0;
-  constructor(readonly wolves: Wolf[]) {}
-  private offsets = [V(0, 0, 0), V(1.8, 0, -2.5), V(-1.6, 0, -4.1)];
+  /** How many wolves this outing (2–5). */
+  size = 3;
+  morale = 1;
+  lungeT = 3;
+  growlT = 0;
+  /** Seconds the player has been out of reach (hidden, at a fire): the hunt is abandoned. */
+  lostT = 0;
+  hunting = false;
+  noticeT = 0;
+  constructor(readonly wolves: Wolf[]) {
+    for (const w of wolves) w.pack = this;
+  }
+  private offsets = [V(0, 0, 0), V(1.8, 0, -2.5), V(-1.6, 0, -4.1), V(2.4, 0, -5.8), V(-2.2, 0, -7.2)];
+
+  get active() {
+    return this.wolves.filter((w) => w.out && w.alive);
+  }
+  hostiles() {
+    return this.wolves;
+  }
+  /** Gunshots and blasts: rattle the pack (by day it's enough to drive them off). */
+  hear(pos: THREE.Vector3, radius: number, kind: NoiseKind) {
+    if (this.state === 'gone' || this.state === 'flee') return;
+    const lead = this.active[0];
+    if (!lead || lead.pos.distanceTo(pos) > radius) return;
+    if (kind === 'gunshot' || kind === 'explosion') {
+      this.morale -= this.hunting ? 0.07 : 0.25;
+      if (!this.hunting && this.morale < 0.75) this.state = 'flee';
+    } else if (kind === 'can' && this.state === 'circle') {
+      this.morale -= 0.15;
+    }
+  }
+  onWolfHurt(w: Wolf, at: THREE.Vector3, d: Damage) {
+    this.morale -= 0.12;
+    w.role = 'retreat';
+    w.roleT = 0;
+    this.audio?.combat?.voice('yelp', at, 1 + Math.random() * 0.1);
+    // a hurt wolf makes the whole pack commit (or bolt)
+    if (this.state === 'travel' || this.state === 'watch') this.hunting = true, this.state = 'circle';
+    void d;
+  }
+  onWolfDown(w: Wolf, at: THREE.Vector3, d: Damage) {
+    this.morale -= d.takedown ? 0.25 : 0.42;
+    this.audio?.combat?.voice(d.takedown ? 'whimper' : 'yelp', at, 0.85);
+    if (this.state === 'travel' || this.state === 'watch') this.hunting = true, this.state = 'circle';
+    void w;
+  }
+  audio?: AudioEngine;
+
+  private spawn(c: Ctx) {
+    const p = openSpot(c, 95, 130, 15);
+    if (!p) { this.wait = 5; return; }
+    const night = c.hour > 19.3 || c.hour < 5.2;
+    const dusk = !night && (c.hour > 17.8 || c.hour < 6.5);
+    this.size = night ? 4 + (Math.random() < 0.5 ? 1 : 0) : dusk ? 3 + (Math.random() < 0.4 ? 1 : 0) : 2 + (Math.random() < 0.5 ? 1 : 0);
+    this.morale = night ? 1.25 : 1;
+    this.hunting = false;
+    this.lostT = 0;
+    // a line that passes the player at a distance, not through them
+    const toward = V(c.player.x - p.x, 0, c.player.z - p.z);
+    const side = V(-toward.z, 0, toward.x).normalize().multiplyScalar(rnd(40, 65) * (Math.random() < 0.5 ? 1 : -1));
+    this.goal.copy(c.player).add(side).addScaledVector(toward, 0.9);
+    this.wolves.forEach((w, i) => {
+      w.out = i < this.size;
+      w.alive = w.out;
+      w.hp = 60;
+      w.dead = -1;
+      w.fear = 0;
+      w.stagger = 0;
+      w.role = 'ring';
+      w.ringA = (i / this.size) * Math.PI * 2;
+      w.ringR = rnd(8, 11.5);
+      w.pos.copy(p).add(this.offsets[i]);
+      w.yaw = Math.atan2(this.goal.x - p.x, this.goal.z - p.z);
+      w.b.visible = false;
+    });
+    this.state = 'travel';
+    this.nextWatch = rnd(6, 16);
+  }
+
+  /** Is the player somewhere wolves won't follow (a fire, a town, indoors)? */
+  private safe(c: Ctx) {
+    if (c.combat?.target.hidden) return true;
+    for (const s of c.safe) if (Math.hypot(c.player.x - s.p.x, c.player.z - s.p.z) < s.r) return true;
+    return false;
+  }
+
   update(c: Ctx) {
-    const lead = this.wolves[0];
     if (this.state === 'gone') {
-      for (const w of this.wolves) w.b.visible = false;
+      for (const w of this.wolves) { w.b.visible = false; w.out = false; }
       if ((this.wait -= c.dt) > 0) return;
-      const p = openSpot(c, 95, 130, 15);
-      if (!p) { this.wait = 5; return; }
-      // a line that passes the player at a distance, not through them
-      const toward = V(c.player.x - p.x, 0, c.player.z - p.z);
-      const side = V(-toward.z, 0, toward.x).normalize().multiplyScalar(rnd(50, 80) * (Math.random() < 0.5 ? 1 : -1));
-      this.goal.copy(c.player).add(side).addScaledVector(toward, 0.9);
-      this.wolves.forEach((w, i) => { w.pos.copy(p).add(this.offsets[i]); w.yaw = Math.atan2(this.goal.x - p.x, this.goal.z - p.z); });
-      this.state = 'travel';
-      this.nextWatch = rnd(8, 20);
+      this.spawn(c);
       return;
     }
+    const live = this.active;
+    const lead = live[0] ?? this.wolves.find((w) => w.out) ?? this.wolves[0];
     const d = Math.hypot(lead.pos.x - c.player.x, lead.pos.z - c.player.z);
-    for (const w of this.wolves) w.b.visible = d < 260;
-    const night = c.hour > 19 || c.hour < 5.5;
-    if (this.state !== 'flee' && d < (c.sprinting ? 45 : 32)) this.state = 'flee';
+    for (const w of this.wolves) w.b.visible = w.out && Math.hypot(w.pos.x - c.player.x, w.pos.z - c.player.z) < 260;
+    const night = c.hour > 19.3 || c.hour < 5.2;
+    const t = c.combat?.target;
+    const safe = this.safe(c);
+    // morale breaks: run
+    if (this.state !== 'flee' && (this.morale < 0.3 || live.length === 0 || (live.length === 1 && this.size > 2))) this.state = 'flee';
+
+    // noticing you: noise and scent carry further at night and when you sprint; storms and crouching hide you
+    if (this.state === 'travel' || this.state === 'watch') {
+      const nz = t ? t.noise : c.sprinting ? 1.5 : 0.8;
+      const vis = t ? t.visibility : 1;
+      const sense = (night ? 80 : 50) * (0.55 + nz * 0.45) * (0.5 + vis * 0.5);
+      if (d < sense && !safe && t?.alive !== false) {
+        this.noticeT += c.dt;
+        // by day a pack may only watch and move on; at night it hunts
+        if (this.noticeT > (night ? 0.8 : 2.2)) {
+          const hunt = night || d < 28 || Math.random() < 0.55;
+          this.noticeT = -6;
+          if (hunt) {
+            this.hunting = true;
+            this.state = 'stalk';
+            c.audio?.combat?.voice('growl', lead.pos.clone().setY(lead.pos.y + 0.8), 0.95);
+            if (night && Math.random() < 0.6) c.audio?.howl(lead.pos.clone().setY(lead.pos.y + 1));
+          }
+        }
+      } else this.noticeT = Math.max(0, this.noticeT - c.dt);
+    }
+    if (this.hunting && safe) { this.lostT += c.dt; if (this.lostT > 6) { this.state = 'flee'; this.hunting = false; } }
+    else this.lostT = 0;
+
     let target: THREE.Vector3 | null = null;
     let speed = 0;
     if (this.state === 'travel') {
       speed = 2.6;
       const to = V(this.goal.x - lead.pos.x, 0, this.goal.z - lead.pos.z);
       if (to.length() < 4 || c.hf.zoneDistance(lead.pos.x + Math.sin(lead.yaw) * 6, lead.pos.z + Math.cos(lead.yaw) * 6) < 10) {
-        // re-aim past the player again, the far side
         const a = Math.random() * 6.28;
         this.goal.set(c.player.x + Math.cos(a) * 140, 0, c.player.z + Math.sin(a) * 140);
       }
@@ -659,38 +1113,145 @@ class Pack {
       this.watchT -= c.dt;
       if ((this.howlT -= c.dt) <= 0) {
         this.howlT = 99;
-        const w = this.wolves[Math.floor(Math.random() * this.wolves.length)];
+        const w = live[Math.floor(Math.random() * live.length)] ?? lead;
         w.howl = 3.2;
         c.audio?.howl(w.pos.clone().setY(w.pos.y + 1));
       }
       if (this.watchT <= 0) { this.state = 'travel'; this.nextWatch = rnd(15, 35); }
-    } else {
+    } else if (this.state === 'flee') {
       speed = 10;
-      const away = Math.atan2(lead.pos.x - c.player.x, lead.pos.z - c.player.z);
-      lead.yaw += clamp(angDiff(lead.yaw, away), -1, 1) * c.dt * 4;
+      for (const w of live) {
+        const away = Math.atan2(w.pos.x - c.player.x, w.pos.z - c.player.z);
+        w.yaw += clamp(angDiff(w.yaw, away), -1, 1) * c.dt * 4;
+        w.speed = lerp(w.speed, 10, Math.min(1, c.dt * 3));
+        w.pos.x += Math.sin(w.yaw) * w.speed * c.dt;
+        w.pos.z += Math.cos(w.yaw) * w.speed * c.dt;
+      }
     }
-    if (d > 190 || (this.state === 'flee' && d > 150)) { this.state = 'gone'; this.wait = rnd(80, 200); return; }
-    lead.speed = lerp(lead.speed, speed, Math.min(1, c.dt * 3));
-    lead.pos.x += Math.sin(lead.yaw) * lead.speed * c.dt;
-    lead.pos.z += Math.cos(lead.yaw) * lead.speed * c.dt;
-    // followers: station-keep on offsets in the leader's frame
-    for (let i = 1; i < this.wolves.length; i++) {
-      const w = this.wolves[i];
-      const o = this.offsets[i].clone().applyAxisAngle(V(0, 1, 0), lead.yaw);
-      const want = lead.pos.clone().add(o);
-      const to = V(want.x - w.pos.x, 0, want.z - w.pos.z);
-      const dist = to.length();
-      const sp = clamp(speed + (dist - 0.5) * 1.5, 0, 12);
-      if (dist > 0.3) w.yaw += clamp(angDiff(w.yaw, Math.atan2(to.x, to.z)), -1, 1) * c.dt * 4;
-      else if (this.state === 'watch') w.yaw += angDiff(w.yaw, Math.atan2(c.player.x - w.pos.x, c.player.z - w.pos.z)) * c.dt * 1.5;
-      w.speed = lerp(w.speed, dist > 0.3 ? sp : 0, Math.min(1, c.dt * 3));
+
+    if (this.state === 'stalk' || this.state === 'circle') {
+      this.huntStep(c, live, night, safe);
+    } else if (this.state !== 'flee') {
+      // travel / watch: the leader leads, the rest keep station on it
+      lead.speed = lerp(lead.speed, speed, Math.min(1, c.dt * 3));
+      lead.pos.x += Math.sin(lead.yaw) * lead.speed * c.dt;
+      lead.pos.z += Math.cos(lead.yaw) * lead.speed * c.dt;
+      for (let i = 1; i < this.wolves.length; i++) {
+        const w = this.wolves[i];
+        if (!w.out || !w.alive) continue;
+        const o = this.offsets[i].clone().applyAxisAngle(V(0, 1, 0), lead.yaw);
+        const want = lead.pos.clone().add(o);
+        const to = V(want.x - w.pos.x, 0, want.z - w.pos.z);
+        const dist = to.length();
+        const sp = clamp(speed + (dist - 0.5) * 1.5, 0, 12);
+        if (dist > 0.3) w.yaw += clamp(angDiff(w.yaw, Math.atan2(to.x, to.z)), -1, 1) * c.dt * 4;
+        else if (this.state === 'watch') w.yaw += angDiff(w.yaw, Math.atan2(c.player.x - w.pos.x, c.player.z - w.pos.z)) * c.dt * 1.5;
+        w.speed = lerp(w.speed, dist > 0.3 ? sp : 0, Math.min(1, c.dt * 3));
+        w.pos.x += Math.sin(w.yaw) * w.speed * c.dt;
+        w.pos.z += Math.cos(w.yaw) * w.speed * c.dt;
+      }
+      if (this.state === 'watch') lead.yaw += angDiff(lead.yaw, Math.atan2(c.player.x - lead.pos.x, c.player.z - lead.pos.z)) * c.dt * 1.5;
+    }
+
+    // gone for good once far enough (or everyone's down and you've walked off)
+    const far = live.every((w) => Math.hypot(w.pos.x - c.player.x, w.pos.z - c.player.z) > (this.state === 'flee' ? 130 : 200));
+    const bodiesFar = this.wolves.every((w) => !w.out || w.alive || Math.hypot(w.pos.x - c.player.x, w.pos.z - c.player.z) > 160);
+    if (far && bodiesFar) { this.state = 'gone'; this.wait = rnd(70, 180) * (night ? 0.6 : 1); for (const w of this.wolves) w.out = false; return; }
+
+    for (const w of this.wolves) {
+      if (!w.out) continue;
+      w.howl = Math.max(0, w.howl - c.dt);
+      w.stagger = Math.max(0, w.stagger - c.dt);
+      w.bite = Math.max(0, w.bite - c.dt);
+      w.animate(c, w.alive && (this.state === 'watch' || this.state === 'circle' || this.state === 'stalk') ? c.player : target);
+    }
+  }
+
+  /** Stalk in and work the ring: one lunge at a time, the rest circling and snarling. */
+  private huntStep(c: Ctx, live: Wolf[], night: boolean, safe: boolean) {
+    const P = c.player;
+    const t = c.combat?.target;
+    const diff = c.combat?.diff;
+    const n = live.length;
+    let lunging = live.some((w) => w.role === 'lunge');
+    this.lungeT -= c.dt * (diff ? 1 / diff.react : 1);
+    // a lit torch held on a wolf makes it think twice
+    const camF = c.camFwd;
+    live.forEach((w, i) => {
+      const toW = V(w.pos.x - P.x, 0, w.pos.z - P.z);
+      const dist = toW.length();
+      if (t?.torch && camF && dist < 16 && toW.normalize().dot(V(camF.x, 0, camF.z).normalize()) > 0.93) w.fear = Math.min(1.5, w.fear + c.dt * 2.5);
+      else w.fear = Math.max(0, w.fear - c.dt * 0.8);
+      w.roleT += c.dt;
+      // spread the ring evenly; it slowly rotates
+      const slot = (i / Math.max(1, n)) * Math.PI * 2;
+      w.ringA += angDiff(w.ringA, slot + c.t * 0.25) * c.dt * 0.5 + c.dt * 0.25;
+      if (w.stagger > 0) { w.speed = lerp(w.speed, 0, Math.min(1, c.dt * 8)); return; }
+      let goal: THREE.Vector3;
+      let sp: number;
+      if (this.state === 'stalk') {
+        // close in, fanning out a little
+        const dir = Math.atan2(P.x - w.pos.x, P.z - w.pos.z) + (i - (n - 1) / 2) * 0.25;
+        goal = V(P.x - Math.sin(dir) * 10, 0, P.z - Math.cos(dir) * 10);
+        sp = dist > 30 ? 8.5 : 5;
+        if (dist < 20) this.state = 'circle';
+      } else if (w.role === 'lunge') {
+        goal = P.clone();
+        sp = 11.5;
+        if (dist < 1.7 && !w.bitten) {
+          // the bite
+          w.bitten = true;
+          w.bite = 0.3;
+          c.audio?.combat?.voice('snarl', w.pos.clone().setY(w.pos.y + 0.8), 1.05);
+          c.audio?.combat?.voice('bite', w.pos.clone().setY(w.pos.y + 0.9), 1);
+          const dmg = (night ? 15 : 12) * (0.85 + Math.random() * 0.3);
+          c.combat?.hurtPlayer(dmg, w.pos.clone().setY(w.pos.y + 0.8), 'bite');
+          w.role = 'retreat';
+          w.roleT = 0;
+        } else if (w.roleT > 1.8 || w.fear > 0.8 || safe) { w.role = 'retreat'; w.roleT = 0; }
+      } else if (w.role === 'retreat') {
+        const away = Math.atan2(w.pos.x - P.x, w.pos.z - P.z);
+        goal = V(P.x + Math.sin(away) * (w.ringR + 4), 0, P.z + Math.cos(away) * (w.ringR + 4));
+        sp = 7;
+        if (w.roleT > 1.1) { w.role = 'ring'; w.roleT = 0; }
+      } else {
+        const r = w.ringR + w.fear * 6 + (safe ? 14 : 0);
+        goal = V(P.x + Math.cos(w.ringA) * r, 0, P.z + Math.sin(w.ringA) * r);
+        sp = 4.2;
+      }
+      const to = V(goal.x - w.pos.x, 0, goal.z - w.pos.z);
+      const gd = to.length();
+      const want = gd > 0.4 ? Math.min(sp, gd * 2.5) : 0;
+      // face the move; on the ring, face the player while drifting
+      const faceP = w.role === 'ring' && gd < 3;
+      const head = faceP ? Math.atan2(P.x - w.pos.x, P.z - w.pos.z) : Math.atan2(to.x, to.z);
+      w.yaw += clamp(angDiff(w.yaw, head), -1.2, 1.2) * c.dt * (w.role === 'lunge' ? 9 : 5);
+      w.speed = lerp(w.speed, want, Math.min(1, c.dt * (w.role === 'lunge' ? 6 : 3)));
+      // move along the facing, plus a little sideways slide toward the goal when circling
       w.pos.x += Math.sin(w.yaw) * w.speed * c.dt;
       w.pos.z += Math.cos(w.yaw) * w.speed * c.dt;
-    }
-    if (this.state === 'watch') lead.yaw += angDiff(lead.yaw, Math.atan2(c.player.x - lead.pos.x, c.player.z - lead.pos.z)) * c.dt * 1.5;
-    for (const w of this.wolves) {
-      w.howl = Math.max(0, w.howl - c.dt);
-      w.animate(c, target);
+      if (faceP && gd > 0.2) { w.pos.x += (to.x / gd) * Math.min(gd, 3) * c.dt; w.pos.z += (to.z / gd) * Math.min(gd, 3) * c.dt; }
+      // never stand inside the player
+      const pd = Math.hypot(w.pos.x - P.x, w.pos.z - P.z);
+      if (pd < 1.1) { const k = 1.1 / pd; w.pos.x = P.x + (w.pos.x - P.x) * k; w.pos.z = P.z + (w.pos.z - P.z) * k; }
+      // snarls round the ring
+      if ((w.snarlT -= c.dt) <= 0) {
+        w.snarlT = rnd(2.5, 6);
+        if (this.state === 'circle' && dist < 25) c.audio?.combat?.voice(Math.random() < 0.6 ? 'growl' : 'snarl', w.pos.clone().setY(w.pos.y + 0.8), 0.9 + Math.random() * 0.2, 0.8);
+      }
+    });
+    // send the next one in
+    if (this.state === 'circle' && !lunging && this.lungeT <= 0 && !safe && t?.alive !== false) {
+      const ready = live.filter((w) => w.role === 'ring' && w.fear < 0.5 && w.stagger <= 0 && Math.hypot(w.pos.x - P.x, w.pos.z - P.z) < 16);
+      if (ready.length) {
+        const w = ready[Math.floor(Math.random() * ready.length)];
+        w.role = 'lunge';
+        w.roleT = 0;
+        w.bitten = false;
+        lunging = true;
+        c.audio?.combat?.voice('snarl', w.pos.clone().setY(w.pos.y + 0.8), 1.1);
+        this.lungeT = rnd(night ? 1.6 : 2.4, night ? 3.2 : 4.4) * (n <= 2 ? 1.3 : 1);
+      }
     }
   }
 }
@@ -708,17 +1269,25 @@ export class Fauna {
   readonly lizards: Lizard[] = [];
   readonly butterflies: Butterfly[] = [];
   private flies: Flies;
-  private pack: Pack;
+  readonly pack: Pack;
+  readonly critters: Critters;
+  private snakes: Snake[] = [];
+  private scorpions: Scorpion[] = [];
   private t = 0;
+  /** Places wolves won't follow you into (the camp fire, Dry Creek); set by Game. */
+  safe: { p: THREE.Vector3; r: number }[] = [];
+  combat?: Combat;
+  /** The camera's forward (torchlight on a wolf). */
+  camFwd?: THREE.Vector3;
 
   constructor(private hf: Heightfield, perches: THREE.Vector3[], wrecks: THREE.Vector3[]) {
     _seed = 4711;
     const raven = birdRig({ body: [0.09, 0.09, 0.1], wing: [0.07, 0.07, 0.08], head: [0.09, 0.09, 0.1], beak: [0.12, 0.12, 0.12], span: 1, fingers: false });
     const vulture = birdRig({ body: [0.2, 0.16, 0.13], wing: [0.14, 0.11, 0.09], head: [0.5, 0.26, 0.22], beak: [0.75, 0.7, 0.6], span: 1.25, fingers: true, headScale: 0.65 });
-    const rabbit = rabbitRig(), lizard = lizardRig(), wolf = wolfRig(), flies = fliesRig(24);
+    const rabbit = rabbitRig(), lizard = lizardRig(), wolf = wolfRig(), flies = fliesRig(24), snake = snakeRig(), scorp = scorpionRig();
     const flyCols: [number, number, number][] = [[0.92, 0.55, 0.15], [0.95, 0.92, 0.85], [0.95, 0.85, 0.3], [0.5, 0.6, 0.9]];
     const butterflies = flyCols.map((col) => butterflyRig(col));
-    const plan: [Rig, number][] = [[vulture.R, 3], [raven.R, 7], [rabbit.R, 3], [lizard.R, 4], [wolf.R, 3], [flies.R, 1], ...butterflies.map((b) => [b.R, 1] as [Rig, number])];
+    const plan: [Rig, number][] = [[vulture.R, 3], [raven.R, 7], [rabbit.R, 3], [lizard.R, 4], [wolf.R, 5], [flies.R, 1], [snake.R, 3], [scorp.R, 4], ...butterflies.map((b) => [b.R, 1] as [Rig, number])];
     let verts = 0, tris = 0;
     for (const [rig, n] of plan) { verts += rig.verts * n; tris += rig.tris * n; }
     this.P = new Float32Array(verts * 3);
@@ -742,8 +1311,11 @@ export class Fauna {
     for (let k = 0; k < 7; k++) this.ravens.push(new Raven(make(raven.R), raven, perches, taken));
     for (let k = 0; k < 3; k++) this.rabbits.push(new Rabbit(make(rabbit.R), rabbit));
     for (let k = 0; k < 4; k++) this.lizards.push(new Lizard(make(lizard.R), lizard));
-    this.pack = new Pack([0, 1, 2].map(() => new Wolf(make(wolf.R), wolf)));
+    this.pack = new Pack([0, 1, 2, 3, 4].map(() => new Wolf(make(wolf.R), wolf)));
     this.flies = new Flies(make(flies.R), flies, wrecks);
+    for (let k = 0; k < 3; k++) this.snakes.push(new Snake(make(snake.R), snake));
+    for (let k = 0; k < 4; k++) this.scorpions.push(new Scorpion(make(scorp.R), scorp, wrecks));
+    this.critters = new Critters(this.snakes, this.scorpions);
     for (const bf of butterflies) this.butterflies.push(new Butterfly(make(bf.R), bf));
     const g = new THREE.BufferGeometry();
     g.setAttribute('position', new THREE.BufferAttribute(this.P, 3));
@@ -770,15 +1342,19 @@ export class Fauna {
       lizards: this.lizards.map((x) => x.state),
       wolves: this.pack.state,
       wolfPos: this.pack.wolves[0].pos.clone(),
+      wolfHp: this.pack.wolves.map((w) => (w.out ? Math.round(w.hp) : -1)),
+      morale: +this.pack.morale.toFixed(2),
       flies: !!this.flies.center,
       butterflies: this.butterflies.filter((x) => x.on).length,
+      snakes: this.snakes.map((x) => x.state),
+      scorpions: this.scorpions.map((x) => x.state),
     };
   }
 
   /** Debug (prop lab): every creature posed in a row along x around `at`, flat ground at y = at.y. */
   lineup(at: THREE.Vector3) {
     const far = at.clone().add(V(0, 0, 9999));
-    const c: Ctx = { hf: this.hf, player: far, hour: 12, dt: 0.016, t: 1.3, sprinting: false };
+    const c: Ctx = { hf: this.hf, player: far, hour: 12, dt: 0.016, t: 1.3, sprinting: false, safe: [] };
     const p = (x: number, y: number, z: number) => at.clone().add(V(x, y, z));
     const v = this.vultures[0];
     v.update(c);
@@ -792,31 +1368,38 @@ export class Fauna {
     const l = this.lizards[0];
     l.state = 'dash'; l.pos.copy(p(-0.8, 0, 0.5)); l.run = 9; l.yaw = 0.5; l.update(c);
     const w = this.pack.wolves;
-    w.forEach((x, i) => { x.pos.copy(p(1.2 + i * 1.6, 0, i % 2 ? 0.8 : -0.4)); x.yaw = 1.2 + i * 0.6; });
+    w.forEach((x, i) => { x.out = i < 3; x.pos.copy(p(1.2 + i * 1.6, 0, i % 2 ? 0.8 : -0.4)); x.yaw = 1.2 + i * 0.6; });
     w[0].speed = 2.6; w[0].phase = 0.8; w[0].animate(c, null);
     w[1].speed = 0; w[1].animate(c, at.clone().add(V(0, 0, 10)));
     w[2].speed = 0; w[2].howl = 2; w[2].animate(c, null);
     const bf = this.butterflies[0];
     bf.on = true; bf.home.copy(p(0.2, 0, 1)); bf.pos.copy(p(0.2, 0.9, 1)); bf.update({ ...c, player: at, hour: 12 });
-    for (const x of [v.b, r0.b, r1.b, a.b, b.b, l.b, ...w.map((x) => x.b), bf.b]) x.visible = true;
+    for (const x of [v.b, r0.b, r1.b, a.b, b.b, l.b, ...w.slice(0, 3).map((x) => x.b), bf.b]) x.visible = true;
     for (const x of this.bodies) x.write(this.P, this.N);
   }
 
-  /** Debug/test: bring the pack in now at `d` m from the player. */
-  summonPack(player: THREE.Vector3, d = 60) {
+  /** Debug/test: bring the pack in now at `d` m from the player (`hunt`: already on you). */
+  summonPack(player: THREE.Vector3, d = 60, hunt = false, size = 0) {
     const p = this.pack;
     p.state = 'gone';
     p.wait = 0;
-    p.update({ hf: this.hf, player, hour: 12, dt: 0, t: this.t, sprinting: false });
+    p.update(this.ctx(player, 12, 0, false));
+    if (size) { p.size = size; p.wolves.forEach((w, i) => { w.out = w.alive = i < size; }); }
     const a = Math.random() * 6.28;
     p.wolves.forEach((w, i) => w.pos.set(player.x + Math.cos(a) * d + i * 1.5, 0, player.z + Math.sin(a) * d - i * 2));
-    p.state = 'watch';
+    p.state = hunt ? 'stalk' : 'watch';
+    p.hunting = hunt;
     p.watchT = 30;
+  }
+
+  private ctx(player: THREE.Vector3, hour: number, dt: number, sprinting: boolean, audio?: AudioEngine): Ctx {
+    return { hf: this.hf, player, hour, dt, t: this.t, audio, sprinting, combat: this.combat, safe: this.safe, camFwd: this.camFwd };
   }
 
   update(dt: number, player: THREE.Vector3, hour: number, audio: AudioEngine | undefined, sprinting: boolean) {
     this.t += dt;
-    const c: Ctx = { hf: this.hf, player, hour, dt: Math.min(dt, 0.1), t: this.t, audio, sprinting };
+    const c = this.ctx(player, hour, Math.min(dt, 0.1), sprinting, audio);
+    this.pack.audio = audio;
     for (const x of this.vultures) x.update(c);
     for (const x of this.ravens) x.update(c);
     for (const x of this.rabbits) x.update(c);
@@ -824,6 +1407,8 @@ export class Fauna {
     for (const x of this.butterflies) x.update(c);
     this.flies.update(c);
     this.pack.update(c);
+    for (const x of this.snakes) x.update(c);
+    for (const x of this.scorpions) x.update(c);
     let any = false;
     for (const b of this.bodies) any = b.write(this.P, this.N) || any;
     if (any) {

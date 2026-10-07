@@ -3,6 +3,17 @@
 Each `## vX.Y.Z` section becomes the GitHub release notes and the "what's new" list in the in-app
 update notice (the first few bullets). `scripts/release.sh` refuses to release a version without one.
 
+## v0.5.0
+- **You can fight back now.** A crowbar, Hollis's six-shooter, a pump shotgun and a lever-action rifle, each with its own model, sound and handling. Aim down the sights (right mouse), feel the kick, reload a round at a time, swap with Q or the wheel. Rounds come off the dead, or the camp reloads brass from scrap
+- **The road has teeth.** Kade Holdings' Recovery crews hold four outposts and walk the highway. They spot you from a distance (less at night, in a dust storm or when you crouch), shout to each other, take cover, peek and fire, flank when you go to ground, and lob "compliance charges" if you dig in. Lose a few and the rest run
+- **Wolves hunt.** The pack picks up your scent, stalks in low, circles you and sends one wolf at a time in for a bite. Your torch makes them hesitate and they won't follow you to a fire or into town. Kill two and the rest break
+- **Machines at the outposts.** Compliance Sentries say please before they open fire (shoot the eye, EMP them, or sneak round the back and pull the breaker), Hornet drones circle with searchlights, and the property line is mined: listen for the click
+- **Small dangers.** Rattlesnakes rattle before they strike and scorpions come out at night. Their venom burns until you use a snakebite kit
+- **Other ways through.** Come up behind someone who hasn't seen you and a crowbar ends it quietly. Noise travels: a gunshot brings every crew in earshot, a quiet takedown brings nobody
+- **Dying costs something.** You wake at the fire hours later, and everything but your weapons stays in a pack where you fell, marked on the map. Die again before you get back to it and it's gone
+- **New Firearms skill** with steadier aim, faster reloads, headshot damage and two branches (Quickdraw or Marksman, Deadeye or Brawler). Difficulty is in Settings: Story, Wasteland or Hard Water
+- **Desktop app:** mouse clicks and the wheel now reach the game while the mouse is captured, so shooting works in the Linux app
+
 ## v0.4.0
 - **Everything holds up close now.** The wrecks along the highway, in Dry Creek, at the data centre and at the drive-in are real cars: rounded bodies, dusty glass with wiper arcs and cracked windshields, chrome bumpers, quad headlights, tyres and hubcaps, seats and dashboards inside, engines under open hoods. Sedans, coupes, wagons, pickups, vans and convertibles, some burnt, some on their roof, some on flat tyres, all sun-bleached and rusting up from the bottom
 - **A living desert.** Gnarled dead cottonwoods and shaggy Joshua trees, with creosote, sagebrush, prickly pear, barrel cactus, yucca, ocotillo and mesquite between them. Each grows where it should: cacti on the stony slopes, green mesquite and wildflowers down in the wash

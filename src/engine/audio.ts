@@ -3,6 +3,7 @@ import { Music, type MusicMood } from './music';
 import { SpotManager, VOICES, crackleBuffer, type AmbientKind, type SpotHandle, type VoiceEnv } from './ambient';
 import { footstep, landing, type StepOpts } from './foley';
 import { HARDNESS, type Room, type Surface } from './surface';
+import { CombatAudio } from './combatAudio';
 
 /**
  * Positional ambience loops (Landmarks/sites push `{ kind, pos }` into `landmarks.audioSpots`).
@@ -130,6 +131,9 @@ export class AudioEngine {
   private stepFoot = 0;
   private stepPan: StereoPannerNode[] = [];
   volume = { master: 0.8, music: 0.5, sfx: 0.9 };
+  /** Gunfire, impacts, creatures, explosions (null until start()). */
+  combat: CombatAudio | null = null;
+  private listenerPos = new THREE.Vector3();
 
   get ready() {
     return this.started;
@@ -150,7 +154,15 @@ export class AudioEngine {
     // makeup gain: the mix is mostly quiet ambience now, so lift it back to a normal listening level
     const makeup = ctx.createGain();
     makeup.gain.value = 1.5;
-    this.master.connect(comp).connect(makeup).connect(ctx.destination);
+    // a brick wall after the makeup: gunshots and blasts are far louder than anything else in the
+    // mix, and without it their transients clip at the output
+    const limiter = ctx.createDynamicsCompressor();
+    limiter.threshold.value = -3;
+    limiter.knee.value = 0;
+    limiter.ratio.value = 20;
+    limiter.attack.value = 0.001;
+    limiter.release.value = 0.12;
+    this.master.connect(comp).connect(makeup).connect(limiter).connect(ctx.destination);
     this.master.gain.value = this.volume.master;
 
     this.reverb = ctx.createConvolver();
@@ -210,6 +222,7 @@ export class AudioEngine {
     this.spots = new SpotManager(this.voiceEnv(ctx), this.foley, this.roomBus);
     this.startWind();
     this.score = new Music(ctx, this.music, this.reverbSend, this.noiseBuf);
+    this.combat = new CombatAudio({ ctx, noise: this.noiseBuf, sfx: this.sfx, reverb: this.reverbSend, room: this.roomBus, listener: () => this.listenerPos });
   }
 
   private voiceEnv(ctx: BaseAudioContext, cache = this.buffers): VoiceEnv {
@@ -798,6 +811,7 @@ export class AudioEngine {
 
     const l = this.ctx.listener;
     const p = camera.position;
+    this.listenerPos.copy(p);
     const fwd = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
     const up = new THREE.Vector3(0, 1, 0).applyQuaternion(camera.quaternion);
     if (l.positionX) {

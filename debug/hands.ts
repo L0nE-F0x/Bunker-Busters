@@ -4,6 +4,8 @@
 //   &t=0.4                                   seconds to simulate before the shot (default 2)
 //   &view=side|palm|top&hand=r|l             inspect one hand from an orbit camera (anatomy check)
 //   &w=1280&h=540                            viewport (wide aspect = more horizontal FOV)
+//   &arm=revolver|shotgun|rifle|crowbar      a weapon up (&ads aimed, &act=fire|reload|load|close|swing|bash, &at=secs into it)
+//   &bg=#hex &sky                            backdrop
 import * as THREE from 'three/webgpu';
 import { Hands, HAND_LOOKS, type HandsFrame } from '@/game/player/Hands';
 import { updateRim } from '@/game/world/materials';
@@ -29,11 +31,24 @@ const hands = new Hands(HAND_LOOKS[qs.get('look') || 'infiltrator']);
 hands.attach(cam);
 hands.setBase(qs.get('pose') || 'idle');
 if (qs.has('torch')) hands.flashlightOn = true;
-const frame: HandsFrame = { speed: 0, grounded: true, crouch: qs.get('pose') === 'crouch', sprint: false, bobPhase: 0, lookDX: 0, lookDY: 0, ...JSON.parse(qs.get('frame') ?? '{}') };
+const frame: HandsFrame = { speed: 0, grounded: true, crouch: qs.get('pose') === 'crouch', sprint: false, bobPhase: 0, lookDX: 0, lookDY: 0, ads: qs.has('ads'), ...JSON.parse(qs.get('frame') ?? '{}') };
+const arm = qs.get('arm');
+if (arm) (hands.arms as any).equip(arm, 0.3);
 const steps = Math.round(Number(qs.get('t') ?? 2) * 60);
 for (let i = 0; i < steps; i++) {
   if (frame.speed) frame.bobPhase += (frame.speed / (frame.sprint ? 2.25 : 1.45)) * Math.PI / 60;
   hands.update(1 / 60, frame);
+}
+const act = qs.get('act');
+if (act) {
+  const a = hands.arms as any;
+  if (act === 'fire') a.fire(1);
+  if (act === 'reload') a.reloadOpen(0.4);
+  if (act === 'load') a.reloadLoad(0.5);
+  if (act === 'close') a.reloadClose(0.35);
+  if (act === 'swing' || act === 'bash') a.melee(0.62, 0.3, () => {});
+  const n = Math.round(Number(qs.get('at') ?? 0.1) * 60);
+  for (let i = 0; i < n; i++) hands.update(1 / 60, frame);
 }
 let view: THREE.Camera = cam;
 const v = qs.get('view');

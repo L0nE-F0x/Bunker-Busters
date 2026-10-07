@@ -16,6 +16,8 @@ import { CircuitGame, KeypadGame } from './Circuit';
 import { Minimap, MapData, drawWorldMap, type MapMarker } from './Minimap';
 import { mountUpdateNotice } from './Updater';
 import { isTouch, isIOS, isStandalone, canFullscreen, isFullscreen, enterFullscreen } from '@/engine/device';
+import type { ArmsHud } from '@/game/combat/PlayerArms';
+import { DIFFICULTY } from '@/content/weapons';
 
 const esc = (s: string) => s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]!));
 
@@ -42,6 +44,12 @@ export interface HudFrame {
   markers: MapMarker[];
   hunger: number;
   thirst: number;
+  /** The weapon in hand (null: none / no arms yet). */
+  arms?: ArmsHud | null;
+  health?: number;
+  /** Hostiles out in the world: something is hunting you, or getting curious. */
+  threat?: 'hunted' | 'watched' | null;
+  venom?: boolean;
 }
 
 /** DOM overlay. Owns HUD widgets, menus, modal panels and minigames. */
@@ -61,6 +69,10 @@ export class UI implements UIBridge {
   private minimapT = 0;
   private lastObjective = '';
   private loadingEl: HTMLElement;
+  private armsKey = '';
+  private xhairKey = '';
+  private hitT = 0;
+  private hitKind = '';
 
   constructor(private audio: AudioEngine) {
     this.root = document.getElementById('ui')!;
@@ -159,6 +171,9 @@ export class UI implements UIBridge {
           <span><span class="kbd">E</span> / <span class="kbd">F</span></span><span>Interact · alternate action</span>
           <span><span class="kbd">1</span><span class="kbd">2</span><span class="kbd">3</span><span class="kbd">4</span></span><span>EMP · ration · water · medkit</span>
           <span><span class="kbd">F</span></span><span>The other way in: a charge, a keypad, the wire</span>
+          <span><span class="kbd">LMB</span> / <span class="kbd">RMB</span></span><span>Fire or swing · aim down the sights</span>
+          <span><span class="kbd">R</span> · <span class="kbd">V</span></span><span>Reload · melee (from behind, unseen: a silent takedown)</span>
+          <span><span class="kbd">Q</span> · <span class="kbd">Wheel</span> · <span class="kbd">X</span></span><span>Last weapon · cycle weapons · holster</span>
           <span><span class="kbd">L</span></span><span>Flashlight (SeedBot spots you more easily)</span>
           <span><span class="kbd">Tab</span> / <span class="kbd">I</span></span><span>Kit</span>
           <span><span class="kbd">K</span></span><span>Skills: ranks, focuses, capstones</span>
@@ -283,6 +298,10 @@ export class UI implements UIBridge {
       <div class="clock"></div>
       <div class="detect" style="opacity:0">${EYE_ICON}<div class="m"><i></i></div><div class="t"></div></div>
       <div class="crosshair"></div>
+      <div class="xhair"><i class="t"></i><i class="b"></i><i class="l"></i><i class="r"></i></div>
+      <div class="hitmark"><i></i><i></i><i></i><i></i></div>
+      <div class="dmgarcs"></div>
+      <div class="weapon" style="opacity:0"><div class="wname"></div><div class="ammo"><b class="mag"></b><span class="cap"></span><span class="res"></span></div><div class="rounds"></div></div>
       <div class="subtitle" style="opacity:0"><span class="who"></span><span class="line"></span></div>
       <div class="prompt"></div>
       <div class="hotbar"></div>
@@ -292,8 +311,8 @@ export class UI implements UIBridge {
         <div class="meta"><span class="arch"></span><span class="xptext"></span></div>
         <div class="spwrap"></div>
       </div>
-      <div class="stance"><span class="pill crouch">Crouch</span><span class="pill sprint">Sprint</span></div>`;
-    for (const k of ['objective', 'toasts', 'minimap', 'clock', 'detect', 'subtitle', 'prompt', 'hotbar', 'vitals', 'stance']) {
+      <div class="stance"><span class="pill venom">Venom</span><span class="pill crouch">Crouch</span><span class="pill sprint">Sprint</span></div>`;
+    for (const k of ['objective', 'toasts', 'minimap', 'clock', 'detect', 'subtitle', 'prompt', 'hotbar', 'vitals', 'stance', 'crosshair', 'xhair', 'hitmark', 'dmgarcs', 'weapon']) {
       this.els[k] = hud.querySelector(`.${k}`)!;
     }
     this.els.minimap.prepend(this.minimap.canvas);
@@ -408,15 +427,15 @@ export class UI implements UIBridge {
     // detection (only touch the DOM when something visible changed: every write costs a style pass
     // and a recomposite of the overlay, which is what hurts in WebKitGTK)
     const det = this.els.detect;
-    const show = f.detection > 0.02 || f.droneState === 'alert';
+    const show = f.detection > 0.02 || f.droneState === 'alert' || !!f.threat;
     const dc = this.detCache;
     if (show !== dc.show) { dc.show = show; det.style.opacity = show ? '1' : '0'; }
     if (show) {
-      const col = f.droneState === 'alert' ? '#ff3b3b' : f.detection > 0.3 ? '#ffb347' : '#f3e9d8';
+      const col = f.droneState === 'alert' || f.threat === 'hunted' ? '#ff3b3b' : f.detection > 0.3 || f.threat === 'watched' ? '#ffb347' : '#f3e9d8';
       if (col !== dc.color) { dc.color = col; det.style.color = col; }
       const w = `${Math.round(f.detection * 400) / 4}%`; // quarter-percent steps: sub-pixel on any meter
       if (w !== dc.width) { dc.width = w; (det.querySelector('.m i') as HTMLElement).style.width = w; }
-      const text = f.droneState === 'alert' ? 'DETECTED' : f.canSee ? 'BEING WATCHED' : f.droneState === 'search' ? 'SEARCHING' : 'SUSPICIOUS';
+      const text = f.droneState === 'alert' ? 'DETECTED' : f.threat === 'hunted' ? 'HOSTILES' : f.canSee || f.threat === 'watched' ? 'BEING WATCHED' : f.droneState === 'search' ? 'SEARCHING' : 'SUSPICIOUS';
       if (text !== dc.text) { dc.text = text; det.querySelector('.t')!.textContent = text; }
     }
     // prompts
@@ -429,6 +448,7 @@ export class UI implements UIBridge {
     // stance
     this.els.stance.querySelector('.crouch')!.classList.toggle('on', f.crouch);
     this.els.stance.querySelector('.sprint')!.classList.toggle('on', f.sprint);
+    this.els.stance.querySelector('.venom')!.classList.toggle('on', !!f.venom);
     // clock
     const hh = Math.floor(f.hour), mm = Math.floor((f.hour - hh) * 60);
     const phase = f.hour < 5 || f.hour > 20.5 ? 'NIGHT' : f.hour < 7.5 ? 'DAWN' : f.hour < 16.5 ? 'DAY' : f.hour < 19 ? 'GOLDEN HOUR' : 'DUSK';
@@ -450,10 +470,81 @@ export class UI implements UIBridge {
     // ~20 Hz is plenty for the minimap, and every canvas update forces the overlay to recomposite
     this.minimapT -= dt;
     if (this.minimapT <= 0) { this.minimapT = 0.05; this.minimap?.draw(f.px, f.pz, f.heading, f.playerYaw, f.markers); }
+    this.updateArms(dt, f.arms);
     // subtitle fade
     if (this.subtitleTimer > 0) {
       this.subtitleTimer -= dt;
       if (this.subtitleTimer <= 0) this.els.subtitle.style.opacity = '0';
+    }
+  }
+
+  /** One of your shots landed: the cross flashes (red for a kill, bigger for a headshot). */
+  hitmark(kind: 'hit' | 'head' | 'kill') {
+    const el = this.els.hitmark;
+    if (!el) return;
+    this.hitT = kind === 'kill' ? 0.45 : 0.25;
+    if (kind !== this.hitKind || true) {
+      this.hitKind = kind;
+      el.className = `hitmark on ${kind}`;
+      // restart the pop
+      void el.offsetWidth;
+      el.classList.add('pop');
+    }
+  }
+
+  /** Damage came from `bearing` (radians, 0 = straight ahead, positive = to the left). */
+  damageFrom(bearing: number, k: number) {
+    const host = this.els.dmgarcs;
+    if (!host) return;
+    const arc = h('div', 'arc');
+    arc.style.transform = `rotate(${(-bearing * 180) / Math.PI}deg)`;
+    arc.style.setProperty('--k', String(0.45 + k * 0.55));
+    host.appendChild(arc);
+    setTimeout(() => arc.remove(), 1300);
+    while (host.children.length > 5) host.firstChild?.remove();
+  }
+
+  /** Weapon panel, crosshair spread and hit-marker decay (only writes the DOM on change). */
+  private updateArms(dt: number, a: ArmsHud | null | undefined) {
+    const wp = this.els.weapon, xh = this.els.xhair, dot = this.els.crosshair;
+    if (!wp || !xh) return;
+    const key = a && a.weapon ? `${a.weapon}|${a.mag}|${a.reserve}|${a.reloading}` : '';
+    if (key !== this.armsKey) {
+      this.armsKey = key;
+      if (!a || !a.weapon) wp.style.opacity = '0';
+      else {
+        wp.style.opacity = '1';
+        wp.querySelector('.wname')!.textContent = a.name.toUpperCase();
+        const gun = !a.melee;
+        (wp.querySelector('.mag') as HTMLElement).textContent = gun ? String(a.mag) : '';
+        (wp.querySelector('.cap') as HTMLElement).textContent = gun ? `/ ${a.cap}` : '';
+        (wp.querySelector('.res') as HTMLElement).textContent = gun ? `${a.reserve}` : '';
+        wp.classList.toggle('low', gun && a.mag <= Math.max(1, Math.floor(a.cap / 3)));
+        wp.classList.toggle('empty', gun && a.mag === 0);
+        wp.classList.toggle('reloading', a.reloading);
+        wp.querySelector('.rounds')!.innerHTML = gun ? Array.from({ length: a.cap }, (_, i) => `<i class="${i < a.mag ? 'on' : ''}"></i>`).join('') : '';
+      }
+    }
+    // crosshair: four ticks that open with the spread; gone once you're on the sights
+    let xk = 'none';
+    if (a && a.weapon && !a.melee) {
+      const fovPx = innerHeight / (2 * Math.tan((32 * Math.PI) / 180));
+      const gap = Math.round(Math.max(4, Math.tan(a.spread) * fovPx));
+      const hide = a.ads > 0.6;
+      xk = hide ? 'ads' : `g${gap}`;
+    } else if (a && a.weapon) xk = 'melee';
+    if (a?.takedown) xk += '|td';
+    if (xk !== this.xhairKey) {
+      this.xhairKey = xk;
+      const gun = xk.startsWith('g');
+      xh.style.opacity = gun ? '1' : '0';
+      if (gun) xh.style.setProperty('--gap', `${xk.slice(1).split('|')[0]}px`);
+      dot.style.opacity = xk.startsWith('ads') ? '0' : '1';
+      dot.classList.toggle('td', !!a?.takedown);
+    }
+    if (this.hitT > 0) {
+      this.hitT -= dt;
+      if (this.hitT <= 0) this.els.hitmark.className = 'hitmark';
     }
   }
 
@@ -663,6 +754,7 @@ export class UI implements UIBridge {
       <div class="panel pause interactive"><div class="scan"></div>
         <h3>SETTINGS</h3>
         <div class="settings">
+          <span>Difficulty</span><select data-k="difficulty">${(['story', 'normal', 'hard'] as const).map((d) => `<option value="${d}" ${(settings.difficulty ?? 'normal') === d ? 'selected' : ''}>${DIFFICULTY[d].label.toUpperCase()} · ${({ story: 'forgiving', normal: 'as intended', hard: 'brutal' })[d]}</option>`).join('')}</select>
           <span>Graphics</span><select data-k="quality">${['low', 'medium', 'high', 'ultra'].map((q) => `<option value="${q}" ${settings.quality === q ? 'selected' : ''}>${q.toUpperCase()}</option>`).join('')}</select>
           <span>Master volume</span><input type="range" min="0" max="1" step="0.05" data-k="master" value="${settings.master}">
           <span>Music</span><input type="range" min="0" max="1" step="0.05" data-k="music" value="${settings.music}">
@@ -677,7 +769,7 @@ export class UI implements UIBridge {
         const k = (inp as HTMLElement).dataset.k as keyof Settings;
         const v = (inp as HTMLInputElement).value;
         const next = { ...settings } as Record<string, unknown>;
-        next[k] = k === 'quality' ? v : k === 'voice' ? v === '1' : Number(v);
+        next[k] = k === 'quality' || k === 'difficulty' ? v : k === 'voice' ? v === '1' : Number(v);
         Object.assign(settings, next);
         onChange(settings);
       });

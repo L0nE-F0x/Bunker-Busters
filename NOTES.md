@@ -872,3 +872,57 @@ The iGPU is GPU-bound in this test (~30 fps) since the graphics pass. The deskto
 - **Headless results** (draws off → on, k-tris): Garage 143 → 63 (2355 → 129), Cut 89 → 44 (1685 → 75), Tube 109 → 38 (2271 → 145), hall 114 → 57 (2066 → 227). Exterior was skipped in 16/16, 10/16, 10/16 and 12/16 of a 16-view sweep; the rest face a portal.
 - **Pixel diffs off vs on** show only animated things (lasers, the fire's embers, LEDs).
 - **No new pipelines** with the hook across all four.
+
+## Hostiles: combat, enemies and stakes (2026-10-07, v0.5.0)
+**Why (owner):** after v0.4.0 the wasteland "feels a little too easy". They asked for enemies that shoot and attack, aggressive wolves, other antagonists, guns plus melee plus stealth, and a real cost to dying. "Triple-A quality all the way."
+
+**Player arms** (`src/content/weapons.ts`, `src/game/combat/PlayerArms.ts`, viewmodel in `src/game/player/Arms.ts`):
+- Crowbar, Six-Shooter (.38), Pump Twelve (12 ga), Lever .30-30. Weapons are inventory items (`category: 'weapon'`), ammo items are `ammo38` / `shells` / `ammo3030`. Rounds loaded in each gun live in `data.arms.mags`.
+- Controls: LMB fire/swing, RMB aim down the sights, R reload, Q last weapon, wheel cycle, X holster, V melee. A click is buffered 0.18 s.
+- Hitscan with a spread cone (hip → sights, worse moving/airborne, bloom from recent shots, tighter with Firearms). Damage falls off past `range`. Head ×`headMult`, limbs ×0.72. Difficulty scales damage dealt/taken and enemy aim/reaction (`DIFFICULTY`).
+- Camera recoil: a quick punch up, ~70% settles back. The viewmodel has its own bouncy recoil spring.
+- Reloads are round by round (open → load × n → close) and interruptible: fire during a load finishes the round in hand and closes.
+- Melee: a forgiving fan of rays; from behind an unaware target (`Hostile.unaware()` + facing) it's a silent takedown (no noise, only a squadmate within 7 m notices).
+- **Viewmodel:** the weapon is posed first (hip / ADS / run / low / reload / swing frames, springs, sway, bob, breath), then the hands are solved onto it: right wrist = weapon · attach⁻¹ · grip⁻¹, left wrist = weapon · forend frame. `poseFromRoot` undoes the left hand's mirroring. Models use Hands' material kinds and `bakeParts(skinned)`, so moving parts (cylinder, hammer, pump, lever) are bones. Muzzle flash is one shared additive star material.
+- ADS centres `sightY` on the view. Long guns needed raised sights (buckhorn/blade, ghost ring/post) or the receiver filled the screen.
+- Iterate with the hands lab: `&arm=revolver|shotgun|rifle|crowbar&ads&act=fire|reload|load|close|swing|bash&at=0.3`.
+
+**Combat hub** (`src/game/combat/Combat.ts`):
+- `HostileProvider`s register; `Hostile` = sphere reject + exact `raycast` + `damage()` (+ optional `unaware`, `facing`, `awareness`).
+- Player rounds: Rapier ray (excluding the player) vs every hostile's ray test; impacts pick fx and sound by the surface (`Acoustics.surfaceOfHit`).
+- Enemy rounds resolve against the player's capsule and the world (cover works); near misses crack past (`whizz`).
+- `noise(pos, radius, kind)`: gunshots carry 140–220 m and wake squads; cans and melee are local.
+- `explode()`: fire, smoke, dirt, sparks, a blast VirtualLight; it hurts everything in range that isn't behind cover.
+- FX (`fx.ts`): `Tracers` (additive ribbons, faded within a few metres of the eye), `Debris` (lit blood/dirt/dust/chunks/smoke), `Flames` (fireballs, muzzle stars, flash cores). One draw each; idle systems hide.
+
+**Enemies:**
+- **Wolves** (`Fauna.ts` Wolf/Pack): 2–5 per pack (bigger at night). Notice by noise/scent (range scales with night, sprinting, storms) → stalk → circle at 8–12 m → one lunge at a time (bite 12–15). Torchlight on a wolf adds fear (it won't lunge). Gunshots dent morale; deaths more. Packs abandon a hunt if you reach the camp (30 m), Dry Creek (75 m) or go indoors. Dead wolves roll onto their side.
+- **Kade Recovery** (`Humans.ts` rig, `Recovery.ts` AI, `Outposts.ts` props, `content/recovery.ts` data):
+  - One `SkinnedMesh` for all 10 slots (16 bones each; a slot's gun is baked in). Bones get world matrices built straight from procedurally placed joints (gait, crouch, lean, twist, IK arms onto the weapon, IK legs). Death = Rapier ragdoll: 11 capsules, ball joints and hinged knees/elbows; parts collide with the world but not each other (groups 0x0002/0x0001). The gun drops as its own body. Bodies sleep after ~1–7 s and the physics is removed.
+  - Squads share knowledge (`known`, `knownT`). Perception every ~0.15 s: range 72 m idle / 130 m alert, ×0.42 at night without your torch (×1.5 with it), dust and crouching shrink it; LOS by ray to chest or eye. Detection meter → suspicious → engage.
+  - Combat: cover from the outpost's list or sampled points (a ray toward the threat must hit something at 0.6 m), peek/duck cycles, bursts whose spread starts ~3.6× and settles over ~1.3 s, reloads, a flank every 10–16 s when you're hidden, and compliance charges (physics canisters, beep, 5.5 m blast). Morale breaks into a retreat.
+  - Four outposts on flattened pads (Heightfield reads `OUTPOSTS`): Survey Camp (tier 1), Recovery Point 7 and Pipeline Camp 3 (tier 2), Kade Wellhead (tier 3, the aquifer). They wake within 240 m, sleep beyond 330 m, and respawn 30 play-minutes after a clear (`marks['cleared.<id>']`). Footlockers and searchable bodies feed ammo, water and the weapons you don't have yet.
+  - Road patrols: a pair walks the highway past you every 5–7 minutes when you're near it, never near the camp or Dry Creek.
+- **Machines** (`Machines.ts`): Compliance Sentry (scan arc, a polite line, then bursts down a visible laser; eye ×1.8 damage; EMP blinds; Electronics 1 pulls the rear breaker), Hornet (circles the pad, calls the crew, nail bursts, falls and burns when shot or EMP'd), property-line mines (blink within 14 m, click and 0.55 s beep, Demolition 1 disarms, a shot sets them off).
+- **Critters** (`Fauna.ts`): rattlesnakes (coil → rattle → strike → slither off; bite + 26 s venom), bark scorpions at night near wrecks (sting + 14 s venom). Venom drains 0.6 hp/s; the snakebite kit (`antivenom`) clears it, a medkit halves it.
+- SeedBot can be shot: each hit puts it on alert, four within 10 s knock it down for 25 s.
+
+**Stakes:** death drops every non-weapon, non-story item in a pack at the spot (`data.pack`, orange beacon, map marker); a second death loses it. You wake at the camp six hours later with 45 hp. The view sags and rolls on the way down.
+
+**HUD:** an ammo panel with round pips, a four-tick crosshair that opens with spread and vanishes when aimed, hit markers (white, gold head, red kill), red damage arcs toward the source, a "HOSTILES / BEING WATCHED" state on the detect eye, a venom pill and a takedown prompt. Touch builds get Fire / Aim / Reload / Swap.
+
+**Audio** (`combatAudio.ts`): layered gunshots (crack, body thump, bark, desert slapback echo network); far shots arrive after their travel time at the speed of sound and lose their top; whizz/snap; impacts by surface with ricochets; reload foley; melee; wolf growls, snarls, bites and yelps; formant shouts and grunts; rattles; explosions; machine chimes and servos; heartbeat. A brick-wall limiter now sits after the makeup gain (gunfire clipped the output).
+
+**Desktop:** the native X pointer grab swallowed mouse buttons, so clicks never reached WebKit while captured. `rawmouse.rs` now also reads XI2 raw button presses and the wheel (deduped by server time; XWayland reports one click from two devices). `raw_mouse_delta` returns `(dx, dy, held, pressed, wheel)`; `Input.pollRaw` maps them while locked. **Untested with real clicks on the owner's machine.**
+
+**Verified (headless, RTX 4050):**
+- No pipelines compiled mid-game across all four weapons (fire/reload/swing), a squad fight with ragdolls, a wolf fight, an explosion, night at two outposts with sentries/Hornet/mines, death and the pack beacon. The hook (`renderer._pipelines.caches.size`) catches a new textured material (positive control); wireframe/flatShading don't create programs here.
+- 60 fps (vsync-bound) at 1600×900 High everywhere tested. Draws: spawn 86 (v0.4: 83), Recovery Point 7 fight 144, five-wolf fight 157, wellhead at night 135. Sentries are culled past 190 m, mines draw only within 120 m of a mined outpost, outpost banners/fires go with the near LOD.
+- Save round-trip: equipped weapon, loaded rounds, the dropped pack and its beacon survive `?continue`.
+
+**Desktop bench** (`BB_DEV=1 BB_FLAGS=fight scripts/dev/bench-desktop.sh high`, 4050, 936×1138 tiled window; `?fight` drops a 4-man squad in front of you on Story and keeps you alive): 46–50 fps in the fight vs 48–50 at the same spot without it; render submit ~6.4 ms either way.
+
+**Next:**
+- Real-click check of the new raw-button path in the Linux app.
+- Balance from the owner's play: TTK, patrol frequency, wolf day-hunting odds.
+- Ideas: enemy weapon pickups on the ground, decals, wolves vs contractors, a rival crew.

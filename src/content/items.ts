@@ -27,6 +27,49 @@ const defs: ItemDef[] = [
     description: 'Fills you up and steadies your hands. A little health, a lot of not-hungry.',
     flavor: '"Best before: civilisation."',
   },
+  // --- Arms (v0.5) ---
+  {
+    id: 'crowbar', name: 'Crowbar', category: 'weapon', weight: 0.8, stack: 1, value: 15, icon: 'crowbar',
+    description: 'Pries crates, persuades wolves. From behind, an unaware contractor goes down without a sound (melee when they haven\'t seen you).',
+    flavor: 'The original admin password.',
+  },
+  {
+    id: 'revolver', name: 'Six-Shooter', category: 'weapon', weight: 0.6, stack: 1, value: 80, icon: 'revolver',
+    description: 'Hollis\'s old .38. Six in the cylinder, loaded one at a time. Loud enough to be heard a hundred metres off.',
+    flavor: 'Engraved on the frame: "DISRUPT".',
+  },
+  {
+    id: 'shotgun', name: 'Pump Twelve', category: 'weapon', weight: 1.8, stack: 1, value: 120, icon: 'shotgun',
+    description: 'Five shells, nine pellets each. Ends arguments inside ten metres and starts new ones past thirty.',
+    flavor: 'Kade Holdings asset tag still on the stock: "COMPLIANCE TOOL 4 of 40".',
+  },
+  {
+    id: 'rifle', name: 'Lever .30-30', category: 'weapon', weight: 2, stack: 1, value: 140, icon: 'rifle',
+    description: 'Seven rounds through the loading gate. Iron sights that reach across the flats. Hold right-click and breathe out.',
+    flavor: 'Somebody carved a tally into the forend and then, later, crossed it out.',
+  },
+  {
+    id: 'ammo38', name: '.38 Rounds', category: 'ammo', weight: 0.012, stack: 30, value: 2, icon: 'ammo',
+    description: 'Revolver cartridges. The camp can reload brass with scrap.',
+  },
+  {
+    id: 'shells', name: '12-Gauge Shells', category: 'ammo', weight: 0.04, stack: 15, value: 4, icon: 'shells',
+    description: 'Shotgun shells, red hulls, mostly rewound by hand.',
+  },
+  {
+    id: 'ammo3030', name: '.30-30 Rounds', category: 'ammo', weight: 0.03, stack: 20, value: 5, icon: 'ammo',
+    description: 'Rifle cartridges. Recovery riflemen carry them in belts. Ask nicely, or don\'t.',
+  },
+  {
+    id: 'antivenom', name: 'Snakebite Kit', category: 'consumable', weight: 0.2, stack: 4, value: 30, icon: 'antivenom', usable: true,
+    description: 'Stops venom from a rattler or a bark scorpion, and puts a little health back. A medkit only treats the hole.',
+    flavor: 'Expired. Still the most honest thing in the desert.',
+  },
+  {
+    id: 'kade_badge', name: 'Recovery Lanyard', category: 'loot', weight: 0.05, stack: 20, value: 6, icon: 'badge',
+    description: 'A Kade Holdings contractor ID on a lanyard: name, photo, "ASSET RECOVERY · TIER 1 FIELD". Dez pays a ration for every three.',
+    flavor: 'The photo is always smiling. The policy says it has to.',
+  },
   // --- Loot ---
   {
     id: 'scrap', name: 'Scrap Metal', category: 'loot', weight: 1, stack: 50, value: 2, icon: 'scrap',
@@ -104,3 +147,5 @@ const defs: ItemDef[] = [
 
 export const ITEMS: Record<string, ItemDef> = Object.fromEntries(defs.map((d) => [d.id, d]));
 export const HOTBAR_ITEMS = ['emp', 'ration', 'water', 'medkit'];
+/** Items that are never dropped with your pack on death (story, weapons). */
+export const KEEP_ON_DEATH = (id: string) => { const c = ITEMS[id]?.category; return c === 'intel' || c === 'weapon' || id === 'sol_roll' || id === 'deed'; };

@@ -39,9 +39,14 @@ import { Story } from './Story';
 import { RECIPES, type Recipe } from '@/content/craft';
 import { SKILLS } from '@/content/skills';
 import { GARAGE } from '@/content/bunkers/garage';
-import { ITEMS, HOTBAR_ITEMS } from '@/content/items';
-import { XP_REWARDS, fallFactor } from '@/content/progression';
+import { ITEMS, HOTBAR_ITEMS, KEEP_ON_DEATH } from '@/content/items';
+import { OUTPOSTS } from '@/content/recovery';
+import { XP_REWARDS, fallFactor, empRadius } from '@/content/progression';
 import { damp } from '@/engine/noise';
+import { Combat, sphereRay, type HurtKind, type Hostile } from './combat/Combat';
+import { PlayerArms } from './combat/PlayerArms';
+import { Recovery } from './combat/Recovery';
+import { Machines } from './combat/Machines';
 
 /** Debug: ?interior=off draws the exterior even from inside sealed interiors (A/B for interior mode). */
 const NO_INTERIOR = typeof location !== 'undefined' && new URLSearchParams(location.search).get('interior') === 'off';
@@ -109,6 +114,20 @@ export class Game {
   state: GameState | null = null;
   /** Quest log, corner objective and exploring banter for the current run. */
   story: Story | null = null;
+  /** Bullets, blasts, hostiles and the effects that sell them. */
+  combat!: Combat;
+  /** The player's weapons (per run). */
+  arms: PlayerArms | null = null;
+  /** Kade Recovery: outposts, crews, road patrols. */
+  recovery!: Recovery;
+  /** Sentries, Hornet drones and mines at the outposts. */
+  machines!: Machines;
+  private wantAds = false;
+  /** The dropped pack in the world: a duffel and a beacon. */
+  private packMesh!: THREE.Group;
+  private dying = 0;
+  private venomHurt = 0;
+  private venomHint = false;
   mode: Mode = 'loading';
   private interactables: Interactable[] = [];
   private focus: Interactable | null = null;
@@ -213,6 +232,15 @@ export class Game {
       else if (p === 'clearing') this.ui.toast('The dust storm is passing.', 'info');
     };
     this.weather.onLightning = (k) => this.audio.thunder(k);
+    this.combat = new Combat(this.physics, this.hf, this.atmo, this.audio);
+    this.combat.difficulty = this.settings.difficulty ?? 'normal';
+    this.combat.puffs = this.puffs;
+    this.combat.acoustics = this.acoustics;
+    this.scene.add(this.combat.group);
+    this.combat.register(this.fauna.pack);
+    this.combat.register(this.fauna.critters);
+    this.fauna.combat = this.combat;
+    this.fauna.camFwd = new THREE.Vector3();
     await step(0.62, 'Charting the wasteland');
     this.map = new MapData(this.hf);
     this.cam = new FirstPersonCamera(this.camera);
@@ -227,8 +255,13 @@ export class Game {
     this.ctx = this.makeContext();
     await step(0.7, 'Building a doomsday bunker (pre-revenue)');
     this.garage = new Garage(this.ctx);
+    this.combat.sparks = this.garage.sparks;
+    // wolves won't follow you to the fire or into a town
+    this.fauna.safe = [{ p: this.landmarks.campPosition.clone(), r: 30 }];
+    for (const lm of LANDMARKS) if (lm.kind === 'town') this.fauna.safe.push({ p: new THREE.Vector3(lm.position[0], 0, lm.position[2]), r: 75 });
     this.settlement = new Settlement(this.ctx, this.landmarks);
     if (!SKIP.has('sites')) this.sites = buildSites(this.ctx, this.landmarks);
+    this.buildRecovery();
     this.buildIntel();
     if (!SKIP.has('env')) this.buildEnvironment();
     if (SKIP.has('garage')) this.scene.remove(this.garage.b.group, this.garage.drone.group);
@@ -383,7 +416,63 @@ export class Game {
     }
   }
 
+  /** The duffel you drop when you go down, with an orange beacon so you can find it again. */
+  private buildPack() {
+    const g = new THREE.Group();
+    const bag = new THREE.Mesh(new THREE.CapsuleGeometry(0.22, 0.45, 4, 10).rotateZ(Math.PI / 2), new THREE.MeshStandardNodeMaterial({ color: '#4a5236', roughness: 0.95 }));
+    bag.scale.set(1, 0.75, 0.9);
+    bag.position.y = 0.17;
+    bag.castShadow = true;
+    const strap = new THREE.Mesh(new THREE.TorusGeometry(0.2, 0.02, 6, 16), new THREE.MeshStandardNodeMaterial({ color: '#1e1c18', roughness: 0.8 }));
+    strap.position.set(0, 0.3, 0);
+    strap.rotation.x = Math.PI / 2;
+    const beamMat = new THREE.MeshBasicNodeMaterial({ transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide, forceSinglePass: true });
+    beamMat.colorNode = Fn(() => {
+      const v = uv();
+      const edge = smoothstep(0.5, 0.0, length(v.x.sub(0.5)));
+      const fade = smoothstep(1.0, 0.0, v.y).mul(sin(time.mul(2.4)).mul(0.25).add(0.75));
+      return vec4(color('#ff8a2a').mul(edge.mul(fade).mul(1.6)), float(1));
+    })();
+    const beam = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.16, 14, 12, 1, true), beamMat);
+    beam.position.y = 7;
+    g.add(bag, strap, beam);
+    g.visible = false;
+    this.scene.add(g);
+    this.packMesh = g;
+    this.interactables.push({
+      id: 'pack',
+      pos: new THREE.Vector3(),
+      radius: 2.4,
+      visible: () => !!this.state?.data.pack,
+      primary: { label: 'Recover your pack', available: () => true, run: () => this.recoverPack() },
+    });
+  }
+
+  private placePack() {
+    const pk = this.state?.data.pack;
+    this.packMesh.visible = !!pk;
+    const it = this.interactables.find((i) => i.id === 'pack');
+    if (!pk || !it) return;
+    const [x, , z] = pk.position;
+    const y = this.hf.heightAt(x, z);
+    this.packMesh.position.set(x, y, z);
+    it.pos.set(x, y + 0.4, z);
+  }
+
+  private recoverPack() {
+    const s = this.state;
+    const pk = s?.data.pack;
+    if (!s || !pk) return;
+    for (const it of pk.items) s.addItem(it.id, it.qty, true, true);
+    s.data.pack = null;
+    this.placePack();
+    this.audio.play('loot');
+    this.ui.toast('Your pack. Everything still in it, which is more than you can say for you.', 'good');
+    this.arms?.validate();
+  }
+
   private buildIntel() {
+    this.buildPack();
     for (const it of WORLD_INTEL) {
       const g = new THREE.Group();
       const x = it.position[0], z = it.position[2];
@@ -447,6 +536,84 @@ export class Game {
       });
     }
     this.interactables.push(...this.garage.interactables, ...this.settlement.interactables, ...this.sites.flatMap((s) => s.interactables));
+  }
+
+  private buildRecovery() {
+    const self = this;
+    this.recovery = new Recovery({
+      physics: this.physics,
+      hf: this.hf,
+      combat: this.combat,
+      audio: this.audio,
+      bark: (text, from) => {
+        if (self.player && from.distanceTo(self.player.position) < 48) self.ui.subtitle('Kade Recovery', text);
+      },
+      give: (items) => {
+        const s = self.state;
+        if (!s) return [];
+        const lines: string[] = [];
+        for (const it of items) {
+          const n = s.addItem(it.id, it.qty, true);
+          if (n) lines.push(`${n}× ${ITEMS[it.id]?.name ?? it.id}`);
+        }
+        return lines;
+      },
+      toast: (t, k) => self.ui.toast(t, k),
+      banner: (a, b) => self.ui.banner(a, b, 'good'),
+      xp: (n, why) => self.state?.addXP(n, why),
+      owns: (id) => (self.state?.count(id) ?? 0) > 0,
+      playTime: () => self.state?.data.stats.playTime ?? 0,
+      get marks() { return self.state?.data.marks ?? {}; },
+      flag: (f) => self.state?.set(f) ?? false,
+      has: (f) => self.state?.has(f) ?? false,
+      interactables: this.interactables,
+    });
+    this.scene.add(this.recovery.group);
+    this.combat.register(this.recovery);
+    this.machines = new Machines({
+      physics: this.physics,
+      hf: this.hf,
+      combat: this.combat,
+      audio: this.audio,
+      subtitle: (who, text) => self.ui.subtitle(who, text),
+      toast: (t, k) => self.ui.toast(t, k),
+      xp: (n, why) => self.state?.addXP(n, why),
+      skill: (id) => self.state?.skill(id) ?? 0,
+      give: (id, n) => { if (n > 0) self.state?.addItem(id, n); },
+      alert: (id, at) => self.recovery.alertOutpost(id, at),
+      awake: (id) => !!self.player && self.recovery.outpostAwake(id, self.player.position),
+      interactables: this.interactables,
+    });
+    this.recovery.onRespawn = (id) => this.machines.reset(id);
+    this.recovery.safe = this.fauna.safe;
+    // SeedBot can be shot: every hit puts it on full alert; four quick ones knock it out of the sky
+    const drone = this.garage.drone;
+    let hits = 0, lastHit = -99;
+    const seedbot: Hostile = {
+      kind: 'drone', surface: 'metal', center: drone.position, radius: 0.8, alive: true,
+      raycast: (o, d, max) => {
+        if (drone.state === 'disabled') return null;
+        const t = sphereRay(o, d, drone.position, 0.6);
+        return t !== null && t <= max ? { t, zone: 'body' } : null;
+      },
+      damage: () => {
+        const now = this.combat.t;
+        hits = now - lastHit < 10 ? hits + 1 : 1;
+        lastHit = now;
+        drone.detection = Math.max(drone.detection, 0.95);
+        if (hits >= 4) {
+          hits = 0;
+          drone.emp(25);
+          this.ui.subtitle('SeedBot', 'HULL BREACH. FILING A CLAIM. GOODBYE.');
+          this.state?.addXP(XP_REWARDS.droneEmp, 'SeedBot shot down');
+          return true;
+        }
+        return false;
+      },
+    };
+    this.combat.register({ hostiles: () => [seedbot] });
+    this.scene.add(this.machines.group);
+    this.combat.register(this.machines);
   }
 
   private collectIntel(id: string) {
@@ -711,6 +878,18 @@ export class Game {
       if (this.player) this.audio.footstep(this.acoustics?.surfaceAt(this.player.position) ?? 'sand', 0.6, { kind: 'jump' });
     };
     this.cam.snap(state.data.yaw + Math.PI, -0.05);
+    this.grantArms(state);
+    this.arms = new PlayerArms(state, this.hands, this.cam, this.camera, this.input, this.combat, this.audio, this.player);
+    this.placePack();
+    this.combat.hooks = {
+      onVenom: (sec) => {
+        state.data.poison = Math.min(70, (state.data.poison ?? 0) + sec);
+        if (!this.venomHint) { this.venomHint = true; this.ui.toast('Venom. It burns slowly. A snakebite kit stops it; a medkit only slows it.', 'bad'); }
+      },
+      onHurt: (amt, from, kind) => this.playerHurt(amt, from, kind),
+      onHit: (k) => { this.ui.hitmark(k); this.audio.combat?.hitmark(k); if (k === 'kill') state.data.stats.kills = (state.data.stats.kills ?? 0) + 1; },
+      trauma: (k) => this.cam.addTrauma(k),
+    };
     // hands, everything they can hold, and the shadow body compile on the first frame, under the fade
     this.warmNext = { roots: [this.camera, this.player.model.root], stage: () => this.hands?.stageItems() };
     this.garage.applyFlags(true);
@@ -735,6 +914,7 @@ export class Game {
       void this.ui.pages(briefingFor(state.archetype)).then(() => {
         state.set('briefed');
         state.set('intro');
+        if (state.set('tut.arms')) setTimeout(() => this.ui.toast(isTouch ? 'Armed: FIRE, AIM, RELOAD and SWAP sit over the jump button.' : 'Armed. LMB fire · RMB aim · R reload · Q / wheel swap · X holster · V melee.', 'info'), 4000);
         if (this.player) this.player.frozen = false;
         this.busy = false;
         this.input.requestLock();
@@ -742,6 +922,14 @@ export class Game {
       });
     }
     this.startLoops();
+    // debug: ?fight drops a Recovery squad in front of you (Story difficulty, can't die): desktop benches
+    if (new URLSearchParams(location.search).has('fight')) {
+      setTimeout(() => {
+        this.combat.difficulty = 'story';
+        this.recovery.summon(this.player!.position, this.cam.yaw, 22, 4, true);
+        setInterval(() => { if (this.state) this.state.data.health = Math.max(this.state.data.health, 50); }, 250);
+      }, 6000);
+    }
   }
 
   /**
@@ -794,7 +982,7 @@ export class Game {
     const inside = (o: THREE.Object3D) => this.garage.houseBox.containsPoint(o.getWorldPosition(new THREE.Vector3()));
     this._exterior = [
       this.atmo.sky, this.terrain.mesh, this.terrain.far, this.props.group, this.landmarks.group, this.garage.b.group,
-      this.scrub.mesh, this.shrubs.group, this.pebbles.mesh, this.fauna.mesh,
+      this.scrub.mesh, this.shrubs.group, this.pebbles.mesh, this.fauna.mesh, this.recovery.group, this.machines.group,
       this.haze.sprite, this.streaks.sprite, this.devils.sprite,
       ...[...this.intelMeshes.values()].filter((g) => !inside(g)),
     ].filter((o): o is THREE.Object3D => !!o);
@@ -828,8 +1016,12 @@ export class Game {
   }
 
   private removePlayer() {
+    this.recovery?.reset();
     this.story?.dispose();
     this.story = null;
+    this.arms = null;
+    this.combat.hooks = null;
+    this.cam.aimK = 0;
     if (this.player) {
       this.scene.remove(this.player.model.root);
       this.physics.world.removeCollider(this.player.collider, false);
@@ -929,6 +1121,7 @@ export class Game {
     this.applyAudioSettings();
     this.input.sensitivity = s.sensitivity;
     if (this.garage) this.garage.voiceEnabled = s.voice;
+    if (this.combat) this.combat.difficulty = s.difficulty ?? 'normal';
     if (s.quality !== this.quality.level && this.post) {
       this.quality = makeQuality(s.quality);
       if (!this.isWebGPU) this.quality.ao = false;
@@ -953,7 +1146,89 @@ export class Game {
     this.camera.updateProjectionMatrix();
   }
 
+  /** Down in the dust: the view drops, the pack stays behind, you wake at the camp. */
+  private die() {
+    const s = this.state!, player = this.player!;
+    this.busy = true;
+    player.frozen = true;
+    this.dying = 0.0001;
+    s.data.stats.deaths = (s.data.stats.deaths ?? 0) + 1;
+    s.data.poison = 0;
+    this.input.exitLock();
+    // the pack: everything that isn't a weapon or the story stays where you fell
+    const lost = !!s.data.pack;
+    const keep: { id: string; qty: number }[] = [];
+    const drop: { id: string; qty: number }[] = [];
+    for (const it of s.data.inventory) (KEEP_ON_DEATH(it.id) ? keep : drop).push({ ...it });
+    s.data.inventory = keep;
+    s.events.emit('inventoryChanged', {});
+    s.data.pack = drop.length ? { position: [player.position.x, player.position.y, player.position.z], items: drop, day: Math.floor(s.data.stats.playTime / 1560) } : null;
+    this.arms?.validate();
+    this.audio.combat?.hurt('melee', 1.2);
+    setTimeout(() => this.ui.fade(true, 'You go down in the dust.'), 900);
+    setTimeout(() => {
+      s.heal(45);
+      s.data.hunger = Math.max(20, s.data.hunger - 20);
+      s.data.thirst = Math.max(20, s.data.thirst - 25);
+      const c = this.landmarks.campPosition.clone().add(new THREE.Vector3(2, 0, 2));
+      c.y = this.hf.heightAt(c.x, c.z) + 0.2;
+      player.teleport(c);
+      this.cam.snap(this.cam.yaw, -0.05);
+      this.atmo.hour = (this.atmo.hour + 6) % 24;
+      this.envTimer = 0;
+      this.dying = 0;
+      this.ui.fade(true, 'Mara had someone drag you back. Six hours gone. The job didn\'t wait.');
+      this.placePack();
+    }, 3000);
+    setTimeout(() => {
+      this.ui.fade(false);
+      player.frozen = false;
+      this.busy = false;
+      this.input.requestLock();
+      if (lost) this.ui.toast('Your old pack is gone. Kade got to it first.', 'bad');
+      if (s.data.pack) this.ui.toast('Your pack is still where you fell. Orange beacon, marked on the map.', 'info');
+      this.save(true);
+    }, 6200);
+  }
+
   // ------------------------------------------------------------------ gameplay helpers
+  /**
+   * v0.5 hands everyone a crowbar and Hollis's revolver (new runs and old saves alike, once). The
+   * Brute brings the camp's shotgun, the Scout her ranger rifle.
+   */
+  private grantArms(s: GameState) {
+    if (!s.set('arms.v5')) return;
+    const give = (id: string, n: number) => s.addItem(id, n, true, true);
+    give('crowbar', 1);
+    give('revolver', 1);
+    give('ammo38', 12);
+    const mags: Record<string, number> = { revolver: 6 };
+    if (s.data.archetype === 'brute') { give('shotgun', 1); give('shells', 6); mags.shotgun = 5; }
+    if (s.data.archetype === 'scout') { give('rifle', 1); give('ammo3030', 7); mags.rifle = 7; }
+    s.data.arms = { equipped: 'revolver', mags };
+    if (s.has('briefed')) {
+      setTimeout(() => this.ui.subtitle('Mara Voss', 'Hollis left you his revolver and a crowbar in your pack. The road\'s got teeth now: Kade\'s Recovery crews, and the wolves stopped being shy.'), 2500);
+    }
+  }
+
+  /** Something hurt the player (combat hook): health, the HUD's direction marker, the body's reaction. */
+  private playerHurt(amount: number, from: THREE.Vector3 | null, kind: HurtKind) {
+    const s = this.state;
+    if (!s || !this.player || s.data.health <= 0) return;
+    s.damage(amount);
+    const k = Math.min(1, amount / 30);
+    this.post.damage.value = Math.min(0.9, (this.post.damage.value as number) + 0.22 + k * 0.45);
+    this.cam.addTrauma(0.15 + k * 0.45);
+    this.hands?.jolt(0.3 + k * 0.6);
+    this.audio.combat?.hurt(kind === 'zap' ? 'melee' : kind, 0.6 + k * 0.6);
+    if (from) {
+      // screen-space bearing of the source, for the red arc round the crosshair
+      const dx = from.x - this.player.position.x, dz = from.z - this.player.position.z;
+      const bearing = Math.atan2(dx, dz) - (this.cam.yaw + Math.PI);
+      this.ui.damageFrom(bearing, k);
+    }
+  }
+
   private useItem(id: string) {
     const s = this.state!;
     if (!s.count(id)) { this.audio.play('deny'); return; }
@@ -985,9 +1260,21 @@ export class Game {
       if (this.hands && !this.ui.modalOpen) this.hands.eat(apply); else apply();
       return;
     }
+    if (id === 'antivenom') {
+      s.removeItem(id, 1);
+      const apply = () => {
+        s.data.poison = 0;
+        s.heal(10);
+        this.audio.play('eat');
+        this.ui.toast('Snakebite kit. The burning stops. Mostly.', 'good');
+      };
+      if (this.hands && !this.ui.modalOpen) this.hands.eat(apply); else apply();
+      return;
+    }
     if (id === 'medkit') {
       s.removeItem(id, 1);
       const apply = () => {
+        s.data.poison = (s.data.poison ?? 0) * 0.5;
         s.heal(55);
         s.data.thirst = Math.max(0, s.data.thirst - 4);
         this.audio.play('eat');
@@ -1088,7 +1375,11 @@ export class Game {
         this.post.emp.value = Math.max(0, 1 - near / 14);
         this.cam.addTrauma(Math.max(0, 0.6 - near / 20));
         this.hands?.jolt(Math.max(0, 0.8 - near / 15));
-        if (!this.garage.emp(g.mesh.position, 8.5)) this.ui.toast('EMP fizzled — nothing electronic nearby.', 'info');
+        const hitGarage = this.garage.emp(g.mesh.position, 8.5);
+        const s = this.state;
+        const empDur = 12 * ((s?.skill('electronics') ?? 0) >= 2 ? 1.5 : 1) * (s?.focus('electronics') === 'deepcell' ? 1.3 : 1);
+        const hitMachines = this.machines.emp(g.mesh.position, empRadius(s?.skill('demolition') ?? 0) * (s?.focus('demolition') === 'wide' ? 1.18 : 1), empDur);
+        if (!hitGarage && !hitMachines) this.ui.toast('EMP fizzled — nothing electronic nearby.', 'info');
         void XP_REWARDS;
       }
     }
@@ -1146,6 +1437,12 @@ export class Game {
       if (s.has(c.id)) continue;
       if (!s.has(`approach:${c.id}`) && this.map.revealedAt(c.x, c.z) < 30) continue;
       out.push({ id: c.id, x: c.x, z: c.z, label: c.id === 'cache.cooler' ? 'Cooler' : 'Mast cells', color: '#7ec8d4', kind: 'intel' });
+    }
+    if (s.data.pack) out.push({ id: 'pack', x: s.data.pack.position[0], z: s.data.pack.position[2], label: 'Your pack', color: '#ff8a2a', kind: 'intel' });
+    for (const op of OUTPOSTS) {
+      if (!s.has(`seen:${op.id}`) && this.map.revealedAt(op.x, op.z) < 40) continue;
+      const cleared = s.has(`outpost.${op.id}.cleared`) && (s.data.marks[`cleared.${op.id}`] ?? -1e9) > s.data.stats.playTime - 30 * 60;
+      out.push({ id: `op:${op.id}`, x: op.x, z: op.z, label: cleared ? `${op.name} (cleared)` : op.name, color: cleared ? '#7d725f' : '#ff4a3a', kind: 'bunker' });
     }
     const goal = this.story?.target();
     if (goal) out.push({ id: 'quest', x: goal.x, z: goal.z, label: goal.label, color: '#ffd27a', kind: 'intel' });
@@ -1228,6 +1525,7 @@ export class Game {
     this.scrub.update(focusPos, this.atmo.wind);
     this.shrubs.update(focusPos);
     this.pebbles.update(focusPos);
+    this.camera.getWorldDirection(this.fauna.camFwd!);
     this.fauna.update(dt, focusPos, this.atmo.hour, this.mode === 'playing' ? this.audio : undefined, !!this.player?.sprinting);
     this.dust.update(dt);
     this.haze.update(dt);
@@ -1235,6 +1533,9 @@ export class Game {
     this.streaks.update(dt);
     this.devils.update();
     this.updateGrenades(dt);
+    this.recovery.update(dt, focusPos, this.camera.position, this.mode === 'playing' && !!this.player && !this.ui.modalOpen);
+    if (this.mode === 'playing' && !this.ui.modalOpen) this.machines.update(dt, this.camera.position);
+    this.combat.update(dt);
     this.updateEnvironment(dt);
     for (const gem of this.intelGems) {
       if (!gem.parent?.visible) continue;
@@ -1247,7 +1548,7 @@ export class Game {
     this.post.emp.value = damp(this.post.emp.value as number, 0, 1.2, dt);
     const alertTarget = this.mode === 'playing' && this.garage.drone.state === 'alert' ? 0.8 : this.mode === 'playing' ? this.garage.drone.detection * 0.4 : 0;
     this.post.alert.value = damp(this.post.alert.value as number, alertTarget, 4, dt);
-    const tension = this.mode === 'playing' ? Math.max(this.garage.drone.detection, this.garage.alarm > 0 ? 1 : 0) : 0;
+    const tension = this.mode === 'playing' ? Math.max(this.garage.drone.detection, this.garage.alarm > 0 ? 1 : 0, this.combat.heat) : 0;
     const playing = this.mode === 'playing';
     if (playing && this.acoustics && this.player) this.acoustics.update(dt, this.player.position);
     this.audio.update(dt, this.camera, this.atmo.windStrength, tension, this.weather.intensity, {
@@ -1346,15 +1647,47 @@ export class Game {
     }
     player.update(dt, input, this.cam.yaw, true);
     this.garage.update(dt);
+    // what hostiles can perceive of you this frame
+    const tg = this.combat.target;
+    tg.feet.copy(player.position);
+    tg.chest.copy(player.position).setY(player.position.y + (player.crouching ? 0.75 : 1.25));
+    tg.eye.copy(this.camera.position);
+    tg.velocity.copy(player.velocity);
+    tg.crouch = player.crouching;
+    tg.noise = player.noise * s.archetype.stats.stealth;
+    tg.torch = !!this.hands?.flashlightOn;
+    tg.hidden = this.garage.playerInside;
+    tg.night = this.atmo.isNight ? 1 : Math.max(0, Math.min(1, (0.15 - this.atmo.sunElevation) / 0.25));
+    tg.visibility = 1 - this.weather.intensity * 0.75;
+    tg.alive = s.data.health > 0;
+    tg.collider = player.collider;
+    tg.height = player.height;
+
     const strafe = blocked ? 0 : (input.isDown('KeyD') ? 1 : 0) - (input.isDown('KeyA') ? 1 : 0) + input.moveX;
     const hs = Math.hypot(player.velocity.x, player.velocity.z);
     this.cam.update(dt, input, { feet: player.position, crouch: player.crouching, sprint: player.sprinting, speed: hs, grounded: player.grounded, strafe, exertion: player.exertion });
+    // going down: the view sags to the ground and rolls
+    if (this.dying > 0) {
+      this.dying = Math.min(1, this.dying + dt / 1.1);
+      const k = this.dying * this.dying * (3 - 2 * this.dying);
+      this.camera.position.y -= k * 1.25;
+      this.camera.rotation.z += k * 1.1;
+      this.camera.rotation.x -= k * 0.25;
+      this.post.damage.value = Math.max(this.post.damage.value as number, 0.6 * (1 - k * 0.5));
+    }
+    // weapons after the camera: a shot goes where you're looking this frame, not last frame
+    this.camera.updateMatrixWorld();
+    tg.eye.copy(this.camera.position);
+    if (this.arms) {
+      this.arms.validate();
+      this.wantAds = this.arms.update(dt, blocked || this.busy, !!this.hands?.busy).wantAds;
+    }
     this.audio.breathe(dt, player.exertion);
     if (player.winded && !this.windedHint) {
       this.windedHint = true;
       this.ui.toast('Winded. Catch your breath before sprinting again.', 'info');
     }
-    this.hands?.update(dt, { speed: hs, grounded: player.grounded, crouch: player.crouching, sprint: player.sprinting, bobPhase: this.cam.bobPhase, lookDX: input.mouseDX, lookDY: input.mouseDY, vy: player.velocity.y });
+    this.hands?.update(dt, { speed: hs, grounded: player.grounded, crouch: player.crouching, sprint: player.sprinting, bobPhase: this.cam.bobPhase, lookDX: input.mouseDX, lookDY: input.mouseDY, vy: player.velocity.y, ads: this.wantAds, steady: s.focus('firearms') === 'marksman' });
 
     // interaction
     this.focus = blocked ? null : this.pickFocus();
@@ -1386,12 +1719,15 @@ export class Game {
       }
     }
 
+    if (this.arms?.takedownTarget && !this.focus && !isTouch) prompt.push({ key: 'LMB', label: 'Takedown' });
     if (this.touch) {
       const f = this.focus;
       this.touch.update({
         use: !!f, useNA: !!f && f.primary.available() !== true,
         alt: f?.secondary ? f.secondary.label : null,
         crouch: player.crouching, torch: !!this.hands?.flashlightOn,
+        armed: !!this.arms?.equipped, gun: !!this.arms?.equipped && this.arms.equipped !== 'crowbar',
+        ammo: this.arms?.equipped && this.arms.equipped !== 'crowbar' ? `${this.arms.mag(this.arms.equipped)}/${this.arms.reserve(this.arms.equipped)}` : '',
       });
     }
 
@@ -1411,6 +1747,13 @@ export class Game {
           s.addXP(XP_REWARDS.landmarkDiscovered, `Discovered ${lm.name}`);
         }
       }
+      for (const op of OUTPOSTS) {
+        if (s.has(`seen:${op.id}`)) continue;
+        if (Math.hypot(player.position.x - op.x, player.position.z - op.z) < 70) {
+          s.set(`seen:${op.id}`);
+          this.ui.banner(op.name.toUpperCase(), op.blurb, 'bad');
+        }
+      }
       const [gx, , gz] = GARAGE.location.position;
       if (!s.has('seen:garage') && Math.hypot(player.position.x - gx, player.position.z - gz) < 70) {
         s.set('seen:garage');
@@ -1425,23 +1768,15 @@ export class Game {
       }
     }
 
-    // death is a debt, not a nap
-    if (s.data.health <= 0 && !this.busy) {
-      this.busy = true;
-      player.frozen = true;
-      this.ui.fade(true, 'You go down in the dust. Mara had someone drag you back. The job did not.');
-      setTimeout(() => {
-        s.heal(50);
-        s.data.hunger = Math.max(s.data.hunger, 48);
-        s.data.thirst = Math.max(s.data.thirst, 48);
-        const c = this.landmarks.campPosition.clone().add(new THREE.Vector3(2, 0, 2));
-        c.y = this.hf.heightAt(c.x, c.z) + 0.2;
-        player.teleport(c);
-        this.ui.fade(false);
-        player.frozen = false;
-        this.busy = false;
-      }, 2200);
+    // venom: a slow burn until it's treated or runs out
+    if (!blocked && (s.data.poison ?? 0) > 0) {
+      s.data.poison = Math.max(0, (s.data.poison ?? 0) - dt);
+      this.venomHurt += dt * 0.6;
+      if (this.venomHurt >= 1) { const n = Math.floor(this.venomHurt); this.venomHurt -= n; s.damage(n); this.post.damage.value = Math.max(this.post.damage.value as number, 0.18); }
     }
+
+    // death is a debt, not a nap: you wake at the fire hours later, and your pack is where you fell
+    if (s.data.health <= 0 && !this.busy) this.die();
 
     // quests (on flag changes) and the occasional line of banter (throttled inside)
     this.story?.update(dt, {
@@ -1461,9 +1796,12 @@ export class Game {
       this.save(true);
     }
 
+    const aw = this.combat.awareness();
     this.ui.updateHUD(dt, {
       objective: this.objective(),
-      detection: this.garage.drone.detection,
+      detection: Math.max(this.garage.drone.detection, aw.best),
+      threat: aw.hunting > 0 ? 'hunted' : aw.best > 0.3 ? 'watched' : null,
+      venom: (s.data.poison ?? 0) > 0,
       droneState: this.garage.drone.state,
       canSee: this.garage.drone.canSee,
       crouch: player.crouching,
@@ -1477,6 +1815,8 @@ export class Game {
       markers: this.hudMarkers(performance.now()),
       hunger: s.data.hunger,
       thirst: s.data.thirst,
+      arms: this.arms?.hud() ?? null,
+      health: s.data.health,
     });
     void vec3;
   }

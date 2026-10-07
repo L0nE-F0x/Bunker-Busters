@@ -148,6 +148,12 @@ export class Acoustics {
     return s;
   }
 
+  /** What a ray (a bullet) struck: terrain by its ground kind, else the collider's surface. */
+  surfaceOfHit(c: Collider | null, p: V3): Surface {
+    if (!c || c.shapeType() === this.physics.R.ShapeType.HeightField) return this.terrain(p.x, p.z);
+    return this.hard(c, p);
+  }
+
   /** The terrain, or the visual slab / building floor lying on it. */
   private ground(p: V3): Surface {
     const { x, z } = p;

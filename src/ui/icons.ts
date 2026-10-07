@@ -17,6 +17,14 @@ export const ICONS: Record<string, string> = {
   noise: S('<rect x="16" y="14" width="12" height="20" rx="2"/><path d="M30 18 c4 3 4 9 0 12 M33 15 c6 4 6 14 0 18"/>', '#ffb347'),
   medkit: S('<rect x="10" y="14" width="28" height="22" rx="3"/><path d="M18 14 v-4 h12 v4 M24 20 v12 M18 26 h12"/>', '#5dff9a'),
   manifest: S('<path d="M14 8 h16 v32 h-16 z"/><path d="M18 8 v32 M14 14 h4 M22 16 h6 M22 22 h6 M22 28 h6 M22 34 h4"/>', '#c896ff'),
+  crowbar: S('<path d="M12 40 L34 12"/><path d="M34 12 c3 -4 8 -2 7 2 c-1 3 -4 3 -5 2"/><path d="M12 40 l-3 -1 l2 -4"/><path d="M16 35 l4 3" stroke="#ff8a5a"/>', '#ff8a5a'),
+  revolver: S('<path d="M8 18 h26 v5 h-20"/><path d="M34 18 h6 v3 h-6"/><rect x="18" y="16" width="9" height="9" rx="2"/><path d="M14 23 l-4 14 h7 l3 -10"/><path d="M20 27 c1 3 4 3 5 1"/>', '#ff8a5a'),
+  shotgun: S('<path d="M4 20 h30 v4 h-30z"/><path d="M14 25 h12 v3 h-12z"/><path d="M34 19 h6 l4 5 l-2 8 l-8 -2 l-1 -5"/><path d="M28 26 c0 3 3 4 4 2"/>', '#ff8a5a'),
+  rifle: S('<path d="M2 21 h28 v3 h-28z"/><path d="M30 19 h8 l7 6 l-3 7 l-10 -4 l-1 -5"/><path d="M28 25 c-2 5 4 7 6 4" /><path d="M10 24 h12 v3 h-12z"/>', '#ff8a5a'),
+  ammo: S('<path d="M14 14 v24 h6 v-24 c0 -5 -6 -5 -6 0z"/><path d="M26 14 v24 h6 v-24 c0 -5 -6 -5 -6 0z"/><path d="M14 32 h6 M26 32 h6"/>', '#ffd27a'),
+  shells: S('<rect x="12" y="12" width="9" height="26" rx="2"/><rect x="27" y="12" width="9" height="26" rx="2"/><path d="M12 32 h9 M27 32 h9"/>', '#ff6a5a'),
+  antivenom: S('<rect x="12" y="16" width="24" height="20" rx="3"/><path d="M18 16 v-4 h12 v4"/><path d="M19 26 c3 -4 7 4 10 0" stroke="#5dff9a"/>', '#5dff9a'),
+  badge: S('<rect x="14" y="16" width="20" height="24" rx="2"/><path d="M20 16 l4 -8 l4 8"/><circle cx="24" cy="25" r="4"/><path d="M18 34 h12"/>', '#ffb347'),
 };
 
 export const EYE_ICON = `<svg viewBox="0 0 64 40" fill="none" stroke="currentColor" stroke-width="3"><path d="M4 20 C14 4 50 4 60 20 C50 36 14 36 4 20 Z"/><circle cx="32" cy="20" r="8" fill="currentColor"/></svg>`;

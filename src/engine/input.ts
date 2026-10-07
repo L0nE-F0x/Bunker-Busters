@@ -50,6 +50,8 @@ export class Input {
     });
     window.addEventListener('mouseup', (e) => (this.mouseDown[e.button] = false));
     window.addEventListener('wheel', (e) => (this.wheel += Math.sign(e.deltaY)), { passive: true });
+    // right mouse is aim-down-sights: never a context menu over the game
+    el.addEventListener('contextmenu', (e) => e.preventDefault());
     document.addEventListener('pointerlockchange', () => this.setLocked(document.pointerLockElement === this.el));
     document.addEventListener('pointerlockerror', () => document.dispatchEvent(new Event('bb-lockerror')));
     // Linux desktop app (X11/XWayland): capture the mouse natively instead of with pointer lock
@@ -87,7 +89,7 @@ export class Input {
   pollRaw() {
     if (this.rawUnavailable || this.rawPending || !this.locked) return;
     this.rawPending = true;
-    ipc!.invoke('raw_mouse_delta').then((d: [number, number] | null) => {
+    ipc!.invoke('raw_mouse_delta').then((d: [number, number, number?, number?, number?] | null) => {
       this.rawPending = false;
       if (!d) { this.rawUnavailable = true; return; }
       if (this.rawFlush) { this.rawFlush = false; return; }
@@ -95,6 +97,15 @@ export class Input {
       const [dx, dy] = Math.abs(d[0]) > 1500 || Math.abs(d[1]) > 1500 ? [0, 0] : d;
       if (dx || dy) this.rawLive = true;
       if (this.locked && this.rawLive) { this.mouseDX += dx; this.mouseDY += dy; }
+      // buttons and wheel (v0.5 shell): the native grab keeps clicks from the page, so they come from here
+      if (this.native && this.locked && d.length >= 5) {
+        const held = d[2] ?? 0, pressed = d[3] ?? 0;
+        for (const [bit, b] of [[1, 0], [2, 1], [4, 2]] as const) {
+          this.mouseDown[b] = (held & bit) !== 0;
+          if (pressed & bit) this.mousePressed[b] = true;
+        }
+        this.wheel += d[4] ?? 0;
+      }
     }, () => { this.rawPending = false; this.rawUnavailable = true; });
   }
 

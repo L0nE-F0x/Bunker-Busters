@@ -10,6 +10,15 @@ import {
   THIRST_PER_SEC, HUNGER_PER_SEC, needDrain, foodBonus, survivalCarry,
 } from '@/content/progression';
 import { EventBus } from '@/engine/events';
+import type { WeaponId, Difficulty } from '@/content/weapons';
+
+/** What you dropped where you fell: walk back for it. A second death loses it. */
+export interface DroppedPack {
+  position: Vec3;
+  items: { id: string; qty: number }[];
+  /** Game day it was dropped (for the journal line). */
+  day: number;
+}
 
 export interface SaveData {
   version: 3;
@@ -39,8 +48,14 @@ export interface SaveData {
   hour: number;
   flags: string[];
   discovered: string;
-  stats: { picks: number; caught: number; playTime: number; busted: number };
+  stats: { picks: number; caught: number; playTime: number; busted: number; kills?: number; deaths?: number };
   savedAt: number;
+  /** v0.5: the weapon in hand and the rounds loaded in each gun. */
+  arms?: { equipped: WeaponId | null; mags: Partial<Record<WeaponId, number>> };
+  /** v0.5: the pack you dropped when you went down. */
+  pack?: DroppedPack | null;
+  /** v0.5: venom in the blood (seconds of poison left). */
+  poison?: number;
 }
 
 export type GameEvents = {
@@ -92,8 +107,11 @@ export class GameState {
       hour: 17.1,
       flags: [],
       discovered: '',
-      stats: { picks: 0, caught: 0, playTime: 0, busted: 0 },
+      stats: { picks: 0, caught: 0, playTime: 0, busted: 0, kills: 0, deaths: 0 },
       savedAt: Date.now(),
+      arms: { equipped: null, mags: {} },
+      pack: null,
+      poison: 0,
     });
   }
 
@@ -462,6 +480,9 @@ function migrateSave(raw: unknown): SaveData | null {
     discovered: d.discovered ?? '',
     stats: d.stats ?? { picks: 0, caught: 0, playTime: 0, busted: 0 },
     savedAt: d.savedAt ?? Date.now(),
+    arms: d.arms ?? { equipped: null, mags: {} },
+    pack: d.pack ?? null,
+    poison: d.poison ?? 0,
   };
 }
 
@@ -475,6 +496,7 @@ export function clearSave() {
 
 export interface Settings {
   quality: 'low' | 'medium' | 'high' | 'ultra';
+  difficulty: Difficulty;
   master: number;
   music: number;
   sfx: number;
@@ -483,7 +505,7 @@ export interface Settings {
 }
 
 // phones start on Low: a phone GPU at native resolution under the full post stack crawls
-export const DEFAULT_SETTINGS: Settings = { quality: isMobile ? 'low' : 'high', master: 0.8, music: 0.5, sfx: 0.9, sensitivity: 1, voice: true };
+export const DEFAULT_SETTINGS: Settings = { quality: isMobile ? 'low' : 'high', difficulty: 'normal', master: 0.8, music: 0.5, sfx: 0.9, sensitivity: 1, voice: true };
 
 export function loadSettings(): Settings {
   try {

@@ -283,6 +283,12 @@ export function journalEntries(v: StoryView): JournalEntry[] {
   add('creek.loft', 'The page on the shelf', 'The landlord drew a ridge south of the Spire with a cut in it, and left the Till\'s deed signed over to "whoever is still here". Somebody with rocket money looked at a pocket in that ridge and didn\'t buy.');
   add('creek.doc.list', 'Doc\'s page', 'Half the names on it are from the camps. Tanner sold them a bunker health plan and shipped them tote bags. Doc kept the page because nobody else would.');
   add('cave.known', 'The cut in the ridge', 'South of the Spire, up the posted wash. Wick lives up there with the view, because nobody bought it.');
+  add('arms.v5', 'Hollis\'s revolver', 'Hollis handed over the camp\'s old six-shooter and a crowbar with the paint worn to steel. "The road has teeth now," he said. Kade\'s Recovery crews walk the highway, and the wolves stopped keeping their distance. Rounds are scrap and patience at the fire.');
+  add('seen:survey', 'Survey stakes', 'Kade\'s surveyors are pricing the ridge north of the camp. White hard hats, respirators, lanyards with smiling photos. They log everything, including the people they shoot.');
+  add('seen:rp7', 'Recovery Point 7', 'Where Kade stacks what it repossesses: water jugs, a vending machine, somebody\'s piano. A sentry by the wall says please before it fires.');
+  add('seen:pipeline', 'The line west', 'A pipe on stands runs west out of Pipeline Camp 3, and the skid beside it hums. Painted on the casing: WATER IS A SERVICE. A Hornet drone circles the pad at night. The ground round it is mined.');
+  add('seen:wellhead', 'Where the creek went', 'South-west of Dry Creek, the aquifer comes up through a Kade wellhead into a tank with her name on it, then west down the pipe. The creek didn\'t dry up. It was moved. Juno was right, and the proof is guarded by five rifles, two sentries and a minefield.');
+  add('outpost.wellhead.cleared', 'Opened the tap', 'You took the wellhead. The tank is still Kade\'s, and Kade will send more people; Kade always sends more people. But for a while the water under Dry Creek was nobody\'s, which is the closest thing to everybody\'s it has been in years.');
   add('cave.wick.vesper', 'She stood where you stood', 'Wick says Vesper Kade called the Garage a prototype with bad unit economics. He told her the prototype had his cousin\'s water. She painted her initials in a pocket of the rock and left.');
   return out.reverse();
 }

@@ -13,6 +13,7 @@ import { floraMaterial, desertRock } from '@/game/world/materials';
 import { rockGeometry } from '@/game/world/Props';
 import { Fauna } from '@/game/world/Fauna';
 import type { Heightfield } from '@/game/world/Heightfield';
+import { HumanCrowd, type HumanLook } from '@/game/combat/Humans';
 
 const qs = new URLSearchParams(location.search);
 const num = (k: string, d: number) => Number(qs.get(k) ?? d);
@@ -99,6 +100,22 @@ const BUILDERS: Record<string, () => THREE.Object3D> = {
     const f = new Fauna(hf, [], []);
     f.lineup(new THREE.Vector3(0, 0, 0));
     return f.mesh;
+  },
+  human: () => {
+    const hf = { size: 840, heightAt: () => 0, normalAt: () => ({ x: 0, y: 1, z: 0 }) } as unknown as Heightfield;
+    const base: HumanLook = { vest: '#e3b524', uniform: '#3c4450', pants: '#4a4a40', helmet: '#e8e6df', boots: '#2a1f18', gloves: '#2b2b2b', skin: '#8a6450', build: 1, height: 1, weapon: 'rifle' };
+    const looks: HumanLook[] = [
+      { ...base },
+      { ...base, vest: '#e66a1e', weapon: 'shotgun', build: 1.15, pack: true },
+      { ...base, weapon: 'revolver', build: 0.93, height: 0.96 },
+      { ...base, helmet: '#e05a1a', leader: true, uniform: '#2c3038' },
+    ];
+    const c = new HumanCrowd(looks);
+    c.lineup(new THREE.Vector3(0, 0, 0), hf);
+    const pose = qs.get('pose');
+    if (pose) c.people.forEach((p) => { p.pose = pose as never; for (let k = 0; k < 30; k++) p.update(1 / 30, hf); });
+    if (qs.has('walk')) c.people.forEach((p) => { p.vel.set(0, 0, -Number(qs.get('walk'))); for (let k = 0; k < 17; k++) p.update(1 / 30, hf); });
+    return c.mesh;
   },
   rock: () => {
     const g = new THREE.Group();

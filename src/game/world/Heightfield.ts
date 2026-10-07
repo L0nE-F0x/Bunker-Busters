@@ -1,6 +1,7 @@
 import { Simplex2, smoothstep, lerp, clamp } from '@/engine/noise';
 import { WORLD_SIZE, WORLD_SEED, HIGHWAY, SIDE_ROADS, LANDMARKS, CAVE_TRAIL } from '@/content/world';
 import { GARAGE } from '@/content/bunkers/garage';
+import { OUTPOSTS } from '@/content/recovery';
 
 export interface FlattenZone { x: number; z: number; r: number; falloff: number; target?: number }
 
@@ -65,6 +66,8 @@ export class Heightfield {
       if (lm.kind === 'cave') zn.target = this.rawHeight(lm.position[0], lm.position[2]);
       this.zones.push(zn);
     }
+    // Kade outposts sit on pads of their own
+    for (const op of OUTPOSTS) this.zones.push({ x: op.x, z: op.z, r: op.r, falloff: 16 });
     for (const zn of this.zones) if (zn.target == null) zn.target = this.baseHeight(zn.x, zn.z) + (zn === this.zones[0] ? 0.5 : 0);
     const spireLm = LANDMARKS.find((l) => l.kind === 'radio-tower');
     const spire = spireLm && this.zones.find((z) => Math.abs(z.x - spireLm.position[0]) < 1);

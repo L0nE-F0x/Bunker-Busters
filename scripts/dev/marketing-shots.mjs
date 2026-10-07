@@ -16,6 +16,8 @@ const WORLD = [
   ['hero', tp(-14, 40, -0.32, 0.03, 17.55, 'g.hands.root.visible = false;')],
   ['night', tp(4, 25, 0.12, 0.02, 22.3, 'g.hands.root.visible = true; g.hands.flashlightOn = true; g.player.flashlight = true; const d = g.garage.drone; d.position.copy(o.clone().add(new d.position.constructor(-3, 3.2, 15)));')],
   ['interior', tp(5, -2.2, 1.35, -0.12, 21.0, 'g.hands.flashlightOn = false; g.player.flashlight = false; window.dispatchEvent(new KeyboardEvent("keydown", { code: "KeyC" }));')],
+  // a firefight on the flats: a Recovery squad advancing and shooting, a rifle up
+  ['combat', `(() => { const g = window.game; g.hands.root.visible = true; g.weather.storm(0, true); g.combat.difficulty = 'story'; setInterval(() => { g.state.data.health = 100; g.post.damage.value = 0; }, 16); g.state.addItem('rifle', 1, true, true); g.state.addItem('ammo3030', 30, true, true); g.state.data.arms.mags.rifle = 7; g.arms.equip('rifle'); const p = g.player.position.clone(); p.x = -60; p.z = 40; p.y = g.hf.heightAt(p.x, p.z) + 0.2; g.player.teleport(p); g.cam.snap(2.2, -0.04); g.atmo.hour = 17.45; g.envTimer = 0; setTimeout(() => g.recovery.summon(g.player.position, g.cam.yaw, 17, 4, true), 400); })()`, 3600],
   ['camp', `(() => { const g = window.game; window.dispatchEvent(new KeyboardEvent("keyup", { code: "KeyC" })); const c = g.landmarks.campPosition.clone(); c.x += 4.5; c.z += 4; c.y = g.hf.heightAt(c.x, c.z) + 0.2; g.player.teleport(c); g.cam.snap(Math.atan2(4.5, 4), -0.1); g.atmo.hour = 19.05; g.envTimer = 0; })()`],
 ];
 

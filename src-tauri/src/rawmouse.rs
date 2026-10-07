@@ -12,22 +12,32 @@
 //! ~19 turns in a few seconds) and `xwayland-relative-pointer` (true deltas). Touchpad gesture
 //! devices are skipped as well.
 
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicI32, AtomicU32, Ordering};
 use std::sync::Mutex;
 
 static DELTA: Mutex<(f64, f64)> = Mutex::new((0.0, 0.0));
 static ACTIVE: AtomicBool = AtomicBool::new(false);
+/// Mouse buttons held (bit 0 left, 1 middle, 2 right), and pressed since the last poll.
+static HELD: AtomicU32 = AtomicU32::new(0);
+static PRESSED: AtomicU32 = AtomicU32::new(0);
+/// Wheel notches since the last poll (+ down, − up).
+static WHEEL: AtomicI32 = AtomicI32::new(0);
 
-/// Accumulated (dx, dy) since the last call, in accelerated pointer units (≈ CSS px).
+/// Accumulated (dx, dy) since the last call, in accelerated pointer units (≈ CSS px), plus the
+/// mouse buttons: held mask, pressed-since-last-call mask, and wheel notches. While our own
+/// connection holds the pointer grab (mouse_capture), clicks never reach WebKit, so the page
+/// reads them here instead (shooting needs them).
 #[tauri::command]
-pub fn raw_mouse_delta() -> Option<(f64, f64)> {
+pub fn raw_mouse_delta() -> Option<(f64, f64, u32, u32, i32)> {
     if !ACTIVE.load(Ordering::Relaxed) {
         return None;
     }
     let mut d = DELTA.lock().unwrap();
     let out = *d;
     *d = (0.0, 0.0);
-    Some(out)
+    let pressed = PRESSED.swap(0, Ordering::Relaxed);
+    let wheel = WHEEL.swap(0, Ordering::Relaxed);
+    Some((out.0, out.1, HELD.load(Ordering::Relaxed), pressed, wheel))
 }
 
 /// Must run before anything else touches Xlib (i.e. before GTK starts): with a second thread using
@@ -73,7 +83,9 @@ fn run() -> Result<(), String> {
             return Err("XInput2 not supported".into());
         }
         let mut mask = [0u8; 4];
-        mask[(xinput2::XI_RawMotion >> 3) as usize] |= 1 << (xinput2::XI_RawMotion & 7);
+        for ev in [xinput2::XI_RawMotion, xinput2::XI_RawButtonPress, xinput2::XI_RawButtonRelease] {
+            mask[(ev >> 3) as usize] |= 1 << (ev & 7);
+        }
         let mut em = xinput2::XIEventMask { deviceid: xinput2::XIAllMasterDevices, mask_len: mask.len() as c_int, mask: mask.as_mut_ptr() };
         let root = (xl.XDefaultRootWindow)(dpy);
         (xi.XISelectEvents)(dpy, root, &mut em, 1);
@@ -110,6 +122,9 @@ fn run() -> Result<(), String> {
         };
         let mut rel = relative_devices(dpy);
         let mut seen = std::collections::HashSet::new();
+        // XWayland can report one click from two slave devices: drop a repeat of the same
+        // (event, button) at the same server time
+        let mut last_button: (i32, i32, u64) = (0, 0, 0);
 
         let mut event: xlib::XEvent = std::mem::zeroed();
         loop {
@@ -118,7 +133,30 @@ fn run() -> Result<(), String> {
             if cookie.type_ != xlib::GenericEvent || cookie.extension != opcode || (xl.XGetEventData)(dpy, cookie) == 0 {
                 continue;
             }
-            if cookie.evtype == xinput2::XI_RawMotion {
+            if cookie.evtype == xinput2::XI_RawButtonPress || cookie.evtype == xinput2::XI_RawButtonRelease {
+                let raw = &*(cookie.data as *const xinput2::XIRawEvent);
+                let key = (cookie.evtype, raw.detail, raw.time as u64);
+                if key != last_button {
+                    last_button = key;
+                    let press = cookie.evtype == xinput2::XI_RawButtonPress;
+                    match raw.detail {
+                        // left, middle, right → bits 0, 1, 2
+                        1..=3 => {
+                            let bit = 1u32 << (raw.detail - 1);
+                            if press {
+                                HELD.fetch_or(bit, Ordering::Relaxed);
+                                PRESSED.fetch_or(bit, Ordering::Relaxed);
+                            } else {
+                                HELD.fetch_and(!bit, Ordering::Relaxed);
+                            }
+                        }
+                        // wheel: one notch per press (4 up, 5 down)
+                        4 if press => { WHEEL.fetch_sub(1, Ordering::Relaxed); }
+                        5 if press => { WHEEL.fetch_add(1, Ordering::Relaxed); }
+                        _ => {}
+                    }
+                }
+            } else if cookie.evtype == xinput2::XI_RawMotion {
                 let raw = &*(cookie.data as *const xinput2::XIRawEvent);
                 // a device we haven't classified yet (hotplug): look again, once per device
                 if !rel.contains(&raw.sourceid) && seen.insert(raw.sourceid) {

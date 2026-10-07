@@ -1,6 +1,6 @@
 // Shared content schema. Everything a designer touches lives in /content and conforms to these types.
 
-export type SkillId = 'lockpicking' | 'electronics' | 'stealth' | 'demolition' | 'survival' | 'social';
+export type SkillId = 'lockpicking' | 'electronics' | 'stealth' | 'demolition' | 'survival' | 'social' | 'firearms';
 export type Vec3 = [number, number, number];
 
 export interface SkillDef {
@@ -11,7 +11,7 @@ export interface SkillDef {
   perLevel: string[]; // description of what each level grants (index = level)
 }
 
-export type ItemCategory = 'tool' | 'consumable' | 'loot' | 'intel';
+export type ItemCategory = 'tool' | 'consumable' | 'loot' | 'intel' | 'weapon' | 'ammo';
 
 export interface ItemDef {
   id: string;

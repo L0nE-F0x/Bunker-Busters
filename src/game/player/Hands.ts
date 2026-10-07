@@ -8,6 +8,7 @@ import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { noise } from '@/engine/noiseTex';
 import { bumpFromHeight } from '../world/Terrain';
 import { rimColor, rimStrength, glow } from '../world/materials';
+import { Arms, poseFromRoot } from './Arms';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 type N = any;
@@ -51,7 +52,7 @@ const mA = (): N => attribute('hA', 'vec4');
 const mB = (): N => attribute('hB', 'vec4');
 
 /** Glove leather: fine pebbled grain, darker creases at segment ends, scuffed lighter on the back. */
-function gloveMaterial(base: string, wear: string, segLen = 0) {
+export function gloveMaterial(base: string, wear: string, segLen = 0) {
   const m = new THREE.MeshStandardNodeMaterial({ roughness: 0.6, metalness: 0 });
   gloveSetup(m, positionLocal, normalLocal, uniform(new THREE.Color(base)), uniform(new THREE.Color(wear)), segLen > 0 ? uniform(segLen) : null);
   _handSpec.set(m, { kind: 'glove', a: [...rgb(base), segLen], b: [...rgb(wear), 0] });
@@ -79,7 +80,7 @@ function gloveSetup(m: THREE.MeshStandardNodeMaterial, P: N, Nl: N, b: N, w: N, 
   m.emissiveNode = rim(0.08);
 }
 
-function fabricMat(c: string, rough = 0.95) {
+export function fabricMat(c: string, rough = 0.95) {
   const m = new THREE.MeshStandardNodeMaterial({ roughness: rough });
   fabricSetup(m, positionLocal, uniform(new THREE.Color(c)));
   _handSpec.set(m, { kind: 'fabric', a: [...rgb(c), rough], b: [0, 0, 0, 0] });
@@ -95,7 +96,7 @@ function fabricSetup(m: THREE.MeshStandardNodeMaterial, P: N, base: N) {
   m.emissiveNode = rim(0.08);
 }
 
-function hardMat(c: string, rough = 0.45, metal = 0.1) {
+export function hardMat(c: string, rough = 0.45, metal = 0.1) {
   const m = new THREE.MeshStandardNodeMaterial({ roughness: rough, metalness: metal });
   hardSetup(m, positionLocal, uniform(new THREE.Color(c)));
   _handSpec.set(m, { kind: 'hard', a: [...rgb(c), rough], b: [metal, 0, 0, 0] });
@@ -108,7 +109,7 @@ function hardSetup(m: THREE.MeshStandardNodeMaterial, P: N, base: N) {
   m.emissiveNode = rim(0.08);
 }
 
-function steelMat(c = '#b9bec4', rough = 0.25) {
+export function steelMat(c = '#b9bec4', rough = 0.25) {
   const m = new THREE.MeshStandardNodeMaterial({ roughness: rough, metalness: 1 });
   steelSetup(m, positionLocal, uniform(new THREE.Color(c)), float(rough));
   _handSpec.set(m, { kind: 'steel', a: [...rgb(c), rough], b: [0, 0, 0, 0] });
@@ -150,7 +151,7 @@ function mergedMaterial(kind: HandKind) {
  * joints become a SkinnedMesh whose bones are those joints (one bone per vertex, weight 1), so the
  * articulated fingers keep moving exactly as before. Untagged meshes (glow screens) are left alone.
  */
-function bakeParts(root: THREE.Object3D, skinned: boolean) {
+export function bakeParts(root: THREE.Object3D, skinned: boolean) {
   root.updateMatrixWorld(true);
   const meshes: THREE.Mesh[] = [];
   root.traverse((o) => { const m = o as THREE.Mesh; if (m.isMesh && _handSpec.has(m.material as THREE.Material)) meshes.push(m); });
@@ -321,7 +322,7 @@ export interface HandPose {
  * A single curl value becomes a natural cascade: in a relaxed or loosely closed hand the index is
  * the straightest finger and each finger toward the little one curls a bit more.
  */
-const P = (x: number, y: number, z: number, rx: number, ry: number, rz: number, curl: number | [number, number, number, number], thumb: number, oppose: number, spread = 0): HandPose => ({
+export const P = (x: number, y: number, z: number, rx: number, ry: number, rz: number, curl: number | [number, number, number, number], thumb: number, oppose: number, spread = 0): HandPose => ({
   pos: new THREE.Vector3(x, y, z),
   rot: new THREE.Euler(rx, ry, rz, 'YXZ'),
   curl: typeof curl === 'number' ? [curl * 0.82, curl, Math.min(1, curl * 1.1 + 0.03), Math.min(1, curl * 1.2 + 0.06)] : curl,
@@ -331,9 +332,9 @@ const P = (x: number, y: number, z: number, rx: number, ry: number, rz: number, 
 });
 
 // Resting off-screen: arms hang at your sides, so empty hands aren't in view (like real life).
-const DOWN = P(0.24, -0.62, -0.3, -0.9, 0.2, -1.3, 0.3, 0.3, 0.2);
+export const DOWN = P(0.24, -0.62, -0.3, -0.9, 0.2, -1.3, 0.3, 0.3, 0.2);
 // Off-hand while the other one works: just below the frame, ready.
-const READY = P(0.22, -0.46, -0.36, -0.4, 0.2, -1.2, 0.35, 0.35, 0.25);
+export const READY = P(0.22, -0.46, -0.36, -0.4, 0.2, -1.2, 0.35, 0.35, 0.25);
 
 /** Right-hand poses; the left hand mirrors x / yaw / roll. */
 export const POSES: Record<string, { r: HandPose; l: HandPose; items?: { r?: string; l?: string } }> = {
@@ -372,7 +373,7 @@ export const POSES: Record<string, { r: HandPose; l: HandPose; items?: { r?: str
 };
 
 /** Left hand holding the torch in a fist, lens forward, beam roughly along the view. */
-const TORCH_L = P(0.165, -0.2, -0.42, 0.12, 0.22, -1.2, 0.9, 0.75, 0.55);
+export const TORCH_L = P(0.165, -0.2, -0.42, 0.12, 0.22, -1.2, 0.9, 0.75, 0.55);
 
 // arm IK (right side, view metres at viewmodel scale; mirrored for the left)
 const SHOULDER = new THREE.Vector3(0.2, -0.32, 0.1);
@@ -556,7 +557,7 @@ const _q = new THREE.Quaternion();
 const _z = new THREE.Vector3(0, 0, 1);
 const _m = new THREE.Matrix4();
 
-function clonePose(p: HandPose): HandPose {
+export function clonePose(p: HandPose): HandPose {
   return { pos: p.pos.clone(), rot: p.rot.clone(), curl: [...p.curl] as HandPose['curl'], thumb: p.thumb, oppose: p.oppose, spread: p.spread };
 }
 
@@ -655,6 +656,10 @@ export interface HandsFrame {
   lookDX: number; // mouse delta this frame
   lookDY: number;
   vy?: number; // vertical velocity (m/s), for the falling/balance reflex
+  /** Right mouse held with a gun up. */
+  ads?: boolean;
+  /** No aim sway (Marksman). */
+  steady?: boolean;
 }
 
 type Action = { pose: string; dur: number; t: number; onHit?: () => void; hitAt?: number; hit?: boolean; next?: Action };
@@ -687,12 +692,14 @@ export class Hands {
   private target = { r: clonePose(DOWN), l: clonePose(DOWN) };
   flashlightOn = false;
   readonly flashlight: THREE.SpotLight;
+  /** The weapon in hand (models + viewmodel animation). */
+  readonly arms = new Arms();
 
   constructor(look: HandLook) {
     this.right = new HandRig(1, look, this.accent);
     this.left = new HandRig(-1, look, this.accent);
     this.items = buildItems(look);
-    this.root.add(this.right.root, this.left.root, this.right.upper, this.left.upper);
+    this.root.add(this.right.root, this.left.root, this.right.upper, this.left.upper, this.arms.root);
     this.root.scale.setScalar(Hands.VIEW_SCALE);
     this.root.renderOrder = 5;
     // flashlight beam emitted from the torch in the left hand (light lives at camera scale)
@@ -713,7 +720,8 @@ export class Hands {
   stageItems() {
     const staged = Object.values(this.items).filter((obj) => !obj.parent);
     for (const obj of staged) this.root.add(obj);
-    return () => { for (const obj of staged) obj.removeFromParent(); };
+    const unArms = this.arms.stage();
+    return () => { for (const obj of staged) obj.removeFromParent(); unArms(); };
   }
 
   setBase(pose: string) {
@@ -758,6 +766,15 @@ export class Hands {
 
   update(dt: number, f: HandsFrame) {
     this.t += dt;
+    // a weapon up: posed first, the hands are solved onto it below. An action (reach, eat, throw)
+    // drops it out of view and borrows the hands.
+    const arms = this.arms;
+    if (arms.current) {
+      arms.lower(!!this.action || this.base !== 'idle');
+      arms.update({ dt, ads: !!f.ads, sprint: f.sprint, speed: f.speed, grounded: f.grounded, crouch: f.crouch, bobPhase: f.bobPhase, lookDX: f.lookDX, lookDY: f.lookDY, steady: !!f.steady }, this.root);
+    } else arms.holding = arms.leftOn = false;
+    const gripR = arms.holding && !this.action && this.base === 'idle';
+    const gripL = gripR && arms.leftOn;
     // pick the active pose
     let poseName = this.base;
     if (this.action) {
@@ -772,7 +789,9 @@ export class Hands {
       poseName = this.air > 0.28 || (f.vy ?? 0) < -5 ? 'air' : f.sprint ? 'run' : f.crouch ? 'crouch' : 'idle';
     }
     const def = POSES[poseName] ?? POSES.idle;
-    const torchGrip = this.flashlightOn && !def.items?.l && poseName !== 'lockpick' && poseName !== 'showcase' && poseName !== 'showcaseEmp';
+    // with a gun up the torch rides on the weapon; the crowbar leaves the left hand free to hold it
+    const gunTorch = gripR && arms.current !== 'crowbar';
+    const torchGrip = this.flashlightOn && !gunTorch && !gripL && !def.items?.l && poseName !== 'lockpick' && poseName !== 'showcase' && poseName !== 'showcaseEmp';
 
     // sprinting: arms pump in counter-phase with the legs, fists swinging up into the bottom of the view
     this.pump += ((f.sprint && f.grounded && !this.action && this.base === 'idle' ? 1 : 0) - this.pump) * (1 - Math.exp(-6 * dt));
@@ -802,9 +821,20 @@ export class Hands {
     const w = this.action ? 17 : 10;
     springPose(this.right.cur, tr, this.right.vel, w, dt);
     springPose(this.left.cur, tl, this.left.vel, w * 0.88, dt);
+    // hands on the weapon: placed exactly, no spring (the weapon's own frame carries the motion)
+    const grab = (rig: HandRig, side: 1 | -1, m: THREE.Matrix4, gripRel: boolean, c: number[]) => {
+      poseFromRoot(rig, side, m, gripRel, rig.cur);
+      for (let i = 0; i < 4; i++) rig.cur.curl[i] = c[i];
+      rig.cur.thumb = c[4];
+      rig.cur.oppose = c[5];
+      rig.cur.spread = 0;
+      rig.vel.fill(0);
+    };
+    if (gripR) grab(this.right, 1, arms.rightRoot, true, arms.rCurl);
+    if (gripL) grab(this.left, -1, arms.leftRoot, false, arms.lCurl);
 
     // items in hands
-    const want = { r: def.items?.r, l: def.items?.l ?? (torchGrip ? 'flashlight' : undefined) };
+    const want = { r: gripR ? undefined : def.items?.r, l: gripL ? undefined : def.items?.l ?? (torchGrip ? 'flashlight' : undefined) };
     for (const [name, obj] of Object.entries(this.items)) {
       const hand = want.r === name ? this.right : want.l === name ? this.left : null;
       if (!hand) { obj.removeFromParent(); continue; }
@@ -833,6 +863,11 @@ export class Hands {
     const apply = (rig: HandRig, phase: number) => {
       const p = _pose;
       copyPose(p, rig.cur);
+      if (rig === this.right ? gripR : gripL) {
+        rig.apply(p);
+        rig.root.visible = rig.upper.visible = p.pos.y > -0.55;
+        return;
+      }
       p.pos.x += bobX * phase + this.sway.x;
       p.pos.y += bobY + breathe + this.sway.y + this.dip - this.kick * 0.04;
       p.pos.z += this.kick * 0.05;
@@ -852,10 +887,14 @@ export class Hands {
     ring.value = 4 + Math.sin(this.t * 18) * 2;
     const lens = this.items.flashlight.userData.lens as { value: number };
     lens.value = this.flashlightOn ? 8 : 0.1;
-    const lit = this.flashlightOn && want.l === 'flashlight';
+    const lit = this.flashlightOn && (want.l === 'flashlight' || gunTorch);
     this.flashlight.intensity += ((lit ? 16 : 0) - this.flashlight.intensity) * (1 - Math.exp(-14 * dt));
     // the beam follows the torch hand (bob, sway, sprint pump) instead of being glued to the eye
-    if (lit) {
+    if (lit && gunTorch) {
+      const k = Hands.VIEW_SCALE;
+      this.flashlight.position.copy(arms.torchPos).multiplyScalar(k);
+      this.flashlight.target.position.copy(arms.torchPos).multiplyScalar(k).addScaledVector(arms.torchDir, 6);
+    } else if (lit) {
       const lp = this.left.cur.pos;
       this.flashlight.position.set(-0.05 + (lp.x * -1 + 0.165) * 0.32, -0.05 + (lp.y + 0.2) * 0.32, -0.35);
       this.flashlight.target.position.set(-0.02 - this.sway.x * 8, -0.12 + this.sway.y * 8 + (lp.y + 0.2) * 3, -6);
@@ -884,7 +923,7 @@ export function torchLight() {
 
 const _sway = new THREE.Vector2();
 const _pose = clonePose(DOWN);
-function copyPose(dst: HandPose, src: HandPose) {
+export function copyPose(dst: HandPose, src: HandPose) {
   dst.pos.copy(src.pos);
   dst.rot.copy(src.rot);
   for (let i = 0; i < 4; i++) dst.curl[i] = src.curl[i];

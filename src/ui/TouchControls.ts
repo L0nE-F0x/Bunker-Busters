@@ -11,6 +11,10 @@ const GLYPH = {
   pause: G('<path d="M18 13 v22 M30 13 v22"/>'),
   kit: G('<rect x="11" y="16" width="26" height="22" rx="3"/><path d="M18 16 v-4 h12 v4 M11 25 h26 M22 25 v4 h4 v-4"/>'),
   map: G('<path d="M8 14 l10 -4 l12 4 l10 -4 v24 l-10 4 l-12 -4 l-10 4 z"/><path d="M18 10 v24 M30 14 v24"/>'),
+  fire: G('<circle cx="24" cy="24" r="12"/><path d="M24 6 v8 M24 34 v8 M6 24 h8 M34 24 h8"/><circle cx="24" cy="24" r="2.5" fill="currentColor"/>'),
+  aim: G('<path d="M10 24 c6 -10 22 -10 28 0 c-6 10 -22 10 -28 0 z"/><circle cx="24" cy="24" r="5"/>'),
+  reload: G('<path d="M36 18 a13 13 0 1 0 2 10"/><path d="M38 10 v9 h-9"/>'),
+  swap: G('<path d="M12 18 h22 l-6 -6 M36 30 h-22 l6 6"/>'),
 };
 
 type Role = { kind: 'stick' } | { kind: 'look'; x: number; y: number } | { kind: 'key'; code: string; el: HTMLElement };
@@ -35,6 +39,7 @@ export class TouchControls {
   private altBtn: HTMLElement;
   private crouchBtn: HTMLElement;
   private torchBtn: HTMLElement;
+  private armsEl: HTMLElement;
   private roles = new Map<number, Role>();
   private origin = { x: 0, y: 0 };
   private active = false;
@@ -54,6 +59,12 @@ export class TouchControls {
         ${btn('t-use', 'KeyE', GLYPH.use)}
         ${btn('t-alt', 'KeyF', '', 'ALT')}
         ${btn('t-torch', 'KeyL', GLYPH.torch)}
+      </div>
+      <div class="arms">
+        ${btn('t-fire', 'TouchFire', GLYPH.fire)}
+        ${btn('t-aim', 'TouchAim', GLYPH.aim)}
+        ${btn('t-reload', 'KeyR', GLYPH.reload)}
+        ${btn('t-swap', 'KeyQ', GLYPH.swap)}
       </div>`;
     this.stick = root.querySelector('.stick')!;
     this.knob = root.querySelector('.knob')!;
@@ -61,6 +72,7 @@ export class TouchControls {
     this.altBtn = root.querySelector('.t-alt')!;
     this.crouchBtn = root.querySelector('.t-crouch')!;
     this.torchBtn = root.querySelector('.t-torch')!;
+    this.armsEl = root.querySelector('.arms')!;
     document.body.appendChild(root);
 
     const rotate = document.createElement('div');
@@ -89,8 +101,18 @@ export class TouchControls {
   }
 
   /** Once per frame: what the buttons should show. */
-  update(f: { use: boolean; useNA: boolean; alt: string | null; crouch: boolean; torch: boolean }) {
+  private ammoText = '';
+  update(f: { use: boolean; useNA: boolean; alt: string | null; crouch: boolean; torch: boolean; armed?: boolean; gun?: boolean; ammo?: string }) {
+    const ammo = f.ammo ?? '';
+    if (ammo !== this.ammoText) {
+      this.ammoText = ammo;
+      let el = this.armsEl.querySelector('.t-fire span') as HTMLElement | null;
+      if (!el) { el = document.createElement('span'); this.armsEl.querySelector('.t-fire')!.appendChild(el); }
+      el.textContent = ammo;
+    }
     const cl = (el: HTMLElement, c: string, on: boolean) => { if (el.classList.contains(c) !== on) el.classList.toggle(c, on); };
+    cl(this.armsEl, 'hide', !f.armed);
+    cl(this.armsEl, 'melee', !f.gun);
     cl(this.useBtn, 'lit', f.use && !f.useNA);
     cl(this.useBtn, 'dim', !f.use || f.useNA);
     cl(this.altBtn, 'hide', !f.alt);

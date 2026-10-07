@@ -32,6 +32,9 @@ export class FirstPersonCamera {
   private fov = 64;
   private shake = new Simplex2(7);
   readonly baseFov = 64;
+  /** Aiming down the sights: the FOV to zoom to, and how far into the zoom (0..1). */
+  aimFov = 50;
+  aimK = 0;
 
   constructor(public camera: THREE.PerspectiveCamera) {
     camera.rotation.order = 'YXZ';
@@ -68,7 +71,9 @@ export class FirstPersonCamera {
   update(dt: number, input: Input, f: FPFrame) {
     this.t += dt;
     if (this.enabled) {
-      const s = 0.0021 * input.sensitivity;
+      // aimed: look speed follows the zoom, so the sights track the same as the hip
+      const zoom = this.camera.fov / this.baseFov;
+      const s = 0.0021 * input.sensitivity * (this.aimK > 0.05 ? zoom : 1);
       this.yaw -= input.mouseDX * s;
       this.pitch = clamp(this.pitch - input.mouseDY * s, -1.48, 1.48);
     }
@@ -112,8 +117,9 @@ export class FirstPersonCamera {
       this.roll + this.shake.noise(k, k) * 0.05 * sh,
     );
 
-    const target = this.baseFov + (f.sprint ? 7 : 0) - (f.crouch ? 2 : 0);
-    this.fov = damp(this.fov, target, 4, dt);
+    const free = this.baseFov + (f.sprint ? 7 : 0) - (f.crouch ? 2 : 0);
+    const target = free + (this.aimFov - free) * this.aimK;
+    this.fov = this.aimK > 0.01 ? damp(this.fov, target, 18, dt) : damp(this.fov, target, 4, dt);
     if (Math.abs(this.camera.fov - this.fov) > 0.01) {
       this.camera.fov = this.fov;
       this.camera.updateProjectionMatrix();

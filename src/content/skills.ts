@@ -97,17 +97,31 @@ export const SKILLS: Record<SkillId, SkillDef> = {
       'Tanner unlatches the side door and says the whole code.',
     ],
   },
+  firearms: {
+    id: 'firearms',
+    name: 'Firearms',
+    max: 5,
+    blurb: 'The desert has more guns than water. Learn which end matters.',
+    perLevel: [
+      'Untrained. The sights are a suggestion and the recoil is a surprise.',
+      'Steadier hands: tighter spread from the hip, less kick.',
+      'Reloads go 20% faster. The camp can load rifle rounds.',
+      'Headshots hit harder. Aiming down the sights settles quicker.',
+      'Recoil is half what it was. Wounded wolves stop to think.',
+      'Every shot lands where you meant it, and contractors flinch when you aim at them.',
+    ],
+  },
 };
 
-export const SKILL_ORDER: SkillId[] = ['lockpicking', 'electronics', 'stealth', 'demolition', 'survival', 'social'];
+export const SKILL_ORDER: SkillId[] = ['lockpicking', 'electronics', 'stealth', 'demolition', 'survival', 'social', 'firearms'];
 
 /** Short glyph for the tree header. */
 export const SKILL_GLYPH: Record<SkillId, string> = {
-  lockpicking: 'LP', electronics: 'EL', stealth: 'ST', demolition: 'DM', survival: 'SV', social: 'SO',
+  lockpicking: 'LP', electronics: 'EL', stealth: 'ST', demolition: 'DM', survival: 'SV', social: 'SO', firearms: 'FA',
 };
 
 export function emptySkills(): Record<SkillId, number> {
-  return { lockpicking: 0, electronics: 0, stealth: 0, demolition: 0, survival: 0, social: 0 };
+  return { lockpicking: 0, electronics: 0, stealth: 0, demolition: 0, survival: 0, social: 0, firearms: 0 };
 }
 
 /** A branch node: two per skill at rank 2 (focus) and two at rank 4 (capstone). */
@@ -132,6 +146,8 @@ export const FOCUSES: FocusDef[] = [
   { id: 'hardrest', skill: 'survival', name: 'Hard Rest', blurb: 'A rest at the fire puts back more health, food and water.' },
   { id: 'known', skill: 'social', name: 'Known Face', blurb: 'Dry Creek hears you as one Social rank higher.' },
   { id: 'longcon', skill: 'social', name: 'Long Con', blurb: 'When Tanner sends SeedBot home, it stays docked 5 s longer.' },
+  { id: 'quickdraw', skill: 'firearms', name: 'Quickdraw', blurb: 'Swap and draw twice as fast, and reload a further 20% quicker.' },
+  { id: 'marksman', skill: 'firearms', name: 'Marksman', blurb: 'Aiming down the sights zooms further and holds your breath: no sway.' },
 ];
 
 /** Rank 4. The last shape a skill takes. */
@@ -148,6 +164,8 @@ export const CAPSTONES: FocusDef[] = [
   { id: 'packrat', skill: 'survival', name: 'Pack Rat', blurb: 'The pack holds 6 kg more.' },
   { id: 'handler', skill: 'social', name: 'Handler', blurb: 'SeedBot stays docked twice as long, and Tanner takes the ask twice as often.' },
   { id: 'wordofmouth', skill: 'social', name: 'Word of Mouth', blurb: 'Quests pay 30% more XP, and every finished favour earns extra goodwill.' },
+  { id: 'deadeye', skill: 'firearms', name: 'Deadeye', blurb: 'Headshots deal half again as much, and a kill refunds a round to the gun.' },
+  { id: 'brawler', skill: 'firearms', name: 'Brawler', blurb: 'The crowbar and gun-butt hit twice as hard, and takedowns work on anyone who isn\'t facing you.' },
 ];
 
 /** Rank that opens each branch. */

@@ -6,7 +6,7 @@ First-person post-apocalyptic heist game (Three.js r186 WebGPU/WebGL2 + TSL shad
 
 Repo: https://github.com/L0nE-F0x/Bunker-Busters (public, branch `main`). Read `BUNKER_BUSTERS_SPEC.md` for the design and `NOTES.md` for the dev log and findings.
 
-**Current phase:** v0.1.0 is released, the site is live and the owner has the desktop app installed. We are now **refining and iterating**. The owner cares most about visual quality ("make it look incredible"), then game feel. Each meaningful round of improvements ends with a release (below).
+**Current phase:** v0.5.0 ("Hostiles": guns, melee, enemies, a death penalty) is the latest work, the site is live and the owner has the desktop app installed. We are **refining and iterating**. The owner cares most about visual quality ("make it look incredible"), then game feel. Each meaningful round of improvements ends with a release (below).
 
 ## Daily loop
 
@@ -98,8 +98,15 @@ src/game/town/              Dry Creek, The Cut and the wash (Settlement.ts: buil
 src/game/sites/             points of interest, one class each: jet, drivein, datacenter, tube (Site.ts: flag contract)
 src/game/bunker/            GarageBuilder (Tier 1 geometry), Garage (locks, hazards, loot, taunts), Drone (SeedBot AI)
 src/game/player/            Player (Rapier controller), FirstPersonCamera, Hands (procedural viewmodel + poses),
+                            Arms (weapon models + viewmodel animation; hands are solved onto the weapon),
                             CharacterModel (third-person body, now a shadow-only caster), ThirdPersonCamera (unused)
-src/content/                data: items, skills, archetypes, world layout, bunkers/garage.ts (data-driven)
+src/game/combat/            Combat (hostile registry, hitscan, enemy fire vs the player capsule, explosions, noise,
+                            damage hooks), PlayerArms (the player's guns + melee + takedowns), fx (tracers, debris,
+                            flames), Humans (Kade contractors: one SkinnedMesh, procedural joints, Rapier ragdolls),
+                            Recovery (squad AI, outposts, road patrols, loot), Outposts (props + cover points),
+                            Machines (sentries, Hornet drones, mines). Wolves, snakes, scorpions live in world/Fauna
+src/content/                data: items, skills, archetypes, world layout, bunkers/garage.ts (data-driven),
+                            weapons.ts (guns, difficulty), recovery.ts (outposts, crews, barks, body loot)
 src/ui/                     DOM HUD/menus (UI.ts), Lockpick/Circuit/Keypad minigames, Minimap, TouchControls (phones), styles.css
 src/site/ + index.html      marketing page.   play/index.html: game page.   public/media + og.jpg: site art
 src-tauri/                  desktop shell. main.rs: auto NVIDIA selection on hybrid Linux laptops, dev hooks. update.rs: in-app updater
@@ -129,6 +136,7 @@ scripts/dev/bench-desktop.sh [high|medium]   # real desktop-app perf: opens a wi
 - The harness renders WebGL on the RTX 4050 headlessly (`GPU_MODE=nvidia|intel|soft`).
 - Always pass `?webgl` in headless game URLs.
 - `window.game` exposes everything: `game.player.teleport(v)`, `game.cam.snap(yaw,pitch)`, `game.atmo.hour`, `game.hands.setBase('lockpick')`, `game.garage.drone`, `game.state`, `game.ui`.
+- Combat debug: `game.arms.equip('rifle')`, `game.arms.trigger()` / `reloadNow()`, `game.recovery.summon(game.player.position, game.cam.yaw, 18, 3)`, `game.recovery.census()`, `game.fauna.summonPack(game.player.position, 30, true, 4)`, `game.combat.difficulty = 'story'`, `game.combat.explode(pos, 4, 50)`. After a teleport, aim on the next frame: the camera only moves in the frame loop.
 - **Look at the screenshots.** Visual quality is the product.
 
 Game URL flags:
@@ -139,6 +147,7 @@ Game URL flags:
 - `?touch=1|0`: force the phone/touch build on or off (on-screen controls, compact layout, mobile quality caps)
 - `?webgl`, `?gpu=high|low|reset`: backend override
 - `?skip=ui,post,env,dust,haze,props,landmarks,scrub,fauna,garage,terrain,sky,shadows,fog`: subsystem bisecting
+- `?fight`: drop a Recovery squad in front of you (Story difficulty, can't die), for benches
 - `?interior=off`: never skip the exterior (A/B for interior mode). `?at=garage`: start the run inside the Garage
 
 Desktop dev hooks (env vars):
@@ -197,12 +206,22 @@ The webview's `console.log` goes to stdout.
   - The player is a kinematic controller with real gravity and acceleration limits (constants at the top of `Player.ts`).
   - Dynamic bodies (the EMP canister) are excluded from the controller's query (`EXCLUDE_DYNAMIC`).
   - Footsteps come from `FirstPersonCamera.onStep`, not the shadow body.
+- **Combat** (`src/game/combat/`, v0.5):
+  - Anything shootable is a `Hostile` from a `HostileProvider` registered with `Combat`. Give it a cheap bounding sphere (`center`, `radius`); `raycast` runs only after the sphere test.
+  - Enemy shots go through `combat.enemyRound` (it handles cover, the player's capsule, whizzes and impacts). Damage to the player goes through `combat.hurtPlayer` (difficulty + HUD arc).
+  - Muzzle flashes and blasts use VirtualLights owned by `Combat`, never new lights.
+  - Contractors share one SkinnedMesh of 10 slots × 16 bones; a slot's gun is baked into its geometry (`SLOT_GUNS`). Bones have no parents: each bone's `matrixWorld` is written directly. More slots means more bones in the vertex uniforms; keep it modest for WebGL2.
+  - Ragdolls are temporary Rapier bodies (collision groups 0x0002/0x0001, so parts don't collide with each other). They're removed once asleep.
+  - The viewmodel gun is posed first and the hands follow (`Arms` → `Hands`). Don't move the hands independently while a gun is up, or they detach from it.
+  - In the Linux app, mouse buttons and the wheel come from `raw_mouse_delta` while captured (the native grab keeps clicks from WebKit). Any new mouse input must read `Input.mouseDown` / `mousePressed` / `wheel`, not DOM events.
+  - Iterate visuals with the hands lab (`&arm=…&ads&act=…`) and the prop lab (`what=human&pose=aim&walk=3.8`).
 - Fonts are self-hosted via `@fontsource` (`src/fonts.ts`). Import paths have **no `.css` suffix** (the packages' export maps add it).
 - In bash with `set -o pipefail`, don't use `grep -q` on a producer's output (SIGPIPE → false failure).
 - Node scripts: use `fileURLToPath(new URL(…))`, not `.pathname`. The repo path contains a space.
 
 ## Backlog (owner priorities first)
 
+0. **Combat follow-ups (v0.5):** a real-click check of the raw-button path in the Linux app, and balance from the owner's play (time-to-kill, patrol frequency, wolf day-hunts). Bench a fight with `BB_FLAGS=fight`.
 1. **Visual polish pass:**
    - richer Garage exterior and interior detail
    - better hero/landing art
