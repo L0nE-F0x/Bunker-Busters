@@ -20,6 +20,8 @@ export class Landmarks {
   flickers: Flicker[] = [];
   blinkers: { u: { value: number }; period: number; offset: number }[] = [];
   campPosition = new THREE.Vector3();
+  /** The gas station's frame (camp space: the fire at (−8, 0, 5), logs north and east of it). */
+  campFrame: Frame | null = null;
   audioSpots: { kind: AmbientKind; pos: THREE.Vector3 }[] = [];
   private lods: DistanceLod[] = [];
 
@@ -191,6 +193,7 @@ export class Landmarks {
     root.add(fire.group);
     this.fires.push(fire);
     this.campPosition.copy(f.p(campX + 1, 0.2, campZ + 1));
+    this.campFrame = f;
     this.audioSpots.push({ kind: 'fire', pos: this.campPosition.clone() });
 
     this.group.add(root);
@@ -302,12 +305,13 @@ export class Landmarks {
     // camp space (the gas station's frame): fire at (−8, 5); log A along x at z 6.4 (north of the
     // fire), log B along z at x −6.8 (east). Each point is where the hips sit, on top of the log.
     const fire = new THREE.Vector3(-8, 0, 5);
-    const seat = (id: string, x: number, z: number, notice = 5): NpcDef => {
+    // they notice you from the far side of the fire (and from where you kneel in character select)
+    const seat = (id: string, x: number, z: number, notice = 7): NpcDef => {
       const yaw = Math.atan2(fire.x - x, fire.z - z);
       return { id, look: CAMP_LOOK, pose: 'warm', x, y: 0, z, yaw, seat: 0.62, notice };
     };
     const defs = [
-      seat('mara', -9.5, 6.5, 6),
+      seat('mara', -9.5, 6.5, 7.5),
       seat('pip', -8.3, 6.25),
       seat('hollis', -6.8, 4.65),
       seat('dez', -6.8, 3.45),
@@ -315,6 +319,15 @@ export class Landmarks {
     if (!defs.length) return;
     this.campCrowd = new NpcCrowd(defs, 'camp-people');
     this.campNear.add(this.campCrowd.mesh);
+  }
+
+  /** A camp-space point in world space, `y` metres above the ground there (menu cameras). */
+  campPoint(x: number, y: number, z: number, out = new THREE.Vector3()) {
+    const f = this.campFrame;
+    if (!f) return out.copy(this.campPosition).add(new THREE.Vector3(x + 8, y, z - 5));
+    out.set(x, 0, z).applyMatrix4(f.m);
+    out.y = this.hf.heightAt(out.x, out.z) + y;
+    return out;
   }
 
   update(dt: number, t: number, cam?: THREE.Vector3) {

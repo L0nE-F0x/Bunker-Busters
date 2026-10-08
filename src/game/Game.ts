@@ -52,6 +52,7 @@ import { Combat, sphereRay, type HurtKind, type Hostile } from './combat/Combat'
 import { PlayerArms } from './combat/PlayerArms';
 import { Recovery } from './combat/Recovery';
 import { Machines } from './combat/Machines';
+import { MenuDirector } from './MenuDirector';
 
 /** Debug: ?interior=off draws the exterior even from inside sealed interiors (A/B for interior mode). */
 const NO_INTERIOR = typeof location !== 'undefined' && new URLSearchParams(location.search).get('interior') === 'off';
@@ -153,6 +154,7 @@ export class Game {
   private revealTimer = 0;
   private autosaveTimer = 60;
   private titleT = 0;
+  private director!: MenuDirector;
   private busy = false; // minigame/modal in progress
   /** Warm these on the next frame's render (see warmShaders), staging anything not yet in the scene. */
   private warmNext: { roots: THREE.Object3D[]; stage?: () => (() => void) | undefined } | null = null;
@@ -299,12 +301,18 @@ export class Game {
     this.post = new PostFX(this.renderer, this.scene, this.camera, this.atmo.sun, this.quality);
     this.resize();
     this.physics.step();
-    this.setTitleCamera(0);
+    this.director = new MenuDirector(this.camera, this.landmarks, () => this.garage?.b.origin ?? new THREE.Vector3(96, 0, -150));
+    this.atmo.hour = this.director.startTitle();
     this.atmo.update(0, this.camera.position);
     // streamed scatter must hold something before the warm-up, or its programs compile mid-play
     this.scrub.update(this.camera.position, this.atmo.wind);
     this.shrubs.update(this.camera.position);
     this.pebbles.update(this.camera.position);
+    // character select's hands and everything they hold compile now too, not on the glide down to
+    // the fire (hand materials are shared per kind, so one pair covers every look)
+    const menuHands = new Hands(HAND_LOOKS.engineer);
+    menuHands.attach(this.camera);
+    const unstageMenuHands = menuHands.stageItems();
     // in batches, a frame each, so the loading bar keeps moving through a cold start (~20 s in WebKit)
     const drawn: THREE.Object3D[] = [];
     this.scene.traverse((o) => { if ((o as THREE.Mesh).isMesh || (o as THREE.Sprite).isSprite || (o as THREE.Points).isPoints || (o as THREE.Line).isLine) drawn.push(o); });
@@ -316,6 +324,8 @@ export class Game {
       for (let f = 0; f < 2; f++) await new Promise((r) => requestAnimationFrame(r)); // a fresh frame for the scene pass
     }
     console.log(`[BunkerBusters] shader warm-up: ${drawn.length} objects in ${batches} frames, ${warmMs.toFixed(0)} ms`);
+    unstageMenuHands();
+    menuHands.dispose();
     await step(0.95, 'Polishing neon');
     this.renderer.setAnimationLoop(() => this.frame());
     window.addEventListener('resize', () => this.resize());
@@ -820,21 +830,11 @@ export class Game {
   }
 
   // ------------------------------------------------------------------ modes
-  private setTitleCamera(t: number) {
-    const o = this.garage?.b.origin ?? new THREE.Vector3(96, 0, -150);
-    // orbit on the sunset side so the bunker is back-lit, framed to the right of the logo
-    const a = 5.55 + Math.sin(t * 0.04) * 0.3;
-    const r = 40 + Math.sin(t * 0.13) * 4;
-    this.camera.position.set(o.x + Math.sin(a) * r, o.y + 7 + Math.sin(t * 0.2) * 1.2, o.z + Math.cos(a) * r);
-    const fwd = new THREE.Vector3(o.x - this.camera.position.x, 0, o.z - this.camera.position.z).normalize();
-    const right = new THREE.Vector3(-fwd.z, 0, fwd.x);
-    this.camera.lookAt(o.x - right.x * 13, o.y + 6, o.z - right.z * 13);
-  }
-
   toTitle() {
     this.mode = 'title';
     this.titleT = 0;
-    this.atmo.hour = 17.45;
+    this.atmo.hour = this.director.startTitle();
+    this.envTimer = 0;
     this.atmo.paused = false;
     this.atmo.dayLengthMinutes = 240;
     this.removePlayer();
@@ -865,22 +865,27 @@ export class Game {
 
   private toCharSelect() {
     this.mode = 'charselect';
-    this.atmo.hour = 18.55;
-    this.atmo.paused = true;
+    this.director.startSelect();
     const show = (id: string) => {
       this.hands?.dispose();
       const look = handArchetype(id);
       this.hands = new Hands(HAND_LOOKS[look] ?? HAND_LOOKS.infiltrator);
       this.hands.attach(this.camera);
       this.hands.setBase(look === 'engineer' ? 'showcaseEmp' : 'showcase');
+      this.director.pick();
     };
     const leave = () => { this.hands?.dispose(); this.hands = null; };
     // (hands are re-created fresh in startGame, so the showcase offset never leaks into play)
     this.ui.showCharSelect(
       (id) => {
-        leave();
-        clearSave();
-        this.startGame(GameState.fresh(id, SPAWN));
+        // stand up from the fire as it goes dark (the hands drop back to your sides), then the run
+        this.director.standUp();
+        this.hands?.setBase('idle');
+        setTimeout(() => {
+          leave();
+          clearSave();
+          this.startGame(GameState.fresh(id, SPAWN));
+        }, MenuDirector.STAND * 1000 + 60);
       },
       show,
       () => { leave(); this.toTitle(); },
@@ -890,6 +895,17 @@ export class Game {
   private startGame(state: GameState) {
     this.state = state;
     this.mode = 'playing';
+    // out of the menus' dip to black: the picture comes up as the run begins
+    const f0 = this.post.fade.value as number;
+    if (f0 > 0) {
+      const t0 = performance.now();
+      const lift = () => {
+        const k = (performance.now() - t0) / 1100;
+        this.post.fade.value = f0 * Math.max(0, 1 - k * k);
+        if (k < 1) requestAnimationFrame(lift);
+      };
+      requestAnimationFrame(lift);
+    }
     this.atmo.paused = false;
     this.atmo.dayLengthMinutes = 26;
     this.atmo.hour = state.data.hour;
@@ -1544,18 +1560,15 @@ export class Game {
 
     if (this.mode === 'title') {
       this.titleT += dt;
-      this.setTitleCamera(this.titleT);
+      const cut = this.director.title(dt);
+      if (cut !== null) { this.atmo.hour = cut; this.envTimer = 0; }
+      this.post.fade.value = this.director.fade;
     } else if (this.mode === 'charselect') {
-      const fire = this.landmarks.campPosition;
-      const eye = fire.clone().add(new THREE.Vector3(1.9, 0, 1.4));
-      eye.y = this.hf.heightAt(eye.x, eye.z) + 1.05 + Math.sin(this.t * 0.9) * 0.01; // kneeling
-      this.camera.position.copy(eye);
-      // frame the fire right of centre so the side panel doesn't cover it; hands follow
-      const toFire = fire.clone().sub(eye).setY(0).normalize();
-      const leftOf = new THREE.Vector3(toFire.z, 0, -toFire.x);
-      this.camera.lookAt(fire.x + leftOf.x * 0.9 + Math.sin(this.t * 0.2) * 0.15, fire.y + 0.25, fire.z + leftOf.z * 0.9);
-      if (this.hands) this.hands.root.position.set(0.045, 0.004, 0);
-      if (this.camera.fov !== this.cam.baseFov) { this.camera.fov = this.cam.baseFov; this.camera.updateProjectionMatrix(); }
+      // the menu director kneels you at the fire (gliding down from the title shot); hands follow
+      this.director.select(dt);
+      this.atmo.hour = damp(this.atmo.hour, this.director.selectHour, 1.2, dt);
+      this.post.fade.value = this.director.fade;
+      if (this.hands) this.hands.root.position.set(0.045, -0.012, 0.004);
       this.hands?.update(dt, { speed: 0, grounded: true, crouch: false, sprint: false, bobPhase: 0, lookDX: Math.sin(this.t * 0.7) * 4, lookDY: Math.cos(this.t * 0.5) * 3 });
     } else if (this.mode === 'playing' && this.player && this.state) {
       this.playFrame(dt);
