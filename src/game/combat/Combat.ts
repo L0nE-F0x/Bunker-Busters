@@ -55,11 +55,15 @@ export interface Hostile {
   facing?(): THREE.Vector3;
   /** 0..1 how aware of the player (HUD chevrons), and whether it's actively hostile right now. */
   awareness?(): number;
+  /** Dead but still on its feet (falling): rounds can still hit it. */
+  shootable?(): boolean;
 }
 
 export interface HostileProvider {
   hostiles(): Iterable<Hostile>;
   hear?(pos: THREE.Vector3, radius: number, kind: NoiseKind): void;
+  /** One of the player's rounds flew from `origin` along `dir` for `len` m (it hit `hit`, if anything): near misses suppress. */
+  whizz?(origin: THREE.Vector3, dir: THREE.Vector3, len: number, hit: Hostile | null): void;
 }
 
 /** What enemies perceive of the player each frame (filled by Game). */
@@ -255,7 +259,7 @@ export class Combat {
     let bestT = max;
     for (const pr of this.providers) {
       for (const h of pr.hostiles()) {
-        if (!h.alive || h === ignore) continue;
+        if ((!h.alive && !h.shootable?.()) || h === ignore) continue;
         // sphere reject
         _o.subVectors(h.center, origin);
         const along = _o.dot(dir);
@@ -340,6 +344,7 @@ export class Combat {
     const host = this.hostileRay(eye, dir, wT);
     const end = _p.copy(eye).addScaledVector(dir, host ? host.t : wT);
     if (tracer) this.tracers.emit(muzzle, end, 420, 9, 0.016);
+    for (const pr of this.providers) pr.whizz?.(eye, dir, host ? host.t : wT, host ? host.h : null);
     if (host) {
       const point = end.clone();
       const amt = damage(host.t, host.zone);
