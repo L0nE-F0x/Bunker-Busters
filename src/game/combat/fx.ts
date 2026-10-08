@@ -2,7 +2,7 @@ import * as THREE from 'three/webgpu';
 import {
   Fn, vec2, vec3, vec4, float, uniform, instanceIndex, hash, uv, length, smoothstep, mix, max, min, pow, dot, normalize,
   clamp, attribute, cameraPosition, cross, viewportLinearDepth, linearDepth, cameraNear, cameraFar,
-  instancedDynamicBufferAttribute, exp, atan, sin, cos, varying,
+  instancedBufferAttribute, exp, atan, sin, cos, varying,
 } from 'three/tsl';
 import type { Atmosphere } from '../world/Atmosphere';
 import { noise } from '@/engine/noiseTex';
@@ -47,7 +47,6 @@ export class Tracers {
       corner.set([0, -1, 0, 1, 1, -1, 1, 1], v * 2);
       idx.push(v, v + 2, v + 1, v + 1, v + 2, v + 3);
     }
-    for (const a of [this.A, this.B, this.C]) a.setUsage(THREE.DynamicDrawUsage);
     g.setAttribute('tA', this.A);
     g.setAttribute('tB', this.B);
     g.setAttribute('tC', this.C);
@@ -136,16 +135,13 @@ export class Debris {
 
   constructor(private atmo: Atmosphere) {
     const N = this.N;
-    const mk = (fill = 0) => {
-      const at = new THREE.InstancedBufferAttribute(new Float32Array(N * 4).fill(fill), 4);
-      at.setUsage(THREE.DynamicDrawUsage);
-      return at;
-    };
+    // static usage: three re-uploads a DynamicDrawUsage attribute on every draw; these upload on emit
+    const mk = (fill = 0) => new THREE.InstancedBufferAttribute(new Float32Array(N * 4).fill(fill), 4);
     this.a = mk(-1e4); this.b = mk(); this.c = mk(); this.d = mk(1);
-    const A: N = instancedDynamicBufferAttribute(this.a, 'vec4');
-    const B: N = instancedDynamicBufferAttribute(this.b, 'vec4');
-    const C: N = instancedDynamicBufferAttribute(this.c, 'vec4');
-    const D: N = instancedDynamicBufferAttribute(this.d, 'vec4');
+    const A: N = instancedBufferAttribute(this.a, 'vec4');
+    const B: N = instancedBufferAttribute(this.b, 'vec4');
+    const C: N = instancedBufferAttribute(this.c, 'vec4');
+    const D: N = instancedBufferAttribute(this.d, 'vec4');
     const mat = new THREE.SpriteNodeMaterial({ transparent: true, depthWrite: false });
     const age: N = this.uTime.sub(A.w);
     const life: N = D.x;
@@ -242,15 +238,12 @@ export class Flames {
 
   constructor() {
     const N = this.N;
-    const mk = (fill = 0) => {
-      const at = new THREE.InstancedBufferAttribute(new Float32Array(N * 4).fill(fill), 4);
-      at.setUsage(THREE.DynamicDrawUsage);
-      return at;
-    };
+    // static usage: three re-uploads a DynamicDrawUsage attribute on every draw; these upload on emit
+    const mk = (fill = 0) => new THREE.InstancedBufferAttribute(new Float32Array(N * 4).fill(fill), 4);
     this.a = mk(-1e4); this.b = mk(); this.c = mk(1);
-    const A: N = instancedDynamicBufferAttribute(this.a, 'vec4');
-    const B: N = instancedDynamicBufferAttribute(this.b, 'vec4');
-    const C: N = instancedDynamicBufferAttribute(this.c, 'vec4');
+    const A: N = instancedBufferAttribute(this.a, 'vec4');
+    const B: N = instancedBufferAttribute(this.b, 'vec4');
+    const C: N = instancedBufferAttribute(this.c, 'vec4');
     const mat = new THREE.SpriteNodeMaterial({ transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, fog: false });
     const age: N = this.uTime.sub(A.w);
     const life: N = C.x;

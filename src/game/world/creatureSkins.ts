@@ -140,12 +140,15 @@ export class ScorpionSkins {
     this.mesh.frustumCulled = false;
     this.mesh.castShadow = true;
     this.mesh.receiveShadow = true;
-    this.mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
     for (let i = 0; i < count; i++) this.mesh.setMatrixAt(i, HIDE);
   }
 
+  private shown: boolean[] = [];
   /** Scorpion `i` at the procedural body's root matrix (null: hidden). */
   set(i: number, root: THREE.Matrix4 | null) {
+    // a hidden one stays hidden without re-uploading the matrices every frame
+    if (!root && this.shown[i] === false) return;
+    this.shown[i] = !!root;
     this.mesh.setMatrixAt(i, root ? this._m.multiplyMatrices(root, this.fit) : HIDE);
     this.mesh.instanceMatrix.needsUpdate = true;
   }

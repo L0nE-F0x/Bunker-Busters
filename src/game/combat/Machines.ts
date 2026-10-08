@@ -1,6 +1,6 @@
 import * as THREE from 'three/webgpu';
 import { Fn, uv, vec3, vec4, float, length, smoothstep, atan, time, sin, uniform, sign, positionLocal, abs } from 'three/tsl';
-import { MeshBatch, Frame } from '../world/kit';
+import { MeshBatch, Frame, shadowProxy } from '../world/kit';
 import { rustyMetal, plainStandard, glow } from '../world/materials';
 import { lightCone } from '../world/effects';
 import type { Physics } from '@/engine/physics';
@@ -107,7 +107,8 @@ class Sentry implements Hostile {
     }
     mb.add(red, P(new THREE.CylinderGeometry(0.22, 0.26, 0.28, 16), 0, 1.02, 0));
     mb.add(dark, P(new THREE.BoxGeometry(0.22, 0.16, 0.08), 0, 0.96, -0.25)); // rear service panel
-    mb.add(glow('#5dff9a', 2).material, P(new THREE.PlaneGeometry(0.05, 0.03), 0.05, 1.0, -0.291, 0, Math.PI, 0));
+    const led = glow('#5dff9a', 2).material;
+    mb.add(led, P(new THREE.PlaneGeometry(0.05, 0.03), 0.05, 1.0, -0.291, 0, Math.PI, 0));
     const base = mb.build('sentry:base');
     this.group.add(base);
     // head: pod, twin barrels, sensor eye; pivots on yaw then pitch
@@ -117,7 +118,8 @@ class Sentry implements Hostile {
     for (const s of [-1, 1]) hb.add(dark, P(new THREE.CylinderGeometry(0.03, 0.03, 0.5, 8).rotateX(Math.PI / 2), s * 0.12, -0.04, 0.45));
     hb.add(dark, P(new THREE.CylinderGeometry(0.075, 0.075, 0.06, 14).rotateX(Math.PI / 2), 0, 0.03, 0.27));
     hb.add(plainStandard('#2a6a9a', 0.3, 0.2), P(new THREE.BoxGeometry(0.4, 0.02, 0.28), 0, 0.2, -0.08, -0.25, 0, 0)); // solar panel
-    this.head.add(hb.build('sentry:head'));
+    const headParts = hb.build('sentry:head');
+    this.head.add(headParts);
     this.eye = glow('#ffb020', 6);
     const eyeMesh = new THREE.Mesh(new THREE.CircleGeometry(0.055, 16), this.eye.material);
     eyeMesh.position.set(0, 0.03, 0.302);
@@ -138,7 +140,12 @@ class Sentry implements Hostile {
     this.group.rotation.y = 0;
     this.pivot.copy(at).setY(at.y + 1.32);
     this.center.copy(this.pivot);
-    for (const m of [base, this.head]) m.traverse((o) => { if ((o as THREE.Mesh).isMesh) o.castShadow = true; });
+    // shadows: the tripod and the head's pod cast, each through one depth draw (a proxy that rides
+    // its part); the status LED, the eye and the laser quads don't (they were 3 more depth draws a
+    // sentry, for slivers no one could see)
+    for (const m of [base, headParts]) m.traverse((o) => { if ((o as THREE.Mesh).isMesh && (o as THREE.Mesh).material !== led) o.castShadow = true; });
+    shadowProxy(base);
+    shadowProxy(headParts);
     host.physics.addCylinder({ x: at.x, y: at.y + 0.7, z: at.z }, 0.7, 0.32);
     // the breaker on the back panel
     const back = at.clone().add(_a.set(-Math.sin(baseYaw) * 0.55, 0.9, -Math.cos(baseYaw) * 0.55));
@@ -351,6 +358,7 @@ class Hornet implements Hostile {
     mb.add(shell, P(new THREE.CylinderGeometry(0.018, 0.018, 0.28, 6).rotateX(Math.PI / 2), 0, -0.08, 0.38)); // nail gun
     const parts = mb.build('hornet');
     parts.traverse((o) => { if ((o as THREE.Mesh).isMesh) o.castShadow = true; });
+    shadowProxy(parts);
     this.body.add(parts);
     const rotorMat = new THREE.MeshBasicNodeMaterial({ transparent: true, depthWrite: false, side: THREE.DoubleSide });
     const spin = this.spin;

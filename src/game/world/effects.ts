@@ -2,7 +2,7 @@ import * as THREE from 'three/webgpu';
 import {
   Fn, vec2, vec3, vec4, float, uniform, instanceIndex, hash, time, cameraPosition, fract, uv, length, smoothstep, mix, max,
   pow, dot, normalize, sin, positionLocal, positionWorld, texture, color, clamp,
-  normalWorld, abs, viewportLinearDepth, linearDepth, cameraNear, cameraFar, instancedDynamicBufferAttribute, exp,
+  normalWorld, abs, viewportLinearDepth, linearDepth, cameraNear, cameraFar, exp,
   cameraViewMatrix, atan, renderGroup, step, instancedBufferAttribute, uniformArray, varying, select, floor,
 } from 'three/tsl';
 import type { Atmosphere } from './Atmosphere';
@@ -410,10 +410,8 @@ export class DustPuffs {
     const N = this.N;
     this.a = new THREE.InstancedBufferAttribute(new Float32Array(N * 4).fill(-1e4), 4);
     this.b = new THREE.InstancedBufferAttribute(new Float32Array(N * 4), 4);
-    this.a.setUsage(THREE.DynamicDrawUsage);
-    this.b.setUsage(THREE.DynamicDrawUsage);
-    const A: N = instancedDynamicBufferAttribute(this.a, 'vec4');
-    const B: N = instancedDynamicBufferAttribute(this.b, 'vec4');
+    const A: N = instancedBufferAttribute(this.a, 'vec4');
+    const B: N = instancedBufferAttribute(this.b, 'vec4');
     const mat = new THREE.SpriteNodeMaterial({ transparent: true, depthWrite: false });
     const life = float(1.8);
     const age = this.uTime.sub(A.w);
@@ -445,6 +443,8 @@ export class DustPuffs {
     this.sprite.count = N;
     this.sprite.frustumCulled = false;
     this.sprite.renderOrder = 12;
+    // no draw while every puff has faded (the boot warm-up shows it anyway)
+    this.sprite.visible = false;
   }
 
   /** `n` puffs around `p`: `spread` m/s outward, `up` m/s upward, `size` m, optional push `dir`. */
@@ -466,11 +466,15 @@ export class DustPuffs {
     }
     this.a.needsUpdate = true;
     this.b.needsUpdate = true;
+    this.lastEmit = this.now;
+    this.sprite.visible = true;
   }
 
+  private lastEmit = -99;
   update(dt: number) {
     this.now += dt;
     this.uTime.value = this.now;
+    if (this.sprite.visible && this.now - this.lastEmit > 2) this.sprite.visible = false;
     const w = this.atmo.wind;
     (this.uWind.value as THREE.Vector3).set(w.x, 0, w.y);
   }
@@ -685,7 +689,15 @@ export class GlowSprites {
     })();
     this.sprite = new THREE.Sprite(mat);
     this.sprite.count = this.items.length;
-    this.sprite.frustumCulled = false;
+    // culled by a sphere round all its halos (three's own sprite test is a unit sphere at the
+    // origin, which knows nothing of the instances): a site's halos stop costing a draw whenever
+    // the site is out of view
+    const local = new THREE.Sphere().setFromPoints(this.items.map((it) => it.p));
+    local.radius += Math.max(0, ...this.items.map((it) => it.size));
+    const world = new THREE.Sphere();
+    const sprite = this.sprite;
+    sprite.frustumCulled = this.items.length > 0;
+    sprite.intersectsFrustum = (f: THREE.Frustum) => f.intersectsSphere(world.copy(local).applyMatrix4(sprite.matrixWorld));
     this.sprite.renderOrder = 22;
     this.sprite.name = 'glowHalos';
     return this.sprite;
@@ -713,10 +725,9 @@ export class Sparks {
     this.a = new THREE.InstancedBufferAttribute(new Float32Array(N * 4).fill(-1e4), 4);
     this.b = new THREE.InstancedBufferAttribute(new Float32Array(N * 4), 4);
     this.c = new THREE.InstancedBufferAttribute(new Float32Array(N * 4).fill(0.5), 4);
-    for (const at of [this.a, this.b, this.c]) at.setUsage(THREE.DynamicDrawUsage);
-    const A: N = instancedDynamicBufferAttribute(this.a, 'vec4');
-    const B: N = instancedDynamicBufferAttribute(this.b, 'vec4');
-    const C: N = instancedDynamicBufferAttribute(this.c, 'vec4');
+    const A: N = instancedBufferAttribute(this.a, 'vec4');
+    const B: N = instancedBufferAttribute(this.b, 'vec4');
+    const C: N = instancedBufferAttribute(this.c, 'vec4');
     const mat = new THREE.SpriteNodeMaterial({ transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, fog: false });
     const age: N = this.uTime.sub(A.w);
     const life: N = C.z;
@@ -875,7 +886,6 @@ export class Shockwave {
     const nV = Shockwave.ARCS * Shockwave.SEG * 6;
     const geo = new THREE.BufferGeometry();
     this.arcPos = new THREE.BufferAttribute(new Float32Array(nV * 3), 3);
-    this.arcPos.setUsage(THREE.DynamicDrawUsage);
     geo.setAttribute('position', this.arcPos);
     const along = new Float32Array(nV * 2);
     for (let i = 0; i < nV; i++) along[i * 2 + 1] = [0, 1, 0, 1, 1, 0][i % 6]; // v = across the ribbon
@@ -968,7 +978,7 @@ export class ElectricArc {
     const nv = maxBolts * 2 * vPerRibbon;
     const geo = new THREE.BufferGeometry();
     this.pos = new THREE.BufferAttribute(new Float32Array(nv * 3), 3);
-    this.pos.setUsage(THREE.DynamicDrawUsage);
+    // (static usage: three re-uploads a dynamic attribute on every draw; end() flags the upload)
     const uvA = new Float32Array(nv * 2);
     const idx: number[] = [];
     for (let r = 0; r < maxBolts * 2; r++) {

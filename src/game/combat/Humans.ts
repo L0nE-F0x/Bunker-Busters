@@ -5,6 +5,7 @@ import { rimColor, rimStrength } from '../world/materials';
 import type { Physics } from '@/engine/physics';
 import type { Heightfield } from '../world/Heightfield';
 import type { HumanSkins } from './humanSkin';
+import { viewCull } from '../world/kit';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 type N = any;
@@ -518,7 +519,7 @@ const _f = new THREE.Vector3(), _l = new THREE.Vector3(), _cf = new THREE.Vector
 const _cb = new THREE.Vector3(), _tmp = new THREE.Vector3(), _hf = new THREE.Vector3(), _hu = new THREE.Vector3(), _md = new THREE.Vector3();
 const _pole = new THREE.Vector3(), _toe = new THREE.Vector3(), _ad = new THREE.Vector3(), _rd = new THREE.Vector3(), _rdy = new THREE.Vector3();
 const _wd = new THREE.Vector3(), _wp = new THREE.Vector3(), _wu = new THREE.Vector3(), _a = new THREE.Vector3(), _b = new THREE.Vector3(), _c = new THREE.Vector3();
-const _h1 = new THREE.Vector3(), _h2 = new THREE.Vector3();
+const _h1 = new THREE.Vector3(), _h2 = new THREE.Vector3(), _hc = new THREE.Vector3();
 
 /** Every contractor's body in one skinned mesh. `slots` people max; looks are fixed per slot. */
 export class HumanCrowd {
@@ -568,7 +569,10 @@ export class HumanCrowd {
       if (p.active) {
         p.update(dt, hf);
         any = true;
-        this.skins?.pose(p.slot, p, !eye || p.pos.distanceToSquared(eye) < 40 * 40);
+        // the model is fitted only where it can be seen or cast a shadow into view (the procedural
+        // skeleton above still moves: AI, hit tests); elsewhere it's hidden, not left standing
+        if (this.skins && viewCull.sees(_hc.setFromMatrixPosition(p.mats[BONE.hips]), 1.35 * p.look_.height)) this.skins.pose(p.slot, p);
+        else this.skins?.hide(p.slot);
       } else this.skins?.hide(p.slot);
     }
     this.mesh.visible = any;
@@ -583,7 +587,7 @@ export class HumanCrowd {
       p.aimYaw = Math.PI;
       p.pose = i % 3 === 0 ? 'aim' : i % 3 === 1 ? 'ready' : 'relaxed';
       for (let k = 0; k < 30; k++) p.update(1 / 30, hf);
-      this.skins?.pose(p.slot, p, true);
+      this.skins?.pose(p.slot, p);
     });
     this.mesh.visible = true;
   }
