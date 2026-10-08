@@ -31,8 +31,8 @@ export class MenuDirector {
   static readonly STAND = 0.9;
   /** 0..1 dip to black (Game feeds it to the post stack's fade while a menu is up). */
   fade = 1;
-  /** Character select's clock (the glide down eases the sky toward it). */
-  selectHour = 18.05;
+  /** Character select's clock (the glide down eases the sky toward it; the run starts at it, too). */
+  selectHour = 17.65;
   private shot = 0;
   private t = 0;
   private glideT = -1;

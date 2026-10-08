@@ -882,7 +882,15 @@ export class Game {
         setTimeout(() => {
           leave();
           clearSave();
-          this.startGame(GameState.fresh(id, SPAWN));
+          // ...and the run starts where you stood up: at the camp fire, facing the four, the pumps
+          // (and the note on them) to your left, at the hour you chose under
+          const state = GameState.fresh(id, SPAWN);
+          const at = this.landmarks.campPoint(-11.8, 0, 0.6);
+          const fire = this.landmarks.campPosition;
+          state.data.position = [at.x, at.y, at.z];
+          state.data.yaw = Math.atan2(at.x - fire.x, at.z - fire.z) - Math.PI;
+          state.data.hour = this.atmo.hour;
+          this.startGame(state);
         }, MenuDirector.STAND * 1000 + 60);
       },
       show,
