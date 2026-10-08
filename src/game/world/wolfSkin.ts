@@ -1,6 +1,7 @@
 import * as THREE from 'three/webgpu';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { clone as cloneSkinned } from 'three/addons/utils/SkeletonUtils.js';
+import { boundSkinned } from './kit';
 
 /**
  * The wolf as a real model (Meshy, prepared by scripts/models/prep-glb.mjs): one textured skinned
@@ -46,6 +47,8 @@ interface Slot {
   tilt: THREE.Group;
   model: THREE.Object3D;
   bones: Record<string, THREE.Bone>;
+  /** The body's skinned mesh(es), bounded each pose so both passes can cull them. */
+  skinned: THREE.SkinnedMesh[];
   /** Every animated or turned bone with its bind pose and the walk's tracks for it. */
   rig: { bone: THREE.Bone; q0: THREE.Quaternion; p0: THREE.Vector3; rot?: THREE.Interpolant; pos?: THREE.Interpolant }[];
   used: boolean;
@@ -53,7 +56,7 @@ interface Slot {
 
 const _q = new THREE.Quaternion(), _pq = new THREE.Quaternion(), _bq = new THREE.Quaternion();
 const _lat = new THREE.Vector3(), _up = new THREE.Vector3(), _fwd = new THREE.Vector3();
-const _cq = new THREE.Quaternion(), _cp = new THREE.Vector3();
+const _cq = new THREE.Quaternion(), _cp = new THREE.Vector3(), _m = new THREE.Matrix4();
 
 export class WolfSkins {
   readonly group = new THREE.Group();
@@ -86,7 +89,7 @@ export class WolfSkins {
       m.material = mat;
       m.castShadow = true;
       m.receiveShadow = true;
-      m.frustumCulled = false; // skinned bounds don't follow the pose; the whole pack is near anyway
+      m.frustumCulled = false; // until pose() bounds it (skinned bounds don't follow the pose)
     });
     // normalise: measure the bind pose, scale to height, feet at y 0, body centred, head toward +Z
     src.updateMatrixWorld(true);
@@ -120,7 +123,11 @@ export class WolfSkins {
       root.visible = false;
       this.group.add(root);
       const bones: Record<string, THREE.Bone> = {};
-      model.traverse((o) => { if ((o as THREE.Bone).isBone) bones[o.name] = o as THREE.Bone; });
+      const skinned: THREE.SkinnedMesh[] = [];
+      model.traverse((o) => {
+        if ((o as THREE.Bone).isBone) bones[o.name] = o as THREE.Bone;
+        if ((o as THREE.SkinnedMesh).isSkinnedMesh) skinned.push(o as THREE.SkinnedMesh);
+      });
       // the walk is sampled by hand, not through an AnimationMixer: the mixer only writes a bone
       // when its value changes, so once the clip's weight is 0 the layered turns below would pile
       // up frame after frame (a dead wolf curled up into a ball). Every frame starts from the bind pose.
@@ -130,7 +137,7 @@ export class WolfSkins {
         const interp = (t?: THREE.KeyframeTrack) => (t ? (t as unknown as { createInterpolant(): THREE.Interpolant }).createInterpolant() : undefined);
         return { bone, q0: bone.quaternion.clone(), p0: bone.position.clone(), rot: interp(tr('quaternion')), pos: interp(tr('position')) };
       });
-      this.slots.push({ root, tilt, model, bones, rig, used: false });
+      this.slots.push({ root, tilt, model, bones, skinned, rig, used: false });
     }
   }
 
@@ -173,6 +180,9 @@ export class WolfSkins {
       if (r.pos) r.bone.position.lerp(_cp.fromArray(r.pos.evaluate(time) as unknown as number[]), w);
     }
     s.root.updateMatrixWorld(true);
+    // a sphere round the body's centre holds it standing, running or lying on its side
+    _cp.setFromMatrixPosition(s.tilt.matrixWorld);
+    for (const sk of s.skinned) boundSkinned(sk, _cp, 1.4);
 
     // layered on top, about the body's own axes in world space (so they stay right when it pitches
     // on a slope or lies on its side; the rig's bone axes never matter)
@@ -226,12 +236,12 @@ export class WolfSkins {
   /** Rotate `bone` by `angle` about a world axis, at its own joint. */
   private turn(bone: THREE.Bone | undefined, axis: THREE.Vector3, angle: number) {
     if (!bone || Math.abs(angle) < 1e-4) return;
-    const parent = bone.parent!;
-    parent.getWorldQuaternion(_pq);
-    _q.setFromAxisAngle(axis, angle);
+    // (pose() refreshed the slot's matrices top-down, and every turn refreshes its own subtree, so
+    // the parent's matrixWorld is current: no walk up the ancestors per turn)
+    _pq.setFromRotationMatrix(_m.extractRotation(bone.parent!.matrixWorld));
+    _q.setFromAxisAngle(axis, angle).multiply(_pq);
     // local delta = parent⁻¹ · R · parent
-    const delta = _pq.clone().invert().multiply(_q).multiply(_pq);
-    bone.quaternion.premultiply(delta);
+    bone.quaternion.premultiply(_pq.invert().multiply(_q));
     bone.updateMatrixWorld(true);
   }
 }

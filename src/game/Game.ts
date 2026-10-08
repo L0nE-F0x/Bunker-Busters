@@ -25,6 +25,7 @@ import { updateRim, glow, desertRock } from './world/materials';
 import { buildIntelProp, type IntelProp } from './world/intelProps';
 import { Scavenge } from './world/Scavenge';
 import { NpcModels } from './world/npcSkin';
+import { updateShownMatrices } from './world/kit';
 import { NpcCrowd } from './world/npc';
 import { HumanSkins } from './combat/humanSkin';
 import { Garage } from './bunker/Garage';
@@ -297,6 +298,11 @@ export class Game {
     if (SKIP.has('fog')) this.scene.fogNode = null;
     await step(0.8, 'Compiling shaders');
     this.post = new PostFX(this.renderer, this.scene, this.camera, this.atmo.sun, this.quality);
+    // Three walks the whole graph (~1,600 objects, ~600 of them bones, over half of it hidden) on
+    // every render of the scene, and a frame renders it twice (sun shadow map + scene pass). The game
+    // does it once per frame instead, right before rendering, skipping hidden subtrees (frame,
+    // warmShaders; kit.ts updateShownMatrices).
+    this.scene.matrixWorldAutoUpdate = false;
     this.resize();
     this.physics.step();
     this.setTitleCamera(0);
@@ -1008,6 +1014,7 @@ export class Game {
     }
     const t0 = performance.now();
     try {
+      updateShownMatrices(this.scene);
       if (SKIP.has('post')) this.renderer.render(this.scene, this.camera); else this.post.render();
     } catch (e) {
       console.warn('[BunkerBusters] shader warm-up failed', e);
@@ -1634,6 +1641,7 @@ export class Game {
     } else {
       // interior mode: inside a sealed building that can't see out, the exterior isn't drawn (nor cast
       // into the shadow map). Hidden only around the render, so no system's own visibility is touched.
+      updateShownMatrices(this.scene); // once a frame (scene.matrixWorldAutoUpdate is off: see build)
       const inner = this.activeInterior();
       const hidden = inner ? hideExcept(this.exteriorRoots(), inner.keep, this._hidden) : null;
       if (SKIP.has('post')) this.renderer.render(this.scene, this.camera); else this.post.render();

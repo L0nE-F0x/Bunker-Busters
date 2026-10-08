@@ -3,6 +3,7 @@ import { texture, uniform, mix, smoothstep, max, min, vec3 } from 'three/tsl';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { clone as cloneSkinned } from 'three/addons/utils/SkeletonUtils.js';
 import { BONE, type Human } from './Humans';
+import { boundSkinned } from '../world/kit';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 type N = any;
@@ -37,12 +38,16 @@ interface Slot {
   model: THREE.Object3D;
   b: Record<string, THREE.Bone>;
   props: THREE.Object3D[];
+  /** The body's skinned mesh(es): bounded each frame so both passes can cull them. */
+  skinned: THREE.SkinnedMesh[];
 }
 
 const _q = new THREE.Quaternion(), _q2 = new THREE.Quaternion(), _q3 = new THREE.Quaternion(), _pq = new THREE.Quaternion();
 const _m = new THREE.Matrix4(), _v = new THREE.Vector3(), _w = new THREE.Vector3(), _e = new THREE.Vector3(), _s = new THREE.Vector3();
 const _x = new THREE.Vector3(), _y = new THREE.Vector3(), _z = new THREE.Vector3(), _p = new THREE.Vector3();
 const _dq = { hips: new THREE.Quaternion(), chest: new THREE.Quaternion(), head: new THREE.Quaternion() };
+const _root = new THREE.Vector3(), _target = new THREE.Vector3(), _procMid = new THREE.Vector3(), _pole = new THREE.Vector3();
+const _mid = new THREE.Vector3(), _twist = new THREE.Vector3(), _twist2 = new THREE.Vector3(), _toe = new THREE.Vector3(), _hipW = new THREE.Vector3();
 
 /** Rotation of a frame with +Y along `y` and +Z toward `zHint` (the Humans.ts frameTo convention). */
 function basis(y: THREE.Vector3, zHint: THREE.Vector3, out: THREE.Quaternion) {
@@ -100,7 +105,9 @@ export class HumanSkins {
         m.material = mat;
         m.castShadow = shadow;
         m.receiveShadow = true;
-        m.frustumCulled = false;
+        // the skinned body gets a sphere per frame (boundSkinned); the rigid head props ride the
+        // Head bone, so their own geometry bounds already cull them
+        m.frustumCulled = !(m as THREE.SkinnedMesh).isSkinnedMesh;
       });
     };
     swap(src, (map) => new THREE.MeshStandardNodeMaterial({ map, roughness: 0.85, metalness: 0 }), true);
@@ -157,7 +164,9 @@ export class HumanSkins {
         b.Head.add(hat, mask);
         props.push(hat, mask);
       }
-      this.slots.push({ root, model, b, props });
+      const skinned: THREE.SkinnedMesh[] = [];
+      model.traverse((o) => { if ((o as THREE.SkinnedMesh).isSkinnedMesh) skinned.push(o as THREE.SkinnedMesh); });
+      this.slots.push({ root, model, b, props, skinned });
     }
   }
 
@@ -186,8 +195,12 @@ export class HumanSkins {
     rot(BONE.hips, _dq.hips);
     rot(BONE.chest, _dq.chest);
     rot(BONE.head, _dq.head);
+    // every setWorld below trusts its parent's matrixWorld (set just before it, top-down), so the
+    // chain above the hips is brought up to date once here instead of once per bone
+    B.Hips.parent!.updateWorldMatrix(true, false);
     // the pelvis: at the procedural one, lifted to the model's own hip height
     _p.setFromMatrixPosition(m[BONE.hips]);
+    _hipW.copy(_p);
     _v.set(0, 1, 0).applyQuaternion(_dq.hips).multiplyScalar((this.hipsH - 0.95) * H);
     this.setWorld(B.Hips, _q.copy(_dq.hips).multiply(this.bind.Hips.q), _w.copy(_p).add(_v));
     // the spine eases from the hips' frame to the chest's
@@ -208,36 +221,39 @@ export class HumanSkins {
     this.limb(B, 'Left', 'UpLeg', 'Leg', 'Foot', sd2(BONE.thighL, BONE.shinL, BONE.footL), H, m);
     this.limb(B, 'Right', 'UpLeg', 'Leg', 'Foot', sd2(BONE.thighR, BONE.shinR, BONE.footR), H, m);
     s.root.updateMatrixWorld(true);
+    // a sphere round the pelvis holds the whole pose (it follows a ragdoll too)
+    for (const sk of s.skinned) boundSkinned(sk, _hipW, 1.35 * H);
   }
 
   /** Upper/lower/end bones of a procedural limb. */
   private limb(B: Record<string, THREE.Bone>, sd: Side, up: string, lo: string, end: string, P: [number, number, number], H: number, m: THREE.Matrix4[]) {
     const bu = B[sd + up], bl = B[sd + lo], be = B[sd + end];
     if (!bu || !bl || !be) return;
-    // the joint and the procedural limb's twist reference (its +Z)
-    const root = bu.getWorldPosition(new THREE.Vector3());
-    const target = new THREE.Vector3().setFromMatrixPosition(m[P[2]]);
-    const procMid = new THREE.Vector3().setFromMatrixPosition(m[P[1]]);
+    // the joint (its parent was just set; limb joints keep their bind offset) and the procedural
+    // limb's twist reference (its +Z)
+    const root = _root.copy(bu.position).applyMatrix4(bu.parent!.matrixWorld);
+    const target = _target.setFromMatrixPosition(m[P[2]]);
+    const procMid = _procMid.setFromMatrixPosition(m[P[1]]);
     const k = H * (1.78 / MODEL_H);
     const a = this.len[sd + up] * k, b = this.len[sd + lo] * k;
     // bend toward where the procedural elbow/knee is
-    const pole = new THREE.Vector3().subVectors(procMid, root);
-    const mid = ik(root, target, a, b, pole, new THREE.Vector3());
-    const twist = new THREE.Vector3().setFromMatrixColumn(m[P[0]], 2).normalize();
+    const pole = _pole.subVectors(procMid, root);
+    const mid = ik(root, target, a, b, pole, _mid);
+    const twist = _twist.setFromMatrixColumn(m[P[0]], 2).normalize();
     // upper: bind direction → root→mid
     this.aim(bu, sd + up, _v.subVectors(mid, root), twist);
-    const twist2 = new THREE.Vector3().setFromMatrixColumn(m[P[1]], 2).normalize();
+    const twist2 = _twist2.setFromMatrixColumn(m[P[1]], 2).normalize();
     this.aim(bl, sd + lo, _v.subVectors(target, mid), twist2);
     if (end === 'Foot') {
       // the foot: toes along the procedural foot's +Z, sole down
-      const toe = new THREE.Vector3().setFromMatrixColumn(m[P[2]], 2).normalize();
+      const toe = _toe.setFromMatrixColumn(m[P[2]], 2).normalize();
       const d0 = this.dir[sd + 'Foot'];
       basis(toe, UP, _q2);
       basis(d0, UP, _q3);
       this.setWorld(be, _q.copy(_q2).multiply(_q3.invert()).multiply(this.bind[sd + 'Foot'].q));
     } else {
       // the hand continues the forearm (mitts, no fingers)
-      bl.getWorldQuaternion(_q2);
+      _q2.setFromRotationMatrix(_m.extractRotation(bl.matrixWorld));
       _q3.copy(this.bind[sd + lo].q).invert();
       this.setWorld(be, _q.copy(_q2).multiply(_q3).multiply(this.bind[sd + end].q));
     }
@@ -251,10 +267,13 @@ export class HumanSkins {
     this.setWorld(bone, _q.copy(_q2).multiply(_q3.invert()).multiply(this.bind[name].q));
   }
 
-  /** Give `bone` this world rotation (and position), whatever its parents are doing. */
+  /**
+   * Give `bone` this world rotation (and position). Its parent's matrixWorld must be current: bones
+   * are set top-down, and `pose` refreshes the chain above the hips first. (Walking the parents up
+   * on every call cost ~15 matrix updates per bone, ~0.3 ms a frame for a squad in WebKit.)
+   */
   private setWorld(bone: THREE.Bone, q: THREE.Quaternion, p?: THREE.Vector3) {
     const parent = bone.parent!;
-    parent.updateWorldMatrix(true, false);
     _pq.setFromRotationMatrix(_m.extractRotation(parent.matrixWorld));
     bone.quaternion.copy(_pq.invert().multiply(q));
     if (p) bone.position.copy(_p.copy(p).applyMatrix4(_m.copy(parent.matrixWorld).invert()));
