@@ -535,14 +535,15 @@ export class CombatAudio {
   }
 
   /** Low-health heartbeat: call every frame with 0..1 how close to death. */
-  heartbeat(dt: number, k: number) {
+  heartbeat(dt: number, k: number): boolean {
     this.hbT -= dt;
-    if (k < 0.05 || this.hbT > 0) return;
+    if (k < 0.05 || this.hbT > 0) return false;
     const period = 1.05 - k * 0.45;
     this.hbT = period;
     const t = this.b.ctx.currentTime + 0.01;
     const o = this.b.sfx;
     this.tone(o, t, 'sine', 62, 0.42 * k, 0.012, 0.13, 40);
     this.tone(o, t + 0.2, 'sine', 55, 0.3 * k, 0.012, 0.16, 38);
+    return true;
   }
 }

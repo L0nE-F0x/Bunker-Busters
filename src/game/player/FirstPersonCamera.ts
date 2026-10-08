@@ -44,6 +44,18 @@ export class FirstPersonCamera {
     this.trauma = Math.min(1, this.trauma + v);
   }
 
+  /** A blow knocks the head: pitch, yaw, roll offsets on a stiff spring (the aim itself isn't moved). */
+  private punchO = new THREE.Vector3();
+  private punchV = new THREE.Vector3();
+  /** Knocked by a hit from `bearing` (radians, 0 = ahead, + = to the left), strength 0..1. */
+  punch(bearing: number, k: number) {
+    const s = Math.sin(bearing), c = Math.cos(bearing);
+    // the head snaps back from a hit in front, and turns and tilts away from one at the side
+    this.punchV.x += c * 6 * k;
+    this.punchV.y += -s * 4 * k;
+    this.punchV.z += -s * 8 * k;
+  }
+
   /** Footstep callback, fired at the low point of each stride so sound and head-bob agree. */
   onStep: ((intensity: number) => void) | null = null;
 
@@ -111,10 +123,14 @@ export class FirstPersonCamera {
 
     const right = new THREE.Vector3(Math.cos(this.yaw), 0, -Math.sin(this.yaw));
     this.camera.position.set(f.feet.x, f.feet.y + this.eye + bobY + this.dip + heave, f.feet.z).addScaledVector(right, bobX);
+    // the punch spring (critically damped-ish: a quick knock, a quick settle)
+    this.punchV.addScaledVector(this.punchO, -170 * dt).multiplyScalar(Math.exp(-dt * 17));
+    this.punchO.addScaledVector(this.punchV, dt);
+    const po = this.punchO;
     this.camera.rotation.set(
-      this.pitch + this.shake.noise(k, 1) * 0.04 * sh + bobY * 0.15 + this.dip * 0.35 + heave * 0.8,
-      this.yaw + this.shake.noise(2, k) * 0.04 * sh,
-      this.roll + this.shake.noise(k, k) * 0.05 * sh,
+      this.pitch + this.shake.noise(k, 1) * 0.04 * sh + bobY * 0.15 + this.dip * 0.35 + heave * 0.8 + po.x,
+      this.yaw + this.shake.noise(2, k) * 0.04 * sh + po.y,
+      this.roll + this.shake.noise(k, k) * 0.05 * sh + po.z,
     );
 
     const free = this.baseFov + (f.sprint ? 7 : 0) - (f.crouch ? 2 : 0);

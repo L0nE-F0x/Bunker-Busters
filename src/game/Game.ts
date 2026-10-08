@@ -134,6 +134,8 @@ export class Game {
   private packMesh!: THREE.Group;
   private dying = 0;
   private venomHurt = 0;
+  /** Low-health pulse: phase through the current heartbeat (0..1). */
+  private hbPhase = 0;
   private venomHint = false;
   mode: Mode = 'loading';
   private interactables: Interactable[] = [];
@@ -1275,6 +1277,8 @@ export class Game {
       const dx = from.x - this.player.position.x, dz = from.z - this.player.position.z;
       const bearing = Math.atan2(dx, dz) - (this.cam.yaw + Math.PI);
       this.ui.damageFrom(bearing, k);
+      // the hit knocks your head (a bite or a blast hardest)
+      this.cam.punch(bearing, (kind === 'bite' || kind === 'blast' ? 0.12 : 0.06) + k * 0.1);
     }
   }
 
@@ -1599,6 +1603,7 @@ export class Game {
     this.post.damage.value = damp(this.post.damage.value as number, 0, 2.5, dt);
     this.post.menuShade.value = damp(this.post.menuShade.value as number, this.mode === 'title' || this.mode === 'charselect' ? 1 : 0, 3, dt);
     this.post.emp.value = damp(this.post.emp.value as number, 0, 1.2, dt);
+    if (this.mode !== 'playing') this.post.lowHp.value = 0;
     const alertTarget = this.mode === 'playing' && this.garage.drone.state === 'alert' ? 0.8 : this.mode === 'playing' ? this.garage.drone.detection * 0.4 : 0;
     this.post.alert.value = damp(this.post.alert.value as number, alertTarget, 4, dt);
     const tension = this.mode === 'playing' ? Math.max(this.garage.drone.detection, this.garage.alarm > 0 ? 1 : 0, this.combat.heat) : 0;
@@ -1827,6 +1832,13 @@ export class Game {
       this.venomHurt += dt * 0.6;
       if (this.venomHurt >= 1) { const n = Math.floor(this.venomHurt); this.venomHurt -= n; s.damage(n); this.post.damage.value = Math.max(this.post.damage.value as number, 0.18); }
     }
+
+    // near death: a heartbeat you can hear, colour draining, the edges throbbing in time with it
+    const lowK = !blocked && s.data.health > 0 ? THREE.MathUtils.clamp((40 - s.data.health) / 30, 0, 1) : 0;
+    this.hbPhase = Math.min(1, this.hbPhase + dt / (1.05 - lowK * 0.45));
+    if (this.audio.combat?.heartbeat(dt, lowK)) this.hbPhase = 0;
+    const throb = Math.exp(-this.hbPhase * 7) + 0.6 * Math.exp(-Math.max(0, this.hbPhase - 0.19) * 9) * (this.hbPhase > 0.19 ? 1 : 0);
+    this.post.lowHp.value = damp(this.post.lowHp.value as number, lowK * (0.65 + 0.35 * Math.min(1, throb)), 6, dt);
 
     // death is a debt, not a nap: you wake at the fire hours later, and your pack is where you fell
     if (s.data.health <= 0 && !this.busy) this.die();

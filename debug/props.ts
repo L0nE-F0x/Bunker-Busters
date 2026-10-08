@@ -15,6 +15,7 @@ import { Fauna } from '@/game/world/Fauna';
 import type { Heightfield } from '@/game/world/Heightfield';
 import { HumanCrowd, type HumanLook, type HitZone } from '@/game/combat/Humans';
 import { HumanSkins } from '@/game/combat/humanSkin';
+import { WolfSkins } from '@/game/world/wolfSkin';
 
 const qs = new URLSearchParams(location.search);
 const num = (k: string, d: number) => Number(qs.get(k) ?? d);
@@ -62,7 +63,20 @@ const seed = num('seed', 1);
 const rand = mulberry32(seed);
 // the Meshy contractor bodies, for what=human&meshy
 const humanSkins = qs.get('what') === 'human' && qs.has('meshy') ? await HumanSkins.load(4, [3]) : null;
+// the Meshy wolf: what=wolf&leap=0.5 | &low=1 | &roll=0.3&look=0.8 | &amp=0.85&phase=1 | &dead=1.2
+const wolfSkins = qs.get('what') === 'wolf' ? await WolfSkins.load(3) : null;
 const BUILDERS: Record<string, () => THREE.Object3D> = {
+  wolf: () => {
+    const s = wolfSkins!;
+    for (let i = 0; i < 3; i++) {
+      s.pose(i, {
+        pos: new THREE.Vector3((i - 1) * 1.6, 0, 0), yaw: num('wyaw', Math.PI / 2), pitch: num('wpitch', 0), roll: num('roll', 0), bob: 0,
+        phase: num('phase', 0) + i * 1.2, amp: num('amp', 0), low: num('low', 0), look: num('look', 0), nod: num('nod', 0), tail: num('tail', 0),
+        deadT: num('dead', -1), side: 1, leap: num('leap', 0),
+      });
+    }
+    return s.group;
+  },
   car: () => {
     const b = new MeshBatch();
     const kind = (qs.get('kind') || 'sedan') as CarKind;

@@ -652,7 +652,14 @@ class Wolf implements Hostile {
   /** Seconds since it died (−1 alive): the fall plays out, then it lies there. */
   dead = -1;
   deadSide = 1;
-  role: 'ring' | 'lunge' | 'retreat' = 'ring';
+  role: 'ring' | 'lunge' | 'retreat' | 'feint' = 'ring';
+  /** Lunge wind-up: seconds left crouched and coiled before it goes (the tell). */
+  windup = 0;
+  /** Seconds into the leap at the end of a lunge (−1: on the ground). */
+  leap = -1;
+  /** The last hit: seconds since, and which side it came from (+1 its left). */
+  hitT = 99;
+  hitSide = 1;
   roleT = 0;
   ringA = Math.random() * 6.28;
   ringR = 9;
@@ -711,6 +718,9 @@ class Wolf implements Hostile {
       return true;
     }
     this.stagger = 0.45;
+    this.hitT = 0;
+    this.hitSide = Math.sin(this.yaw) * d.dir.z - Math.cos(this.yaw) * d.dir.x > 0 ? 1 : -1;
+    this.windup = 0;
     // a hit drives it back a step
     this.pos.addScaledVector(this._a.set(d.dir.x, 0, d.dir.z).normalize(), d.melee ? 0.9 : 0.35);
     this.pack?.onWolfHurt(this, at, d);
@@ -771,26 +781,35 @@ class Wolf implements Hostile {
     const fx = Math.sin(this.yaw) * 0.4, fz = Math.cos(this.yaw) * 0.4;
     const pitch = -Math.atan2(c.hf.heightAt(this.pos.x + fx, this.pos.z + fz) - c.hf.heightAt(this.pos.x - fx, this.pos.z - fz), 0.8);
     // stalking: low to the ground; a lunge stretches out; a hit rocks it
-    const low = this.pack && (this.pack.state === 'stalk' || this.pack.state === 'circle') && this.role !== 'lunge' ? 0.08 : 0;
+    const coiled = this.role === 'lunge' && this.windup > 0;
+    const low = coiled ? 0.11 : this.pack && (this.pack.state === 'stalk' || this.pack.state === 'circle') && this.role !== 'lunge' ? 0.08 : 0;
     const rock = this.stagger > 0 ? Math.sin(this.stagger * 30) * this.stagger * 0.5 : 0;
+    // a hit: it jerks away and sags on its legs, head whipping round to the wound
+    this.hitT += c.dt;
+    const hr = this.hitT < 1 ? Math.min(1, this.hitT / 0.05) * Math.exp(-Math.max(0, this.hitT - 0.05) * 5) : 0;
+    const LEAP = 0.42;
+    if (this.leap >= 0) { this.leap += c.dt; if (this.leap > LEAP) this.leap = -1; }
+    const leapU = this.leap >= 0 ? this.leap / LEAP : 0;
     this.center.set(this.pos.x, g + 0.8 - low, this.pos.z);
     if (this.skin) {
       let lookYaw = 0;
       if (target) lookYaw = clamp(angDiff(this.yaw, Math.atan2(target.x - this.pos.x, target.z - this.pos.z)), -1.1, 1.1);
       this.look = lerp(this.look, lookYaw, Math.min(1, c.dt * 3));
       const snap = this.bite > 0 ? Math.sin((1 - this.bite / 0.3) * Math.PI) : 0;
+      // coiled for the lunge: a shiver through the crouch, head down, hackles up
+      const shiver = coiled ? Math.sin(c.t * 38) * 0.012 : 0;
       this.skin.pose(this.slot, {
-        pos: V(this.pos.x, g, this.pos.z), yaw: this.yaw, pitch: pitch * 0.8 + (this.bite > 0 ? 0.1 : 0), roll: rock, bob: 0,
-        phase: this.phase, amp: A, low: low / 0.08, look: this.look,
-        nod: this.howl > 0 ? 0.85 : (sp > 6 ? -0.12 : 0) - snap * 0.45,
-        tail: (sp > 6 ? -0.25 : low ? 0.3 : 0) + Math.sin(c.t * 2 + this.phase) * 0.06,
-        deadT: -1, side: 1,
+        pos: V(this.pos.x, g, this.pos.z), yaw: this.yaw, pitch: pitch * 0.8 + (this.bite > 0 ? 0.1 : 0) + (coiled ? 0.06 : 0), roll: this.hitSide * hr * 0.32 + shiver, bob: 0,
+        phase: this.phase, amp: A, low: low / 0.08 + hr * 1.6, look: this.look - this.hitSide * hr * 0.9,
+        nod: this.howl > 0 ? 0.85 : (sp > 6 ? -0.12 : 0) - snap * 0.45 - (coiled ? 0.2 : 0) + hr * 0.35,
+        tail: (sp > 6 ? -0.25 : low ? 0.3 : 0) + Math.sin(c.t * 2 + this.phase) * 0.06 - hr * 0.5 + (coiled ? 0.25 : 0),
+        deadT: -1, side: 1, leap: leapU,
       });
       this.deathAmp = A;
       this.b.visible = false;
       return;
     }
-    this.b.place(V(this.pos.x, g + 0.8 + bob - low, this.pos.z), this.yaw, pitch + (this.bite > 0 ? 0.12 : 0), rock, 1.3);
+    this.b.place(V(this.pos.x, g + 0.8 + bob - low + Math.sin(leapU * Math.PI) * 0.45, this.pos.z), this.yaw, pitch + (this.bite > 0 ? 0.12 : 0) - Math.sin(leapU * Math.PI * 2) * 0.4, rock + this.hitSide * hr * 0.3, 1.3);
     const { legs, neck, head, tail } = this.rig;
     legs.forEach((l, k) => {
       // trot: diagonal pairs move together
@@ -1307,6 +1326,19 @@ class Pack implements HostileProvider {
       } else if (w.role === 'lunge') {
         goal = P.clone();
         sp = 11.5;
+        if (w.windup > 0) {
+          // the tell: it stops, drops into a crouch facing you, and snarls; then it goes
+          w.windup -= c.dt;
+          w.roleT = 0;
+          sp = 0;
+          goal = w.pos.clone();
+          w.yaw += clamp(angDiff(w.yaw, Math.atan2(P.x - w.pos.x, P.z - w.pos.z)), -1.2, 1.2) * c.dt * 8;
+          if (w.windup <= 0) c.audio?.combat?.voice('snarl', w.pos.clone().setY(w.pos.y + 0.8), 1.15);
+        } else if (w.leap < 0 && dist < 3.8 && !w.bitten) {
+          // the last stride is a leap at you
+          w.leap = 0;
+          w.speed = Math.max(w.speed, 9);
+        }
         if (dist < 1.7 && !w.bitten) {
           // the bite
           w.bitten = true;
@@ -1318,6 +1350,13 @@ class Pack implements HostileProvider {
           w.role = 'retreat';
           w.roleT = 0;
         } else if (w.roleT > 1.8 || w.fear > 0.8 || safe) { w.role = 'retreat'; w.roleT = 0; }
+      } else if (w.role === 'feint') {
+        // a false start: a few quick bounds in, a snarl, and back out to the ring
+        const away = Math.atan2(w.pos.x - P.x, w.pos.z - P.z);
+        const r = Math.max(4.5, w.ringR - 5);
+        goal = V(P.x + Math.sin(away) * r, 0, P.z + Math.cos(away) * r);
+        sp = 8;
+        if (w.roleT > 0.7 || dist < 5) { w.role = 'retreat'; w.roleT = 0.4; }
       } else if (w.role === 'retreat') {
         const away = Math.atan2(w.pos.x - P.x, w.pos.z - P.z);
         goal = V(P.x + Math.sin(away) * (w.ringR + 4), 0, P.z + Math.cos(away) * (w.ringR + 4));
@@ -1334,8 +1373,9 @@ class Pack implements HostileProvider {
       // face the move; on the ring, face the player while drifting
       const faceP = w.role === 'ring' && gd < 3;
       const head = faceP ? Math.atan2(P.x - w.pos.x, P.z - w.pos.z) : Math.atan2(to.x, to.z);
-      w.yaw += clamp(angDiff(w.yaw, head), -1.2, 1.2) * c.dt * (w.role === 'lunge' ? 9 : 5);
-      w.speed = lerp(w.speed, want, Math.min(1, c.dt * (w.role === 'lunge' ? 6 : 3)));
+      // in the air it's committed: no turning
+      if (w.leap < 0 && !(w.role === 'lunge' && w.windup > 0)) w.yaw += clamp(angDiff(w.yaw, head), -1.2, 1.2) * c.dt * (w.role === 'lunge' ? 9 : 5);
+      w.speed = w.leap >= 0 ? Math.max(w.speed * Math.exp(-c.dt * 1.5), 5) : lerp(w.speed, want, Math.min(1, c.dt * (w.role === 'lunge' ? 6 : 3)));
       // move along the facing, plus a little sideways slide toward the goal when circling
       w.pos.x += Math.sin(w.yaw) * w.speed * c.dt;
       w.pos.z += Math.cos(w.yaw) * w.speed * c.dt;
@@ -1353,13 +1393,28 @@ class Pack implements HostileProvider {
     if (this.state === 'circle' && !lunging && this.lungeT <= 0 && !safe && t?.alive !== false) {
       const ready = live.filter((w) => w.role === 'ring' && w.fear < 0.5 && w.stagger <= 0 && Math.hypot(w.pos.x - P.x, w.pos.z - P.z) < 16);
       if (ready.length) {
-        const w = ready[Math.floor(Math.random() * ready.length)];
+        // mostly one you can see coming (in front of you); now and then one from the side
+        const inView = (w: Wolf) => !camF || (w.pos.x - P.x) * camF.x + (w.pos.z - P.z) * camF.z > 0.35 * Math.hypot(w.pos.x - P.x, w.pos.z - P.z) * Math.hypot(camF.x, camF.z);
+        const seen = ready.filter(inView);
+        const pool = seen.length && Math.random() < 0.75 ? seen : ready;
+        const w = pool[Math.floor(Math.random() * pool.length)];
         w.role = 'lunge';
         w.roleT = 0;
         w.bitten = false;
+        // the tell: shorter at night and on harder settings
+        w.windup = (night ? rnd(0.3, 0.45) : rnd(0.42, 0.6)) * (diff ? diff.react : 1);
         lunging = true;
-        c.audio?.combat?.voice('snarl', w.pos.clone().setY(w.pos.y + 0.8), 1.1);
+        c.audio?.combat?.voice('growl', w.pos.clone().setY(w.pos.y + 0.8), 1.1);
         this.lungeT = rnd(night ? 1.6 : 2.4, night ? 3.2 : 4.4) * (n <= 2 ? 1.3 : 1);
+      }
+    } else if (this.state === 'circle' && !lunging && this.lungeT > 1.2 && !safe && n >= 2 && Math.random() < c.dt * 0.35) {
+      // between lunges, a feint keeps you turning
+      const ring = live.filter((w) => w.role === 'ring' && w.fear < 0.5 && w.stagger <= 0);
+      const w = ring[Math.floor(Math.random() * ring.length)];
+      if (w) {
+        w.role = 'feint';
+        w.roleT = 0;
+        if (Math.hypot(w.pos.x - P.x, w.pos.z - P.z) < 25) c.audio?.combat?.voice('snarl', w.pos.clone().setY(w.pos.y + 0.8), 0.95 + Math.random() * 0.15, 0.85);
       }
     }
   }
