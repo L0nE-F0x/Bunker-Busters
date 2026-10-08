@@ -9,8 +9,12 @@ import type { Physics } from '@/engine/physics';
 import { LANDMARKS } from '@/content/world';
 import type { LandmarkDef } from '@/content/types';
 import { box, cyl, beam, place, merge, MeshBatch, DistanceLod, Frame, canvasTexture, grime, wire, shadowProxy } from './kit';
-import { rustyMetal, concrete, corrugated, neon, plainStandard, fabric, wood, glow, warmWindow } from './materials';
+import { rustyMetal, concrete, corrugated, neon, plainStandard, fabric, wood, glow, warmWindow, chainLink, uDaylight } from './materials';
 import { Fire, lightCone } from './effects';
+import { VirtualLight } from './lights';
+import { dressSpire } from './spire';
+import { decalMat, glowDecalMat, uSiteNight, uSiteFlicker } from '../sites/jetKit';
+import { printMaterial } from './printAtlas';
 
 export interface Flicker { set: (v: number) => void; phase: number; speed: number; broken: number }
 
@@ -393,10 +397,21 @@ export class Landmarks {
     b.add(red2.material, place3(new THREE.SphereGeometry(0.16, 10, 8), new THREE.Vector3(0, 12, 1.4)));
     this.blinkers.push({ u: red2.intensity, period: 1.6, offset: 0.8 });
 
+    // the compound, the office and the truthers' camp (spire.ts)
+    const dress = dressSpire(b, (lx, ly, lz, hx, hy, hz, yaw = 0) => {
+      this.physics.addBox(f.p(lx, ly, lz), { x: hx, y: hy, z: hz }, f.yaw + yaw);
+    });
+    b.add(chainLink(), ...dress.fence);
     const far = b.buildFar('spire-far');
     const near = b.build('spire');
+    // printed faces, ground decals and the night pools: no shadows of their own
+    const print = new MeshBatch().add(printMaterial(), ...dress.faces).add(decalMat(), ...dress.decals).add(glowDecalMat(), ...dress.pools).build('spire-print', false, true);
+    near.add(print);
     shadowProxy(near);
     root.add(near);
+    const porch = new VirtualLight('#ffcf90', 0, 11, 1.6);
+    porch.position.copy(f.p(dress.porchAt.x, dress.porchAt.y, dress.porchAt.z));
+    this.spire = { near, leds: dress.leds, fairy: dress.fairy, bulb: dress.porch, light: porch };
     // a work lamp that casts a light cone onto the intel spot
     const lampPos = new THREE.Vector3(shackX + 1.8, 2.5, shackZ + 1.9);
     const cone = lightCone(3, 1.6, '#bfeaff', 0.25);
@@ -413,6 +428,9 @@ export class Landmarks {
     root.add(far);
     this.lods.push(new DistanceLod(new THREE.Vector3(f.x, f.y, f.z), radius, near, far));
   }
+
+  /** The Spire's night pieces (driven in update). */
+  private spire: { near: THREE.Object3D; leds: { value: number }[]; fairy: { value: number }[]; bulb: { value: number }; light: VirtualLight } | null = null;
 
   /** The camp's near set (the people round the fire join it, so they hide with it at range). */
   private campNear: THREE.Object3D | null = null;
@@ -461,6 +479,20 @@ export class Landmarks {
       const n = Math.sin(t * 17 * fl.speed + fl.phase) * Math.sin(t * 3.1 * fl.speed + fl.phase * 2);
       const off = n > 1 - fl.broken * 2 ? 0.08 : 1;
       fl.set(off * (0.92 + 0.08 * Math.sin(t * 60)));
+    }
+    const sp = this.spire;
+    if (sp) {
+      const night = 1 - uDaylight.value;
+      const near = sp.near.visible;
+      // the office's porch lamp buzzes on at dusk; the cabinets' status LEDs blink out of step
+      const buzz = Math.sin(t * 23) * Math.sin(t * 2.3) > 0.9 ? 0.4 : 1;
+      sp.bulb.value = (0.3 + night * 7) * buzz;
+      sp.light.intensity = near ? night * 9 * buzz : 0;
+      sp.leds[0].value = Math.sin(t * 2.1) > 0 ? 5 : 0.4;
+      sp.leds[1].value = Math.sin(t * 5.3 + 1) > 0.6 ? 6 : 0.3;
+      sp.fairy.forEach((u, i) => (u.value = night * (4 + 2 * Math.sin(t * 1.3 + i * 2.1))));
+      // the shared site pools (sites set these near themselves; the Spire is far from both)
+      if (near) { uSiteNight.value = night; uSiteFlicker.value = buzz > 0.5 ? 1 : 0.7; }
     }
     for (const bl of this.blinkers) {
       const ph = ((t + bl.offset) % bl.period) / bl.period;

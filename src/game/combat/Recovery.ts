@@ -728,6 +728,7 @@ export class Recovery implements HostileProvider {
       op.build.lod.update(cam);
       const night = host.combat.target.night > 0.5;
       op.build.light.intensity = night && op.state !== 'cleared' ? 35 : 0;
+      op.build.nightGlow.value = night && op.state !== 'cleared' ? 6 : 0.1;
       op.build.fire.group.visible = (night || op.state === 'active') && op.state !== 'cleared' && Math.hypot(cam.x - op.def.x, cam.z - op.def.z) < 160;
       if (op.build.fire.group.visible) op.build.fire.update(dt, cam);
       op.build.fire.light.intensity = op.build.fire.group.visible ? 12 : 0;

@@ -1,6 +1,8 @@
 import * as THREE from 'three/webgpu';
-import { MeshBatch, Frame, DistanceLod, canvasTexture, shadowProxy } from '../world/kit';
-import { fabric, wood, rustyMetal, plainStandard, glow, corrugated } from '../world/materials';
+import { MeshBatch, Frame, DistanceLod, grime, merge, shadowProxy } from '../world/kit';
+import { printPaint, printMap, printMaterial } from '../world/printAtlas';
+import { decalMat, floorDecal } from '../sites/jetKit';
+import { fabric, wood, rustyMetal, plainStandard, glow, corrugated, warmWindow } from '../world/materials';
 import { VirtualLight } from '../world/lights';
 import { Fire } from '../world/effects';
 import type { Physics } from '@/engine/physics';
@@ -37,32 +39,95 @@ export interface OutpostBuild {
   light: VirtualLight;
   fire: Fire;
   center: THREE.Vector3;
+  /** The field office's door lamp (lit at night while the outpost is manned). */
+  nightGlow: { value: number };
 }
 
-let _bannerTex: THREE.Texture | null = null;
-function bannerTexture() {
-  return (_bannerTex ??= canvasTexture(512, 256, (ctx, w, h) => {
-    ctx.fillStyle = '#e9e4d6';
-    ctx.fillRect(0, 0, w, h);
-    ctx.fillStyle = '#c8202a';
-    ctx.fillRect(0, 0, w, 46);
-    ctx.fillRect(0, h - 30, w, 30);
-    ctx.fillStyle = '#1a1a1a';
-    ctx.font = '900 92px "Big Shoulders Stencil Display", Impact, sans-serif';
-    ctx.textAlign = 'center';
-    ctx.fillText('KADE', w / 2, 140);
-    ctx.font = '700 30px "Chakra Petch", sans-serif';
-    ctx.fillText('ASSET RECOVERY', w / 2, 188);
-    ctx.font = '600 16px "JetBrains Mono", monospace';
-    ctx.fillStyle = '#fff';
-    ctx.fillText('A PILOT PROGRAM OF KADE HOLDINGS', w / 2, 30);
-    ctx.fillText('TRESPASSERS WILL BE RECOVERED', w / 2, h - 10);
-  }));
-}
-let _bannerMat: THREE.MeshStandardNodeMaterial | null = null;
-function bannerMaterial() {
-  return (_bannerMat ??= new THREE.MeshStandardNodeMaterial({ map: bannerTexture(), roughness: 0.9, side: THREE.DoubleSide }));
-}
+// ------------------------------------------------------------------ printed art (world/printAtlas.ts)
+const DISPLAY = '"Big Shoulders Stencil Display", Impact, sans-serif', UI = '"Chakra Petch", sans-serif', MONO = '"JetBrains Mono", monospace';
+printPaint('kBanner', 512, 256, (ctx, w, h) => {
+  ctx.fillStyle = '#e9e4d6';
+  ctx.fillRect(0, 0, w, h);
+  ctx.fillStyle = '#c8202a';
+  ctx.fillRect(0, 0, w, 46);
+  ctx.fillRect(0, h - 30, w, 30);
+  ctx.fillStyle = '#1a1a1a';
+  ctx.font = `900 92px ${DISPLAY}`;
+  ctx.textAlign = 'center';
+  ctx.fillText('KADE', w / 2, 140);
+  ctx.font = `700 30px ${UI}`;
+  ctx.fillText('ASSET RECOVERY', w / 2, 188);
+  ctx.font = `600 16px ${MONO}`;
+  ctx.fillStyle = '#fff';
+  ctx.fillText('A PILOT PROGRAM OF KADE HOLDINGS', w / 2, 30);
+  ctx.fillText('TRESPASSERS WILL BE RECOVERED', w / 2, h - 10);
+});
+/** Each outpost's gate sign: name and motto on the tin plate over the entrance. */
+const GATE: Record<string, [string, string]> = {
+  survey: ['KADE SURVEY CAMP', 'THIS RIDGE IS NOW A DATA ASSET'],
+  rp7: ['RECOVERY POINT 7', "WE'LL TAKE IT FROM HERE"],
+  pipeline: ['PIPELINE CAMP 3', 'WATER IS A SERVICE™'],
+  wellhead: ['KADE WELLHEAD', 'THE CREEK, NOW WITH OVERSIGHT'],
+};
+Object.entries(GATE).forEach(([id, [name, motto]], i) => {
+  printPaint('kGate:' + id, 616, 80, (c, w, h) => {
+    c.fillStyle = '#d9d5c8'; c.fillRect(0, 0, w, h);
+    c.fillStyle = '#b02a22'; c.fillRect(0, 0, 150, h);
+    c.fillStyle = '#f2ede0'; c.textAlign = 'center'; c.textBaseline = 'middle';
+    c.font = `900 50px ${DISPLAY}`; c.fillText('KADE', 75, h / 2 + 2);
+    c.fillStyle = '#1a1a1a'; c.textAlign = 'left';
+    c.font = `900 34px ${DISPLAY}`; c.fillText(name, 166, 28, w - 180);
+    c.font = `600 19px ${UI}`; c.fillStyle = '#5a1712'; c.fillText(motto, 166, 60, w - 180);
+    grime(c, w, h, 1.2, 31 + i);
+  });
+});
+printPaint('kDays', 256, 192, (c, w, h) => {
+  c.fillStyle = '#1f5a3a'; c.fillRect(0, 0, w, h);
+  c.strokeStyle = '#e8efe6'; c.lineWidth = 5; c.strokeRect(6, 6, w - 12, h - 12);
+  c.fillStyle = '#e8efe6'; c.textAlign = 'center'; c.textBaseline = 'middle';
+  c.font = `700 17px ${UI}`; c.fillText('THIS SITE HAS GONE', w / 2, 28);
+  c.fillStyle = '#f4f1e6'; c.fillRect(w / 2 - 44, 44, 88, 70);
+  c.fillStyle = '#b02a22'; c.font = `900 66px ${DISPLAY}`; c.fillText('0', w / 2, 82);
+  c.fillStyle = '#e8efe6'; c.font = `700 17px ${UI}`; c.fillText('DAYS WITHOUT A', w / 2, 132); c.fillText('RECOVERY INCIDENT', w / 2, 152);
+  c.font = `500 12px ${MONO}`; c.fillText("SAFETY IS EVERYONE'S KPI", w / 2, 174);
+  grime(c, w, h, 1.1, 77);
+});
+printPaint('kPotty', 128, 256, (c, w, h) => {
+  c.fillStyle = '#2f5f8a'; c.fillRect(0, 0, w, h);
+  c.fillStyle = '#e9e4d6'; c.fillRect(10, 26, w - 20, 74);
+  c.fillStyle = '#b02a22'; c.textAlign = 'center'; c.textBaseline = 'middle';
+  c.font = `900 26px ${DISPLAY}`; c.fillText('KADE', w / 2, 44);
+  c.fillStyle = '#1a1a1a'; c.font = `700 13px ${UI}`; c.fillText('COMFORT', w / 2, 66); c.fillText('STATION', w / 2, 82);
+  c.fillStyle = '#e9e4d6'; c.font = `500 11px ${UI}`;
+  c.fillText('YOUR BREAK', w / 2, 128); c.fillText('IS BEING', w / 2, 142); c.fillText('TIMED', w / 2, 156);
+  c.fillStyle = '#b02a22'; c.fillRect(30, 180, w - 60, 20);
+  c.fillStyle = '#fff'; c.font = `700 12px ${MONO}`; c.fillText('OCCUPIED', w / 2, 191);
+  grime(c, w, h, 1.4, 78);
+});
+printPaint('kOffice', 512, 200, (c, w, h) => {
+  c.fillStyle = '#7e2a22'; c.fillRect(0, 0, w, h);
+  c.fillStyle = '#efe8da'; c.textAlign = 'left'; c.textBaseline = 'middle';
+  c.font = `900 72px ${DISPLAY}`; c.fillText('KADE HOLDINGS', 26, 58, w - 50);
+  c.font = `700 30px ${UI}`; c.fillText('ASSET RECOVERY · FIELD OFFICE', 28, 118, w - 50);
+  c.font = `500 18px ${MONO}`; c.fillText('THIS UNIT IS MONITORED FOR PRODUCTIVITY', 28, 166, w - 50);
+  grime(c, w, h, 1.5, 79);
+});
+printPaint('kVinyl', 512, 96, (c, w, h) => {
+  c.fillStyle = '#f0ece2'; c.fillRect(0, 0, w, h);
+  c.fillStyle = '#c8202a'; c.fillRect(0, 0, 18, h); c.fillRect(w - 18, 0, 18, h);
+  c.fillStyle = '#1a1a1a'; c.textAlign = 'center'; c.textBaseline = 'middle';
+  c.font = `900 40px ${DISPLAY}`; c.fillText('YOUR COMPLIANCE', w / 2, 34);
+  c.font = `700 24px ${UI}`; c.fillText('KEEPS EVERYONE SAFE', w / 2, 70);
+  grime(c, w, h, 1.3, 80);
+});
+printPaint('kCam', 128, 128, (c, w, h) => {
+  c.fillStyle = '#e8c33a'; c.fillRect(0, 0, w, h);
+  c.strokeStyle = '#141414'; c.lineWidth = 5; c.strokeRect(5, 5, w - 10, h - 10);
+  c.fillStyle = '#141414'; c.fillRect(34, 26, 46, 22); c.fillRect(80, 32, 14, 10); // a camera
+  c.textAlign = 'center'; c.textBaseline = 'middle';
+  c.font = `800 15px ${UI}`; c.fillText('SMILE:', w / 2, 70); c.fillText("YOU'RE A", w / 2, 88); c.fillText('DATA ASSET', w / 2, 106);
+  grime(c, w, h, 1.2, 81);
+});
 
 const V = (x: number, y: number, z: number) => new THREE.Vector3(x, y, z);
 
@@ -185,10 +250,6 @@ export function buildOutpost(def: OutpostDef, physics: Physics, hf: Heightfield)
   if (def.tier > 1) crates(6.5, -1.5, -0.6, 3);
   // banner on two poles
   for (const x of [-1.6, 1.6]) mb.add(steel, place(new THREE.CylinderGeometry(0.04, 0.05, 3.2, 8), x, 1.6, 12.6, 0));
-  const banner = place(new THREE.PlaneGeometry(3.2, 1.6), 0, 2.2, 12.62, 0);
-  const bannerMesh = new THREE.Mesh(banner, bannerMaterial());
-  bannerMesh.castShadow = true;
-  bannerMesh.receiveShadow = true;
   // floodlight tower (a VirtualLight at night) + burn barrel
   const tower = f.p(-7, 0, -1);
   mb.add(steel, place(new THREE.CylinderGeometry(0.06, 0.08, 4.6, 8), -7, 2.3, -1, 0));
@@ -248,6 +309,98 @@ export function buildOutpost(def: OutpostDef, physics: Physics, hf: Heightfield)
   mb.add(wood('#6b4a2e'), place(new THREE.BoxGeometry(0.08, 1.5, 0.08), -2.6, 0.75, 14, 0), place(new THREE.BoxGeometry(0.08, 1.5, 0.08), 2.6, 0.75, 14, 0));
   mb.add(tin, place(new THREE.BoxGeometry(5.4, 0.7, 0.04), 0, 1.25, 14, 0));
 
+  // --- dressing (environment round 3): what makes a pad of props read as a Kade site from all sides.
+  // Printed faces join the banner's mesh (one print-atlas draw per outpost); solids use the batch's
+  // family materials; ground decals share the site decal material.
+  const prints: THREE.BufferGeometry[] = [];
+  const printQ = (name: string, w: number, h: number, lx: number, ly: number, lz: number, yaw = 0, rx = 0) =>
+    prints.push(place(printMap(name, new THREE.PlaneGeometry(w, h)), lx, ly, lz, yaw, rx));
+  const decals: THREE.BufferGeometry[] = [];
+  const decalAt = (name: string, w: number, h: number, lx: number, lz: number, rot = 0) => {
+    const p = f.p(lx, 0, lz);
+    decals.push(floorDecal(name, w, h, p.x, hf.heightAt(p.x, p.z) + 0.03, p.z, def.rot + rot));
+  };
+  const blue = plainStandard('#2f5f8a', 0.6);
+  const white = plainStandard('#e2ded2', 0.55);
+  const orange = plainStandard('#d8641e', 0.5);
+  const office = rustyMetal({ base: '#8a2c24', rust: 0.45, metalness: 0.5, roughness: 0.55 });
+  const dark = plainStandard('#1b1c1d', 0.55, 0.3);
+  const doorLamp = glow('#ffdcae', 0);
+  const camLed = glow('#ff2a1a', 6);
+  printQ('kBanner', 3.2, 1.6, 0, 2.2, 12.62);
+  printQ('kGate:' + def.id, 5.3, 0.66, 0, 1.25, 14.025);
+  // the vinyl on the front sandbags, leaning back on them
+  printQ('kVinyl', 2.8, 0.52, 2.2, 0.36, 11.33, 0, -0.18);
+  // the safety board by the gate
+  for (const x of [5.55, 6.85]) mb.add(pallet, place(new THREE.BoxGeometry(0.07, 1.9, 0.07), x, 0.95, 13.2, 0));
+  mb.add(white, place(new THREE.BoxGeometry(1.36, 1.02, 0.04), 6.2, 1.38, 13.2, 0));
+  printQ('kDays', 1.3, 0.97, 6.2, 1.38, 13.225);
+  // a CCTV mast at the gate (red tally light), and its sign
+  mb.add(steel, place(new THREE.CylinderGeometry(0.05, 0.07, 3.8, 8), -4.2, 1.9, 14.4, 0));
+  mb.add(white, place(new THREE.BoxGeometry(0.16, 0.16, 0.4), -4.2, 3.7, 14.62, 0.35, 0.35));
+  mb.add(dark, place(new THREE.BoxGeometry(0.2, 0.05, 0.46), -4.2, 3.81, 14.64, 0.35, 0.35));
+  mb.add(camLed.material, place(new THREE.SphereGeometry(0.02, 6, 4), -4.13, 3.66, 14.83, 0.35));
+  mb.add(white, place(new THREE.BoxGeometry(0.46, 0.46, 0.02), -4.2, 1.7, 14.46, 0));
+  printQ('kCam', 0.44, 0.44, -4.2, 1.7, 14.475);
+  // water-filled barriers out front (the survey camp is too temporary for them)
+  if (def.tier > 1) {
+    for (const [x, z, y] of [[3.6, 15.6, 0.25], [-1.9, 16.1, -0.2]]) {
+      mb.add(orange, place(new THREE.BoxGeometry(1.8, 0.55, 0.55), x, 0.28, z, y));
+      mb.add(orange, place(new THREE.BoxGeometry(1.8, 0.34, 0.32), x, 0.72, z, y));
+      mb.add(white, place(new THREE.BoxGeometry(1.82, 0.1, 0.34), x, 0.72, z, y));
+      solid(x, 0.45, z, 0.9, 0.45, 0.3, y);
+    }
+  }
+  // the comfort station, round the side
+  mb.add(blue, place(new THREE.BoxGeometry(1.1, 2.2, 1.1), -11.6, 1.1, -7.5, 0));
+  mb.add(white, place(new THREE.BoxGeometry(1.2, 0.12, 1.2), -11.6, 2.26, -7.5, 0));
+  mb.add(dark, place(new THREE.CylinderGeometry(0.05, 0.05, 0.5, 6), -11.85, 2.5, -7.75, 0));
+  printQ('kPotty', 0.86, 1.72, -11.04, 1.06, -7.5, Math.PI / 2);
+  solid(-11.6, 1.1, -7.5, 0.55, 1.1, 0.55);
+  // jerry cans by the generator, a cable drum out back, oil and dirt on the ground
+  for (let i = 0; i < 3; i++) mb.add(kadeRed, place(new THREE.BoxGeometry(0.17, 0.45, 0.35), -8.6 + i * 0.22, 0.23, 2.5 - (i % 2) * 0.1, 0.2 + i * 0.15));
+  mb.add(crate, place(new THREE.CylinderGeometry(0.55, 0.55, 0.08, 14).rotateX(Math.PI / 2), 8.2, 0.55, -9.3, 0.4));
+  mb.add(crate, place(new THREE.CylinderGeometry(0.55, 0.55, 0.08, 14).rotateX(Math.PI / 2), 8.2, 0.55, -8.7, 0.4));
+  mb.add(dark, place(new THREE.CylinderGeometry(0.42, 0.42, 0.52, 12).rotateX(Math.PI / 2), 8.2, 0.55, -9.0, 0.4));
+  solid(8.2, 0.55, -9.0, 0.55, 0.55, 0.35, 0.4);
+  decalAt('oil', 2.2, 2.0, -7.5, 1.2, 0.3);
+  decalAt('dirt', 6.0, 4.0, 0, 15.2, 0.1);
+  decalAt('dirt', 4.5, 3.5, -1, 0.5, 1.2);
+  // the field office: a shipping container on sleepers (tier 2+), its door and lit window facing
+  // the yard, Kade's livery on the outside, the cargo doors' lock bars at the back
+  if (def.tier > 1) {
+    const ox = 11.6, oz = -4.0, L = 6.06, W2 = 1.22, Hc = 2.59;
+    for (const z of [-2.4, 2.4]) mb.add(pallet, place(new THREE.BoxGeometry(2.6, 0.14, 0.24), ox, 0.07, oz + z, 0));
+    mb.add(office, place(new THREE.BoxGeometry(W2 * 2, Hc - 0.1, L), ox, 0.14 + (Hc - 0.1) / 2, oz, 0));
+    for (let i = 0; i <= 18; i++) {
+      const z = oz - L / 2 + 0.17 + i * ((L - 0.34) / 18);
+      for (const s of [-1, 1]) if (!(s < 0 && Math.abs(z - (oz + 1.2)) < 0.6)) mb.add(office, place(new THREE.BoxGeometry(0.05, Hc - 0.3, 0.09), ox + s * (W2 + 0.02), 0.14 + Hc / 2 - 0.05, z, 0));
+    }
+    mb.add(steel, place(new THREE.BoxGeometry(W2 * 2 + 0.1, 0.1, L + 0.06), ox, Hc + 0.06, oz, 0));
+    for (const x of [-0.75, -0.25, 0.25, 0.75]) mb.add(steel, place(new THREE.CylinderGeometry(0.025, 0.025, 2.3, 6), ox + x, 1.3, oz - L / 2 - 0.05, 0));
+    // the yard side: a personnel door with a step and a lamp, a window, the A/C box
+    const ix = ox - W2 - 0.03;
+    mb.add(steel, place(new THREE.BoxGeometry(0.06, 2.0, 0.92), ix, 1.15, oz + 1.2, 0));
+    mb.add(dark, place(new THREE.BoxGeometry(0.05, 0.05, 0.16), ix - 0.05, 1.15, oz + 0.85, 0));
+    mb.add(pallet, place(new THREE.BoxGeometry(0.7, 0.16, 1.1), ix - 0.4, 0.08, oz + 1.2, 0));
+    mb.add(warmWindow('#ffc27a', 1.6), place(new THREE.BoxGeometry(0.04, 0.62, 1.1), ix - 0.01, 1.6, oz - 1.0, 0));
+    mb.add(steel, place(new THREE.BoxGeometry(0.06, 0.08, 1.2), ix - 0.02, 1.25, oz - 1.0, 0));
+    mb.add(white, place(new THREE.BoxGeometry(0.42, 0.42, 0.62), ix - 0.2, 2.15, oz - 2.3, 0));
+    mb.add(steel, place(new THREE.BoxGeometry(0.3, 0.05, 0.05), ix - 0.15, 2.32, oz + 1.2, 0));
+    mb.add(doorLamp.material, place(new THREE.SphereGeometry(0.06, 8, 6), ix - 0.3, 2.26, oz + 1.2, 0));
+    printQ('kDays', 0.62, 0.46, ix - 0.005, 1.55, oz + 0.25, -Math.PI / 2);
+    // the outside: livery
+    printQ('kOffice', 4.6, 1.8, ox + W2 + 0.08, 1.45, oz, Math.PI / 2);
+    solid(ox, Hc / 2 + 0.07, oz, W2, Hc / 2, L / 2);
+    decalAt('dirt', 3.0, 2.4, ix - 1.0, oz + 1.2, 0.5);
+    // cover along both long walls
+    for (const s of [-1, 1]) for (const z of [-2.1, 0.0]) {
+      const p = f.p(ox + s * (W2 + 0.55), 0, oz + z);
+      p.y = hf.heightAt(p.x, p.z);
+      cover.push({ pos: p, out: V(-s, 0, 0).applyAxisAngle(V(0, 1, 0), def.rot), h: 2.5, taken: false });
+    }
+  }
+
   // --- centrepieces
   if (def.id === 'survey') {
     // a theodolite on a tripod, survey stakes with flagging tape
@@ -293,12 +446,18 @@ export function buildOutpost(def: OutpostDef, physics: Physics, hf: Heightfield)
 
   const far = mb.buildFar(`outpost:${def.id}:far`, { minSize: 0.6 });
   const near = mb.build(`outpost:${def.id}`);
-  near.add(bannerMesh); // the banner goes with the near set (the far stand-in is a silhouette)
+  // the banner and every printed face: one mesh, near set only (the far stand-in is a silhouette)
+  const printMesh = new THREE.Mesh(merge(prints), printMaterial());
+  printMesh.castShadow = true;
+  printMesh.receiveShadow = true;
+  const decalMesh = new THREE.Mesh(merge(decals), decalMat());
+  decalMesh.receiveShadow = true;
+  near.add(printMesh, decalMesh);
   group.add(near, far);
   shadowProxy(near, [], `outpost:${def.id}:shadow`);
   const center = f.p(0, 0, 0).setY(y0);
   const lod = new DistanceLod(center, def.r, near, far, 150, 700);
-  return { def, frame: f, group, lod, cover, locker, terminal, light, fire, center };
+  return { def, frame: f, group, lod, cover, locker, terminal, light, fire, center, nightGlow: doorLamp.intensity as unknown as { value: number } };
 }
 
 const xz = (v: THREE.Vector3): [number, number] => [v.x, v.z];
