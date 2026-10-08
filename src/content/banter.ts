@@ -41,6 +41,11 @@ export const BANTER: Banter[] = [
     text: 'You read it. Good. Northeast, up the spur. Check the cooler behind the pumps first. Walking thirsty is how people stop walking.',
   },
   {
+    id: 'rags', speaker: 'Mara', priority: 4,
+    when: (v) => v.has('seen:stash'),
+    text: 'See that red rag on a stick? Somebody\'s stash. Take what you need. People out here leave them for whoever comes next.',
+  },
+  {
     id: 'garage.self', speaker: 'self', priority: 6,
     when: (v) => v.has('seen:garage') && !v.has('garage.gate.open') && !v.has('garage.gap.open'),
     text: (v) => SEEN_GARAGE[v.archetype.id] ?? 'So that\'s the Garage. Smaller than the pitch deck.',

@@ -644,6 +644,12 @@ class Wolf implements Hostile {
   bitten = false;
   snarlT = rnd(1, 4);
   pack: Pack | null = null;
+  /** Where it stood last frame (feet): walls are checked along the move from here. */
+  readonly prev = new THREE.Vector3(0, -999, 0);
+  /** Pinned against a wall: walk along it this way (yaw) for `detourT` seconds before trying again. */
+  detour = 0;
+  detourT = 0;
+  stuckT = 0;
   constructor(readonly b: Body, readonly rig: ReturnType<typeof wolfRig>) {}
 
   private readonly _a = new THREE.Vector3();
@@ -964,6 +970,8 @@ class Critters implements HostileProvider {
  * hesitate; a gunshot rattles them (less at night); they won't go near a fire or a town.
  */
 class Pack implements HostileProvider {
+  /** Seconds this pack has been running off (stragglers are dropped after a while). */
+  fleeT = 0;
   state: 'gone' | 'travel' | 'watch' | 'stalk' | 'circle' | 'flee' = 'gone';
   wait = rnd(30, 80);
   goal = new THREE.Vector3();
@@ -1094,6 +1102,7 @@ class Pack implements HostileProvider {
         }
       } else this.noticeT = Math.max(0, this.noticeT - c.dt);
     }
+    if (this.state !== 'flee') this.fleeT = 0;
     if (this.hunting && safe) { this.lostT += c.dt; if (this.lostT > 6) { this.state = 'flee'; this.hunting = false; } }
     else this.lostT = 0;
 
@@ -1120,6 +1129,15 @@ class Pack implements HostileProvider {
       if (this.watchT <= 0) { this.state = 'travel'; this.nextWatch = rnd(15, 35); }
     } else if (this.state === 'flee') {
       speed = 10;
+      // a wolf still boxed in by town clutter long after the rest ran off slips away unseen
+      this.fleeT += c.dt;
+      if (this.fleeT > 15) {
+        for (const w of live) {
+          const dx = w.pos.x - c.player.x, dz = w.pos.z - c.player.z, dd = Math.hypot(dx, dz);
+          const seen = c.camFwd ? (dx * c.camFwd.x + dz * c.camFwd.z) / Math.max(dd, 1e-3) > 0.2 : true;
+          if (dd > 10 && !seen) w.out = false;
+        }
+      }
       for (const w of live) {
         const away = Math.atan2(w.pos.x - c.player.x, w.pos.z - c.player.z);
         w.yaw += clamp(angDiff(w.yaw, away), -1, 1) * c.dt * 4;
@@ -1157,6 +1175,41 @@ class Pack implements HostileProvider {
     const far = live.every((w) => Math.hypot(w.pos.x - c.player.x, w.pos.z - c.player.z) > (this.state === 'flee' ? 130 : 200));
     const bodiesFar = this.wolves.every((w) => !w.out || w.alive || Math.hypot(w.pos.x - c.player.x, w.pos.z - c.player.z) > 160);
     if (far && bodiesFar) { this.state = 'gone'; this.wait = rnd(70, 180) * (night ? 0.6 : 1); for (const w of this.wolves) w.out = false; return; }
+
+    // walls: whatever the pack decided, nobody walks through a building
+    for (const w of this.wolves) {
+      if (!w.out) continue;
+      const want = Math.hypot(w.pos.x - w.prev.x, w.pos.z - w.prev.z);
+      if (c.combat && w.alive && w.prev.y > -900 && want < 3) {
+        w.prev.y = c.hf.heightAt(w.prev.x, w.prev.z);
+        if (w.detourT > 0) {
+          // committed to going round: follow the wall instead of what the pack wants
+          w.detourT -= c.dt;
+          const step = Math.max(want, w.speed * c.dt * 0.8, 2.5 * c.dt);
+          w.pos.x = w.prev.x + Math.sin(w.detour) * step;
+          w.pos.z = w.prev.z + Math.cos(w.detour) * step;
+          w.yaw += angDiff(w.yaw, w.detour) * Math.min(1, c.dt * 8);
+        }
+        const tried = Math.hypot(w.pos.x - w.prev.x, w.pos.z - w.prev.z);
+        const triedYaw = tried > 1e-4 ? Math.atan2(w.pos.x - w.prev.x, w.pos.z - w.prev.z) : w.yaw;
+        const along = c.combat.slide(w.prev, w.pos, 0.45, 0.55);
+        if (along !== null) {
+          if (w.role !== 'lunge') w.yaw += angDiff(w.yaw, along) * Math.min(1, c.dt * 6);
+          const got = Math.hypot(w.pos.x - w.prev.x, w.pos.z - w.prev.z);
+          // pinned (a corner, or steering straight back into the wall): pick a way round and commit
+          if (got < tried * 0.35) {
+            w.stuckT += c.dt;
+            if (w.stuckT > 0.25) {
+              // find the gap: the roomiest heading near where it was trying to go
+              w.detour = c.combat.openWay(w.prev, triedYaw, 0.55);
+              w.detourT = rnd(0.7, 1.3);
+              w.stuckT = 0;
+            }
+          } else w.stuckT = Math.max(0, w.stuckT - c.dt);
+        }
+      }
+      w.prev.set(w.pos.x, 0, w.pos.z);
+    }
 
     for (const w of this.wolves) {
       if (!w.out) continue;

@@ -199,6 +199,8 @@ export class Props {
   readonly perches: THREE.Vector3[] = [];
   /** Wreck centres (flies). */
   readonly wrecks: THREE.Vector3[] = [];
+  /** The same wrecks as boxes (centre, yaw, half extents) and how they lie: for searching them. */
+  readonly wreckBoxes: { pos: THREE.Vector3; yaw: number; half: THREE.Vector3; upright: boolean; kind: CarKind }[] = [];
   private readonly _m = new THREE.Matrix4();
   private readonly _q = new THREE.Quaternion();
   private readonly _s = new THREE.Vector3();
@@ -366,6 +368,7 @@ export class Props {
       const cw = new THREE.Vector3(c.x, 0, c.z).applyAxisAngle(new THREE.Vector3(0, 1, 0), yaw);
       this.physics.addBox({ x: x + cw.x, y: c.y, z: z + cw.z }, { x: h.x, y: h.y, z: h.z }, yaw);
       this.wrecks.push(new THREE.Vector3(x + cw.x, c.y, z + cw.z));
+      this.wreckBoxes.push({ pos: new THREE.Vector3(x + cw.x, c.y, z + cw.z), yaw, half: h.clone(), upright: !flipped && !onSide, kind });
       if (!flipped && !onSide) this.perches.push(new THREE.Vector3(x + cw.x, c.y + h.y + 0.02, z + cw.z));
     }
     const cars = all.build('cars', false, true);

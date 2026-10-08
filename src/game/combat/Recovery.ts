@@ -73,6 +73,7 @@ function lookFor(i: number, weapon: HumanWeapon): HumanLook {
 
 const UP = new THREE.Vector3(0, 1, 0);
 const _a = new THREE.Vector3(), _b = new THREE.Vector3(), _c = new THREE.Vector3(), _d = new THREE.Vector3();
+const _from = new THREE.Vector3();
 const angDiff = (a: number, b: number) => Math.atan2(Math.sin(b - a), Math.cos(b - a));
 const rnd = (a: number, b: number) => a + Math.random() * (b - a);
 const pick = <T,>(a: T[]) => a[Math.floor(Math.random() * a.length)];
@@ -974,10 +975,22 @@ export class Recovery implements HostileProvider {
     dir.normalize();
     const v = Math.min(speed, d * 2.5);
     h.vel.lerp(_b.copy(dir).multiplyScalar(v), Math.min(1, dt * 6));
+    _from.copy(h.pos);
     h.pos.addScaledVector(h.vel, dt);
+    // feelers steer; this is the hard stop (no walking through walls)
+    this.host.combat.slide(_from, h.pos, 0.35, 0.5);
     h.pos.y = this.host.hf.heightAt(h.pos.x, h.pos.z);
-    // stuck? jitter sideways
-    if (m.lastPos.distanceTo(h.pos) < 0.2 * dt * speed) { m.stuckT += dt; if (m.stuckT > 1.2) { h.pos.addScaledVector(_c.set(-dir.z, 0, dir.x), rnd(-1, 1)); m.stuckT = 0; } }
+    // stuck? jitter sideways (still not through a wall)
+    if (m.lastPos.distanceTo(h.pos) < 0.2 * dt * speed) {
+      m.stuckT += dt;
+      if (m.stuckT > 1.2) {
+        _from.copy(h.pos);
+        h.pos.addScaledVector(_c.set(-dir.z, 0, dir.x), rnd(-1, 1));
+        this.host.combat.slide(_from, h.pos, 0.35, 0.5);
+        h.pos.y = this.host.hf.heightAt(h.pos.x, h.pos.z);
+        m.stuckT = 0;
+      }
+    }
     else m.stuckT = 0;
     m.lastPos.copy(h.pos);
     h.yaw += angDiff(h.yaw, Math.atan2(h.vel.x, h.vel.z)) * Math.min(1, dt * (run ? 10 : 5));

@@ -936,3 +936,9 @@ The iGPU is GPU-bound in this test (~30 fps) since the graphics pass. The deskto
 - Not voiced: the player (silent protagonist), notes/signs, and the jet's CVR/ExitPilot transcript pages (narration mixed with two speakers).
 - Confirmed by the owner: voices play in the Linux desktop app (WebKitGTK decodes the mp3s via GStreamer). `?trace` logs `[voice] …` per line.
 
+
+## 2026-10-08: scavenging + walls for walkers (v0.5.3 batch)
+
+- Owner: ammo too scarce; wolves wander through town walls.
+- **Walls:** `Combat.slide(from, to, r, knee)` is a knee-high ray against fixed colliders (terrain excluded), stop short and slide along. Wolves resolve it once per frame after the pack logic, whatever the state; contractors after `walkTo` and their stuck-jitter. A pinned wolf picks the roomiest heading near its goal (`Combat.openWay`) and commits for ~1 s. A fleeing pack drops unseen stragglers after 15 s. Test (Dry Creek, 5 hunting wolves, 20 s): 27 wall crossings → 0; ~1 wolf in 40 still gets boxed in by clutter (then despawns unseen).
+- **Scavenging** (`content/scavenge.ts`, `world/Scavenge.ts`): 18 survivor stashes (ammo cans, footlockers, packs, Kade crates, coolers) marked by a red rag on a stick over a cairn; they refill after 35 min of play (leaner). All 17 highway wrecks are searchable once. Ammo rolls favour calibres for guns you carry. A full pack leaves the find in place. Mara explains the rag sign the first time one is within 30 m. One MeshBatch, 5 meshes, ~11k tris.

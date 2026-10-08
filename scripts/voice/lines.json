@@ -2000,6 +2000,16 @@
   "where": "src/content/banter.ts"
  },
  {
+  "key": "1hlg0ky",
+  "voice": "af_sarah",
+  "fx": "radio",
+  "speed": 0.97,
+  "speaker": "Mara",
+  "words": "See that red rag on a stick? Somebody's stash. Take what you need. People out here leave them for whoever comes next.",
+  "tts": "See that red rag on a stick? Somebody's stash. Take what you need. People out here leave them for whoever comes next.",
+  "where": "src/content/banter.ts"
+ },
+ {
   "key": "1790gsm",
   "voice": "af_sarah",
   "fx": "radio",

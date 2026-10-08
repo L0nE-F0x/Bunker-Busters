@@ -23,6 +23,7 @@ import { Weather } from './world/Weather';
 import { VirtualLight, lightPool } from './world/lights';
 import { updateRim, glow, desertRock } from './world/materials';
 import { buildIntelProp, type IntelProp } from './world/intelProps';
+import { Scavenge } from './world/Scavenge';
 import { Garage } from './bunker/Garage';
 import { Settlement } from './town/Settlement';
 import { buildSites, type Site } from './sites';
@@ -107,6 +108,7 @@ export class Game {
   weather!: Weather;
   garage!: Garage;
   settlement!: Settlement;
+  scavenge!: Scavenge;
   sites: Site[] = [];
   map!: MapData;
   player: Player | null = null;
@@ -264,6 +266,16 @@ export class Game {
     if (!SKIP.has('sites')) this.sites = buildSites(this.ctx, this.landmarks);
     this.buildRecovery();
     this.buildIntel();
+    // stashes and searchable wrecks (not quests: just the desert being generous)
+    this.scavenge = new Scavenge({
+      hf: this.hf,
+      state: () => this.state ?? null,
+      place: (x, z) => this.clearSpot(x, z),
+      toast: (t, k) => this.ui.toast(t, k),
+      sound: (n) => this.audio.play(n),
+    }, this.props.wreckBoxes);
+    this.scene.add(this.scavenge.group);
+    this.interactables.push(...this.scavenge.interactables);
     if (!SKIP.has('env')) this.buildEnvironment();
     if (SKIP.has('garage')) this.scene.remove(this.garage.b.group, this.garage.drone.group);
     if (SKIP.has('ui')) document.getElementById('ui')!.style.display = 'none';
@@ -1007,7 +1019,7 @@ export class Game {
     this._exterior = [
       this.atmo.sky, this.terrain.mesh, this.terrain.far, this.props.group, this.landmarks.group, this.garage.b.group,
       this.scrub.mesh, this.shrubs.group, this.pebbles.mesh, this.fauna.mesh, this.recovery.group, this.machines.group,
-      this.haze.sprite, this.streaks.sprite, this.devils.sprite,
+      this.haze.sprite, this.streaks.sprite, this.devils.sprite, this.scavenge?.group,
       ...[...this.intelMeshes.values()].filter((g) => !inside(g)),
     ].filter((o): o is THREE.Object3D => !!o);
     return this._exterior;
@@ -1542,6 +1554,7 @@ export class Game {
     this.atmo.follow(this.camera);
     this.landmarks.update(dt, this.t, this.camera.position);
     this.settlement?.update(dt, this.camera.position);
+    if (this.player && this.mode === 'playing') this.scavenge?.update(dt, this.player.position);
     for (const site of this.sites) site.update(dt, this.camera.position);
     if (this.mode !== 'playing') this.garage.update(dt);
     this.garage.cull(this.camera.position);

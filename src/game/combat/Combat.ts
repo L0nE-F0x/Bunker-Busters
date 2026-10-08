@@ -165,6 +165,70 @@ export class Combat {
     return { t: hit.timeOfImpact, normal: _n.set(hit.normal.x, hit.normal.y, hit.normal.z).clone(), collider: hit.collider as Collider };
   }
 
+  /**
+   * Walk a ground creature from `from` toward `to` (feet positions; `to` is rewritten) without
+   * passing through buildings, walls or rocks: a knee-high ray along the step against fixed
+   * colliders (terrain excluded, it's handled by the heightfield). On a hit it stops `r` short and
+   * slides along the wall. Returns the slide direction's yaw when it touched a wall, else null.
+   */
+  slide(from: THREE.Vector3, to: THREE.Vector3, r = 0.4, knee = 0.5): number | null {
+    let dx = to.x - from.x, dz = to.z - from.z;
+    const len = Math.hypot(dx, dz);
+    if (len < 1e-4) return null;
+    dx /= len; dz /= len;
+    const y = from.y + knee;
+    const h = this.solidRay(from.x, y, from.z, dx, dz, len + r);
+    if (!h || h.toi < 0.04) return null; // clear, or already inside something: let it walk out
+    const nl = Math.hypot(h.nx, h.nz);
+    if (nl < 0.3) return null; // a floor or a ramp, not a wall
+    const nx = h.nx / nl, nz = h.nz / nl;
+    const go = Math.max(0, h.toi - r);
+    let ex = from.x + dx * go, ez = from.z + dz * go;
+    // the rest of the step, minus the part into the wall
+    let tx = dx * (len - go), tz = dz * (len - go);
+    const into = tx * nx + tz * nz;
+    if (into < 0) { tx -= nx * into; tz -= nz * into; }
+    const tl = Math.hypot(tx, tz);
+    let yaw = Math.atan2(-nz, nx); // head-on: along the wall
+    if (tl > 1e-4) {
+      yaw = Math.atan2(tx, tz);
+      const h2 = this.solidRay(ex, y, ez, tx / tl, tz / tl, tl + r);
+      const ok = !h2 ? tl : h2.toi < 0.04 ? 0 : Math.max(0, Math.min(tl, h2.toi - r));
+      ex += (tx / tl) * ok;
+      ez += (tz / tl) * ok;
+    }
+    to.x = ex;
+    to.z = ez;
+    return yaw;
+  }
+
+  /**
+   * The way out for something pinned at `from`: of 16 headings, the one with the most room
+   * (capped at `reach`), favouring those near `want` (yaw). For walkers boxed in by clutter.
+   */
+  openWay(from: THREE.Vector3, want: number, knee = 0.5, reach = 4): number {
+    let best = want, score = -Infinity;
+    for (let k = 0; k < 16; k++) {
+      const a = want + (k / 16) * Math.PI * 2;
+      const h = this.solidRay(from.x, from.y + knee, from.z, Math.sin(a), Math.cos(a), reach);
+      const room = h ? h.toi : reach;
+      const off = Math.abs(Math.atan2(Math.sin(a - want), Math.cos(a - want)));
+      const sc = room - off * 0.6;
+      if (sc > score) { score = sc; best = a; }
+    }
+    return best;
+  }
+
+  private solidRay(x: number, y: number, z: number, dx: number, dz: number, max: number) {
+    const r = this.ray;
+    r.origin.x = x; r.origin.y = y; r.origin.z = z;
+    r.dir.x = dx; r.dir.y = 0; r.dir.z = dz;
+    const R = this.physics.R;
+    const hit = this.physics.world.castRayAndGetNormal(r, max, true, R.QueryFilterFlags.ONLY_FIXED | R.QueryFilterFlags.EXCLUDE_SENSORS, undefined, undefined, undefined,
+      (c: Collider) => c.shapeType() !== R.ShapeType.HeightField);
+    return hit ? { toi: hit.timeOfImpact, nx: hit.normal.x, nz: hit.normal.z } : null;
+  }
+
   /** Clear line between two points (no world geometry in between). */
   clearLine(a: THREE.Vector3, b: THREE.Vector3, skip?: unknown) {
     _d.subVectors(b, a);
