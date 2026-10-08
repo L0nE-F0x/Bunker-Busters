@@ -9,13 +9,11 @@ import { lightCone, GlowSprites } from '../world/effects';
 import { VirtualLight } from '../world/lights';
 import { dressHouse, dressRoof, dressYard, dressWorkshop, dressVault, CH, type Dress } from './garageDressing';
 
+import type { BunkerShell, Door, Tripwire, Laser, LootSpot } from './shell';
+export type { Door, Tripwire, Laser } from './shell';
+
 /* eslint-disable @typescript-eslint/no-explicit-any */
 type N = any;
-type Collider = ReturnType<Physics['addBox']>;
-
-export interface Tripwire { id: string; a: THREE.Vector3; b: THREE.Vector3; mesh: THREE.Object3D; armed: boolean }
-export interface Laser { id: string; a: THREE.Vector3; b: THREE.Vector3; mesh: THREE.Mesh; intensity: { value: number } }
-export interface Door { pivot: THREE.Object3D; open: number; target: number; collider: Collider | null; axis: 'y' | 'slide'; amount: number; colliderSpec: { pos: THREE.Vector3; half: THREE.Vector3 } }
 
 /** Fence footprint (local metres). Front (+z) faces the access track. */
 export const YARD = { x0: -22, x1: 22, z0: -18, z1: 20 };
@@ -25,7 +23,7 @@ export const HOUSE = { x0: -8, x1: 8, z0: -12, z1: 0, h: 4.2, vaultZ: -6.6 };
  * Builds The Garage's geometry and returns handles to every gameplay-relevant piece. All positions
  * are in world space; `origin` is the local (0,0,0).
  */
-export class GarageBuilder {
+export class GarageBuilder implements BunkerShell {
   group = new THREE.Group();
   roof = new THREE.Group();
   origin: THREE.Vector3;
@@ -38,7 +36,7 @@ export class GarageBuilder {
   blinkers: { u: { value: number }; period: number; offset: number; on: number }[] = [];
   neonFlicker = { value: 1 };
   serverLeds!: { value: number };
-  lootSpots: { id: string; pos: THREE.Vector3; mesh: THREE.Object3D; lid?: THREE.Object3D }[] = [];
+  lootSpots: LootSpot[] = [];
   points: Record<string, THREE.Vector3> = {};
   dronePath: THREE.Vector3[] = [];
   floodBulbs: { value: number }[] = [];
@@ -64,8 +62,14 @@ export class GarageBuilder {
   /** Separate draws that still read from far away (kept out of the LOD swap). */
   private farDetail: THREE.Object3D[] = [];
 
+  /** The house (sealed inside) and the fenced yard, for the runtime. */
+  innerBox: THREE.Box3;
+  groundsBox: THREE.Box3;
+
   constructor(private physics: Physics, origin: THREE.Vector3) {
     this.origin = origin.clone();
+    this.innerBox = new THREE.Box3(this.w(HOUSE.x0, 0, HOUSE.z0), this.w(HOUSE.x1, HOUSE.h, HOUSE.z1));
+    this.groundsBox = new THREE.Box3(this.w(YARD.x0, -2, YARD.z0), this.w(YARD.x1, 8, YARD.z1));
     this.group.position.copy(origin);
     this.group.name = 'garage';
     this.build();
@@ -77,6 +81,11 @@ export class GarageBuilder {
     const ch = CH.BLINK0 + this.blinkers.length - 1;
     this.blinkChannel.push(ch);
     return ch;
+  }
+
+  /** The gate's padlock disappears once the gate is open. */
+  get lockMeshes() {
+    return { gate: this.gateLockMesh };
   }
 
   /** local → world */
