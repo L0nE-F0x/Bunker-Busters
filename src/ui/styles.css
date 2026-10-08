@@ -373,10 +373,11 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #000; color:
 .intel-item span { color: var(--ink-dim); line-height: 1.45; }
 
 .pause { width: min(440px, 92vw); padding: 30px; display: flex; flex-direction: column; gap: 10px; }
+.pause:has(.settings) { width: min(540px, 94vw); }
 .pause h3 { font-family: var(--display); font-size: 48px; margin: 0 0 10px; }
-.settings { display: grid; grid-template-columns: 160px 1fr; gap: 14px 20px; align-items: center; font-size: 14px; margin: 10px 0 18px; }
-.settings input[type=range] { width: 100%; accent-color: var(--amber); }
-.settings select { background: #1a120c; color: var(--ink); border: 1px solid var(--line); padding: 6px 8px; font-family: var(--font); }
+.settings { display: grid; grid-template-columns: 160px minmax(0, 1fr); gap: 14px 20px; align-items: center; font-size: 14px; margin: 10px 0 18px; }
+.settings input[type=range] { width: 100%; min-width: 0; margin: 0; box-sizing: border-box; accent-color: var(--amber); }
+.settings select { width: 100%; min-width: 0; box-sizing: border-box; text-overflow: ellipsis; background: #1a120c; color: var(--ink); border: 1px solid var(--line); padding: 6px 8px; font-family: var(--font); }
 .controls { display: grid; grid-template-columns: auto 1fr; gap: 9px 16px; font-size: 14px; color: var(--ink-dim); align-items: center; margin-bottom: 14px; }
 
 /* ---------- intel reader ---------- */
@@ -818,7 +819,7 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #000; color:
   .pause .btn { padding: 9px 18px; font-size: 13px; }
   .pause:has(.controls) { width: min(640px, 94vw); }
   .controls { font-size: 12.5px; gap: 6px 14px; margin-bottom: 8px; }
-  .settings { grid-template-columns: 140px 1fr; gap: 8px 16px; font-size: 13px; margin: 4px 0 10px; }
+  .settings { grid-template-columns: 140px minmax(0, 1fr); gap: 8px 16px; font-size: 13px; margin: 4px 0 10px; }
   .intel-reader { padding: 18px 22px; max-height: 94vh; max-height: 94dvh; overflow-y: auto; touch-action: pan-y; }
   .intel-reader h3 { font-size: 20px; margin: 8px 0; }
   .intel-reader p { font-size: 12.5px; line-height: 1.55; }

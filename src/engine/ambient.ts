@@ -107,79 +107,56 @@ function burst(env: VoiceEnv, dest: AudioNode, t: number, type: BiquadFilterType
 /** Next event time after a hitch: never schedule a pile of events in the past. */
 const resync = (next: number, now: number, gap: number) => (next < now - 0.25 ? now + gap : next);
 
-// ------------------------------------------------------------------ babble (radio, crowd)
-// [F1, F2] for a handful of vowels (adult male); a speaker scales them.
-const VOWELS: readonly [number, number][] = [[730, 1090], [530, 1840], [270, 2290], [570, 840], [300, 870], [500, 1500], [660, 1700], [440, 1020]];
+// ------------------------------------------------------------------ people without voices
+// Synthesised speech always read as uncanny (owner, v0.5.2), so people are heard through what they
+// handle: a tin cup, a creaking seat, a log shifting, a boot scuffing dirt.
 
-/**
- * A sawtooth "glottis" through two formant band-passes and a syllable envelope. Unintelligible by
- * design: random vowels, a falling pitch over each phrase, consonants as short gaps.
- */
-class Babbler {
-  readonly src: OscillatorNode;
-  private f1: BiquadFilterNode;
-  private f2: BiquadFilterNode;
-  readonly env: GainNode;
-  /** Audio time when this voice is free again. */
-  free = 0;
-
-  constructor(ctx: BaseAudioContext, dest: AudioNode, S: Sources, breath?: AudioNode) {
-    this.src = S.add(osc(ctx, 'sawtooth', 110));
-    const tilt = filt(ctx, 'lowpass', 1400, 0.5); // glottal spectral tilt
-    this.f1 = filt(ctx, 'bandpass', 600, 5);
-    this.f2 = filt(ctx, 'bandpass', 1400, 7);
-    const f2g = gain(ctx, 0.55);
-    this.env = gain(ctx, 0);
-    this.src.connect(tilt);
-    tilt.connect(this.f1).connect(this.env);
-    tilt.connect(this.f2).connect(f2g).connect(this.env);
-    if (breath) { breath.connect(this.f1); breath.connect(this.f2); }
-    this.env.connect(dest);
+/** A struck tin cup / bottle: two inharmonic partials over a click. */
+function clink(env: VoiceEnv, dest: AudioNode, t: number, f: number, level: number) {
+  const ctx = env.ctx;
+  for (const [m, k, d] of [[1, 1, 0.35], [2.76, 0.5, 0.18], [5.4, 0.22, 0.08]] as const) {
+    const o = osc(ctx, 'sine', f * m * rand(0.99, 1.01));
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(level * k, t + 0.003);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + d);
+    o.connect(g).connect(dest);
+    o.start(t);
+    o.stop(t + d + 0.05);
   }
+  burst(env, dest, t, 'highpass', 3500, 0.7, level * 0.5, 0.002, 0.02);
+}
 
-  start(t: number) {
-    this.src.start(t);
-  }
+/** Wood under weight: a resonant band of noise sliding in pitch. */
+function creak(env: VoiceEnv, dest: AudioNode, t: number, level: number) {
+  const ctx = env.ctx;
+  const dur = rand(0.25, 0.6);
+  const s = noiseSrc(env, false);
+  const b = filt(ctx, 'bandpass', rand(500, 800), 14);
+  b.frequency.setValueAtTime(b.frequency.value, t);
+  b.frequency.linearRampToValueAtTime(b.frequency.value * rand(0.7, 1.35), t + dur);
+  const g = ctx.createGain();
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(level, t + 0.06);
+  g.gain.setValueAtTime(level, t + dur * 0.7);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  s.connect(b).connect(g).connect(dest);
+  s.start(t, Math.random() * 3.5, dur + 0.05);
+}
 
-  /** One phrase of `n` syllables from `t`. Returns when it ends. */
-  phrase(t: number, base: number, fs: number, n: number, level: number) {
-    const { src, f1, f2, env } = this;
-    let tt = t;
-    for (let i = 0; i < n; i++) {
-      const dur = rand(0.09, 0.24) * (i === n - 1 ? 1.6 : 1); // the last syllable drags
-      const [a, b] = pick(VOWELS);
-      const p = base * (1.06 - 0.2 * (i / n)) * rand(0.93, 1.07);
-      src.frequency.setTargetAtTime(p, tt, 0.03);
-      f1.frequency.setTargetAtTime(a * fs, tt, 0.025);
-      f2.frequency.setTargetAtTime(b * fs, tt, 0.03);
-      env.gain.setTargetAtTime(level * rand(0.5, 1), tt, 0.018);
-      env.gain.setTargetAtTime(0, tt + dur * 0.78, 0.022);
-      tt += dur + (Math.random() < 0.22 ? rand(0.06, 0.16) : rand(0.015, 0.04));
-    }
-    this.free = tt + 0.05;
-    return tt;
-  }
-
-  /** "ha-ha-ha": open vowel, pitch jumps up then falls away. */
-  laugh(t: number, base: number, fs: number, n: number, level: number, breath?: GainNode) {
-    const { src, f1, f2, env } = this;
-    let tt = t;
-    f1.frequency.setTargetAtTime(760 * fs, tt, 0.02);
-    f2.frequency.setTargetAtTime(1250 * fs, tt, 0.02);
-    for (let i = 0; i < n; i++) {
-      const dur = rand(0.08, 0.12);
-      src.frequency.setTargetAtTime(base * (1.55 - 0.45 * (i / n)) * rand(0.95, 1.05), tt, 0.015);
-      env.gain.setTargetAtTime(level * (1 - 0.4 * (i / n)), tt, 0.012);
-      env.gain.setTargetAtTime(0, tt + dur * 0.6, 0.02);
-      if (breath) {
-        breath.gain.setTargetAtTime(0.5, tt, 0.01);
-        breath.gain.setTargetAtTime(0.12, tt + dur * 0.5, 0.03);
-      }
-      tt += dur + rand(0.05, 0.09);
-    }
-    this.free = tt + 0.1;
-    return tt;
-  }
+/** One plucked note (a cheap Karplus-ish triangle with a fast filter decay). */
+function pluck(ctx: BaseAudioContext, dest: AudioNode, t: number, f: number, level: number, dur = 1.6) {
+  const o = osc(ctx, 'triangle', f);
+  const lp = filt(ctx, 'lowpass', f * 6, 0.8);
+  lp.frequency.setValueAtTime(f * 8, t);
+  lp.frequency.exponentialRampToValueAtTime(f * 1.5, t + dur * 0.6);
+  const g = ctx.createGain();
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(level, t + 0.004);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  o.connect(lp).connect(g).connect(dest);
+  o.start(t);
+  o.stop(t + dur + 0.05);
 }
 
 // ------------------------------------------------------------------ rendered buffers
@@ -504,15 +481,18 @@ export const VOICES: Record<AmbientKind, VoiceSpec> = {
       hp.connect(lpf).connect(drive).connect(shaper).connect(filt(ctx, 'highpass', 300, 0.7)).connect(filt(ctx, 'lowpass', 3000, 0.7)).connect(post).connect(out);
       const voiceG = gain(ctx, 1);
       voiceG.connect(hp);
-      const bab = new Babbler(ctx, voiceG, S);
-      bab.start(t0);
       const st = S.add(noiseSrc(env));
       const stG = gain(ctx, 0.05);
       st.connect(filt(ctx, 'bandpass', 1700, 0.5)).connect(stG).connect(hp);
       st.start(t0, rand(0, 3));
-      let station = { base: rand(100, 135), fs: rand(0.95, 1.1) };
+      // what the dial lands on: a Morse beacon or a scratchy song, never a voice
+      let station: 'cw' | 'song' = Math.random() < 0.5 ? 'cw' : 'song';
+      let free = t0 + rand(0.3, 1.5);
       let fadeT = t0, sweepT = t0 + rand(18, 40);
-      bab.free = t0 + rand(0.3, 1.5);
+      const cwF = rand(620, 760);
+      const SONG = [[0, 3, 7, 10], [5, 8, 12, 15], [-2, 2, 5, 9], [3, 7, 10, 14]]; // i-iv-VII-III, minor
+      let bar = 0;
+      const root = rand(196, 233);
       const sweep = (t: number) => {
         const o = osc(ctx, 'sine', 2600);
         o.frequency.setValueAtTime(rand(2200, 3000), t);
@@ -530,8 +510,19 @@ export const VOICES: Record<AmbientKind, VoiceSpec> = {
         stG.gain.setTargetAtTime(0.05, t + 1.3, 0.3);
         voiceG.gain.setTargetAtTime(0, t, 0.05);
         voiceG.gain.setTargetAtTime(1, t + 1.4, 0.2);
-        bab.free = t + 1.8;
-        station = { base: rand(95, 150), fs: rand(0.92, 1.15) };
+        free = t + 1.8;
+        station = station === 'cw' ? 'song' : 'cw';
+      };
+      const beep = (t: number, len: number) => {
+        const o = osc(ctx, 'sine', cwF);
+        const g = ctx.createGain();
+        g.gain.setValueAtTime(0, t);
+        g.gain.linearRampToValueAtTime(0.5, t + 0.006);
+        g.gain.setValueAtTime(0.5, t + len);
+        g.gain.linearRampToValueAtTime(0, t + len + 0.006);
+        o.connect(g).connect(voiceG);
+        o.start(t);
+        o.stop(t + len + 0.02);
       };
       return {
         tick(now, until) {
@@ -543,10 +534,31 @@ export const VOICES: Record<AmbientKind, VoiceSpec> = {
             voiceG.gain.setTargetAtTime(k, now, 1.2);
             stG.gain.setTargetAtTime(0.03 + (1 - k) * 0.06, now, 1.2);
           }
-          if (bab.free < until) {
-            const start = Math.max(bab.free, now);
-            if (Math.random() < 0.25) bab.free = start + rand(0.8, 3); // a pause
-            else bab.phrase(start, station.base, station.fs, Math.floor(rand(4, 13)), 0.9);
+          if (free >= until) return;
+          let t = Math.max(free, now);
+          if (station === 'cw') {
+            // one five-letter group at ~14 wpm, then a word gap
+            const dot = 0.085;
+            for (let l = 0; l < 5; l++) {
+              const n = 1 + Math.floor(rand(0, 4));
+              for (let i = 0; i < n; i++) {
+                const len = Math.random() < 0.45 ? dot * 3 : dot;
+                beep(t, len);
+                t += len + dot;
+              }
+              t += dot * 2;
+            }
+            free = t + dot * 4 + (Math.random() < 0.2 ? rand(1, 3) : 0);
+          } else {
+            // one bar of a slow fingerpicked song, 8 eighth notes
+            const chord = SONG[bar++ % SONG.length];
+            const e = 0.36;
+            for (let i = 0; i < 8; i++) {
+              const step = [0, 2, 1, 3, 2, 1, 3, 2][i];
+              pluck(ctx, voiceG, t + i * e, root * 2 ** (chord[step] / 12), i === 0 ? 0.32 : 0.22, 1.4);
+            }
+            pluck(ctx, voiceG, t, root / 2 * 2 ** (chord[0] / 12), 0.3, 2.6);
+            free = t + 8 * e;
           }
         },
         stop: (w) => S.stop(w),
@@ -587,52 +599,42 @@ export const VOICES: Record<AmbientKind, VoiceSpec> = {
   // people round a fire: two voice chains taking turns (three speakers between them), sparse,
   // muffled to murmur, and every so often someone laughs and another joins in
   crowd: {
-    range: 34, ref: 4, rolloff: 1.2, hrtf: false, gain: 0.5,
+    range: 26, ref: 3, rolloff: 1.3, hrtf: true, gain: 0.55,
     build(env, out) {
       const { ctx } = env;
       const S = new Sources();
       const t0 = ctx.currentTime;
-      const lp = filt(ctx, 'lowpass', 1700, 0.6);
-      lp.connect(out);
-      const air = S.add(noiseSrc(env));
-      const breaths = [gain(ctx, 0.12), gain(ctx, 0.12)];
-      for (const b of breaths) air.connect(b);
-      air.start(t0, rand(0, 3));
-      const chains = breaths.map((b) => new Babbler(ctx, lp, S, b));
-      for (const c of chains) { c.start(t0); c.free = t0 + rand(0.5, 3); }
-      const people = [
-        { base: rand(92, 105), fs: 0.95 },
-        { base: rand(112, 128), fs: 1.0 },
-        { base: rand(185, 210), fs: 1.17 },
-      ];
-      const talking: (typeof people[number] | null)[] = [null, null];
-      let laughT = t0 + rand(12, 35);
+      const bus = filt(ctx, 'lowpass', 6000, 0.6);
+      bus.connect(out);
+      const cups = [rand(1900, 2300), rand(2500, 2900), rand(1500, 1700)];
+      let next = t0 + rand(1, 4);
       return {
         tick(now, until) {
-          for (let i = 0; i < 2; i++) {
-            const c = chains[i];
-            if (c.free > until) continue;
-            talking[i] = null;
-            const start = Math.max(c.free, now);
-            if (now > laughT && i === 0) {
-              laughT = now + rand(30, 80);
-              const who = pick(people);
-              talking[0] = who;
-              c.laugh(start, who.base, who.fs, Math.floor(rand(4, 8)), 0.55, breaths[0]);
-              // someone else catches it
-              if (Math.random() < 0.6 && chains[1].free < start + 2) {
-                const other = pick(people.filter((p) => p !== who));
-                talking[1] = other;
-                chains[1].laugh(start + rand(0.15, 0.45), other.base, other.fs, Math.floor(rand(3, 6)), 0.4, breaths[1]);
-              }
-              continue;
+          next = resync(next, now, rand(1, 3));
+          while (next < until) {
+            const t = next;
+            const r = Math.random();
+            if (r < 0.3) {
+              // a cup set down on a drum lid, sometimes a second touch
+              const f = pick(cups);
+              clink(env, bus, t, f, rand(0.05, 0.11));
+              if (Math.random() < 0.4) clink(env, bus, t + rand(0.08, 0.2), f, rand(0.02, 0.05));
+            } else if (r < 0.55) {
+              creak(env, bus, t, rand(0.18, 0.35)); // someone shifts on a crate
+            } else if (r < 0.75) {
+              // a log nudged into the fire: a dull knock and a rush of crackle
+              burst(env, bus, t, 'lowpass', 260, 1.2, 0.5, 0.004, 0.12);
+              burst(env, bus, t + 0.05, 'bandpass', 2400, 0.8, 0.12, 0.02, 0.5);
+            } else if (r < 0.9) {
+              // boots scuffing dirt
+              const n = 1 + Math.floor(rand(0, 3));
+              for (let i = 0; i < n; i++) burst(env, bus, t + i * rand(0.35, 0.55), 'bandpass', rand(900, 1400), 0.9, rand(0.08, 0.14), 0.02, 0.16);
+            } else {
+              // a bottle: the glass knock, then a slosh
+              clink(env, bus, t, rand(900, 1100), 0.05);
+              burst(env, bus, t + 0.12, 'bandpass', 700, 2, 0.05, 0.08, 0.3);
             }
-            // sparse: a lot of the time nobody on this chain is talking
-            if (Math.random() < 0.6) { c.free = start + rand(1, 5); continue; }
-            const other = talking[1 - i];
-            const who = pick(people.filter((p) => p !== other));
-            talking[i] = who;
-            c.phrase(start, who.base, who.fs, Math.floor(rand(3, 11)), 0.45);
+            next = t + rand(1.5, 6);
           }
         },
         stop: (w) => S.stop(w),
