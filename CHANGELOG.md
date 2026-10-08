@@ -3,6 +3,9 @@
 Each `## vX.Y.Z` section becomes the GitHub release notes and the "what's new" list in the in-app
 update notice (the first few bullets). `scripts/release.sh` refuses to release a version without one.
 
+## v0.5.4
+- **Real wolves.** The packs are now proper animals: a lean, scarred desert wolf with a real coat and a natural walk, in place of the old blocky one. They still stalk low, track you with their heads, snap when they bite, howl at night and fall onto their side when they die
+
 ## v0.5.3
 - **Scavenging.** Survivors mark their stashes with a red rag on a stick: 18 of them are hidden around the map (ammo cans, footlockers, travellers' packs, Kade crates, roadside coolers), and they get topped up again after a while. Every wreck on the highway can be searched too. Ammo you find favours the guns you carry
 - **Wolves respect walls.** Packs no longer walk through buildings in town, and Kade's contractors don't either
