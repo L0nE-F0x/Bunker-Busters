@@ -537,10 +537,18 @@ const num = (v: unknown, lo: number, hi: number, dflt: number) => (typeof v === 
 export function loadSettings(): Settings {
   try {
     const raw = localStorage.getItem(SETTINGS_KEY);
-    const s: Settings = raw ? { ...DEFAULT_SETTINGS, ...JSON.parse(raw) } : { ...DEFAULT_SETTINGS };
+    const parsed: unknown = raw ? JSON.parse(raw) : null;
+    const s: Settings = parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? { ...DEFAULT_SETTINGS, ...parsed } : { ...DEFAULT_SETTINGS };
     // once: the setting used to switch robot speech; now it switches the new voices, which start on
     if (!s.voiceOn052) { s.voice = true; s.voiceOff051 = true; s.voiceOn052 = true; }
     // older saves lack the v0.5.6 fields (the defaults fill them); a hand-edited or corrupt value is clamped
+    // an unknown quality or difficulty would stop the game from booting at all (makeQuality, DIFFICULTY)
+    if (!['low', 'medium', 'high', 'ultra'].includes(s.quality)) s.quality = DEFAULT_SETTINGS.quality;
+    if (!['story', 'normal', 'hard'].includes(s.difficulty)) s.difficulty = DEFAULT_SETTINGS.difficulty;
+    s.master = num(s.master, 0, 1, DEFAULT_SETTINGS.master);
+    s.music = num(s.music, 0, 1, DEFAULT_SETTINGS.music);
+    s.sfx = num(s.sfx, 0, 1, DEFAULT_SETTINGS.sfx);
+    s.voice = s.voice !== false;
     s.fov = num(s.fov, 50, 90, DEFAULT_SETTINGS.fov);
     s.bob = num(s.bob, 0, 1, DEFAULT_SETTINGS.bob);
     s.sensitivity = num(s.sensitivity, 0.1, 5, DEFAULT_SETTINGS.sensitivity);
