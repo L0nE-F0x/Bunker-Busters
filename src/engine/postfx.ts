@@ -49,6 +49,7 @@ export class PostFX {
   readonly damage = uniform(0); // 0..1 red flash
   readonly alert = uniform(0); // 0..1 detection pulse
   readonly emp = uniform(0); // 0..1 EMP static
+  readonly lowHp = uniform(0); // 0..1 near death: colour drains, the edges close in and throb
   readonly fade = uniform(0); // 0..1 fade to black
   readonly menuShade = uniform(0); // 0..1 left-side darkening behind menus
   readonly saturation = uniform(1.0);
@@ -168,7 +169,7 @@ export class PostFX {
 
   /** Lens + gameplay overlays in display space (plus the heat shimmer, folded into the CA taps). */
   private finish(ldr: N, depth: N, camW: N, projInv: N): N {
-    const { vignette, grain, aberration, damage, alert, emp, fade, menuShade } = this;
+    const { vignette, grain, aberration, damage, alert, emp, fade, menuShade, lowHp } = this;
     const heat = gradeU.heat as N;
     return Fn(() => {
       // heat shimmer: distant ground (and the horizon line) wobbles over hot sand. Distance and ray
@@ -208,6 +209,9 @@ export class PostFX {
       const pulse = float(0.6).add(time.mul(9).sin().mul(0.4));
       col.assign(mix(col, vec3(1.0, 0.45, 0.08), edge.mul(alert).mul(pulse).mul(0.55)));
       col.assign(mix(col, vec3(0.75, 0.02, 0.02), edge.mul(damage).mul(0.8)));
+      // near death: the colour drains out and the edges darken and throb with the pulse
+      col.assign(mix(col, vec3(dot(col, vec3(0.3, 0.59, 0.11))), lowHp.mul(0.6)));
+      col.assign(mix(col, vec3(0.32, 0.0, 0.0), smoothstep(0.3, 0.85, r).mul(lowHp).mul(0.6)));
 
       // film grain (luma-weighted so blacks stay clean-ish)
       const g = hash2(uv.mul(vec2(1280.0, 720.0)).floor().mul(0.731).add(time.fract().mul(431.0))).sub(0.5);

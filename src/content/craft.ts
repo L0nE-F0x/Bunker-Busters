@@ -35,6 +35,14 @@ export const RECIPES: Recipe[] = [
     skill: { id: 'electronics', level: 1 },
   },
   {
+    id: 'spike',
+    name: 'Wind trace spikes',
+    detail: '1 cell + 2 scrap → 2 trace spikes · Electronics 1',
+    out: { id: 'spike', qty: 2 },
+    need: [{ id: 'battery', qty: 1 }, { id: 'scrap', qty: 2 }],
+    skill: { id: 'electronics', level: 1 },
+  },
+  {
     id: 'charge',
     name: 'Pack a charge',
     detail: '1 cell + 3 scrap → 1 breach charge · Demolition 1',

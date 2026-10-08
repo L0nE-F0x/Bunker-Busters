@@ -115,10 +115,16 @@ export function campRadio(v: StoryView): { pages: StoryPage[]; flags: string[] }
         speaker: 'Mara Voss',
         text: 'You\'ve seen the place. Fence, drone, megaphone. SeedBot\'s battery is a joke and he knows it. If a door won\'t open, there\'s always a second way: the intercom, the fence, the fuse box. Don\'t die on a door this small.',
       });
-    } else {
+    } else if (v.has('intel:intel.spire.blueprint')) {
       pages.push({
         speaker: 'Mara Voss',
         text: 'The Garage is northeast, up the dirt spur off the highway. The Spire blueprint says he never paid for the north-east fence. Raccoons were "not a threat vector". Be a raccoon.',
+      });
+    } else {
+      // before you've found the blueprint: point at it, don't quote it
+      pages.push({
+        speaker: 'Mara Voss',
+        text: 'The Garage is northeast, up the dirt spur off the highway. Whoever built it for him drew it up at the Spire. If there\'s a weak spot in that fence, it\'s on their paper. Read it before you climb anything.',
       });
     }
   }

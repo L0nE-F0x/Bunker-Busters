@@ -27,6 +27,12 @@ export interface HandLook {
 export const HAND_LOOKS: Record<string, HandLook> = {
   infiltrator: { glove: '#1d1f21', gloveWear: '#45484b', pad: '#2a2e32', sleeve: '#2b3a3c', cuff: '#1b2324', accent: '#3ff2e0', heavy: false },
   engineer: { glove: '#6e5236', gloveWear: '#a88760', pad: '#3a3532', sleeve: '#6a4a2c', cuff: '#d9792a', accent: '#ff9d2e', heavy: true },
+  // the other four: their own gloves and sleeves (colours ride in the merged meshes' attributes, so
+  // a look never adds a shader)
+  brute: { glove: '#3b3734', gloveWear: '#716a61', pad: '#232120', sleeve: '#2c3746', cuff: '#d9bf34', accent: '#ff5a3c', heavy: true }, // warehouse grip gloves, hi-vis cuff
+  fixer: { glove: '#7e5f42', gloveWear: '#b08e68', pad: '#4e3a28', sleeve: '#2b2830', cuff: '#e4ded2', accent: '#c896ff', heavy: false }, // driving gloves, suit sleeve, shirt cuff
+  scout: { glove: '#6a5a3f', gloveWear: '#9c8962', pad: '#463d2e', sleeve: '#5a5d3c', cuff: '#3b3e27', accent: '#9ad86a', heavy: false }, // roughout suede, ranger olive
+  defector: { glove: '#2b3036', gloveWear: '#59616b', pad: '#3d4855', sleeve: '#a7a397', cuff: '#1d2024', accent: '#e8c95a', heavy: false }, // tech gloves, prepper-catalogue fleece
 };
 
 // ------------------------------------------------------------------ materials

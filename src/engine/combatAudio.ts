@@ -16,6 +16,10 @@ export interface CombatBus {
   reverb: AudioNode;
   room: AudioNode;
   listener: () => THREE.Vector3;
+  /** 0..1 how closed-in the listener is (a room, the cave): shots ring in the room instead of the desert. */
+  enclosed?: () => number;
+  /** Ears ringing after something too loud and too close (0..1). */
+  deafen?: (k: number) => void;
 }
 
 export type GunKind = 'revolver' | 'shotgun' | 'rifle' | 'carbine' | 'turret';
@@ -127,41 +131,68 @@ export class CombatAudio {
   /**
    * A gunshot. `pos` absent = the player's own (dry, close, in the head). With `pos`, the sound
    * arrives after its travel time and loses its top end with distance.
+   *
+   * Where you are decides the tail: out in the open the report rolls off across the flats and the
+   * ridges slap it back; in a room (or the cave) the desert goes away and the room booms and rings.
    */
   gunshot(kind: GunKind, pos?: THREE.Vector3, opts: { suppressed?: boolean } = {}) {
     const ctx = this.b.ctx;
     const dist = pos ? pos.distanceTo(this.b.listener()) : 0;
     const t = ctx.currentTime + 0.005 + dist / SPEED_OF_SOUND;
     const far = Math.min(1, dist / 260);
+    const enc = Math.min(1, Math.max(0, ((this.b.enclosed?.() ?? 0) - 0.2) / 0.6));
+    const open = 1 - enc;
     // close: a stereo-wide dry hit straight to the bus; far: positional, darker, quieter
     const out = pos ? this.panner(pos, 6, 0.9) : this.b.sfx;
     const lp = ctx.createBiquadFilter();
     lp.type = 'lowpass';
     lp.frequency.value = 16000 * Math.pow(1 - far * 0.92, 2) + 500;
     lp.connect(out);
+    // the player's own shot rings in the room too (positional ones already do, via their panner)
+    if (!pos) lp.connect(this.b.room);
     const k = { revolver: 1, shotgun: 1.25, rifle: 1.15, carbine: 0.85, turret: 0.6 }[kind];
     const low = { revolver: 140, shotgun: 105, rifle: 125, carbine: 150, turret: 190 }[kind];
     const lvl = (pos ? 1.0 : 0.6) * (opts.suppressed ? 0.4 : 1);
-    // 1) the crack: a very short, bright noise spike
+    // 1) the crack: a very short, bright noise spike (a rifle's is the supersonic snap: harder, longer)
     this.burst(lp, t, 'highpass', 2600, 0.7, 1.6 * k * lvl * (1 - far * 0.6), 0.0015, 0.045 + (kind === 'rifle' ? 0.02 : 0));
+    if (kind === 'rifle') this.burst(lp, t, 'bandpass', 5200, 1.4, 0.7 * lvl * (1 - far * 0.8), 0.0008, 0.012);
     // 2) the body: a thump that drops in pitch (the chest-punch)
     this.tone(lp, t, 'sine', low * 1.6, 1.1 * k * lvl, 0.002, kind === 'shotgun' ? 0.24 : 0.16, low * 0.38);
     this.tone(lp, t, 'triangle', low * 3, 0.35 * k * lvl, 0.002, 0.07, low);
+    // a twelve-gauge moves air you feel: a sub whump under it
+    if (kind === 'shotgun') this.tone(lp, t, 'sine', 62, 0.8 * lvl * (1 - far * 0.5), 0.004, 0.3, 34);
     // 3) the bark: midrange blast of expanding gas
     this.burst(lp, t, 'bandpass', kind === 'shotgun' ? 700 : 1000, 0.8, 1.1 * k * lvl, 0.003, kind === 'shotgun' ? 0.2 : 0.13, 380);
     this.burst(lp, t + 0.004, 'lowpass', 600, 0.6, 0.9 * k * lvl, 0.004, kind === 'shotgun' ? 0.38 : 0.26, 160);
-    // 4) the action (close only): hammer fall / bolt
+    // 4) the action (close only): hammer fall and cylinder-gap spit, or the rifle's barrel ringing
     if (!pos) {
-      if (kind === 'revolver') this.ping(this.b.sfx, t - 0.004, 2400, 0.03, 0.06);
+      if (kind === 'revolver') {
+        this.ping(this.b.sfx, t - 0.004, 2400, 0.03, 0.06);
+        this.burst(this.b.sfx, t + 0.001, 'bandpass', 4600, 2.2, 0.18, 0.001, 0.02);
+      } else if (kind === 'rifle') this.ping(this.b.sfx, t + 0.01, 1650, 0.012, 0.35);
     }
-    // 5) the tail: desert slapback + reverb, longer and louder in proportion far away
+    // 5) the tail, by place. Open ground: desert slapback + the air's reverb, longer and louder in
+    // proportion far away, and a report that rolls off across the flats.
     const send = ctx.createGain();
-    send.gain.value = (0.55 + far * 0.6) * k * lvl;
+    send.gain.value = (0.55 + far * 0.6) * k * lvl * (0.15 + 0.85 * open);
     lp.connect(send);
     if (this.echo) send.connect(this.echo.in);
     send.connect(this.b.reverb);
-    // a far shot rolls: a low rumble after the report
     if (dist > 60) this.burst(out, t + 0.03, 'lowpass', 220, 0.5, 0.5 * k * lvl, 0.05, 0.9 + far, 90);
+    else if (!pos && open > 0.05) {
+      // your own shot outdoors: the roll, wide and slow, with a second swell off the far ground
+      this.burst(this.b.sfx, t + 0.05, 'lowpass', 420, 0.6, 0.2 * k * open, 0.07, 1.5, 110);
+      this.burst(this.b.reverb, t + 0.32, 'lowpass', 300, 0.6, 0.16 * k * open, 0.2, 1.7, 90);
+    }
+    // a room: the boom of air with nowhere to go (low-mid resonance), and the walls' slap
+    if (enc > 0.05 && dist < 40) {
+      const near = pos ? Math.max(0, 1 - dist / 40) : 1;
+      this.burst(out, t + 0.006, 'lowpass', 300, 1.6, 0.6 * k * lvl * enc * near, 0.01, 0.42, 140);
+      this.burst(this.b.room, t + 0.012, 'bandpass', 1300, 0.7, 0.5 * k * lvl * enc * near, 0.002, 0.16);
+      // your ears in a small room with a twelve-gauge
+      if (!pos && kind === 'shotgun') this.b.deafen?.(0.3 * enc);
+      else if (!pos && kind === 'rifle') this.b.deafen?.(0.18 * enc);
+    }
   }
 
   /** A bullet passing close by (`miss` = how close in metres): a snap and a tearing hiss. */
@@ -471,6 +502,8 @@ export class CombatAudio {
     lp.connect(send);
     if (this.echo) send.connect(this.echo.in);
     send.connect(this.b.reverb);
+    // too close: the world goes dull and your ears ring
+    if (dist < 16) this.b.deafen?.(Math.min(1, (1 - dist / 16) * 1.3) * k);
   }
 
   /** Small machine sounds at `pos`: a mine's arming beep, a turret's chime and servo, a drone's warble. */
@@ -535,14 +568,15 @@ export class CombatAudio {
   }
 
   /** Low-health heartbeat: call every frame with 0..1 how close to death. */
-  heartbeat(dt: number, k: number) {
+  heartbeat(dt: number, k: number): boolean {
     this.hbT -= dt;
-    if (k < 0.05 || this.hbT > 0) return;
+    if (k < 0.05 || this.hbT > 0) return false;
     const period = 1.05 - k * 0.45;
     this.hbT = period;
     const t = this.b.ctx.currentTime + 0.01;
     const o = this.b.sfx;
     this.tone(o, t, 'sine', 62, 0.42 * k, 0.012, 0.13, 40);
     this.tone(o, t + 0.2, 'sine', 55, 0.3 * k, 0.012, 0.16, 38);
+    return true;
   }
 }

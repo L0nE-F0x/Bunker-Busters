@@ -10,6 +10,7 @@ import { box, cyl, beam, merge, MeshBatch, wire, canvasTexture, grime, norm, pla
 import { rustyMetal, plainStandard, wood, desertRock, floraMaterial } from './materials';
 import { mergeVertices } from 'three/addons/utils/BufferGeometryUtils.js';
 import { buildCar, type CarKind } from './vehicles';
+import { buildRoadside } from './roadside';
 import { deadTree, joshuaTree, Plant } from './flora';
 import { noise, noiseTexture } from '@/engine/noiseTex';
 import type { Atmosphere } from './Atmosphere';
@@ -428,7 +429,9 @@ export class Props {
       prevTops = tops;
       this.physics.addCylinder({ x, y: y + H / 2, z }, H / 2, 0.22);
     }
-    this.group.add(b.build('poles'));
+    // the road's furniture shares the poles' batch (its posts merge with theirs); skids are decals
+    const skids = buildRoadside(this.hf, this.physics, b, this.wreckBoxes);
+    this.group.add(b.build('poles'), skids);
     const w = new THREE.Mesh(merge(wires), wireMat);
     w.castShadow = true;
     this.group.add(w);

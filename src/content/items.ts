@@ -27,6 +27,11 @@ const defs: ItemDef[] = [
     description: 'Fills you up and steadies your hands. A little health, a lot of not-hungry.',
     flavor: '"Best before: civilisation."',
   },
+  {
+    id: 'spike', name: 'Trace Spike', category: 'tool', weight: 0.15, stack: 6, value: 15, icon: 'spike',
+    description: 'A cell, a coil and a lot of tape. Jam it in the port mid-splice (F) and the trace stalls for six seconds. The camp can wind them.',
+    flavor: 'Kade\'s incident reports call this "unscheduled latency".',
+  },
   // --- Arms (v0.5) ---
   {
     id: 'crowbar', name: 'Crowbar', category: 'weapon', weight: 0.8, stack: 1, value: 15, icon: 'crowbar',
@@ -121,6 +126,22 @@ const defs: ItemDef[] = [
     id: 'deed', name: 'Deed to the Till', category: 'intel', weight: 0, stack: 1, value: 0, icon: 'intel',
     description: 'The landlord\'s deed to the Till, signed over to "whoever is still here". Inez wants it. So does the rest of Dry Creek. Give it to one of them.',
     flavor: 'Property law, post-apocalypse edition: a pencil and a guess.',
+  },
+  // --- Road favours: Rider 9, Dez's relay, the survey ---
+  {
+    id: 'igniter', name: 'Order #88-1047', category: 'intel', weight: 0, stack: 1, value: 0, icon: 'crate',
+    description: 'A Dropt parcel, taped twice: 1× stove igniter (universal) for N. Pell, Dry Creek Diner. ETA 10 min. Status: running late. Ordered 1,281 days ago.',
+    flavor: 'Ten minutes or it\'s free.',
+  },
+  {
+    id: 'dez_relay', name: 'Dez\'s Relay', category: 'intel', weight: 0, stack: 1, value: 0, icon: 'emp',
+    description: 'A radio relay in a lunchbox, built from three Kade lanyards and a doorbell. Patch it into the generator under the Spire. Red to red.',
+    flavor: 'Hand-labelled: "NOT A BOMB (DEZ)".',
+  },
+  {
+    id: 'survey_book', name: 'Kade Field Book', category: 'intel', weight: 0, stack: 1, value: 0, icon: 'intel',
+    description: 'The Survey Camp\'s field book. Ridge seep: 0.4 L/hr, class DATA ASSET. Resident: one, male, loud. Recommended action: relocation package (tote bag).',
+    flavor: 'Every page is initialled V.K. in a different pen.',
   },
   // --- Sites: The Exit Strategy, Starlite Drive-In ---
   {

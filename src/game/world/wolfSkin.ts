@@ -34,6 +34,8 @@ export interface WolfPose {
   /** Seconds since it died (−1 alive), and which side it falls to (±1). */
   deadT: number;
   side: number;
+  /** A leap in progress: 0..1 through it (0: on the ground). */
+  leap?: number;
 }
 
 const URL = `${import.meta.env.BASE_URL}models/wolf.glb`;
@@ -165,12 +167,17 @@ export class WolfSkins {
       s.tilt.rotation.set(0.22 * (D.buckle - D.hind * 0.7) * (1 - D.topple), 0, p.side * (1.47 * D.topple + 0.07 * D.bounce), 'YXZ');
       s.tilt.position.y = THREE.MathUtils.lerp(this.centre * (1 - 0.3 * D.buckle), this.centre * 0.36, D.topple);
     } else {
-      s.tilt.rotation.set(p.pitch, 0, p.roll, 'YXZ');
+      // a leap: up and over in an arc, nose up off the ground, nose down into the bite
+      const u = p.leap ?? 0;
+      const air = u > 0 ? Math.sin(u * Math.PI) : 0;
+      s.tilt.rotation.set(p.pitch - (u > 0 ? Math.sin(u * Math.PI * 2) * 0.38 : 0), 0, p.roll, 'YXZ');
       s.tilt.position.y = this.centre;
+      s.root.position.y += air * 0.42;
     }
+    const air = !D && p.leap ? Math.sin(p.leap * Math.PI) : 0;
 
     // the stride, in step with the wolf's own phase (frozen where it fell); standing is the bind pose
-    const w = Math.min(1, p.amp / 0.45) * (D ? 1 - D.release : 1);
+    const w = Math.min(1, p.amp / 0.45) * (D ? 1 - D.release : 1) * (1 - air * 0.85);
     const time = ((((p.phase / (Math.PI * 2)) % 1) + 1) % 1) * this.clipLen;
     for (const r of s.rig) {
       r.bone.quaternion.copy(r.q0);
@@ -192,6 +199,24 @@ export class WolfSkins {
     const fwd = _fwd.set(0, 0, 1).applyQuaternion(_bq); // + about this swings a paw toward the body's left
     const B = s.bones;
     if (!D) {
+      if (air > 0) {
+        // stretched out in the air: forelegs reaching, hind legs driving back, jaws first
+        for (const [n, k] of [['frontleg', 1], ['R_frontleg', 0.9]] as const) {
+          this.turn(B[n + '0'], lat, 1.0 * air * k);
+          this.turn(B[n + '1'], lat, -0.35 * air);
+        }
+        for (const [n, k] of [['backleg', 1], ['R_backleg', 0.9]] as const) {
+          this.turn(B[n + '0'], lat, -0.9 * air * k);
+          this.turn(B[n + '1'], lat, 0.3 * air);
+        }
+        if (B.tailstart) this.turn(B.tailstart, lat, -0.3 * air);
+      }
+      if (p.low > 0.01) {
+        // crouched (stalking, coiled for a lunge, sagging from a hit): the legs fold a little under it
+        const k = Math.min(1.8, p.low) * 0.3;
+        for (const n of ['frontleg', 'R_frontleg']) { this.turn(B[n + '0'], lat, 0.3 * k); this.turn(B[n + '1'], lat, -1.1 * k); this.turn(B[n + '2'], lat, -0.45 * k); }
+        for (const n of ['backleg', 'R_backleg']) { this.turn(B[n + '0'], lat, 0.4 * k); this.turn(B[n + '1'], lat, -0.9 * k); this.turn(B[n + '2'], lat, 0.6 * k); }
+      }
       if (B.chest) this.turn(B.chest, up, p.look * 0.3);
       if (B.head) {
         this.turn(B.head, up, p.look * 0.6);

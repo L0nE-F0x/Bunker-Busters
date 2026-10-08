@@ -56,7 +56,12 @@ export interface SaveData {
   pack?: DroppedPack | null;
   /** v0.5: venom in the blood (seconds of poison left). */
   poison?: number;
+  /** v0.5.6: midnights passed since the run began (the calendar starts at Day 1,284). */
+  days?: number;
 }
+
+/** The day Mara hands over the radio. */
+export const START_DAY = 1284;
 
 export type GameEvents = {
   toast: { text: string; kind?: 'info' | 'good' | 'bad' | 'xp' };
@@ -112,6 +117,7 @@ export class GameState {
       arms: { equipped: null, mags: {} },
       pack: null,
       poison: 0,
+      days: 0,
     });
   }
 
@@ -130,6 +136,11 @@ export class GameState {
       this.archCache = { key, def };
     }
     return this.archCache.def;
+  }
+
+  /** "Day 1,285": the calendar, from the morning of the briefing. */
+  get dayLabel() {
+    return `Day ${(START_DAY + (this.data.days ?? 0)).toLocaleString('en-US')}`;
   }
 
   // ---------- flags ----------
@@ -483,6 +494,7 @@ function migrateSave(raw: unknown): SaveData | null {
     arms: d.arms ?? { equipped: null, mags: {} },
     pack: d.pack ?? null,
     poison: d.poison ?? 0,
+    days: typeof d.days === 'number' && d.days >= 0 ? Math.floor(d.days) : 0,
   };
 }
 
@@ -507,17 +519,41 @@ export interface Settings {
   voiceOff051?: boolean;
   /** v0.5.2: `voice` now means real recorded-style voices, on for everyone once. */
   voiceOn052?: boolean;
+  /** v0.5.6: vertical field of view in degrees, as three.js counts it (the menu shows the horizontal). */
+  fov: number;
+  /** v0.5.6: pull the mouse back to look up. */
+  invertY: boolean;
+  /** v0.5.6: walking head bob and strafe roll, 0..1 (motion comfort). */
+  bob: number;
+  /** v0.5.6: a small frames-per-second readout in the corner. */
+  showFps: boolean;
 }
 
 // phones start on Low: a phone GPU at native resolution under the full post stack crawls
-export const DEFAULT_SETTINGS: Settings = { quality: isMobile ? 'low' : 'high', difficulty: 'normal', master: 0.8, music: 0.5, sfx: 0.9, sensitivity: 1, voice: true, voiceOff051: true, voiceOn052: true };
+export const DEFAULT_SETTINGS: Settings = { quality: isMobile ? 'low' : 'high', difficulty: 'normal', master: 0.8, music: 0.5, sfx: 0.9, sensitivity: 1, voice: true, voiceOff051: true, voiceOn052: true, fov: 64, invertY: false, bob: 1, showFps: false };
+
+const num = (v: unknown, lo: number, hi: number, dflt: number) => (typeof v === 'number' && Number.isFinite(v) ? Math.min(hi, Math.max(lo, v)) : dflt);
 
 export function loadSettings(): Settings {
   try {
     const raw = localStorage.getItem(SETTINGS_KEY);
-    const s: Settings = raw ? { ...DEFAULT_SETTINGS, ...JSON.parse(raw) } : { ...DEFAULT_SETTINGS };
+    const parsed: unknown = raw ? JSON.parse(raw) : null;
+    const s: Settings = parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? { ...DEFAULT_SETTINGS, ...parsed } : { ...DEFAULT_SETTINGS };
     // once: the setting used to switch robot speech; now it switches the new voices, which start on
     if (!s.voiceOn052) { s.voice = true; s.voiceOff051 = true; s.voiceOn052 = true; }
+    // older saves lack the v0.5.6 fields (the defaults fill them); a hand-edited or corrupt value is clamped
+    // an unknown quality or difficulty would stop the game from booting at all (makeQuality, DIFFICULTY)
+    if (!['low', 'medium', 'high', 'ultra'].includes(s.quality)) s.quality = DEFAULT_SETTINGS.quality;
+    if (!['story', 'normal', 'hard'].includes(s.difficulty)) s.difficulty = DEFAULT_SETTINGS.difficulty;
+    s.master = num(s.master, 0, 1, DEFAULT_SETTINGS.master);
+    s.music = num(s.music, 0, 1, DEFAULT_SETTINGS.music);
+    s.sfx = num(s.sfx, 0, 1, DEFAULT_SETTINGS.sfx);
+    s.voice = s.voice !== false;
+    s.fov = num(s.fov, 50, 90, DEFAULT_SETTINGS.fov);
+    s.bob = num(s.bob, 0, 1, DEFAULT_SETTINGS.bob);
+    s.sensitivity = num(s.sensitivity, 0.1, 5, DEFAULT_SETTINGS.sensitivity);
+    s.invertY = s.invertY === true;
+    s.showFps = s.showFps === true;
     return s;
   } catch {
     return { ...DEFAULT_SETTINGS };

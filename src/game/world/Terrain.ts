@@ -3,7 +3,7 @@ import {
   Fn, vec2, vec3, float, positionWorld, normalWorld, texture, smoothstep, mix, abs, pow, sin,
   uniform, normalView, positionView, faceDirection, step, fwidth, clamp,
 } from 'three/tsl';
-import { noise, fbm2 } from '@/engine/noiseTex';
+import { noise, fbm2, noiseAt } from '@/engine/noiseTex';
 import type { Heightfield } from './Heightfield';
 import type { Atmosphere } from './Atmosphere';
 import type { Physics } from '@/engine/physics';
@@ -24,6 +24,20 @@ export const bumpFromHeight = Fn(([height, strength]: [N, N]) => {
   const grad = det.sign().mul(dHdx.mul(r1).add(dHdy.mul(r2)));
   return det.abs().mul(n).sub(grad).normalize();
 });
+
+/** World metres per repeat of the ground-cover patch field (pavement / silt). */
+const PATCH_SCALE = 260;
+const ss = (a: number, b: number, x: number) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
+
+/**
+ * CPU twin of the terrain's ground-cover field: `pave` 0..1 = desert pavement (packed stones, little
+ * grows), `silt` 0..1 = pale crusted hollow ground. Slope/road/cavity masks are left to the caller.
+ */
+export function groundPatchAt(x: number, z: number) {
+  const u = x / PATCH_SCALE + 0.61, v = z / PATCH_SCALE + 0.17;
+  const n = noiseAt(u, v, 1) + (noiseAt(u, v, 0) - 0.5) * 0.35;
+  return { pave: ss(0.55, 0.63, n), silt: ss(0.32, 0.26, n) };
+}
 
 export class Terrain {
   mesh: THREE.Mesh;
@@ -281,11 +295,32 @@ export class Terrain {
     const pebTap = noise(xz.div(2.8).add(0.13));
     const pebMask = smoothstep(0.62, 0.8, t9.g.add(mid.mul(0.6)));
     const pebNear = smoothstep(0.5, 0.15, fwidth(xz.x.div(2.8)).mul(12));
-    const pebble = smoothstep(0.5, 0.8, pebTap.b).mul(step(0.72, pebTap.a)).mul(pebMask).mul(pebNear)
+    // (grit in irregular drifts: the old cell-shaped blobs of dots read as animal tracks)
+    const pebble = smoothstep(0.5, 0.75, pebTap.r).mul(step(0.86, pebTap.a)).mul(pebMask).mul(pebNear)
       .mul(float(1).sub(rockMask)).mul(float(1).sub(roadFinal)).mul(float(1).sub(lowMask));
     const pebCol = mix(vec3(0.34, 0.24, 0.17), vec3(0.62, 0.52, 0.42), pebTap.r);
 
-    let col: N = mix(sand, vec3(0.42, 0.34, 0.22), scrubMask);
+    // ground cover patches (same field as `groundPatchAt`, so scatter agrees): wind-stripped desert
+    // pavement on the flats (a packed mosaic of dark varnished stones, sand only in the gaps) and
+    // pale crusted silt in shallow hollows. Both fade to their average tone before a stone is a pixel.
+    const patchTap = noise(xz.div(PATCH_SCALE).add(vec2(0.61, 0.17)));
+    const patchN = patchTap.g.add(patchTap.r.sub(0.5).mul(0.35)).add(ridge.mul(0.05));
+    const flatK = smoothstep(0.16, 0.07, slope);
+    const offRoad = float(1).sub(roadFinal).mul(float(1).sub(trackMask)).mul(float(1).sub(lowMask)).mul(inside);
+    const pave = smoothstep(0.55, 0.63, patchN.add(edgeNoise.mul(0.012))).mul(flatK).mul(offRoad);
+    const silt = smoothstep(0.32, 0.26, patchN).mul(smoothstep(0.0, -1.4, cav.r)).mul(flatK).mul(offRoad);
+    const gravTap = noise(xz.div(1.6).add(0.41));
+    const gNear = smoothstep(0.42, 0.2, fwidth(xz.x.div(1.6)).mul(12));
+    const stoneIn = smoothstep(0.06, 0.24, gravTap.b);
+    const stoneCol = mix(vec3(0.15, 0.09, 0.06), vec3(0.4, 0.28, 0.19), smoothstep(0.3, 0.7, gravTap.r)).mul(float(0.8).add(grain.mul(0.4)));
+    const paveNear = mix(sand.mul(0.8), stoneCol, stoneIn.mul(0.92));
+    const paveFar = mix(sand.mul(0.8), vec3(0.25, 0.165, 0.11), 0.62);
+    const paveCol = mix(paveFar, paveNear, gNear);
+    const siltCol = mix(vec3(0.80, 0.71, 0.59), vec3(0.70, 0.61, 0.50), crackTap.r).mul(float(1).sub(crk.mul(0.28)));
+
+    let col: N = mix(sand, vec3(0.42, 0.34, 0.22), scrubMask.mul(float(1).sub(pave)));
+    col = mix(col, siltCol, silt.mul(0.8));
+    col = mix(col, paveCol, pave.mul(0.9));
     col = mix(col, pebCol, pebble);
     col = mix(col, mud, lowMask);
     col = mix(col, dirt, trackMask);
@@ -296,7 +331,10 @@ export class Terrain {
     col = col.mul(float(1).sub(hollow.mul(0.22)).sub(basin.mul(0.1)).add(ridge.mul(0.07)));
     col = mix(col, col.mul(vec3(0.92, 0.86, 0.84)), hollow.mul(float(1).sub(roadFinal)).mul(0.6));
 
-    let h: N = mix(rippleH.mul(0.5).add(pebble.mul(0.5)), rockH, rockMask);
+    // pavement lies flat (wind took the ripples), its stones stand proud; silt crusts crack
+    let h: N = mix(rippleH.mul(0.5).add(pebble.mul(0.5)), stoneIn.mul(gNear).mul(0.35).add(grain.mul(0.05)), pave);
+    h = mix(h, crk.mul(-0.35).add(fine.mul(0.1)), silt.mul(0.8));
+    h = mix(h, rockH, rockMask);
     h = mix(h, crk.mul(-0.6).add(fine.mul(0.15)), lowMask);
     h = mix(h, roadCracks.mul(-0.4).add(grain.mul(0.08)), roadFinal);
     h = mix(h, tyre.mul(-0.5).add(grain.mul(0.1)), trackMask);
@@ -317,7 +355,8 @@ export class Terrain {
     mat.colorNode = col;
     mat.normalNode = bumpFromHeight(h, float(0.06));
     // fine sand gets a soft grazing sheen toward a low sun; rock and old asphalt stay matte-ish
-    mat.roughnessNode = mix(mix(float(0.8).add(grain.mul(0.1)), float(0.86), rockMask), mix(float(0.78), float(0.55), oil), roadFinal);
+    // (pavement stays matte: the grazing sand sheen washed its dark stones out to the sand's tone)
+    mat.roughnessNode = mix(mix(mix(float(0.8).add(grain.mul(0.1)), float(0.97), pave), float(0.86), rockMask), mix(float(0.78), float(0.55), oil), roadFinal);
     // the sky can't reach into the folds: occlusion on the ambient/IBL only, so sunlit hollows stay lit
     mat.aoNode = float(1).sub(hollow.mul(0.5)).sub(basin.mul(0.2));
     return mat;

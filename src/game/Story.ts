@@ -8,6 +8,7 @@ import { storyObjective } from '@/content/story';
 import { LANDMARKS } from '@/content/world';
 import { ITEMS } from '@/content/items';
 import { GARAGE } from '@/content/bunkers/garage';
+import { OUTPOSTS } from '@/content/recovery';
 
 /** Seconds between two banter lines, at least. Exploring should feel accompanied, not narrated. */
 const BANTER_GAP = 40;
@@ -219,7 +220,9 @@ export class Story {
     if (!step?.at) return null;
     if (step.at === 'garage') return { x: GARAGE.location.position[0], z: GARAGE.location.position[2], label: q.title };
     const lm = LANDMARKS.find((l) => l.id === step.at);
-    return lm ? { x: lm.position[0], z: lm.position[2], label: q.title } : null;
+    if (lm) return { x: lm.position[0], z: lm.position[2], label: q.title };
+    const op = OUTPOSTS.find((o) => o.id === step.at);
+    return op ? { x: op.x, z: op.z, label: q.title } : null;
   }
 
   // ------------------------------------------------------------------ per frame (cheap)

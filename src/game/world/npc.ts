@@ -471,22 +471,42 @@ export class NpcCrowd {
     return this.figs.find((f) => f.def.id === id)?.neck.clone();
   }
 
+  /** Each figure's id and where its head is (world space). */
+  heads(): { id: string; pos: THREE.Vector3 }[] {
+    this.mesh.updateWorldMatrix(true, false);
+    return this.figs.map((f) => ({ id: f.def.id, pos: f.neck.clone().setY(f.neck.y + 0.12).applyMatrix4(this.mesh.matrixWorld) }));
+  }
+
+  /** Something went bang at `world`: everyone in the crowd snaps round to it for `secs`. */
+  startle(world: THREE.Vector3, secs = 3.5) {
+    this.mesh.updateWorldMatrix(true, false);
+    this.inv.copy(this.mesh.matrixWorld).invert();
+    this.alarmAt.copy(world).applyMatrix4(this.inv);
+    this.alarmT = secs;
+  }
+  private alarmAt = new THREE.Vector3();
+  private alarmT = 0;
+
   update(dt: number, cam: THREE.Vector3) {
     this.t += dt;
+    this.alarmT = Math.max(0, this.alarmT - dt);
     // nothing to do while the town is out of view (its near set hidden by distance)
     for (let o: THREE.Object3D | null = this.mesh; o; o = o.parent) if (!o.visible) return;
     this.mesh.updateWorldMatrix(true, false);
     this.inv.copy(this.mesh.matrixWorld).invert();
-    const c = this.local.copy(cam).applyMatrix4(this.inv);
-    const k = 1 - Math.exp(-4 * dt);
+    const startled = this.alarmT > 0;
+    // a bang wins over the player: heads whip round toward it (faster than an idle glance)
+    const pl = this.local.copy(cam).applyMatrix4(this.inv);
+    const c = startled ? this.alarmAt : pl;
+    const k = 1 - Math.exp(-(startled ? 9 : 4) * dt);
     this.figs.forEach((f, i) => {
       const dx = c.x - f.neck.x, dz = c.z - f.neck.z;
       const dist = Math.hypot(dx, dz);
       let rel = Math.atan2(dx, dz) - f.def.yaw;
       rel = Math.atan2(Math.sin(rel), Math.cos(rel));
-      const reach = f.def.notice ?? 5.5;
+      const reach = startled ? Infinity : f.def.notice ?? 5.5;
       let yaw: number, nod: number;
-      if (dist < reach && Math.abs(rel) < 2.1) {
+      if (dist < reach && Math.abs(rel) < (startled ? Math.PI : 2.1)) {
         yaw = THREE.MathUtils.clamp(rel, -1.05, 1.05);
         nod = THREE.MathUtils.clamp(-Math.atan2(c.y - f.neck.y - 0.1, Math.max(0.5, dist)) * 0.8, -0.35, 0.3);
       } else {
@@ -501,10 +521,11 @@ export class NpcCrowd {
       this.uB[i].w = f.nod;
       const a = f.actor;
       if (a) {
+        const near = Math.hypot(pl.x - f.neck.x, pl.z - f.neck.z) < (f.def.notice ?? 5.5);
         // a model nobody can see (nor its shadow) isn't posed; it catches up on its clips when it is
         if (viewCull.sees(_npcC.setFromMatrixPosition(a.root.matrixWorld).setY(_npcC.y + 0.9), 1.4)) {
           a.root.visible = true;
-          a.update(dt + (f.owed ?? 0), dist < reach, f.look, f.nod);
+          a.update(dt + (f.owed ?? 0), near, f.look, f.nod);
           f.owed = 0;
         } else {
           a.root.visible = false;

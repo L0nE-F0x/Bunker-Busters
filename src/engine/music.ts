@@ -9,10 +9,15 @@
  *  - play:  "cues" of a minute or two (pad → guitar → bass → melody), then a stretch of silence
  *           so the world gets to breathe. Independent stems on the same clock: a palm-muted pulse
  *           that rises with drone suspicion, and drums when the alarm goes off.
+ *  - fight: when something hunts you (wolves circling, a crew on you) the calm cue gives way to a
+ *           fight stem on the same clock: a sixteenth-note palm-muted ostinato with a flat-two
+ *           turn, low toms, a tremolo string bed, and, once rounds are flying, a backbeat, a shaker
+ *           and a low brass stab every four bars. When it's over, a short lament lets it go.
  */
 
 export type MusicMood = 'off' | 'title' | 'camp' | 'play';
-export interface MusicFrame { mood: MusicMood; night: boolean; tension: number; alarm: boolean }
+/** `combat` 0..1: something is hunting you (≈0.6) up to a hot firefight (1). Drives the fight stem. */
+export interface MusicFrame { mood: MusicMood; night: boolean; tension: number; alarm: boolean; combat?: number }
 
 const BPM = 72;
 const BEAT = 60 / BPM;
@@ -72,6 +77,11 @@ const ARPS: number[][] = [
   [0, 3, 2, 3, 1, 3, 2, 3], // pedal on top
 ];
 
+// ------------------------------------------------------------------ the fight stem
+const FIGHT_PROG = ['Dm', 'Dm', 'Bb', 'A'];
+/** Accented sixteenths of a fight bar: 3-3-2, 3-3-2. */
+const FIGHT_ACC = [0, 3, 6, 8, 11, 14];
+
 interface Section {
   kind: 'theme' | 'cue' | 'rest';
   chords: string[]; // one per bar
@@ -94,6 +104,15 @@ export class Music {
   private pulseBus: GainNode;
   private drumBus: GainNode;
   private stingBus: GainNode;
+  /** The fight stem (see the header). */
+  private fightBus: GainNode;
+  private fightPadF: BiquadFilterNode;
+  private combat = 0;
+  /** In a fight (hysteresis on `combat`), how hot it is, and how long it has lasted (s). */
+  private fight = false;
+  private fightHot = false;
+  private fightSince = 0;
+  private fightLevel = 0;
   private plucks = new Map<string, AudioBuffer>();
   private mood: MusicMood = 'off';
   private pendingMood: MusicMood = 'off';
@@ -158,6 +177,15 @@ export class Music {
     this.stingBus.connect(rev(0.8));
     this.stingBus.connect(echo);
 
+    // the fight stem: its own level so it can come in under the world and leave slowly
+    this.fightBus = g(0, this.bus);
+    this.fightBus.connect(rev(0.18));
+    this.fightPadF = ctx.createBiquadFilter();
+    this.fightPadF.type = 'lowpass';
+    this.fightPadF.frequency.value = 700;
+    this.fightPadF.Q.value = 2;
+    this.fightPadF.connect(this.fightBus);
+
     this.nextBeat = ctx.currentTime + 0.1;
     this.timer = window.setInterval(() => this.schedule(), 60);
   }
@@ -175,8 +203,20 @@ export class Music {
       this.bus.gain.setTargetAtTime(0, t, 0.3);
       this.switchAt = t + 1.2;
     }
+    // the fight: in at 0.3, out under 0.12 (so a lull between volleys doesn't drop it)
+    this.combat = f.mood === 'play' ? f.combat ?? 0 : 0;
+    const was = this.fight;
+    if (!this.fight && this.combat > 0.3) { this.fight = true; this.fightSince = t; }
+    else if (this.fight && this.combat < 0.12) this.fight = false;
+    this.fightHot = this.fight && this.combat > 0.7;
+    if (was && !this.fight && t - this.fightSince > 8) this.lamentDue = true;
+    const fl = this.fight ? (this.fightHot ? 0.85 : 0.62) : 0;
+    this.fightLevel = fl;
+    this.fightBus.gain.setTargetAtTime(fl, t, fl > 0 ? 0.4 : 2.2);
+    this.fightPadF.frequency.setTargetAtTime(this.fightHot ? 1500 : 800, t, 1.2);
     const pulse = f.mood === 'play' ? Math.min(1, Math.max(0, (f.tension - 0.12) / 0.5)) : 0;
-    this.pulseBus.gain.setTargetAtTime(pulse * 0.9, t, pulse > 0 ? 0.6 : 1.5);
+    // the fight stem replaces the suspicion pulse
+    this.pulseBus.gain.setTargetAtTime(pulse * 0.9 * (this.fight ? 0 : 1), t, pulse > 0 && !this.fight ? 0.6 : 1.5);
     this.drumBus.gain.setTargetAtTime(f.mood === 'play' && f.alarm ? 0.6 : 0, t, f.alarm ? 0.3 : 2);
     // suspicion brightens and thickens the pad; night keeps it dark
     this.padFilter.frequency.setTargetAtTime((this.night ? 650 : 950) + f.tension * 1600, t, 0.8);
@@ -199,6 +239,11 @@ export class Music {
       [50, 51].forEach((m) => this.padVoice(m, t, 3, 0.05, this.stingBus));
       this.kick(t, 1.2, this.stingBus);
     }
+  }
+
+  /** Harness: the fight stem's state. */
+  get fightState() {
+    return { fight: this.fight, hot: this.fightHot, level: this.fightLevel, combat: +this.combat.toFixed(2) };
   }
 
   dispose() {
@@ -238,6 +283,23 @@ export class Music {
     }
     if (this.mood === 'off') return;
     const bar = this.barNow();
+    if (this.mood === 'play' && this.fight) {
+      // no tunes in a fight: let the cue's held voices go and play the stem instead
+      if (this.section) {
+        this.section = null;
+        for (const v of this.live) { v.g.gain.cancelScheduledValues(t); v.g.gain.setTargetAtTime(0, t, 0.6); }
+      }
+      this.restUntilBar = bar + 3;
+      this.fightBar(t, bar);
+      return;
+    }
+    if (this.mood === 'play' && this.lamentDue) {
+      this.lamentDue = false;
+      this.lament(t);
+      this.restUntilBar = bar + 8;
+      this.section = null;
+      return;
+    }
     if (!this.section || this.section.bar >= this.section.bars) {
       if (bar < this.restUntilBar) { this.section = null; return; }
       this.section = this.plan();
@@ -291,7 +353,7 @@ export class Music {
       }
     }
     // tension pulse: palm-muted low string on every eighth, accents on the beat
-    if (this.mood === 'play' && this.tension > 0.12) {
+    if (this.mood === 'play' && this.tension > 0.12 && !this.fight) {
       const r = rootIn(chord, 38);
       const acc = i % 2 === 0;
       this.pluck(i === 6 && this.tension > 0.6 ? r + 1 : r, t, acc ? 0.34 : 0.22, this.pulseBus, 'mute');
@@ -299,6 +361,7 @@ export class Music {
       if (this.tension > 0.45 && (i === 0 || (this.tension > 0.75 && i === 4))) this.kick(t, 0.5, this.pulseBus);
       if (this.tension > 0.45 && (i === 1 || (this.tension > 0.75 && i === 5))) this.kick(t - 0.1, 0.3, this.pulseBus);
     }
+    if (this.mood === 'play' && this.fight) this.fightEighth(i, t);
     // alarm drums
     if (this.mood === 'play' && this.alarm) {
       if (i === 0 || i === 4 || i === 5) this.kick(t, 0.9, this.drumBus);
@@ -306,6 +369,122 @@ export class Music {
       this.hat(t, i % 2 ? 0.05 : 0.09);
       if (this.barNow() % 4 === 3 && i >= 6) this.tom(t, i === 6 ? 140 : 110);
     }
+  }
+
+  // ------------------------------------------------------------------ the fight stem
+  private fightChord: Chord = CH.Dm;
+  private lamentDue = false;
+
+  /** Once a bar in a fight: the chord, its tremolo strings, the bass, and (hot) a brass stab. */
+  private fightBar(t: number, bar: number) {
+    const k = bar % 4;
+    const name = FIGHT_PROG[k];
+    const chord = (this.fightChord = CH[name]);
+    const hot = this.fightHot;
+    const notes = voicing(chord, 50, 63).slice(0, 3);
+    // the turnaround bar leans on the flat nine (Bb over A): the screw turning
+    if (name === 'A') notes.push(58);
+    this.tremolo(notes, t, 4 * BEAT, hot ? 0.024 : 0.018);
+    const r = rootIn(chord, 33);
+    this.pluck(r, t + 0.01, 0.42, this.fightBus, 'bass');
+    this.pluck(r, t + BEAT * 1.5 + 0.01, 0.3, this.fightBus, 'bass');
+    if (hot) this.pluck(r + 12, t + BEAT * 3 + 0.01, 0.26, this.fightBus, 'bass');
+    if (hot && k === 0) this.stab(rootIn(chord, 38), t);
+  }
+
+  /**
+   * Each eighth of a fight bar, as two sixteenths: a palm-muted ostinato in 3-3-2 accents (with a
+   * flat-two turn into the next bar), kick and low toms, and, once it's hot, a backbeat, a shaker
+   * and a tom fill every four bars.
+   */
+  private fightEighth(i: number, t: number) {
+    const hot = this.fightHot;
+    const bar = this.barNow() % 4;
+    const r = rootIn(this.fightChord, 38);
+    const dest = this.fightBus;
+    for (let e = 0; e < 2; e++) {
+      const s = i * 2 + e;
+      const tt = t + e * BEAT * 0.25;
+      const acc = FIGHT_ACC.includes(s);
+      if (acc || hot || e === 0) {
+        const m = bar === 3 && s >= 14 ? r + 1 : r;
+        this.pluck(m, tt + (Math.random() - 0.5) * 0.006, acc ? 0.32 : hot ? 0.15 : 0.12, dest, 'mute');
+      }
+      if (s === 0 || s === 8) this.kick(tt, 0.85, dest);
+      if (s === 0 || s === 6 || s === 11) this.tom(tt, 82, dest, 0.75);
+      if (!hot) continue;
+      if (s === 4 || s === 12) this.snare(tt, dest, 0.6);
+      this.hat(tt, s % 4 === 2 ? 0.05 : 0.025, dest);
+      if (bar === 3 && s >= 12) this.tom(tt, [150, 128, 108, 94][s - 12], dest, 0.85);
+      else if (s === 3 || s === 14) this.tom(tt, 122, dest, 0.6);
+    }
+  }
+
+  /** Bowed strings in sixteenth-note tremolo: detuned saws chopped by a sine at the sixteenth rate. */
+  private tremolo(notes: number[], t: number, dur: number, level: number) {
+    const ctx = this.ctx;
+    const env = ctx.createGain();
+    env.gain.setValueAtTime(0, t);
+    env.gain.linearRampToValueAtTime(level, t + 0.12);
+    env.gain.setValueAtTime(level, t + dur - 0.12);
+    env.gain.linearRampToValueAtTime(0, t + dur + 0.08);
+    env.connect(this.fightPadF);
+    const am = ctx.createGain();
+    am.gain.value = 0.55;
+    am.connect(env);
+    const lfo = ctx.createOscillator();
+    lfo.frequency.value = 4 / BEAT;
+    const lfoG = ctx.createGain();
+    lfoG.gain.value = 0.45;
+    lfo.connect(lfoG).connect(am.gain);
+    const srcs: AudioScheduledSourceNode[] = [lfo];
+    for (const m of notes) {
+      for (const d of [-9, 8]) {
+        const o = ctx.createOscillator();
+        o.type = 'sawtooth';
+        o.frequency.value = hz(m);
+        o.detune.value = d;
+        o.connect(am);
+        srcs.push(o);
+      }
+    }
+    for (const s of srcs) { s.start(t); s.stop(t + dur + 0.2); }
+    this.track(env, srcs, this.fightBus);
+  }
+
+  /** A low brass stab (root, fifth, octave): saws through a lowpass that blares open and shuts. */
+  private stab(m: number, t: number) {
+    const ctx = this.ctx;
+    const f = ctx.createBiquadFilter();
+    f.type = 'lowpass';
+    f.Q.value = 3;
+    f.frequency.setValueAtTime(300, t);
+    f.frequency.exponentialRampToValueAtTime(2200, t + 0.06);
+    f.frequency.exponentialRampToValueAtTime(380, t + 0.7);
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.05, t + 0.02);
+    g.gain.setTargetAtTime(0.0001, t + 0.35, 0.18);
+    f.connect(g).connect(this.fightBus);
+    for (const n of [m, m + 7, m + 12]) {
+      for (const d of [-6, 5]) {
+        const o = ctx.createOscillator();
+        o.type = 'sawtooth';
+        o.frequency.setValueAtTime(hz(n) * 0.985, t);
+        o.frequency.exponentialRampToValueAtTime(hz(n), t + 0.05); // the lip into the note
+        o.detune.value = d;
+        o.connect(f);
+        o.start(t);
+        o.stop(t + 1.4);
+      }
+    }
+  }
+
+  /** After a fight: a low chord and the whistle walking down to the tonic, alone. */
+  private lament(t: number) {
+    for (const m of [50, 57, 65]) this.padVoice(m, t, 7, 0.016, this.padBus);
+    this.padVoice(38, t, 7, 0.014, this.padBus, 'sine');
+    this.whistle([[69, 1.5], [67, 0.5], [65, 1], [64, 1], [62, 4]], t + BEAT, this.whistleBus, this.night ? 0.03 : 0.036);
   }
 
   /** What plays next. */
@@ -569,34 +748,34 @@ export class Music {
     s.start(t, Math.random() * 3, dur + 0.05);
   }
 
-  private snare(t: number) {
-    this.noiseHit(t, 'bandpass', 2200, 0.8, 0.32, 0.18, this.drumBus);
+  private snare(t: number, dest: AudioNode = this.drumBus, k = 1) {
+    this.noiseHit(t, 'bandpass', 2200, 0.8, 0.32 * k, 0.18, dest);
     const o = this.ctx.createOscillator();
     o.type = 'triangle';
     o.frequency.setValueAtTime(200, t);
     o.frequency.exponentialRampToValueAtTime(150, t + 0.08);
     const g = this.ctx.createGain();
     g.gain.setValueAtTime(0.0001, t);
-    g.gain.exponentialRampToValueAtTime(0.18, t + 0.003);
+    g.gain.exponentialRampToValueAtTime(0.18 * k, t + 0.003);
     g.gain.exponentialRampToValueAtTime(0.0001, t + 0.12);
-    o.connect(g).connect(this.drumBus);
+    o.connect(g).connect(dest);
     o.start(t);
     o.stop(t + 0.15);
   }
 
-  private hat(t: number, peak: number) {
-    this.noiseHit(t, 'highpass', 7500, 0.7, peak, 0.05, this.drumBus);
+  private hat(t: number, peak: number, dest: AudioNode = this.drumBus) {
+    this.noiseHit(t, 'highpass', 7500, 0.7, peak, 0.05, dest);
   }
 
-  private tom(t: number, f: number) {
+  private tom(t: number, f: number, dest: AudioNode = this.drumBus, k = 1) {
     const o = this.ctx.createOscillator();
     o.frequency.setValueAtTime(f, t);
     o.frequency.exponentialRampToValueAtTime(f * 0.65, t + 0.25);
     const g = this.ctx.createGain();
     g.gain.setValueAtTime(0.0001, t);
-    g.gain.exponentialRampToValueAtTime(0.4, t + 0.005);
+    g.gain.exponentialRampToValueAtTime(0.4 * k, t + 0.005);
     g.gain.exponentialRampToValueAtTime(0.0001, t + 0.35);
-    o.connect(g).connect(this.drumBus);
+    o.connect(g).connect(dest);
     o.start(t);
     o.stop(t + 0.4);
   }

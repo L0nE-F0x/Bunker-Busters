@@ -18,7 +18,7 @@ import { Scrub, Pebbles } from './world/Scrub';
 import { Shrubs } from './world/Shrubs';
 import { Fauna } from './world/Fauna';
 import { Interior, hideExcept } from './world/interiors';
-import { DustMotes, GroundHaze, DustPuffs, SandStreaks, DustDevils, Shockwave, heightTexture } from './world/effects';
+import { DustMotes, GroundHaze, DustPuffs, SandStreaks, DustDevils, Shockwave, StormLightning, StormWall, heightTexture } from './world/effects';
 import { Weather } from './world/Weather';
 import { VirtualLight, lightPool } from './world/lights';
 import { updateRim, glow, desertRock } from './world/materials';
@@ -30,7 +30,7 @@ import { NpcCrowd } from './world/npc';
 import { HumanSkins } from './combat/humanSkin';
 import { Garage } from './bunker/Garage';
 import { Settlement } from './town/Settlement';
-import { buildSites, type Site } from './sites';
+import { buildSites, Errands, type Site } from './sites';
 import { Player } from './player/Player';
 import { FirstPersonCamera } from './player/FirstPersonCamera';
 import { Hands, HAND_LOOKS, torchLight } from './player/Hands';
@@ -46,6 +46,7 @@ import { RECIPES, type Recipe } from '@/content/craft';
 import { SKILLS } from '@/content/skills';
 import { GARAGE } from '@/content/bunkers/garage';
 import { ITEMS, HOTBAR_ITEMS, KEEP_ON_DEATH } from '@/content/items';
+import { KadeTerminals } from './combat/terminals';
 import { OUTPOSTS } from '@/content/recovery';
 import { XP_REWARDS, fallFactor, empRadius } from '@/content/progression';
 import { damp } from '@/engine/noise';
@@ -53,6 +54,7 @@ import { Combat, sphereRay, type HurtKind, type Hostile } from './combat/Combat'
 import { PlayerArms } from './combat/PlayerArms';
 import { Recovery } from './combat/Recovery';
 import { Machines } from './combat/Machines';
+import { MenuDirector } from './MenuDirector';
 
 /** Debug: ?interior=off draws the exterior even from inside sealed interiors (A/B for interior mode). */
 const NO_INTERIOR = typeof location !== 'undefined' && new URLSearchParams(location.search).get('interior') === 'off';
@@ -70,9 +72,7 @@ const BENCH = new URLSearchParams(location.search).has('bench');
 
 /** Only two hand looks exist. Work gloves for the Brute and the Scout, thin ones for the Fixer and the Defector. */
 function handArchetype(id: string) {
-  if (id === 'brute' || id === 'scout') return 'engineer';
-  if (id === 'fixer' || id === 'defector') return 'infiltrator';
-  return id;
+  return HAND_LOOKS[id] ? id : 'infiltrator';
 }
 
 type Mode = 'loading' | 'title' | 'charselect' | 'playing';
@@ -109,10 +109,16 @@ export class Game {
   puffs!: DustPuffs;
   streaks!: SandStreaks;
   devils!: DustDevils;
+  lightning = new StormLightning();
+  stormWall!: StormWall;
   weather!: Weather;
   garage!: Garage;
   settlement!: Settlement;
+  /** Hostiles hunting the player (last frame's `combat.awareness()`; the music's fight stem). */
+  private huntedBy = 0;
   scavenge!: Scavenge;
+  /** Props and camp effects for the road favours (sites/errands.ts). */
+  errands!: Errands;
   private humanSkins: HumanSkins | null = null;
   sites: Site[] = [];
   map!: MapData;
@@ -130,11 +136,15 @@ export class Game {
   recovery!: Recovery;
   /** Sentries, Hornet drones and mines at the outposts. */
   machines!: Machines;
+  /** The Kade field terminals (one per outpost): hack targets. */
+  terminals!: KadeTerminals;
   private wantAds = false;
   /** The dropped pack in the world: a duffel and a beacon. */
   private packMesh!: THREE.Group;
   private dying = 0;
   private venomHurt = 0;
+  /** Low-health pulse: phase through the current heartbeat (0..1). */
+  private hbPhase = 0;
   private venomHint = false;
   mode: Mode = 'loading';
   private interactables: Interactable[] = [];
@@ -154,13 +164,18 @@ export class Game {
   private revealTimer = 0;
   private autosaveTimer = 60;
   private titleT = 0;
+  private director!: MenuDirector;
   private busy = false; // minigame/modal in progress
+  /** Smoothed 0..1 point light (fires, floodlights) on the player: the stealth model's night term. */
+  private pointLit = 0;
   /** Warm these on the next frame's render (see warmShaders), staging anything not yet in the scene. */
   private warmNext: { roots: THREE.Object3D[]; stage?: () => (() => void) | undefined } | null = null;
   private cubeRT: THREE.CubeRenderTarget | null = null;
   private cubeCam: THREE.CubeCamera | null = null;
   private envScene = new THREE.Scene();
   private envTimer = 0;
+  /** The clock last frame, to count midnights (`SaveData.days`). */
+  private lastHour = 0;
   private landmarkSeen = new Set<string>();
   private windedHint = false;
   private ctx!: GameContext;
@@ -242,7 +257,9 @@ export class Game {
       if (p === 'front') this.ui.toast('A dust storm is rolling in. Low visibility will blind SeedBot\'s optics.', 'info');
       else if (p === 'clearing') this.ui.toast('The dust storm is passing.', 'info');
     };
-    this.weather.onLightning = (k) => this.audio.thunder(k);
+    this.weather.onLightning = (k) => { this.audio.thunder(k); this.lightning.strike(this.camera.position, k); };
+    this.stormWall = new StormWall(this.atmo);
+    if (!SKIP.has('sky')) this.scene.add(this.lightning.mesh, this.stormWall.mesh);
     this.combat = new Combat(this.physics, this.hf, this.atmo, this.audio);
     this.combat.difficulty = this.settings.difficulty ?? 'normal';
     this.combat.puffs = this.puffs;
@@ -255,6 +272,7 @@ export class Game {
     await step(0.62, 'Charting the wasteland');
     this.map = new MapData(this.hf);
     this.cam = new FirstPersonCamera(this.camera);
+    this.applyView();
     this.camera.near = 0.05;
     this.camera.fov = this.cam.baseFov;
     this.camera.updateProjectionMatrix();
@@ -289,6 +307,8 @@ export class Game {
     }, this.props.wreckBoxes);
     this.scene.add(this.scavenge.group);
     this.interactables.push(...this.scavenge.interactables);
+    this.errands = new Errands(this.ctx, this.landmarks, (x, z) => this.clearSpot(x, z));
+    this.interactables.push(...this.errands.interactables);
     if (!SKIP.has('env')) this.buildEnvironment();
     if (SKIP.has('garage')) this.scene.remove(this.garage.b.group, this.garage.drone.group);
     if (SKIP.has('ui')) document.getElementById('ui')!.style.display = 'none';
@@ -305,12 +325,18 @@ export class Game {
     this.scene.matrixWorldAutoUpdate = false;
     this.resize();
     this.physics.step();
-    this.setTitleCamera(0);
+    this.director = new MenuDirector(this.camera, this.landmarks, () => this.garage?.b.origin ?? new THREE.Vector3(96, 0, -150));
+    this.atmo.hour = this.director.startTitle();
     this.atmo.update(0, this.camera.position);
     // streamed scatter must hold something before the warm-up, or its programs compile mid-play
     this.scrub.update(this.camera.position, this.atmo.wind);
     this.shrubs.update(this.camera.position);
     this.pebbles.update(this.camera.position);
+    // character select's hands and everything they hold compile now too, not on the glide down to
+    // the fire (hand materials are shared per kind, so one pair covers every look)
+    const menuHands = new Hands(HAND_LOOKS.engineer);
+    menuHands.attach(this.camera);
+    const unstageMenuHands = menuHands.stageItems();
     // in batches, a frame each, so the loading bar keeps moving through a cold start (~20 s in WebKit)
     const drawn: THREE.Object3D[] = [];
     this.scene.traverse((o) => { if ((o as THREE.Mesh).isMesh || (o as THREE.Sprite).isSprite || (o as THREE.Points).isPoints || (o as THREE.Line).isLine) drawn.push(o); });
@@ -322,6 +348,8 @@ export class Game {
       for (let f = 0; f < 2; f++) await new Promise((r) => requestAnimationFrame(r)); // a fresh frame for the scene pass
     }
     console.log(`[BunkerBusters] shader warm-up: ${drawn.length} objects in ${batches} frames, ${warmMs.toFixed(0)} ms`);
+    unstageMenuHands();
+    menuHands.dispose();
     await step(0.95, 'Polishing neon');
     this.renderer.setAnimationLoop(() => this.frame());
     window.addEventListener('resize', () => this.resize());
@@ -377,6 +405,39 @@ export class Game {
         }
         return ok;
       },
+      hack: (o) => self.withMinigame('keypad', async () => {
+        const s = self.state!;
+        let difficulty = o.difficulty;
+        if (s.focus('electronics') === 'hotline') difficulty = Math.max(0, difficulty - 1);
+        if (s.capstone('electronics') === 'overclock') difficulty = Math.max(0, difficulty - 1);
+        // a Kade box takes a Kade ID: swipe a lanyard for a bigger buffer and a lazier trace
+        let badge = false;
+        const badges = s.count('kade_badge');
+        if (o.kade && badges > 0) {
+          const pick = await self.ui.choose({
+            speaker: o.title,
+            text: 'The reader under the screen wants a contractor ID. You have a dead man\'s lanyard in your pocket. The photo is smiling.',
+            choices: [
+              { id: 'badge', label: `Swipe a Recovery Lanyard, then splice in (${badges} left)` },
+              { id: 'raw', label: 'Splice in cold' },
+              { id: 'leave', label: 'Leave it' },
+            ],
+          });
+          if (pick !== 'badge' && pick !== 'raw') return { done: [], traced: false, aborted: true };
+          badge = pick === 'badge' && s.removeItem('kade_badge', 1);
+        }
+        const res = await self.ui.hack({
+          title: o.title, host: o.host, difficulty, daemons: o.daemons,
+          bonusBuffer: badge ? 1 : 0, traceMult: badge ? 1.5 : 1,
+          spikes: () => s.count('spike'), useSpike: () => s.removeItem('spike', 1),
+          // taking a hit pulls you off the keyboard
+          interrupt: (bail) => s.events.on('health', (e) => { if (e.delta < 0) bail('You\'re hit. You yank the cable.'); }),
+        });
+        if (res.done.length && s.capstone('electronics') === 'salvage' && s.addItem('battery', 1, true)) {
+          s.events.emit('toast', { text: 'Salvage: you pocket a lithium cell from the box.', kind: 'good' });
+        }
+        return res;
+      }),
       choose: (o) => self.withMinigame('idle', () => self.ui.choose(o)),
       converse: (o) => self.withMinigame('idle', () => self.ui.converse(o)),
       banner: (a, b, k) => self.ui.banner(a, b, k),
@@ -641,6 +702,14 @@ export class Game {
       interactables: this.interactables,
     });
     this.recovery.onRespawn = (id) => this.machines.reset(id);
+    this.recovery.onPatrol = (at) => { if (this.player) this.errands?.patrol(at, this.player.position); };
+    this.terminals = new KadeTerminals({
+      recovery: this.recovery, machines: this.machines, ui: this.ctx.ui, audio: this.audio,
+      state: () => self.state ?? null,
+      toast: (t, k) => self.ui.toast(t, k),
+      subtitle: (a, b, v) => self.ui.subtitle(a, b, v),
+    }, this.interactables);
+    this.recovery.onSpawn = (id) => this.terminals.reapply(id);
     this.recovery.safe = this.fauna.safe;
     // SeedBot can be shot: every hit puts it on full alert; four quick ones knock it out of the sky
     const drone = this.garage.drone;
@@ -652,8 +721,9 @@ export class Game {
         const t = sphereRay(o, d, drone.position, 0.6);
         return t !== null && t <= max ? { t, zone: 'body' } : null;
       },
-      damage: () => {
+      damage: (d) => {
         const now = this.combat.t;
+        drone.hit(d.point);
         hits = now - lastHit < 10 ? hits + 1 : 1;
         lastHit = now;
         drone.detection = Math.max(drone.detection, 0.95);
@@ -670,6 +740,17 @@ export class Game {
     this.combat.register({ hostiles: () => [seedbot] });
     this.scene.add(this.machines.group);
     this.combat.register(this.machines);
+    // townsfolk: a word in passing, and an opinion about gunfire (src/game/town/barks.ts)
+    const barks = this.settlement.barks;
+    barks.host = {
+      quiet: () => this.busy || this.mode !== 'playing',
+      talking: () => this.ui.subtitleBusy,
+      armed: () => !!this.arms?.equipped && this.arms.equipped !== 'crowbar',
+      night: () => this.atmo.isNight,
+      see: (a, b) => this.combat.clearLine(a, b, this.combat.target.collider),
+      say: (speaker, text, pos) => this.ui.subtitle(speaker, text, { pos: pos.clone() }),
+    };
+    this.combat.register({ hostiles: () => [], hear: (p, _r, k) => { if (this.player) barks.hear(p, k, this.player.position); } });
   }
 
   private collectIntel(id: string) {
@@ -722,7 +803,10 @@ export class Game {
     const recipeRow = (r: Recipe) => {
       const n = s.craftYield(r);
       const detail = n === r.out.qty ? r.detail : r.detail.replace(/→ \d+/, `→ ${n}`);
-      return { id: r.id, name: r.name, detail, disabled: this.recipeBlock(r) };
+      const disabled = this.recipeBlock(r);
+      // "… · Electronics 1" over "Needs Electronics 1" said it twice: the reason line carries it
+      const shown = disabled && r.skill && disabled.startsWith('Needs') ? detail.replace(` · ${SKILLS[r.skill.id].name} ${r.skill.level}`, '') : detail;
+      return { id: r.id, name: r.name, detail: shown, disabled };
     };
     const recipes = RECIPES.map(recipeRow);
     const refreshRecipes = () => recipes.splice(0, recipes.length, ...RECIPES.map(recipeRow));
@@ -783,6 +867,7 @@ export class Game {
           s.addXP(15, 'Into the ledger');
           this.audio.play('uiConfirm');
         }
+        this.errands.campChoice(choice);
         if (choice === 'emp' && s.count('battery') >= 1 && s.count('scrap') >= 2) {
           s.removeItem('battery', 1);
           s.removeItem('scrap', 2);
@@ -826,21 +911,11 @@ export class Game {
   }
 
   // ------------------------------------------------------------------ modes
-  private setTitleCamera(t: number) {
-    const o = this.garage?.b.origin ?? new THREE.Vector3(96, 0, -150);
-    // orbit on the sunset side so the bunker is back-lit, framed to the right of the logo
-    const a = 5.55 + Math.sin(t * 0.04) * 0.3;
-    const r = 40 + Math.sin(t * 0.13) * 4;
-    this.camera.position.set(o.x + Math.sin(a) * r, o.y + 7 + Math.sin(t * 0.2) * 1.2, o.z + Math.cos(a) * r);
-    const fwd = new THREE.Vector3(o.x - this.camera.position.x, 0, o.z - this.camera.position.z).normalize();
-    const right = new THREE.Vector3(-fwd.z, 0, fwd.x);
-    this.camera.lookAt(o.x - right.x * 13, o.y + 6, o.z - right.z * 13);
-  }
-
   toTitle() {
     this.mode = 'title';
     this.titleT = 0;
-    this.atmo.hour = 17.45;
+    this.atmo.hour = this.director.startTitle();
+    this.envTimer = 0;
     this.atmo.paused = false;
     this.atmo.dayLengthMinutes = 240;
     this.removePlayer();
@@ -871,36 +946,63 @@ export class Game {
 
   private toCharSelect() {
     this.mode = 'charselect';
-    this.atmo.hour = 18.55;
-    this.atmo.paused = true;
+    this.director.startSelect();
     const show = (id: string) => {
       this.hands?.dispose();
       const look = handArchetype(id);
       this.hands = new Hands(HAND_LOOKS[look] ?? HAND_LOOKS.infiltrator);
       this.hands.attach(this.camera);
       this.hands.setBase(look === 'engineer' ? 'showcaseEmp' : 'showcase');
+      this.director.pick();
     };
     const leave = () => { this.hands?.dispose(); this.hands = null; };
     // (hands are re-created fresh in startGame, so the showcase offset never leaks into play)
     this.ui.showCharSelect(
       (id) => {
-        leave();
-        clearSave();
-        this.startGame(GameState.fresh(id, SPAWN));
+        // stand up from the fire as it goes dark (the hands drop back to your sides), then the run
+        this.director.standUp();
+        this.hands?.setBase('idle');
+        setTimeout(() => {
+          leave();
+          clearSave();
+          // ...and the run starts where you stood up: at the camp fire, facing the four, the pumps
+          // (and the note on them) to your left, at the hour you chose under
+          const state = GameState.fresh(id, SPAWN);
+          const at = this.landmarks.campPoint(-12.3, 0, 0);
+          const fire = this.landmarks.campPosition;
+          state.data.position = [at.x, at.y, at.z];
+          state.data.yaw = Math.atan2(at.x - fire.x, at.z - fire.z) - Math.PI;
+          state.data.hour = this.atmo.hour;
+          this.startGame(state);
+        }, MenuDirector.STAND * 1000 + 60);
       },
       show,
       () => { leave(); this.toTitle(); },
     );
+    this.director.panelEl = document.querySelector<HTMLElement>('#charselect .cs-side');
   }
 
   private startGame(state: GameState) {
     this.state = state;
     this.mode = 'playing';
+    this.cam.snapFov(); // charselect/title leave the lens elsewhere; start the run at the player's FOV
+    // out of the menus' dip to black: the picture comes up as the run begins
+    const f0 = this.post.fade.value as number;
+    if (f0 > 0) {
+      const t0 = performance.now();
+      const lift = () => {
+        const k = (performance.now() - t0) / 1100;
+        this.post.fade.value = f0 * Math.max(0, 1 - k * k);
+        if (k < 1) requestAnimationFrame(lift);
+      };
+      requestAnimationFrame(lift);
+    }
     this.atmo.paused = false;
     this.atmo.dayLengthMinutes = 26;
     this.atmo.hour = state.data.hour;
     const hourOverride = Number(new URLSearchParams(location.search).get('hour')); // debug: ?hour=18.6
     if (hourOverride) this.atmo.hour = hourOverride;
+    this.lastHour = this.atmo.hour;
     this.map.deserialize(state.data.discovered);
     const [x, , z] = state.data.position;
     let spawn = new THREE.Vector3(x, this.hf.heightAt(x, z) + 0.1, z);
@@ -973,7 +1075,7 @@ export class Game {
         if (this.player) this.player.frozen = false;
         this.busy = false;
         this.input.requestLock();
-        this.ui.banner('LAST CHANCE', `${state.archetype.name} · Day 1,284`, 'info');
+        this.ui.banner('LAST CHANCE', `${state.archetype.name} · ${state.dayLabel}`, 'info');
       });
     }
     this.startLoops();
@@ -1039,7 +1141,7 @@ export class Game {
     this._exterior = [
       this.atmo.sky, this.terrain.mesh, this.terrain.far, this.props.group, this.landmarks.group, this.garage.b.group,
       this.scrub.mesh, this.shrubs.group, this.pebbles.mesh, this.fauna.mesh, this.fauna.models, this.recovery.group, this.machines.group,
-      this.haze.sprite, this.streaks.sprite, this.devils.sprite, this.scavenge?.group,
+      this.haze.sprite, this.streaks.sprite, this.devils.sprite, this.lightning.mesh, this.stormWall.mesh, this.scavenge?.group,
       ...[...this.intelMeshes.values()].filter((g) => !inside(g)),
     ].filter((o): o is THREE.Object3D => !!o);
     return this._exterior;
@@ -1175,6 +1277,7 @@ export class Game {
     this.settings = s;
     saveSettings(s);
     this.applyAudioSettings();
+    this.applyView();
     this.input.sensitivity = s.sensitivity;
     if (this.combat) this.combat.difficulty = s.difficulty ?? 'normal';
     if (s.quality !== this.quality.level && this.post) {
@@ -1186,6 +1289,18 @@ export class Game {
       this.dust.sprite.count = this.quality.dustCount;
       this.streaks.sprite.count = Math.round(this.quality.dustCount * 0.3);
     }
+  }
+
+  /** Field of view, invert look, head bob and the fps readout. */
+  private applyView() {
+    const s = this.settings;
+    if (this.cam) {
+      this.cam.baseFov = s.fov;
+      this.cam.invertY = s.invertY;
+      this.cam.bob = s.bob;
+      if (this.mode === 'playing') this.cam.snapFov();
+    }
+    this.ui.showFps(s.showFps);
   }
 
   private applyAudioSettings() {
@@ -1282,6 +1397,8 @@ export class Game {
       const dx = from.x - this.player.position.x, dz = from.z - this.player.position.z;
       const bearing = Math.atan2(dx, dz) - (this.cam.yaw + Math.PI);
       this.ui.damageFrom(bearing, k);
+      // the hit knocks your head (a bite or a blast hardest)
+      this.cam.punch(bearing, (kind === 'bite' || kind === 'blast' ? 0.12 : 0.06) + k * 0.1);
     }
   }
 
@@ -1551,18 +1668,15 @@ export class Game {
 
     if (this.mode === 'title') {
       this.titleT += dt;
-      this.setTitleCamera(this.titleT);
+      const cut = this.director.title(dt);
+      if (cut !== null) { this.atmo.hour = cut; this.envTimer = 0; }
+      this.post.fade.value = this.director.fade;
     } else if (this.mode === 'charselect') {
-      const fire = this.landmarks.campPosition;
-      const eye = fire.clone().add(new THREE.Vector3(1.9, 0, 1.4));
-      eye.y = this.hf.heightAt(eye.x, eye.z) + 1.05 + Math.sin(this.t * 0.9) * 0.01; // kneeling
-      this.camera.position.copy(eye);
-      // frame the fire right of centre so the side panel doesn't cover it; hands follow
-      const toFire = fire.clone().sub(eye).setY(0).normalize();
-      const leftOf = new THREE.Vector3(toFire.z, 0, -toFire.x);
-      this.camera.lookAt(fire.x + leftOf.x * 0.9 + Math.sin(this.t * 0.2) * 0.15, fire.y + 0.25, fire.z + leftOf.z * 0.9);
-      if (this.hands) this.hands.root.position.set(0.045, 0.004, 0);
-      if (this.camera.fov !== this.cam.baseFov) { this.camera.fov = this.cam.baseFov; this.camera.updateProjectionMatrix(); }
+      // the menu director kneels you at the fire (gliding down from the title shot); hands follow
+      this.director.select(dt);
+      this.atmo.hour = damp(this.atmo.hour, this.director.selectHour, 1.2, dt);
+      this.post.fade.value = this.director.fade;
+      if (this.hands) this.hands.root.position.set(0.045, -0.012, 0.004);
       this.hands?.update(dt, { speed: 0, grounded: true, crouch: false, sprint: false, bobPhase: 0, lookDX: Math.sin(this.t * 0.7) * 4, lookDY: Math.cos(this.t * 0.5) * 3 });
     } else if (this.mode === 'playing' && this.player && this.state) {
       this.playFrame(dt);
@@ -1577,6 +1691,7 @@ export class Game {
     this.settlement?.update(dt, this.camera.position);
     if (this.player && this.mode === 'playing') this.scavenge?.update(dt, this.player.position);
     for (const site of this.sites) site.update(dt, this.camera.position);
+    this.errands?.update(dt, this.camera.position);
     if (this.mode !== 'playing') this.garage.update(dt);
     this.garage.cull(this.camera.position);
     this.props.update(dt, focusPos, this.atmo.wind);
@@ -1590,6 +1705,8 @@ export class Game {
     this.puffs.update(dt);
     this.streaks.update(dt);
     this.devils.update();
+    this.lightning.update(this.weather.flash, this.weather.intensity);
+    this.stormWall.update(this.camera.position, this.weather.wallDist, this.weather.wallVis, this.atmo.uUpwind.value as THREE.Vector2);
     this.updateGrenades(dt);
     this.recovery.update(dt, focusPos, this.camera.position, this.mode === 'playing' && !!this.player && !this.ui.modalOpen);
     if (this.mode === 'playing' && !this.ui.modalOpen) this.machines.update(dt, this.camera.position);
@@ -1607,6 +1724,7 @@ export class Game {
     this.post.damage.value = damp(this.post.damage.value as number, 0, 2.5, dt);
     this.post.menuShade.value = damp(this.post.menuShade.value as number, this.mode === 'title' || this.mode === 'charselect' ? 1 : 0, 3, dt);
     this.post.emp.value = damp(this.post.emp.value as number, 0, 1.2, dt);
+    if (this.mode !== 'playing') this.post.lowHp.value = 0;
     const alertTarget = this.mode === 'playing' && this.garage.drone.state === 'alert' ? 0.8 : this.mode === 'playing' ? this.garage.drone.detection * 0.4 : 0;
     this.post.alert.value = damp(this.post.alert.value as number, alertTarget, 4, dt);
     const tension = this.mode === 'playing' ? Math.max(this.garage.drone.detection, this.garage.alarm > 0 ? 1 : 0, this.combat.heat) : 0;
@@ -1622,10 +1740,14 @@ export class Game {
       floor: this.acoustics?.surface,
       front: this.weather.front,
       windDir: this.atmo.windDir,
+      combat: playing ? Math.max(this.combat.heat, this.huntedBy > 0 ? 0.6 : 0) : 0,
     });
     if (!this.loopsStarted && this.audio.ready && this.mode !== 'loading') this.startLoops();
 
     if (BENCH) this.bench(now);
+    this.ui.tickFps(now);
+    // the viewmodel keeps its authored size on screen at any field of view (see viewmodelDepth)
+    if (this.hands && this.cam) this.hands.root.scale.z = Hands.VIEW_SCALE * this.cam.viewmodelDepth();
     const tPhys = performance.now();
     // step by the real frame time (the world default of 1/60 per frame ran physics 2.4× fast at 144 Hz)
     this.physics.world.timestep = Math.max(1 / 240, dt);
@@ -1662,6 +1784,11 @@ export class Game {
     const blocked = this.ui.modalOpen || this.ui.minigameOpen || this.busy;
     input.enabled = !blocked;
     this.cam.enabled = !blocked && input.locked;
+
+    // the calendar turns when the clock wraps past midnight. Time only runs forward, so any step back
+    // is a wrap: the clock ticking over, sleeping till dawn, or a six-hour blackout
+    if (this.atmo.hour < this.lastHour - 1e-4) s.data.days = (s.data.days ?? 0) + 1;
+    this.lastHour = this.atmo.hour;
 
     // The body keeps the build honest: quiet feet, a heavy pack, a dry mouth.
     if (!blocked) s.tickNeeds(dt);
@@ -1721,6 +1848,13 @@ export class Game {
     tg.hidden = this.garage.playerInside;
     tg.night = this.atmo.isNight ? 1 : Math.max(0, Math.min(1, (0.15 - this.atmo.sunElevation) / 0.25));
     tg.visibility = 1 - this.weather.intensity * 0.75;
+    // the stealth model: by day everyone's lit; at night it's the fires, the floodlights, the muzzle
+    // flashes, and your own torch. Smoothed so a guttering fire doesn't strobe you in and out of sight.
+    // SeedBot's spotlight isn't in the point-light pool: standing in its cone (it sees you) is lit too,
+    // or the pill reads IN SHADOW while the drone is shouting about you
+    const pointLit = this.garage.drone.canSee ? 1 : 1 - Math.exp(-lightPool.illuminance(tg.chest) / 0.6);
+    this.pointLit += (pointLit - this.pointLit) * Math.min(1, dt * 4);
+    tg.light = tg.torch ? 1 : Math.min(1, 1 - tg.night + tg.night * Math.max(0.08, this.pointLit));
     tg.alive = s.data.health > 0;
     tg.collider = player.collider;
     tg.height = player.height;
@@ -1837,6 +1971,13 @@ export class Game {
       if (this.venomHurt >= 1) { const n = Math.floor(this.venomHurt); this.venomHurt -= n; s.damage(n); this.post.damage.value = Math.max(this.post.damage.value as number, 0.18); }
     }
 
+    // near death: a heartbeat you can hear, colour draining, the edges throbbing in time with it
+    const lowK = !blocked && s.data.health > 0 ? THREE.MathUtils.clamp((40 - s.data.health) / 30, 0, 1) : 0;
+    this.hbPhase = Math.min(1, this.hbPhase + dt / (1.05 - lowK * 0.45));
+    if (this.audio.combat?.heartbeat(dt, lowK)) this.hbPhase = 0;
+    const throb = Math.exp(-this.hbPhase * 7) + 0.6 * Math.exp(-Math.max(0, this.hbPhase - 0.19) * 9) * (this.hbPhase > 0.19 ? 1 : 0);
+    this.post.lowHp.value = damp(this.post.lowHp.value as number, lowK * (0.65 + 0.35 * Math.min(1, throb)), 6, dt);
+
     // death is a debt, not a nap: you wake at the fire hours later, and your pack is where you fell
     if (s.data.health <= 0 && !this.busy) this.die();
 
@@ -1859,11 +2000,13 @@ export class Game {
     }
 
     const aw = this.combat.awareness();
+    this.huntedBy = aw.hunting;
     this.ui.updateHUD(dt, {
       objective: this.objective(),
       detection: Math.max(this.garage.drone.detection, aw.best),
       threat: aw.hunting > 0 ? 'hunted' : aw.best > 0.3 ? 'watched' : null,
       venom: (s.data.poison ?? 0) > 0,
+      light: this.combat.target.night < 0.5 ? null : this.combat.target.light > 0.55 ? 'lit' : this.combat.target.light < 0.3 ? 'shadow' : null,
       droneState: this.garage.drone.state,
       canSee: this.garage.drone.canSee,
       crouch: player.crouching,

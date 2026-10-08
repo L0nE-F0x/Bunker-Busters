@@ -247,6 +247,7 @@ function ik(root: THREE.Vector3, target: THREE.Vector3, a: number, b: number, po
 }
 const _ik1 = new THREE.Vector3(), _ik2 = new THREE.Vector3();
 
+export type HitZone = 'head' | 'body' | 'arm' | 'leg';
 export type HumanPose = 'relaxed' | 'ready' | 'aim' | 'reload' | 'throw' | 'radio' | 'sit';
 
 /** One person's animation state. AI writes the inputs; `pose()` turns them into bone matrices. */
@@ -266,6 +267,23 @@ export class Human {
   private speedS = 0;
   readonly flinch = new THREE.Vector3();
   flinchK = 0;
+  /**
+   * Hit reaction (layered on whatever it's doing): seconds since the hit, how hard (0..1), where it
+   * landed and which side of the body (+1 its left, −1 its right). A head shot snaps the head back,
+   * a body shot knocks the chest back and the knees give, a leg buckles under it, an arm wrenches
+   * the gun off the aim. `hit()` sets it.
+   */
+  hitT = 99;
+  hitK = 0;
+  hitZone: HitZone = 'body';
+  hitSide = 1;
+  readonly hitDir = new THREE.Vector3(0, 0, 1);
+  /** Seconds into a collapse on its feet (−1: not dying). The AI hands it to a ragdoll at `dyingDur`. */
+  dyingT = -1;
+  dyingDur = 0.6;
+  /** Under fire: 0..1 how hard it's cowering (rounds cracking past). Set by the AI, smoothed here. */
+  cower = 0;
+  private cowerS = 0;
   reloadT = 0;
   recoil = 0;
   /** Head turn while idle/listening (radians). */
@@ -290,6 +308,19 @@ export class Human {
     return this.look_.weapon;
   }
 
+  /** A round (or a blow) landed: start the reaction. `dir` is the way it travelled. */
+  hit(zone: HitZone, dir: THREE.Vector3, k: number, side: number) {
+    // a second hit while still reeling stacks, a little
+    const left = this.hitT < 0.3 ? this.hitK * 0.5 : 0;
+    this.hitT = 0;
+    this.hitK = Math.min(1, Math.max(k, left + k * 0.7));
+    this.hitZone = zone;
+    this.hitSide = side;
+    this.hitDir.copy(dir).setY(0);
+    if (this.hitDir.lengthSq() < 1e-6) this.hitDir.set(-Math.sin(this.yaw), 0, -Math.cos(this.yaw));
+    this.hitDir.normalize();
+  }
+
   /** Collapse every bone to a point far below the world (an unused slot). */
   hide() {
     this.active = false;
@@ -307,10 +338,19 @@ export class Human {
     const speed = Math.hypot(this.vel.x, this.vel.z);
     this.speedS += (speed - this.speedS) * Math.min(1, dt * 8);
     this.crouchS += (this.crouch - this.crouchS) * Math.min(1, dt * 7);
-    const wantAim = this.pose === 'aim' ? 1 : 0;
-    const wantReady = this.pose === 'aim' || this.pose === 'ready' || this.pose === 'reload' || this.pose === 'throw' ? 1 : 0;
-    this.aimK += (wantAim - this.aimK) * Math.min(1, dt * 9);
-    this.readyK += (wantReady - this.readyK) * Math.min(1, dt * 6);
+    // dying on its feet: the arms go slack, the knees go, it folds forward (then the ragdoll)
+    const dying = this.dyingT >= 0 ? THREE.MathUtils.smoothstep(this.dyingT / this.dyingDur, 0, 1) : 0;
+    if (this.dyingT >= 0) this.dyingT += dt;
+    const wantAim = this.pose === 'aim' && this.dyingT < 0 ? 1 : 0;
+    const wantReady = this.dyingT < 0 && (this.pose === 'aim' || this.pose === 'ready' || this.pose === 'reload' || this.pose === 'throw') ? 1 : 0;
+    this.aimK += (wantAim - this.aimK) * Math.min(1, dt * (this.dyingT >= 0 ? 5 : 9));
+    this.readyK += (wantReady - this.readyK) * Math.min(1, dt * (this.dyingT >= 0 ? 4 : 6));
+    // the hit: a fast jolt, a slower recovery
+    this.hitT += dt;
+    const hr = this.hitT < 1.4 ? Math.min(1, this.hitT / 0.045) * Math.exp(-Math.max(0, this.hitT - 0.045) * 4.6) * this.hitK : 0;
+    const hz = this.hitZone, hs = this.hitSide, hd = this.hitDir;
+    this.cowerS += (this.cower - this.cowerS) * Math.min(1, dt * (this.cower > this.cowerS ? 14 : 3));
+    const cw = this.cowerS;
     this.flinchK = Math.max(0, this.flinchK - dt * 3.2);
     this.recoil = Math.max(0, this.recoil - dt * 9);
     if (this.reloadT > 0) this.reloadT = Math.max(0, this.reloadT - dt);
@@ -320,7 +360,8 @@ export class Human {
     const sp = this.speedS;
     const run = THREE.MathUtils.smoothstep(sp, 2.5, 4.5);
     const walk = Math.min(1, sp / 1.1);
-    const cr = this.crouchS;
+    // knees give with a hit (a leg most of all), under fire, and as it dies
+    const cr = Math.min(1, this.crouchS + hr * (hz === 'leg' ? 0.75 : hz === 'body' ? 0.24 : 0.1) + cw * 0.35 + dying * 0.95);
     const stride = THREE.MathUtils.lerp(1.3, 2.4, run) * (1 - cr * 0.3);
     this.phase += (sp / stride) * Math.PI * dt;
     const ph = this.phase;
@@ -330,8 +371,13 @@ export class Human {
     // pelvis
     const pelvis = J.pelvis.copy(this.pos).addScaledVector(UP, (0.95 - cr * 0.36) * H - bob).addScaledVector(f, cr * 0.06 + run * 0.04);
     pelvis.addScaledVector(left, Math.sin(ph) * 0.02 * walk);
+    // knocked back a step; a leg hit drops that hip
+    pelvis.addScaledVector(hd, hr * (hz === 'leg' ? 0.04 : 0.11)).addScaledVector(left, hs * hr * (hz === 'leg' ? 0.07 : 0));
     // torso: leans into a run, a crouch and an aim; twists toward the aim
-    const twist = THREE.MathUtils.clamp(angDiff(this.yaw, this.aimYaw), -0.9, 0.9) * (0.4 + this.readyK * 0.5);
+    // an arm hit wrenches that shoulder back (round from the front) or forward (from behind)
+    const front = -(hd.x * f.x + hd.z * f.z) > 0 ? 1 : -1;
+    const twist = THREE.MathUtils.clamp(angDiff(this.yaw, this.aimYaw), -0.9, 0.9) * (0.4 + this.readyK * 0.5)
+      + hr * hs * front * (hz === 'arm' ? 0.5 : hz === 'body' ? 0.12 : 0) - cw * 0.25;
     const chestYaw = this.yaw + twist;
     const cf = _cf.set(Math.sin(chestYaw), 0, Math.cos(chestYaw));
     const cl = _cl.set(cf.z, 0, -cf.x);
@@ -339,6 +385,9 @@ export class Human {
     const torsoUp = _tu.copy(UP).multiplyScalar(Math.cos(lean)).addScaledVector(cf, Math.sin(lean));
     // flinch: knocked back from the hit
     if (this.flinchK > 0) torsoUp.addScaledVector(this.flinch, this.flinchK * 0.5).normalize();
+    if (hr > 0.002) torsoUp.addScaledVector(hd, hr * (hz === 'body' ? 0.45 : hz === 'head' ? 0.3 : 0.12)).addScaledVector(left, hs * hr * (hz === 'leg' ? 0.38 : 0)).normalize();
+    // dying: it folds forward over the wound; cowering: hunched
+    if (dying > 0 || cw > 0) torsoUp.addScaledVector(cf, dying * 0.85 + cw * 0.3).addScaledVector(hd, dying * 0.2).normalize();
     const chestBase = _cb.copy(pelvis).addScaledVector(UP, 0.09 * H);
     frameTo(this.mats[BONE.hips], pelvis, _tmp.copy(UP).addScaledVector(f, cr * 0.15), f, H);
     frameTo(this.mats[BONE.chest], chestBase, torsoUp, cf, H);
@@ -347,7 +396,8 @@ export class Human {
     const hy = chestYaw + (this.readyK > 0.5 ? angDiff(chestYaw, this.aimYaw) : this.look);
     const hp = this.aimPitch * (0.5 + this.readyK * 0.4);
     const hf2 = _hf.set(Math.sin(hy) * Math.cos(hp), Math.sin(hp), Math.cos(hy) * Math.cos(hp));
-    const headUp = _hu.copy(UP).addScaledVector(hf2, -Math.sin(hp) * 0.9).addScaledVector(this.flinch, this.flinchK * 0.6).normalize();
+    const headUp = _hu.copy(UP).addScaledVector(hf2, -Math.sin(hp) * 0.9).addScaledVector(this.flinch, this.flinchK * 0.6)
+      .addScaledVector(hd, hr * (hz === 'head' ? 1.5 : 0.35)).addScaledVector(cf, dying * 0.9 + cw * 0.45).normalize();
     frameTo(this.mats[BONE.head], neck, headUp, hf2, H);
     this.headPos.copy(neck).addScaledVector(headUp, 0.185 * H);
     this.eye.copy(this.headPos).addScaledVector(hf2, 0.08);
@@ -397,6 +447,9 @@ export class Human {
     // recoil: the gun bucks back and up
     wPos.addScaledVector(wDir, -this.recoil * 0.05);
     wDir.addScaledVector(UP, this.recoil * 0.12).normalize();
+    // a hit knocks the muzzle off the aim (an arm hit most of all); dying, it sags
+    if (hr > 0.002) wDir.addScaledVector(UP, hr * (hz === 'arm' ? 0.55 : 0.3)).addScaledVector(cl, hs * hr * (hz === 'arm' ? 0.6 : 0.15)).normalize();
+    if (dying > 0) wDir.addScaledVector(UP, -dying * 0.8).normalize();
     // reloading: the gun tips up, the left hand goes to a pouch and back
     let reload = 0;
     if (this.reloadT > 0) {
@@ -419,6 +472,8 @@ export class Human {
       fore = _b.lerp(pouch, Math.min(1, reload * 1.6));
     }
     if (this.pose === 'radio') fore = _b.copy(neck).addScaledVector(cl, 0.08).addScaledVector(cf, 0.06).addScaledVector(UP, -0.02);
+    // dying from a body wound, the free hand goes to it
+    if (dying > 0 && hz === 'body' && !pistol) fore = _b.lerp(_c.copy(chestBase).addScaledVector(torsoUp, 0.2 * H).addScaledVector(cf, 0.17).addScaledVector(cl, 0.04), Math.min(1, dying * 1.6));
     const aLen = 0.29 * H, fLen = 0.27 * H;
     for (const side of [1, -1] as const) {
       const sh = side > 0 ? shL : shR;
@@ -575,7 +630,7 @@ export class Ragdoll {
   frozen = false;
   private scale = 1;
 
-  constructor(private physics: Physics, mats: THREE.Matrix4[], vel: THREE.Vector3, impulse: THREE.Vector3, hitBone: number) {
+  constructor(private physics: Physics, mats: THREE.Matrix4[], vel: THREE.Vector3, impulse: THREE.Vector3, hitBone: number, more: { bone: number; v: THREE.Vector3 }[] = []) {
     const R = physics.R;
     const world = physics.world;
     // parts collide with the world, never with each other
@@ -620,6 +675,11 @@ export class Ragdoll {
     const hitPart = Math.max(0, PARTS.findIndex((p) => p[0] === hitBone));
     const b = this.bodies[hitPart >= 0 ? hitPart : 1];
     b.applyImpulse({ x: impulse.x, y: impulse.y, z: impulse.z }, true);
+    // and any others the death calls for (a shotgun's spread through the hips, a twist off a bad leg)
+    for (const m of more) {
+      const pi = PARTS.findIndex((p) => p[0] === m.bone);
+      if (pi >= 0) this.bodies[pi].applyImpulse({ x: m.v.x, y: m.v.y, z: m.v.z }, true);
+    }
     // riders: offset from their part at death
     for (const [bone, part] of RIDERS) {
       const pm = new THREE.Matrix4().copy(mats[PARTS[part][0]]).invert();

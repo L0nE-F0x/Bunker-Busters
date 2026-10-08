@@ -563,6 +563,20 @@ function till(S: Site, H: Hooks) {
     S.pool('poolWarm', 3.4, 3.4, 16.6, FY + 0.02, zF + 1.2);
     S.light(17.2, 2.45, pz, 0xffb060, 5, 9);
   }
+  // scrap-pipe wind chimes under the porch roof, and the loft's loose shutter (both heard in the wind)
+  {
+    const cx = 12.0, cz = pz - 0.4, top = 2.92;
+    P.beam(M.steelDark(), V(cx, 3.12, cz), V(cx, top, cz), 0.004, 3);
+    P.cyl(M.woodDark(), 0.09, 0.09, 0.025, cx, top, cz, 10);
+    [0.42, 0.36, 0.31, 0.27, 0.23].forEach((len, i) => {
+      const a = (i / 5) * Math.PI * 2;
+      const x = cx + Math.cos(a) * 0.065, z = cz + Math.sin(a) * 0.065;
+      P.beam(M.steelDark(), V(x, top, z), V(x, top - 0.06, z), 0.002, 3);
+      P.cyl(M.galv(), 0.009, 0.009, len, x, top - 0.06 - len / 2, z, 6);
+    });
+    H.audio('chimes', cx, top - 0.25, cz);
+    H.audio('shutter', x0 + 2.0, 4.55, zf + 0.15);
+  }
   // porch life: a bench, a rocking chair, barrels, a broom, crates, the rain barrel
   table(P, 12.0, zF + 0.4, 1.5, 0.4, 0.45, 0, FY, M.woodGrey(), M.woodDark(), true);
   P.box(M.woodGrey(), 1.5, 0.4, 0.04, 12.0, FY + 0.72, zF + 0.2, 0, -0.1);

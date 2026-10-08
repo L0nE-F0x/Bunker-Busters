@@ -81,6 +81,19 @@ export function noiseTexture() {
 }
 
 /**
+ * CPU read of the atlas, bilinear and wrapped like the GPU tap: `noiseAt(u, v, ch)` matches
+ * `noise(vec2(u, v))[ch]` (ch 0..3 = r, g, b, a). Lets scatter code agree with shader patterns.
+ */
+export function noiseAt(u: number, v: number, ch = 0) {
+  const d = noiseTexture().image.data as Uint8Array;
+  const x = u * S - 0.5, y = v * S - 0.5;
+  const xi = Math.floor(x), yi = Math.floor(y), fx = x - xi, fy = y - yi;
+  const at = (i: number, j: number) => d[((((j % S) + S) % S) * S + (((i % S) + S) % S)) * 4 + ch];
+  const a = at(xi, yi), b = at(xi + 1, yi), c = at(xi, yi + 1), e = at(xi + 1, yi + 1);
+  return (a + (b - a) * fx + (c - a) * fy + (a - b - c + e) * fx * fy) / 255;
+}
+
+/**
  * The atlas never needs a Y flip (a DataTexture: flipY resolves to false on every backend), but
  * on WebGL every texture node carries a flipY uniform that three refreshes per object per frame.
  * With dozens of noise taps per material that was ~0.2 ms of JS per frame; this node skips it.

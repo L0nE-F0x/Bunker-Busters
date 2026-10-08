@@ -18,12 +18,15 @@ export class VoicePlayer {
   private talk: AudioBufferSourceNode[] = [];
   private token = 0;
   private barks = 0;
+  private talking = false;
+  private ducked = 1;
 
   constructor(
     private ctx: AudioContext,
     private out: AudioNode,
     private panner: (pos: Vector3) => PannerNode,
-    private duck: (on: boolean) => void,
+    /** The score's level under speech: 0.45 in a conversation, 0.7 under a bark, 1 otherwise. */
+    private duck: (k: number) => void,
   ) {}
 
   /**
@@ -47,7 +50,8 @@ export class VoicePlayer {
       dest = this.panner(opts.pos);
       dest.connect(this.out);
       this.barks++;
-    } else this.duck(true);
+    } else this.talking = true;
+    this.mix();
     const srcs: AudioBufferSourceNode[] = [];
     for (const b of bufs) {
       if (!b) continue;
@@ -59,10 +63,11 @@ export class VoicePlayer {
       srcs.push(s);
     }
     const last = srcs[srcs.length - 1];
-    if (!last) { if (opts.pos) this.barks--; else this.duck(false); return 0; }
+    if (!last) { if (opts.pos) this.barks--; else this.talking = false; this.mix(); return 0; }
     last.onended = () => {
       if (opts.pos) { this.barks--; dest.disconnect(); }
-      else if (this.talk === srcs) { this.talk = []; this.duck(false); }
+      else if (this.talk === srcs) { this.talk = []; this.talking = false; }
+      this.mix();
     };
     if (!opts.pos) this.talk = srcs;
     if (TRACE) console.log(`[voice] ${speaker}: ${srcs.length} clip(s), ${(t - t0).toFixed(1)} s`);
@@ -82,7 +87,14 @@ export class VoicePlayer {
     const now = this.ctx.currentTime;
     for (const s of this.talk) { s.onended = null; try { s.stop(now + 0.02); } catch { /* not started */ } }
     this.talk = [];
-    this.duck(false);
+    this.talking = false;
+    this.mix();
+  }
+
+  /** Duck the score for whoever is talking: deep for a conversation, a little for a bark. */
+  private mix() {
+    const k = this.talking ? 0.45 : this.barks > 0 ? 0.7 : 1;
+    if (k !== this.ducked) { this.ducked = k; this.duck(k); }
   }
 
   private load(key: string) {
