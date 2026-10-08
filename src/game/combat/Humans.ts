@@ -513,7 +513,7 @@ export class HumanCrowd {
       if (p.active) {
         p.update(dt, hf);
         any = true;
-        this.skins?.pose(p.slot, p, !eye || p.pos.distanceToSquared(eye) < 40 * 40);
+        this.skins?.pose(p.slot, p);
       } else this.skins?.hide(p.slot);
     }
     this.mesh.visible = any;
@@ -528,7 +528,7 @@ export class HumanCrowd {
       p.aimYaw = Math.PI;
       p.pose = i % 3 === 0 ? 'aim' : i % 3 === 1 ? 'ready' : 'relaxed';
       for (let k = 0; k < 30; k++) p.update(1 / 30, hf);
-      this.skins?.pose(p.slot, p, true);
+      this.skins?.pose(p.slot, p);
     });
     this.mesh.visible = true;
   }
