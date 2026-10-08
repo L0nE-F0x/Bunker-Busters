@@ -735,7 +735,10 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #000; color:
 .touch .lvl { width: 40px; height: 40px; font-size: 22px; }
 .touch .hp { height: 10px; }
 .touch .vitals .meta { font-size: 10px; }
-.touch .stance { display: none; }
+/* crouch and sprint show on their own buttons; venom and IN SHADOW / LIT sit under the clock */
+.touch .stance { top: calc(var(--st) + 140px); bottom: auto; right: var(--sr); gap: 6px; font-size: 9.5px; letter-spacing: 0.12em; }
+.touch .stance .pill { padding: 3px 7px; }
+.touch .stance .pill.crouch, .touch .stance .pill.sprint { display: none; }
 .touch .hotbar { left: 50%; right: auto; bottom: var(--sb); transform: translateX(-50%); gap: 10px; }
 .touch #hud .hotbar .slot { width: 52px; height: 52px; pointer-events: auto; touch-action: none; }
 .touch .slot .k { display: none; }
