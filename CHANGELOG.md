@@ -4,8 +4,17 @@ Each `## vX.Y.Z` section becomes the GitHub release notes and the "what's new" l
 update notice (the first few bullets). `scripts/release.sh` refuses to release a version without one.
 
 ## v0.5.6
-- **Company at the fire.** Mara, Hollis, Pip and Dez now sit round the camp's fire on the log benches, talking with their hands when you come close. Hollis has his trucker cap, Dez his radio headset
-- **No more sitting inside logs.** Sol, Ren and Wick sit on their seats properly instead of through them
+- **Company at the fire.** Mara, Hollis, Pip and Dez sit round the camp's fire, and the title screen and character select now open on them at dusk. New runs start right there at the fire
+- **Fights hit harder.** Kade's crews react to where you hit them, stumble and die on their feet, get pinned down by near misses, lay down covering fire and flank. Wolves warn you with a crouch and a growl, then leap. Getting hit knocks your view; near death your heartbeat takes over the screen
+- **SPLICE: a hacking minigame.** Field terminals at every Kade outpost (switch off sentries, land drones, call in a resupply), plus new ways into Tanner's vault and ColdStorage's core. Craft trace spikes to buy time
+- **Night stealth.** At night you're harder to see in the dark; firelight, floodlights and your torch give you away. The HUD tells you whether you're IN SHADOW or LIT
+- **Three new side quests.** A courier who kept delivering after the end of the world (and a new place, The Last Mile), Dez tapping Kade's radio, and Wick's war on survey stakes
+- **Storms you can watch coming.** A dust wall rolls in at ground level and swallows the ridges, with gusts, tumbleweeds and dry lightning. SeedBot got a taser and smokes when you shoot it
+- **A world with more in it.** The gas station dressed on every side, guardrails and bullet-holed road signs, clumped grass and cracked desert pavement, the Spire's collapsed cell-tower compound (and the truthers it fell on), Kade's outposts in full corporate livery, a moon with a face, the Cut in banded sandstone
+- **It sounds alive.** Combat music, gunshots that ring indoors and roll across the flats, ringing ears after a blast, birds by day and owls and coyotes at night, and Dry Creek's people talk to you as you pass (and complain about your gunfire)
+- **Controllers and rebinding.** Play and navigate every menu with a gamepad; remap any key or button in Settings → Controls. Also new: field of view, invert look, head bob and an FPS counter
+- **Faster.** Smoother in fights (roughly 42 → 46–50 fps on our test laptop), and the web version downloads less and starts sooner
+- **Fixes.** Kade crews that lost you no longer stay in combat forever, a bad setting can't stop the game launching, the gold brochure at the jet can be picked up, one loot message per find, Tanner greets you once, and nobody sits inside their log
 
 ## v0.5.5
 - **Kade's crews are real people now.** Hi-vis vests, hard hats with the KADE badge (the squad leader's is orange), respirators, the works. They still take cover, aim, reload and go down in a heap when you drop them
