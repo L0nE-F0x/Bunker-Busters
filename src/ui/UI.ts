@@ -333,13 +333,37 @@ export class UI implements UIBridge {
     state.events.on('xp', ({ amount, reason }) => { this.toast(`+${amount} XP · ${reason}`, 'xp'); this.refreshVitals(); });
     state.events.on('levelup', ({ level }) => this.levelUp(level));
     state.events.on('health', () => this.refreshVitals());
-    state.events.on('item', ({ id, qty }) => { this.toast(`+${qty} ${ITEMS[id]?.name ?? id}`, 'good'); this.audio.play('pickup'); });
+    state.events.on('item', ({ id, qty }) => this.itemGot(id, qty));
     state.events.on('inventoryChanged', () => this.refreshHotbar());
     this.refreshVitals();
     this.refreshHotbar();
   }
 
+  private pendingItems: { id: string; qty: number; name: string }[] = [];
+
+  /**
+   * "+2 Water" per pickup, held until the end of the task: a loot summary toast, banner or intel card
+   * shown in the same breath ("2× Water, 6× .38") already says it, so those items aren't toasted twice.
+   */
+  private itemGot(id: string, qty: number) {
+    if (!this.pendingItems.length) {
+      setTimeout(() => {
+        const left = this.pendingItems.splice(0);
+        if (!left.length) return;
+        this.audio.play('pickup');
+        for (const it of left) if (it.qty > 0) this.toast(`+${it.qty} ${it.name}`, 'good');
+      }, 0);
+    }
+    this.pendingItems.push({ id, qty, name: ITEMS[id]?.name ?? id });
+  }
+
+  /** Items a summary line already names are dropped from the pending per-item toasts. */
+  private claimItems(text: string) {
+    for (const it of this.pendingItems) if (it.qty > 0 && text.includes(`${it.qty}× ${it.name}`)) it.qty = 0;
+  }
+
   toast(text: string, kind: 'info' | 'good' | 'bad' | 'xp' = 'info') {
+    this.claimItems(text);
     const t = h('div', `toast ${kind}`, text);
     this.els.toasts?.appendChild(t);
     setTimeout(() => t.remove(), 4800);
@@ -384,6 +408,7 @@ export class UI implements UIBridge {
 
   /** Big centred banner. Queued so simultaneous events never overlap. */
   banner(title: string, sub: string, kind: 'good' | 'bad' | 'info' = 'good') {
+    this.claimItems(sub);
     this.bannerQueue.push([title, sub, kind]);
     if (!this.bannerBusy) this.nextBanner();
   }
@@ -731,6 +756,7 @@ export class UI implements UIBridge {
   }
 
   showIntel(title: string, body: string, reveal: string, onClose: () => void) {
+    this.claimItems(reveal);
     this.audio.play('intel');
     this.openModal((close) => {
       const m = h('div', 'panel intel-reader interactive', `<div class="scan"></div>
