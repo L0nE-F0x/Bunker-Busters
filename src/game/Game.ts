@@ -717,7 +717,10 @@ export class Game {
     const recipeRow = (r: Recipe) => {
       const n = s.craftYield(r);
       const detail = n === r.out.qty ? r.detail : r.detail.replace(/→ \d+/, `→ ${n}`);
-      return { id: r.id, name: r.name, detail, disabled: this.recipeBlock(r) };
+      const disabled = this.recipeBlock(r);
+      // "… · Electronics 1" over "Needs Electronics 1" said it twice: the reason line carries it
+      const shown = disabled && r.skill && disabled.startsWith('Needs') ? detail.replace(` · ${SKILLS[r.skill.id].name} ${r.skill.level}`, '') : detail;
+      return { id: r.id, name: r.name, detail: shown, disabled };
     };
     const recipes = RECIPES.map(recipeRow);
     const refreshRecipes = () => recipes.splice(0, recipes.length, ...RECIPES.map(recipeRow));
