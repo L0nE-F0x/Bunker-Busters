@@ -1035,3 +1035,21 @@ Played headlessly end to end through `window.game`: new run, note, cooler, camp 
 - **Town wind** (`ambient.ts`): `chimes` (scrap-pipe chimes, a small prop under the Till's porch roof, batched) and `shutter` (the Till loft's loose shutter banging in gusts).
 - **Tooling:** `audio-capture.mjs` records the WAV after the limiter and prints an `out` level (clipping check). A blast at 4 m peaks at −0.1 dBFS out (the limiter holds); fights −0.5 to −1 dBFS.
 - Not verified by ear: only levels and spectrograms were checked. Wanted from the owner: fight stem taste, tinnitus level, bird levels, how often the chimes ring.
+
+## 2026-10-09: three road favours and the Last Mile (overnight swarm, story agent)
+
+- **Ten Minutes or Free** (Hollis, quest `hollis.rider`): Hollis's CB has lost Rider 9, a Dropt courier who kept delivering because the app never told him to stop. New site **The Last Mile** (`sites/courier.ts`, landmark `courier` at −158, −296 on the north flats past the Wellhead). It has his cargo e-bike on its side (taco'd front wheel, blinking tail light), the insulated box set up as a table with the DROPT decal and his "ORDER #1047 RUNNING LATE SORRY" sign, a tarp lean-to with him under a gold emergency blanket, a cold fire ring, a whip flag planted so he'd be found, and his phone on a folding solar panel still showing the streak (the screen's glow is a VirtualLight at night). Steps: read the phone (you get item `igniter`, his last order), deliver it to Nia (her stove lights first time and she sets a plate out for him), then tell Hollis straight (`q.rider.truth`) or kind (`q.rider.west`).
+- **Badge Access** (Dez, quest `dez.badges`): starts when you first carry a Recovery Lanyard, or when you ask Dez. Three lanyards get you `dez_relay`. Patch it into the Spire's generator (`sites/errands.ts`: a red lunchbox with a whip antenna and a blinking LED). Then listen to Kade's crew channel at the fire (three HR-flavoured overheard lines). Either keep Dez listening (`q.dez.ears` → favour `dezEars`: he radios when a road pair spawns near you, via the new `Recovery.onPatrol`) or play the karaoke ballad into the channel (`q.dez.karaoke`, more loot). Dez now really trades three lanyards for a ration, as the item text always promised.
+- **Survey Says** (Wick, quest `wick.survey`): pull three survey stakes (`STAKES` in quests.ts) on the slope from the Survey Camp toward the Cut. Take the field book off a folding table in the Survey Camp. Then burn it with Wick, or keep it for Mara (she gets a radio line about depth readings under the ridge).
+- Quest steps can now point the map at a Kade outpost id (`Story.computeTarget`). The errand props are in the scene from boot (hidden parts too) and hide past ~160 m. The courier site has a far stand-in.
+- **Voiced:** 37 new clips (Hollis, Dez, the Kade crew, Nia, Wick, Mara's banter, the quest wraps). Re-extracted after merging main: 465 clips, nothing stale.
+- **Verified headless** (RTX 4050):
+  - every step of all three quests, and all six outcomes, clicked through the real dialogue cards
+  - the map target and corner text at each step
+  - a save + `?continue` mid-quest for each quest: flags, quest items, and relay/stake/book visibility restored
+  - rewards and standing
+  - `[voice]` logs for the new lines
+  - a real patrol spawn triggering Dez's call
+  - pipelines 208 → 208 with the courier at night, the relay up and the stakes in view; 60 fps
+  - the stakes, the relay and the courier are all reachable (slope-limited path search, ≤ 40°)
+- **Next:** a Pip line if you lied to Hollis about Rider 9; after the karaoke outcome, Kade crews could bark about "the song" for a day.
