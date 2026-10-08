@@ -13,7 +13,7 @@ import { Wildlife } from './wildlife';
  *   drone: SeedBot's rotors · fire: camp fire · neon: tube buzz · generator: small diesel
  *   drip: water in a cave · hum: server/transformer hum · wind-hollow: wind through a hull or pipe
  *   radio: a radio murmuring to itself · projector: film projector clatter · crowd: low voices round a fire
- *   sparks: a shorting cable
+ *   sparks: a shorting cable · flies: over a wreck · chimes: scrap wind chimes · shutter: a loose shutter in gusts
  * Spots are distance-gated: beyond a kind's range they have no nodes at all.
  */
 export type { AmbientKind } from './ambient';
