@@ -669,13 +669,14 @@ export class Recovery implements HostileProvider {
     }
   }
 
-  private search(sq: Squad, at: THREE.Vector3) {
-    if (sq.alert === 'combat') return;
+  private search(sq: Squad, at: THREE.Vector3, givingUp = false) {
+    if (sq.alert === 'combat' && !givingUp) return;
     sq.alert = 'search';
     sq.searchT = 0;
     sq.known.copy(at);
     sq.knownT = this.t;
     for (const m of sq.alive) {
+      if (m.state === 'flee') continue;
       m.state = 'search';
       const a = Math.random() * 6.28;
       m.investigate.copy(at).add(_a.set(Math.cos(a) * rnd(2, 8), 0, Math.sin(a) * rnd(2, 8)));
@@ -785,8 +786,19 @@ export class Recovery implements HostileProvider {
           .sort((a, b) => a.h.pos.distanceTo(sq.known) - b.h.pos.distanceTo(sq.known))[0];
         if (m) { sq.suppressor = m; m.suppressing = true; }
       }
-      // lost you: search, then stand down
-      if (this.t - sq.knownT > 14) this.search(sq, sq.known);
+      // lost you: search, then stand down. (search() ignores a squad in combat, so this has to say it's
+      // giving up: without it a crew that lost you stayed in the fight forever, never despawned, and
+      // walked to wherever it last had you, however far)
+      if (this.t - sq.knownT > 14 && !seen) {
+        if (sq.suppressor) { sq.suppressor.suppressing = false; sq.suppressor = null; }
+        for (const m of live) {
+          m.flank = false;
+          m.fallback = false;
+          if (m.cover) { m.cover.taken = false; m.cover = null; }
+        }
+        this.search(sq, sq.known, true);
+        return;
+      }
       // nerve breaks
       if (sq.morale < 0.25 && live.length <= 2) {
         for (const m of live) if (m.state !== 'flee') { m.state = 'flee'; this.bark(m, 'flee'); }
