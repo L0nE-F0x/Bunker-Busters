@@ -53,6 +53,11 @@ export const LANDMARKS: LandmarkDef[] = [
     blurb: 'A hyperloop test track. Top speed achieved: one press release.',
     flatten: { r: 22, falloff: 20 },
   },
+  {
+    id: 'courier', name: 'The Last Mile', kind: 'site', position: [-158, 0, -296], rotation: 2.4,
+    blurb: 'A delivery 1,281 days late and still, technically, in progress.',
+    flatten: { r: 9, falloff: 16 },
+  },
 ];
 
 /**

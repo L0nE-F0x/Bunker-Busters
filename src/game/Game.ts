@@ -29,7 +29,7 @@ import { NpcCrowd } from './world/npc';
 import { HumanSkins } from './combat/humanSkin';
 import { Garage } from './bunker/Garage';
 import { Settlement } from './town/Settlement';
-import { buildSites, type Site } from './sites';
+import { buildSites, Errands, type Site } from './sites';
 import { Player } from './player/Player';
 import { FirstPersonCamera } from './player/FirstPersonCamera';
 import { Hands, HAND_LOOKS, torchLight } from './player/Hands';
@@ -116,6 +116,8 @@ export class Game {
   /** Hostiles hunting the player (last frame's `combat.awareness()`; the music's fight stem). */
   private huntedBy = 0;
   scavenge!: Scavenge;
+  /** Props and camp effects for the road favours (sites/errands.ts). */
+  errands!: Errands;
   private humanSkins: HumanSkins | null = null;
   sites: Site[] = [];
   map!: MapData;
@@ -302,6 +304,8 @@ export class Game {
     }, this.props.wreckBoxes);
     this.scene.add(this.scavenge.group);
     this.interactables.push(...this.scavenge.interactables);
+    this.errands = new Errands(this.ctx, this.landmarks, (x, z) => this.clearSpot(x, z));
+    this.interactables.push(...this.errands.interactables);
     if (!SKIP.has('env')) this.buildEnvironment();
     if (SKIP.has('garage')) this.scene.remove(this.garage.b.group, this.garage.drone.group);
     if (SKIP.has('ui')) document.getElementById('ui')!.style.display = 'none';
@@ -682,6 +686,7 @@ export class Game {
       interactables: this.interactables,
     });
     this.recovery.onRespawn = (id) => this.machines.reset(id);
+    this.recovery.onPatrol = (at) => { if (this.player) this.errands?.patrol(at, this.player.position); };
     this.terminals = new KadeTerminals({
       recovery: this.recovery, machines: this.machines, ui: this.ctx.ui, audio: this.audio,
       state: () => self.state ?? null,
@@ -846,6 +851,7 @@ export class Game {
           s.addXP(15, 'Into the ledger');
           this.audio.play('uiConfirm');
         }
+        this.errands.campChoice(choice);
         if (choice === 'emp' && s.count('battery') >= 1 && s.count('scrap') >= 2) {
           s.removeItem('battery', 1);
           s.removeItem('scrap', 2);
@@ -1655,6 +1661,7 @@ export class Game {
     this.settlement?.update(dt, this.camera.position);
     if (this.player && this.mode === 'playing') this.scavenge?.update(dt, this.player.position);
     for (const site of this.sites) site.update(dt, this.camera.position);
+    this.errands?.update(dt, this.camera.position);
     if (this.mode !== 'playing') this.garage.update(dt);
     this.garage.cull(this.camera.position);
     this.props.update(dt, focusPos, this.atmo.wind);

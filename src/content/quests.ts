@@ -33,7 +33,7 @@ export interface QuestStep {
   optional?: boolean;
   /** Not reachable in this build (the Act II road). Shown as a teaser, never "current". */
   locked?: boolean;
-  /** Landmark id (or 'garage' / 'camp') the tracked quest marks on the map. */
+  /** Landmark id (or 'garage', or a Kade outpost id) the tracked quest marks on the map. */
   at?: string;
 }
 
@@ -522,7 +522,142 @@ export const QUESTS: QuestDef[] = [
     reward: { xp: 90, items: [{ id: 'scrap', qty: 4 }], rep: { inez: 1 } },
     wrap: { speaker: 'You', text: 'Forty tickets to nowhere. I\'ll tell Inez she can stop worrying about refunds.' },
   },
+
+  // ------------------------------------------------------------------ the road's other favours
+  // Props and interactions: sites/courier.ts (the Last Mile), sites/errands.ts (relay, stakes, field
+  // book). Talk: content/camp.ts (Hollis, Dez), town/Settlement.ts (Nia, Wick).
+  {
+    id: 'hollis.rider',
+    kind: 'side',
+    title: 'Ten Minutes or Free',
+    giver: 'hollis',
+    where: 'Last Chance → the north flats → Dry Creek',
+    blurb: 'Rider 9 delivered for Dropt ("anything, anywhere, ten minutes or it\'s free") and never stopped, because the app never told him to. He checked in on Hollis\'s CB every week for two years. He has missed four.',
+    start: (v) => any(v, 'hollis.rider', 'seen:courier'),
+    steps: [
+      {
+        id: 'find', text: 'Find Rider 9\'s last stop', at: 'courier',
+        hint: 'His last call came from the north flats, past the Kade Wellhead. Look for an orange flag on a whip.',
+        done: (v) => any(v, 'seen:courier', 'q.rider.log'),
+      },
+      {
+        id: 'log', text: 'Read his delivery log', at: 'courier',
+        hint: 'His phone is still on. Of course it is.',
+        done: (v) => v.has('q.rider.log'),
+      },
+      {
+        id: 'deliver', text: 'Deliver his last order', at: 'creek',
+        hint: 'A stove igniter for Nia Pell at the Dry Creek diner. She is behind the counter.',
+        done: (v) => v.has('q.rider.delivered'),
+      },
+      {
+        id: 'tell', text: 'Tell Hollis', at: 'gas',
+        hint: 'At the camp fire. Say it straight, or say it kind.',
+        done: (v) => any(v, 'q.rider.truth', 'q.rider.west'),
+      },
+    ],
+    outcomes: [
+      {
+        flag: 'q.rider.truth',
+        label: 'You told Hollis how Rider 9 ended.',
+        text: 'Hollis stood by the sign for an hour. In the morning he handed you his last box of .38s and said the kid never dropped an order in his life. Channel 19 is quiet now. He leaves it on anyway.',
+        reward: { xp: 90, items: [{ id: 'ammo38', qty: 12 }, { id: 'ration', qty: 1 }], rep: { hollis: 2, compact: 1 } },
+      },
+      {
+        flag: 'q.rider.west',
+        label: 'You told Hollis that Rider 9 rode west.',
+        text: 'Hollis smiled like he believed it, and keeps channel 19 open for the day a bell rings on it. Pip watched your face the whole time and wrote something down.',
+        reward: { xp: 70, items: [{ id: 'ammo38', qty: 8 }], rep: { hollis: 1 } },
+      },
+    ],
+    wrap: { speaker: 'Hollis Grange', text: 'Ten minutes or free. Kid made it free every time.' },
+  },
+  {
+    id: 'dez.badges',
+    kind: 'side',
+    title: 'Badge Access',
+    giver: 'dez',
+    where: 'Last Chance → the Spire',
+    blurb: 'Kade crews read their badge numbers onto the air at every shift change, because the policy says so. Dez thinks the lanyards talk on a channel of their own. He needs three to find it, and somewhere high to listen from.',
+    start: (v) => v.has('briefed') && (v.has('dez.badges') || v.count('kade_badge') > 0),
+    steps: [
+      {
+        id: 'badges', text: 'Bring Dez three Recovery Lanyards', at: 'gas',
+        hint: 'Kade contractors wear them, and Kade crates sometimes hold a spare. Dez is at the camp fire.',
+        done: (v) => v.has('q.dez.badges'),
+      },
+      {
+        id: 'relay', text: 'Patch Dez\'s relay into the Spire', at: 'spire',
+        hint: 'The fallen 5G tower, northeast of camp. Its generator by the shack still runs. Red to red.',
+        done: (v) => v.has('q.dez.relay'),
+      },
+      {
+        id: 'listen', text: 'Listen in with Dez', at: 'gas',
+        hint: 'Back at the fire. Dez has the headphones warm.',
+        done: (v) => any(v, 'q.dez.ears', 'q.dez.karaoke'),
+      },
+    ],
+    outcomes: [
+      {
+        flag: 'q.dez.ears',
+        label: 'You kept quiet and listened.',
+        text: 'Dez sits on Kade\'s crew channel now. When a road pair clocks in near you, he calls it on the radio before they ever see you.',
+        reward: { xp: 90, items: [{ id: 'emp', qty: 1 }], rep: { dez: 2, compact: 1 } },
+      },
+      {
+        flag: 'q.dez.karaoke',
+        label: 'You played the karaoke machine into their channel.',
+        text: 'Four minutes of a power ballad on every Kade radio in the valley. HR opened a ticket. Kade changed channels by morning, and Dez has never been happier.',
+        reward: { xp: 80, items: [{ id: 'emp', qty: 2 }, { id: 'battery', qty: 1 }], rep: { dez: 2, pip: 1 } },
+      },
+    ],
+    wrap: { speaker: 'Dez Marlow', text: 'Badge access granted. To us. Nobody tell HR.' },
+  },
+  {
+    id: 'wick.survey',
+    kind: 'side',
+    title: 'Survey Says',
+    giver: 'wick',
+    where: 'The Cut → Kade Survey Camp',
+    blurb: 'Men in white hard hats came up the wash with a tripod and tied orange tape to Wick\'s ridge. Wick would like the tape gone, and he would like to know what they think they measured.',
+    start: (v) => v.has('wick.survey'),
+    steps: [
+      {
+        id: 'stakes', text: 'Pull Kade\'s three survey stakes', at: 'survey',
+        hint: 'Orange tape on pale stakes, strung up the slope from the Kade Survey Camp toward the Cut. Mind the camp.',
+        done: (v) => STAKES.every((f) => v.has(f)),
+      },
+      {
+        id: 'book', text: 'Take the field book from the Kade Survey Camp', at: 'survey',
+        hint: 'Three tents and a theodolite, west of the wash. The book is on the folding table by the tripod. Quietly, or not.',
+        done: (v) => v.has('q.wick.book'),
+      },
+      {
+        id: 'back', text: 'Show Wick what they measured', at: 'cave',
+        hint: 'Wick sits by his fire in the Cut.',
+        done: (v) => any(v, 'q.wick.burned', 'q.wick.kept'),
+      },
+    ],
+    outcomes: [
+      {
+        flag: 'q.wick.burned',
+        label: 'You let Wick burn the field book.',
+        text: 'Wick read every page, then fed them to his fire one at a time, slowly, like a man eating something good. The seep is still his. Kade will have to measure it again, and he\'ll be waiting.',
+        reward: { xp: 80, items: [{ id: 'water', qty: 2 }, { id: 'ration', qty: 1 }], rep: { wick: 2 } },
+      },
+      {
+        flag: 'q.wick.kept',
+        label: 'You kept the field book for Mara.',
+        text: 'Wick let you take it, eventually. Mara read the numbers on the radio twice and went quiet. Kade isn\'t surveying the ridge. They\'re surveying what\'s under it.',
+        reward: { xp: 90, items: [{ id: 'battery', qty: 1 }, { id: 'ammo3030', qty: 6 }], rep: { mara: 1, compact: 1, wick: 1 } },
+      },
+    ],
+    wrap: { speaker: 'Wick', text: 'Orange tape. On my ridge. Like it was a present.' },
+  },
 ];
+
+/** The Survey Says stakes (sites/errands.ts places them). */
+export const STAKES = ['q.wick.stake.a', 'q.wick.stake.b', 'q.wick.stake.c'];
 
 export const QUEST = Object.fromEntries(QUESTS.map((q) => [q.id, q])) as Record<string, QuestDef>;
 
@@ -561,5 +696,7 @@ export function favours(v: { has: (f: string) => boolean }) {
     wickSeep: v.has('q.wick.left'),
     /** Ren keeps watch at Last Chance. */
     renAtCamp: v.has('q.ren.truth'),
+    /** Dez calls Kade road patrols on the radio when they clock in near you. */
+    dezEars: v.has('q.dez.ears'),
   };
 }

@@ -7,6 +7,7 @@ import type { GameContext, Interactable, Action } from '@/game/context';
 import { LANDMARKS } from '@/content/world';
 import { ITEMS } from '@/content/items';
 import { XP_REWARDS } from '@/content/progression';
+import { STAKES } from '@/content/quests';
 import { DistanceLod, Frame, shadowProxy } from '@/game/world/kit';
 import { Fire } from '@/game/world/effects';
 import { NpcCrowd, type NpcDef } from '@/game/world/npc';
@@ -600,6 +601,13 @@ export class Settlement {
           this.toast('Nia\'s plate. Beans, something green, and opinions. Less hungry, less thirsty.', 'good');
         }
         if (choice === 'deed' && s.removeItem('deed', 1)) s.set('q.inez.town');
+        if (choice === 'igniter' && !s.has('q.rider.delivered') && s.removeItem('igniter', 1)) {
+          s.set('q.rider.delivered');
+          this.loot([{ id: 'ration', qty: 1 }]);
+          s.addXP(30, 'Delivered');
+          this.ctx.audio.play('uiConfirm');
+        }
+        if (choice === 'nine' && s.set('creek.nia.nine')) s.addRep('nia', 1);
         if (choice === 'crew') this.joinCrew('nia');
       },
     });
@@ -622,6 +630,7 @@ export class Settlement {
           ...(q ? [{ id: 'short', label: s.has('q.nia.who') ? 'I know who\'s taking your water.' : 'About your missing water...', next: 'short' }] : []),
           ...(plate ? [{ id: 'plate', label: 'Eat at the counter.', disabled: s.favourReady('nia.plate') ? undefined : 'Rest first. The plate is for people who sleep.', next: 'hello' }] : []),
           ...(s.count('deed') && !s.has('q.inez.inez') && !s.has('q.inez.town') ? [{ id: 'deed', label: 'Pin the Till\'s deed on your wall. It\'s the town\'s.', next: 'deed' }] : []),
+          ...(s.count('igniter') && !s.has('q.rider.delivered') ? [{ id: 'igniter', label: 'Delivery for N. Pell. One stove igniter. It\'s running late.', next: 'igniter' }] : []),
           { id: 'who', label: 'Who else is still here?', next: 'who' },
           { id: 'ridge', label: 'Anything up on the ridge?', disabled: this.needSocial(1, 'She doesn\'t give directions to strangers.'), next: 'ridge' },
           ...this.crewChoice('nia'),
@@ -667,6 +676,20 @@ export class Settlement {
         speaker: 'Nia Pell',
         text: 'For the sterilizer? He could have ASKED. Fine. Fine! He stores it here, in writing, and he buys the next ledger. Tell him I said that. Tell him I said it nicely.',
         choices: [{ id: 'ok', label: 'I\'ll tell him you said it nicely.' }],
+      };
+    }
+    if (id === 'igniter') {
+      return {
+        speaker: 'Nia Pell',
+        text: 'I ordered this. I ordered this before the Pivot. Ten minutes, the app said. (She turns the box over twice.) It\'s the right part. Of course it\'s the right part. Who brought it? Not you. You have the wrong face for it. Who brought it?',
+        choices: [{ id: 'nine', label: 'A rider called Nine. He finished the route.', next: 'nine' }],
+      };
+    }
+    if (id === 'nine') {
+      return {
+        speaker: 'Nia Pell',
+        text: 'Then he gets a plate. Every night, out by the road where Ren sits. Ren can finally have some company. (The stove catches on the first click. She doesn\'t say anything for a while.) Here. Take this for the road. He\'d have wanted a tip.',
+        choices: [{ id: 'ok', label: 'Five stars, Nia.' }],
       };
     }
     if (id === 'deed') {
@@ -1079,6 +1102,9 @@ export class Settlement {
           s.useFavour('wick.seep');
           this.loot([{ id: 'water', qty: 1 }]);
         }
+        if (choice === 'survey') s.set('wick.survey');
+        if (choice === 'burn' && s.has('q.wick.book') && !s.has('q.wick.kept') && s.removeItem('survey_book', 1)) s.set('q.wick.burned');
+        if (choice === 'keep' && s.has('q.wick.book') && !s.has('q.wick.burned')) s.set('q.wick.kept');
         if (choice === 'crew') this.joinCrew('wick');
       },
     });
@@ -1101,9 +1127,11 @@ export class Settlement {
             { id: 'greet', label: 'Doc says hello. (keep the medkit)', next: 'helloed' },
           ] : []),
           ...(s.favours().wickSeep ? [{ id: 'seep', label: 'Fill a bottle at the seep.', disabled: s.favourReady('wick.seep') ? undefined : 'It\'s still filling. Rest first.', next: 'hello' }] : []),
+          ...(s.has('q.wick.book') && !s.has('q.wick.burned') && !s.has('q.wick.kept') ? [{ id: 'book', label: 'I have their field book.', next: 'book' }] : []),
           { id: 'view', label: 'What can you see from up here?', next: 'view' },
           { id: 'share', label: 'I sleep outside too.', disabled: sv >= 2 ? (s.has('cave.share') ? 'He already split it.' : undefined) : 'Requires Survival 2. He can tell you don\'t live on what you carry.', next: 'hello' },
           ...(!s.has('cave.pocket') ? [{ id: 'fall', label: 'The rocks in the side passage.', next: 'fall' }] : []),
+          ...(!s.has('wick.survey') ? [{ id: 'survey', label: 'Anything else bothering you?', next: 'survey' }] : []),
           { id: 'vesper', label: 'A woman with rocket money.', disabled: this.needSocial(1, 'He doesn\'t gossip with strangers.'), next: 'vesper' },
           ...this.crewChoice('wick'),
           { id: 'bye', label: 'I\'ll leave the fire.' },
@@ -1147,6 +1175,39 @@ export class Settlement {
         speaker: 'Wick',
         text: 'Hello back. (He coughs for a long time.) Tell him I\'m fine. I\'m always fine.',
         choices: [{ id: 'ok', label: 'Leave him with the cough.' }],
+      };
+    }
+    if (id === 'survey') {
+      return {
+        speaker: 'Wick',
+        text: 'Men in white hats came up the wash with a tripod. Tied orange tape to my ridge, every forty paces, like it was a present. Pull their stakes. Then find out what they think they measured. Their camp is west of the wash. Three tents and a theodolite, and a theodolite is just a camera that thinks it\'s a lawyer.',
+        choices: [{ id: 'ok', label: 'Stakes first. Then the camp.', next: 'hello' }],
+      };
+    }
+    if (id === 'book') {
+      const stakes = STAKES.every((f) => s.has(f));
+      return {
+        speaker: 'Wick',
+        text: `Point four litres an hour. They measured my seep with a cup. "Resident: one, male, loud." That's fair. "Relocation package: tote bag." That's not. And this, in red. Not flow. Depth. They don't want the water up here. They want what's under the ridge.${stakes ? ' At least the tape\'s gone.' : ' Their tape is still on my slope, by the way.'}`,
+        choices: [
+          { id: 'burn', label: 'Burn it. Page by page.', next: 'burned' },
+          { id: 'keep', label: 'Mara should see this first.', next: 'kept' },
+          { id: 'back', label: 'Let me think.', next: 'hello' },
+        ],
+      };
+    }
+    if (id === 'burned') {
+      return {
+        speaker: 'Wick',
+        text: 'Page by page. (He reads each one before it goes in.) The seep\'s still mine. They\'ll have to measure it again, and next time I\'ll be sitting on it.',
+        choices: [{ id: 'ok', label: 'Save me the cover.' }],
+      };
+    }
+    if (id === 'kept') {
+      return {
+        speaker: 'Wick',
+        text: 'Mara. The water woman. Fine. Take it to her. Tell her the loud resident says the ridge isn\'t for sale, and neither is what\'s under it.',
+        choices: [{ id: 'ok', label: 'I\'ll tell her exactly that.' }],
       };
     }
     if (id === 'vesper') {

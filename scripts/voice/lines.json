@@ -120,6 +120,76 @@
   "where": "src/game/combat/Machines.ts"
  },
  {
+  "key": "15qxcai",
+  "voice": "af_river",
+  "fx": "radio",
+  "speed": 1,
+  "speaker": "Dez Marlow",
+  "words": "Badge access granted. To us. Nobody tell HR.",
+  "tts": "Badge access granted. To us. Nobody tell HR.",
+  "where": "src/content/quests.ts"
+ },
+ {
+  "key": "1amelpr",
+  "voice": "af_river",
+  "fx": "radio",
+  "speed": 1,
+  "speaker": "Dez Marlow",
+  "words": "Crew channel says a pair is starting a shift on the highway by you. Mood: aligned. Get off the road.",
+  "tts": "Crew channel says a pair is starting a shift on the highway by you. Mood: aligned. Get off the road.",
+  "where": "src/game/sites/errands.ts"
+ },
+ {
+  "key": "0zsll9b",
+  "voice": "af_river",
+  "fx": "radio",
+  "speed": 1,
+  "speaker": "Dez Marlow",
+  "words": "Four minutes. Key change at three. Every Kade radio in the valley. They'll change channels by morning and I don't care. This was always the plan. This was always the plan.",
+  "tts": "Four minutes. Key change at three. Every Kade radio in the valley. They'll change channels by morning and I don't care. This was always the plan. This was always the plan.",
+  "where": "src/content/camp.ts"
+ },
+ {
+  "key": "0wkh1ct",
+  "voice": "af_river",
+  "fx": "radio",
+  "speed": 1,
+  "speaker": "Dez Marlow",
+  "words": "Heads up. A Kade road pair just clocked in near you. They're walking your way.",
+  "tts": "Heads up. A Kade road pair just clocked in near you. They're walking your way.",
+  "where": "src/game/sites/errands.ts"
+ },
+ {
+  "key": "00luugb",
+  "voice": "af_river",
+  "fx": "radio",
+  "speed": 1,
+  "speaker": "Dez Marlow",
+  "words": "I've got a carrier. Oh, I've got so many carriers. Come back to the fire. Bring snacks.",
+  "tts": "I've got a carrier. Oh, I've got so many carriers. Come back to the fire. Bring snacks.",
+  "where": "src/game/sites/errands.ts"
+ },
+ {
+  "key": "0imvx7q",
+  "voice": "af_river",
+  "fx": "radio",
+  "speed": 1,
+  "speaker": "Dez Marlow",
+  "words": "Kade lanyards. Every crew reads its badge numbers onto the air at shift change, because policy. Those badges have chips in them, and chips talk. Bring me three and I'll find the channel they talk on.",
+  "tts": "Kade lanyards. Every crew reads its badge numbers onto the air at shift change, because policy. Those badges have chips in them, and chips talk. Bring me three and I'll find the channel they talk on.",
+  "where": "src/content/camp.ts"
+ },
+ {
+  "key": "1qfn1qp",
+  "voice": "af_river",
+  "fx": "radio",
+  "speed": 1,
+  "speaker": "Dez Marlow",
+  "words": "Quiet it is. Keep your radio on. When a pair clocks in near you, you'll hear me before you see them.",
+  "tts": "Quiet it is. Keep your radio on. When a pair clocks in near you, you'll hear me before you see them.",
+  "where": "src/content/camp.ts"
+ },
+ {
   "key": "1bx528x",
   "voice": "af_river",
   "fx": "radio",
@@ -127,6 +197,26 @@
   "speaker": "Dez Marlow",
   "words": "There's a carrier on our band that doesn't belong to any camp. It breathes between songs. Mara thinks I'm paranoid. Mara is wrong. I know exactly how that sounds.",
   "tts": "There's a carrier on our band that doesn't belong to any camp. It breathes between songs. Mara thinks I'm paranoid. Mara is wrong. I know exactly how that sounds.",
+  "where": "src/content/camp.ts"
+ },
+ {
+  "key": "0pvxglp",
+  "voice": "af_river",
+  "fx": "radio",
+  "speed": 1,
+  "speaker": "Dez Marlow",
+  "words": "They smile because the policy says so. Okay. The chips ping on a crew channel, but the karaoke machine can't hear it from down here. Take this relay up to the Spire and patch it into the generator by the shack. Red to red. Don't lick anything.",
+  "tts": "They smile because the policy says so. Okay. The chips ping on a crew channel, but the karaoke machine can't hear it from down here. Take this relay up to the Spire and patch it into the generator by the shack. Red to red. Don't lick anything.",
+  "where": "src/content/camp.ts"
+ },
+ {
+  "key": "04pxms2",
+  "voice": "af_river",
+  "fx": "radio",
+  "speed": 1,
+  "speaker": "Dez Marlow",
+  "words": "You hear that? They're scheduled. They're scheduled like a dentist. I could sit on this channel and call you every time a road pair clocks in near you. Or. Hear me out. The karaoke machine has a power ballad in it that has never been played at full volume.",
+  "tts": "You hear that? They're scheduled. They're scheduled like a dentist. I could sit on this channel and call you every time a road pair clocks in near you. Or. Hear me out. The karaoke machine has a power ballad in it that has never been played at full volume.",
   "where": "src/content/camp.ts"
  },
  {
@@ -330,6 +420,26 @@
   "where": "src/content/townBarks.ts"
  },
  {
+  "key": "1pc5ld7",
+  "voice": "am_onyx",
+  "fx": "radio",
+  "speed": 0.94,
+  "speaker": "Hollis Grange",
+  "words": "Channel 19's been quiet. There's a kid calls himself Rider 9. Rides a delivery e-bike for an app called Dropt: anything, anywhere, ten minutes or it's free. The app never told him to stop, so he never did. He checks in every week. He's missed four. Last I heard him, he was cutting across the north flats past the Kade Wellhead.",
+  "tts": "Channel 19's been quiet. There's a kid calls himself Rider 9. Rides a delivery e-bike for an app called Dropt: anything, anywhere, ten minutes or it's free. The app never told him to stop, so he never did. He checks in every week. He's missed four. Last I heard him, he was cutting across the north flats past the Kade Wellhead.",
+  "where": "src/content/camp.ts"
+ },
+ {
+  "key": "0sqxhzb",
+  "voice": "am_onyx",
+  "fx": "radio",
+  "speed": 0.94,
+  "speaker": "Hollis Grange",
+  "words": "Course he did. Kid never dropped an order in his life. Here. My last box of rounds for that old . 38. I won't be needing them to wait up for anybody.",
+  "tts": "Course he did. Kid never dropped an order in his life. Here. My last box of rounds for that old . 38. I won't be needing them to wait up for anybody.",
+  "where": "src/content/camp.ts"
+ },
+ {
   "key": "1cybxq5",
   "voice": "am_onyx",
   "fx": "radio",
@@ -348,6 +458,36 @@
   "words": "Kid gave you a whole page. Here, take my road kit. Don't tell her I cried.",
   "tts": "Kid gave you a whole page. Here, take my road kit. Don't tell her I cried.",
   "where": "src/content/quests.ts"
+ },
+ {
+  "key": "0bb4vvf",
+  "voice": "am_onyx",
+  "fx": "radio",
+  "speed": 0.94,
+  "speaker": "Hollis Grange",
+  "words": "Ten minutes or free. Kid made it free every time.",
+  "tts": "Ten minutes or free. Kid made it free every time.",
+  "where": "src/content/quests.ts"
+ },
+ {
+  "key": "0iilrin",
+  "voice": "am_onyx",
+  "fx": "radio",
+  "speed": 0.94,
+  "speaker": "Hollis Grange",
+  "words": "West. Huh. Good for him. Somebody ought to get out ahead of the rest of us. I'll keep 19 open, then. In case he rings the bell.",
+  "tts": "West. Huh. Good for him. Somebody ought to get out ahead of the rest of us. I'll keep 19 open, then. In case he rings the bell.",
+  "where": "src/content/camp.ts"
+ },
+ {
+  "key": "02e25be",
+  "voice": "am_onyx",
+  "fx": "radio",
+  "speed": 0.94,
+  "speaker": "Hollis Grange",
+  "words": "You found him. I can see it. Say it straight, or say it kind. I've had both on this radio.",
+  "tts": "You found him. I can see it. Say it straight, or say it kind. I've had both on this radio.",
+  "where": "src/content/camp.ts"
  },
  {
   "key": "0e4wwuf",
@@ -618,6 +758,46 @@
   "words": "Whoever is still here. I'm still here. Thank you. Bottles are two scrap for you from now on. Don't tell Sol. Sol thinks I have a heart and I like him confused.",
   "tts": "Whoever is still here. I'm still here. Thank you. Bottles are two scrap for you from now on. Don't tell Sol. Sol thinks I have a heart and I like him confused.",
   "where": "src/game/town/Settlement.ts"
+ },
+ {
+  "key": "1qe1igf",
+  "voice": "am_fenrir",
+  "fx": "radio",
+  "speed": 1.05,
+  "speaker": "Kade Recovery",
+  "words": "Apex wants the pipeline numbers by the end of the quarter. Does anyone know which quarter it is? Asking for the whole team.",
+  "tts": "Apex wants the pipeline numbers by the end of the quarter. Does anyone know which quarter it is? Asking for the whole team.",
+  "where": "src/content/camp.ts"
+ },
+ {
+  "key": "1sbfl58",
+  "voice": "am_michael",
+  "fx": "radio",
+  "speed": 1.05,
+  "speaker": "Kade Recovery",
+  "words": "Apex wants the pipeline numbers by the end of the quarter. Does anyone know which quarter it is? Asking for the whole team.",
+  "tts": "Apex wants the pipeline numbers by the end of the quarter. Does anyone know which quarter it is? Asking for the whole team.",
+  "where": "src/content/camp.ts"
+ },
+ {
+  "key": "1wuxzz1",
+  "voice": "bm_george",
+  "fx": "radio",
+  "speed": 1.05,
+  "speaker": "Kade Recovery",
+  "words": "Apex wants the pipeline numbers by the end of the quarter. Does anyone know which quarter it is? Asking for the whole team.",
+  "tts": "Apex wants the pipeline numbers by the end of the quarter. Does anyone know which quarter it is? Asking for the whole team.",
+  "where": "src/content/camp.ts"
+ },
+ {
+  "key": "17cag1j",
+  "voice": "bm_daniel",
+  "fx": "radio",
+  "speed": 1.05,
+  "speaker": "Kade Recovery",
+  "words": "Apex wants the pipeline numbers by the end of the quarter. Does anyone know which quarter it is? Asking for the whole team.",
+  "tts": "Apex wants the pipeline numbers by the end of the quarter. Does anyone know which quarter it is? Asking for the whole team.",
+  "where": "src/content/camp.ts"
  },
  {
   "key": "1gz60nl",
@@ -1740,6 +1920,46 @@
   "where": "src/content/recovery.ts"
  },
  {
+  "key": "0v4wjmu",
+  "voice": "am_fenrir",
+  "fx": "radio",
+  "speed": 1.05,
+  "speaker": "Kade Recovery",
+  "words": "Road pair two, clocking in. Mood: aligned. Hydration: compliant. Reminder from People Ops: repossessed pianos are not break-room furniture.",
+  "tts": "Road pair two, clocking in. Mood: aligned. Hydration: compliant. Reminder from People Ops: repossessed pianos are not break-room furniture.",
+  "where": "src/content/camp.ts"
+ },
+ {
+  "key": "10cyj7h",
+  "voice": "am_michael",
+  "fx": "radio",
+  "speed": 1.05,
+  "speaker": "Kade Recovery",
+  "words": "Road pair two, clocking in. Mood: aligned. Hydration: compliant. Reminder from People Ops: repossessed pianos are not break-room furniture.",
+  "tts": "Road pair two, clocking in. Mood: aligned. Hydration: compliant. Reminder from People Ops: repossessed pianos are not break-room furniture.",
+  "where": "src/content/camp.ts"
+ },
+ {
+  "key": "1nvdgxo",
+  "voice": "bm_george",
+  "fx": "radio",
+  "speed": 1.05,
+  "speaker": "Kade Recovery",
+  "words": "Road pair two, clocking in. Mood: aligned. Hydration: compliant. Reminder from People Ops: repossessed pianos are not break-room furniture.",
+  "tts": "Road pair two, clocking in. Mood: aligned. Hydration: compliant. Reminder from People Ops: repossessed pianos are not break-room furniture.",
+  "where": "src/content/camp.ts"
+ },
+ {
+  "key": "1ysepvy",
+  "voice": "bm_daniel",
+  "fx": "radio",
+  "speed": 1.05,
+  "speaker": "Kade Recovery",
+  "words": "Road pair two, clocking in. Mood: aligned. Hydration: compliant. Reminder from People Ops: repossessed pianos are not break-room furniture.",
+  "tts": "Road pair two, clocking in. Mood: aligned. Hydration: compliant. Reminder from People Ops: repossessed pianos are not break-room furniture.",
+  "where": "src/content/camp.ts"
+ },
+ {
   "key": "1hnixxt",
   "voice": "am_fenrir",
   "fx": "radio",
@@ -1778,6 +1998,46 @@
   "words": "Something moved. Probably a coyote. Probably.",
   "tts": "Something moved. Probably a coyote. Probably.",
   "where": "src/content/recovery.ts"
+ },
+ {
+  "key": "0jssvtm",
+  "voice": "am_fenrir",
+  "fx": "radio",
+  "speed": 1.05,
+  "speaker": "Kade Recovery",
+  "words": "Survey Camp to Wellhead. The ridge seep is a data asset now. We stake it Friday. Somebody tell the guy in the cave he's been rebranded.",
+  "tts": "Survey Camp to Wellhead. The ridge seep is a data asset now. We stake it Friday. Somebody tell the guy in the cave he's been rebranded.",
+  "where": "src/content/camp.ts"
+ },
+ {
+  "key": "10i02vp",
+  "voice": "am_michael",
+  "fx": "radio",
+  "speed": 1.05,
+  "speaker": "Kade Recovery",
+  "words": "Survey Camp to Wellhead. The ridge seep is a data asset now. We stake it Friday. Somebody tell the guy in the cave he's been rebranded.",
+  "tts": "Survey Camp to Wellhead. The ridge seep is a data asset now. We stake it Friday. Somebody tell the guy in the cave he's been rebranded.",
+  "where": "src/content/camp.ts"
+ },
+ {
+  "key": "0zfepvs",
+  "voice": "bm_george",
+  "fx": "radio",
+  "speed": 1.05,
+  "speaker": "Kade Recovery",
+  "words": "Survey Camp to Wellhead. The ridge seep is a data asset now. We stake it Friday. Somebody tell the guy in the cave he's been rebranded.",
+  "tts": "Survey Camp to Wellhead. The ridge seep is a data asset now. We stake it Friday. Somebody tell the guy in the cave he's been rebranded.",
+  "where": "src/content/camp.ts"
+ },
+ {
+  "key": "1uwy6qq",
+  "voice": "bm_daniel",
+  "fx": "radio",
+  "speed": 1.05,
+  "speaker": "Kade Recovery",
+  "words": "Survey Camp to Wellhead. The ridge seep is a data asset now. We stake it Friday. Somebody tell the guy in the cave he's been rebranded.",
+  "tts": "Survey Camp to Wellhead. The ridge seep is a data asset now. We stake it Friday. Somebody tell the guy in the cave he's been rebranded.",
+  "where": "src/content/camp.ts"
  },
  {
   "key": "029mmb8",
@@ -2230,6 +2490,16 @@
   "where": "src/content/banter.ts"
  },
  {
+  "key": "1s17kdi",
+  "voice": "af_sarah",
+  "fx": "radio",
+  "speed": 0.97,
+  "speaker": "Mara",
+  "words": "Dropt. I remember Dropt. Ten minutes or free, and they were never once free. Get that box to Nia. Then tell Hollis. In that order.",
+  "tts": "Dropt. I remember Dropt. Ten minutes or free, and they were never once free. Get that box to Nia. Then tell Hollis. In that order.",
+  "where": "src/content/banter.ts"
+ },
+ {
   "key": "1rx0op8",
   "voice": "af_sarah",
   "fx": "radio",
@@ -2267,6 +2537,16 @@
   "speaker": "Mara",
   "words": "I heard that. Kade Holdings. Of course it's Kade. Get the ledger anyway. If he's a middleman, it's a map to the top.",
   "tts": "I heard that. Kade Holdings. Of course it's Kade. Get the ledger anyway. If he's a middleman, it's a map to the top.",
+  "where": "src/content/banter.ts"
+ },
+ {
+  "key": "0zelbzx",
+  "voice": "af_sarah",
+  "fx": "radio",
+  "speed": 0.97,
+  "speaker": "Mara",
+  "words": "I read Wick's book. Depth, not flow. She doesn't want his seep. She wants the aquifer under the ridge, the one the creek used to come from. I'll be up all night with this.",
+  "tts": "I read Wick's book. Depth, not flow. She doesn't want his seep. She wants the aquifer under the ridge, the one the creek used to come from. I'll be up all night with this.",
   "where": "src/content/banter.ts"
  },
  {
@@ -2940,6 +3220,16 @@
   "where": "src/game/town/Settlement.ts"
  },
  {
+  "key": "14zj75g",
+  "voice": "af_heart",
+  "fx": "room",
+  "speed": 0.95,
+  "speaker": "Nia Pell",
+  "words": "I ordered this. I ordered this before the Pivot. Ten minutes, the app said. It's the right part. Of course it's the right part. Who brought it? Not you. You have the wrong face for it. Who brought it?",
+  "tts": "I ordered this. I ordered this before the Pivot. Ten minutes, the app said. It's the right part. Of course it's the right part. Who brought it? Not you. You have the wrong face for it. Who brought it?",
+  "where": "src/game/town/Settlement.ts"
+ },
+ {
   "key": "1a71v8p",
   "voice": "af_heart",
   "fx": "room",
@@ -3037,6 +3327,16 @@
   "speaker": "Nia Pell",
   "words": "The Till belongs to Dry Creek? Inez is going to set something on fire. Probably this. I'm going to laminate it.",
   "tts": "The Till belongs to Dry Creek? Inez is going to set something on fire. Probably this. I'm going to laminate it.",
+  "where": "src/game/town/Settlement.ts"
+ },
+ {
+  "key": "0ea3e5k",
+  "voice": "af_heart",
+  "fx": "room",
+  "speed": 0.95,
+  "speaker": "Nia Pell",
+  "words": "Then he gets a plate. Every night, out by the road where Ren sits. Ren can finally have some company. Here. Take this for the road. He'd have wanted a tip.",
+  "tts": "Then he gets a plate. Every night, out by the road where Ren sits. Ren can finally have some company. Here. Take this for the road. He'd have wanted a tip.",
   "where": "src/game/town/Settlement.ts"
  },
  {
@@ -4080,6 +4380,16 @@
   "where": "src/content/story.ts"
  },
  {
+  "key": "12p2k9r",
+  "voice": "bm_lewis",
+  "fx": "room",
+  "speed": 0.92,
+  "speaker": "Wick",
+  "words": "At least the tape's gone.",
+  "tts": "At least the tape's gone.",
+  "where": "src/game/town/Settlement.ts"
+ },
+ {
   "key": "0caqqyr",
   "voice": "bm_lewis",
   "fx": "room",
@@ -4160,6 +4470,26 @@
   "where": "src/game/town/Settlement.ts"
  },
  {
+  "key": "0bpn67l",
+  "voice": "bm_lewis",
+  "fx": "room",
+  "speed": 0.92,
+  "speaker": "Wick",
+  "words": "Mara. The water woman. Fine. Take it to her. Tell her the loud resident says the ridge isn't for sale, and neither is what's under it.",
+  "tts": "Mara. The water woman. Fine. Take it to her. Tell her the loud resident says the ridge isn't for sale, and neither is what's under it.",
+  "where": "src/game/town/Settlement.ts"
+ },
+ {
+  "key": "141q31w",
+  "voice": "bm_lewis",
+  "fx": "room",
+  "speed": 0.92,
+  "speaker": "Wick",
+  "words": "Men in white hats came up the wash with a tripod. Tied orange tape to my ridge, every forty paces, like it was a present. Pull their stakes. Then find out what they think they measured. Their camp is west of the wash. Three tents and a theodolite, and a theodolite is just a camera that thinks it's a lawyer.",
+  "tts": "Men in white hats came up the wash with a tripod. Tied orange tape to my ridge, every forty paces, like it was a present. Pull their stakes. Then find out what they think they measured. Their camp is west of the wash. Three tents and a theodolite, and a theodolite is just a camera that thinks it's a lawyer.",
+  "where": "src/game/town/Settlement.ts"
+ },
+ {
   "key": "02677qw",
   "voice": "bm_lewis",
   "fx": "room",
@@ -4197,6 +4527,36 @@
   "speaker": "Wick",
   "words": "Not mine. A charge moves it, if you're that kind of person: Demolition 2. Or we shift it by hand, if you've got the back or the patter for it. Some doors are just rocks.",
   "tts": "Not mine. A charge moves it, if you're that kind of person: Demolition 2. Or we shift it by hand, if you've got the back or the patter for it. Some doors are just rocks.",
+  "where": "src/game/town/Settlement.ts"
+ },
+ {
+  "key": "1s5hayg",
+  "voice": "bm_lewis",
+  "fx": "room",
+  "speed": 0.92,
+  "speaker": "Wick",
+  "words": "Orange tape. On my ridge. Like it was a present.",
+  "tts": "Orange tape. On my ridge. Like it was a present.",
+  "where": "src/content/quests.ts"
+ },
+ {
+  "key": "0vc7je6",
+  "voice": "bm_lewis",
+  "fx": "room",
+  "speed": 0.92,
+  "speaker": "Wick",
+  "words": "Page by page. The seep's still mine. They'll have to measure it again, and next time I'll be sitting on it.",
+  "tts": "Page by page. The seep's still mine. They'll have to measure it again, and next time I'll be sitting on it.",
+  "where": "src/game/town/Settlement.ts"
+ },
+ {
+  "key": "0xuids1",
+  "voice": "bm_lewis",
+  "fx": "room",
+  "speed": 0.92,
+  "speaker": "Wick",
+  "words": "Point four litres an hour. They measured my seep with a cup. Resident: one, male, loud. That's fair. Relocation package: tote bag. That's not. And this, in red. Not flow. Depth. They don't want the water up here. They want what's under the ridge.",
+  "tts": "Point four litres an hour. They measured my seep with a cup. Resident: one, male, loud. That's fair. Relocation package: tote bag. That's not. And this, in red. Not flow. Depth. They don't want the water up here. They want what's under the ridge.",
   "where": "src/game/town/Settlement.ts"
  },
  {
@@ -4238,6 +4598,16 @@
   "words": "The salt glows at night if you stare long enough. Don't.",
   "tts": "The salt glows at night if you stare long enough. Don't.",
   "where": "src/content/townBarks.ts"
+ },
+ {
+  "key": "13um198",
+  "voice": "bm_lewis",
+  "fx": "room",
+  "speed": 0.92,
+  "speaker": "Wick",
+  "words": "Their tape is still on my slope, by the way.",
+  "tts": "Their tape is still on my slope, by the way.",
+  "where": "src/game/town/Settlement.ts"
  },
  {
   "key": "1jpibzr",

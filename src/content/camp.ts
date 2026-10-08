@@ -45,6 +45,38 @@ export const CAMP: CampMember[] = [
           choices: [{ id: 'back', label: 'Thanks, Hollis.', next: 'hello' }],
         };
       }
+      if (id === 'rider') {
+        return {
+          speaker: 'Hollis Grange',
+          text: 'Channel 19\'s been quiet. There\'s a kid calls himself Rider 9. Rides a delivery e-bike for an app called Dropt: anything, anywhere, ten minutes or it\'s free. The app never told him to stop, so he never did. He checks in every week. He\'s missed four. Last I heard him, he was cutting across the north flats past the Kade Wellhead.',
+          choices: [{ id: 'back', label: 'I\'ll look for him.', next: 'hello' }],
+        };
+      }
+      if (id === 'ridertell') {
+        return {
+          speaker: 'Hollis Grange',
+          text: 'You found him. I can see it. Say it straight, or say it kind. I\'ve had both on this radio.',
+          choices: [
+            { id: 'rider.truth', label: 'He didn\'t make it. He finished the route anyway.', next: 'ridertruth' },
+            { id: 'rider.west', label: 'He rode west. Said to keep 19 open.', next: 'riderwest' },
+            { id: 'back', label: 'Not yet.', next: 'hello' },
+          ],
+        };
+      }
+      if (id === 'ridertruth') {
+        return {
+          speaker: 'Hollis Grange',
+          text: 'Course he did. Kid never dropped an order in his life. Here. My last box of rounds for that old .38. I won\'t be needing them to wait up for anybody.',
+          choices: [{ id: 'bye', label: 'I\'m sorry, Hollis.' }],
+        };
+      }
+      if (id === 'riderwest') {
+        return {
+          speaker: 'Hollis Grange',
+          text: 'West. Huh. Good for him. Somebody ought to get out ahead of the rest of us. I\'ll keep 19 open, then. In case he rings the bell.',
+          choices: [{ id: 'bye', label: 'Keep it open.' }],
+        };
+      }
       if (id !== 'hello') return null;
       const lines = {
         start: 'Name\'s Hollis. I keep the sign lit. Thirty years of driving, and the only thing I ever owned outright is that neon. Off you go. The road doesn\'t get shorter by looking at it.',
@@ -61,6 +93,8 @@ export const CAMP: CampMember[] = [
         text,
         choices: [
           { id: 'road', label: 'Any road advice?', next: 'road' },
+          ...(!v.has('hollis.rider') ? [{ id: 'rider', label: 'Heard anything on the CB?', next: 'rider' }] : []),
+          ...(v.has('q.rider.log') && !v.has('q.rider.truth') && !v.has('q.rider.west') ? [{ id: 'ridertell', label: 'About Rider 9...', next: 'ridertell' }] : []),
           { id: 'gift', label: 'What\'s in the can?', disabled: v.has('camp.hollis.gift') ? 'He already gave you the can.' : undefined, next: 'hello' },
           { id: 'bye', label: 'See you, Hollis.' },
         ],
@@ -113,6 +147,70 @@ export const CAMP: CampMember[] = [
           choices: [{ id: 'back', label: 'I believe you.', next: 'hello' }],
         };
       }
+      if (id === 'badges') {
+        const n = v.count('kade_badge');
+        return {
+          speaker: 'Dez Marlow',
+          text: 'Kade lanyards. Every crew reads its badge numbers onto the air at shift change, because policy. Those badges have chips in them, and chips talk. Bring me three and I\'ll find the channel they talk on.',
+          choices: [
+            { id: 'badges.give', label: 'Here. Three smiling faces. (3 lanyards)', disabled: n >= 3 ? undefined : `You have ${n}. Kade contractors wear them. So do some Kade crates.`, next: 'relay' },
+            { id: 'back', label: 'I\'ll find some.', next: 'hello' },
+          ],
+        };
+      }
+      if (id === 'relay') {
+        return {
+          speaker: 'Dez Marlow',
+          text: 'They smile because the policy says so. Okay. The chips ping on a crew channel, but the karaoke machine can\'t hear it from down here. Take this relay up to the Spire and patch it into the generator by the shack. Red to red. Don\'t lick anything.',
+          choices: [{ id: 'back', label: 'Red to red.', next: 'hello' }],
+        };
+      }
+      // the crew channel, once the relay is up: three overheard lines, then Dez
+      if (id === 'kade1') {
+        return {
+          speaker: 'Kade Recovery',
+          text: 'Road pair two, clocking in. Mood: aligned. Hydration: compliant. Reminder from People Ops: repossessed pianos are not break-room furniture.',
+          choices: [{ id: 'more', label: '(Keep listening.)', next: 'kade2' }],
+        };
+      }
+      if (id === 'kade2') {
+        return {
+          speaker: 'Kade Recovery',
+          text: 'Survey Camp to Wellhead. The ridge seep is a data asset now. We stake it Friday. Somebody tell the guy in the cave he\'s been rebranded.',
+          choices: [{ id: 'more', label: '(Keep listening.)', next: 'kade3' }],
+        };
+      }
+      if (id === 'kade3') {
+        return {
+          speaker: 'Kade Recovery',
+          text: 'Apex wants the pipeline numbers by the end of the quarter. Does anyone know which quarter it is? Asking for the whole team.',
+          choices: [{ id: 'more', label: '(Take the headphones off.)', next: 'listened' }],
+        };
+      }
+      if (id === 'listened') {
+        return {
+          speaker: 'Dez Marlow',
+          text: 'You hear that? They\'re scheduled. They\'re scheduled like a dentist. I could sit on this channel and call you every time a road pair clocks in near you. Or. Hear me out. The karaoke machine has a power ballad in it that has never been played at full volume.',
+          choices: [
+            { id: 'dez.ears', label: 'Keep listening. Warn me when they\'re close.', next: 'ears' },
+            { id: 'dez.karaoke', label: 'Play them the ballad.', next: 'karaoke' },
+          ],
+        };
+      }
+      if (id === 'ears') {
+        return {
+          speaker: 'Dez Marlow',
+          text: 'Quiet it is. Keep your radio on. When a pair clocks in near you, you\'ll hear me before you see them.',
+          choices: [{ id: 'bye', label: 'I\'ll keep it on.' }],
+        };
+      }
+      if (id === 'karaoke') {
+        return {
+          speaker: 'Dez Marlow',
+          text: 'Four minutes. Key change at three. Every Kade radio in the valley. They\'ll change channels by morning and I don\'t care. This was always the plan. This was always the plan.',
+          choices: [{ id: 'bye', label: 'Don\'t touch the key change.' }],
+        };
+      }
       if (id !== 'hello') return null;
       const lines = {
         start: 'Dez. Radio. Don\'t touch the karaoke machine, it\'s load-bearing. And don\'t say anything on the band you wouldn\'t say to Vesper Kade\'s face.',
@@ -127,6 +225,13 @@ export const CAMP: CampMember[] = [
         text: lines[stage(v)],
         choices: [
           { id: 'listen', label: 'Who listens on our band?', next: 'listen' },
+          ...(!v.has('q.dez.badges') ? [{ id: 'dez.ask', label: v.has('dez.badges') ? 'About those lanyards.' : 'Anything you need?', next: 'badges' }] : []),
+          ...(v.has('q.dez.relay') && !v.has('q.dez.ears') && !v.has('q.dez.karaoke') ? [{ id: 'kade', label: 'Let\'s hear Kade.', next: 'kade1' }] : []),
+          ...(v.has('q.dez.badges') && v.count('kade_badge') > 0 ? [{
+            id: 'trade', label: 'Three lanyards for a ration?',
+            disabled: v.count('kade_badge') >= 3 ? undefined : 'Dez pays a ration for every three.',
+            next: 'hello',
+          }] : []),
           {
             id: 'emp',
             label: 'Pack me an EMP. (1 cell, 2 scrap)',
