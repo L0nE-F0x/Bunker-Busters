@@ -6,7 +6,16 @@ First-person post-apocalyptic heist game (Three.js r186 WebGPU/WebGL2 + TSL shad
 
 Repo: https://github.com/L0nE-F0x/Bunker-Busters (public, branch `main`). Read `BUNKER_BUSTERS_SPEC.md` for the design and `NOTES.md` for the dev log and findings.
 
-**Current phase:** v0.5.0 ("Hostiles": guns, melee, enemies, a death penalty) is the latest work, the site is live and the owner has the desktop app installed. We are **refining and iterating**. The owner cares most about visual quality ("make it look incredible"), then game feel. Each meaningful round of improvements ends with a release (below).
+**Current phase:** v0.5.4 is live (combat from v0.5.0, then voices, scavenging, bullet marks/brass, and the first real model: the Meshy wolf). The owner has the desktop app installed. We are **refining and iterating**, and the big push now is **replacing procedural characters with Meshy models** (see "Next session" below). The owner cares most about visual quality ("make it look incredible"), then game feel. **Batch fixes; release only when the owner says "ship"** (then do it yourself with `scripts/release.sh`).
+
+### Next session (handoff, 2026-10-08)
+- **Meshy API:** the owner is upgrading Meshy to Pro and will put an API key in `~/.config/meshy/key` (chmod 600). Read it from there; **never** copy it into the repo, a script default, or chat. Before spending credits on a batch, tell the owner the rough cost. API docs: https://docs.meshy.ai/api (async tasks: create → poll → download GLB; image/text-to-3D, remesh with a target polycount, rigging for humanoid + quadruped, animation presets).
+- **First jobs, in order:**
+  1. **Wolf death** (the owner's top complaint): the procedural fall makes the legs flail. Get a death clip, plus run/gallop and bite/attack clips, for the *same* wolf rig (`Assets/Meshy_AI_Lone_Wolf_Walking.glb`). Then extend `world/wolfSkin.ts` to blend clips (walk ↔ run by speed, a one-shot bite, death clip then hold) instead of the sped-up walk and the procedural roll.
+  2. **Kade contractors:** a masked, rigged soldier (walk, run, aim/shoot, reload, death; A- or T-pose). `combat/Humans.ts` is a 10-slot procedural SkinnedMesh with IK aiming and Rapier ragdolls; move it to skinned clones like the wolf (one shared material, warm-up before boot), keeping the ragdoll on death (map bones to ragdoll parts) and aiming via an upper-body bone turn.
+  3. Then the town NPCs, SeedBot, and other big creatures, one at a time with screenshots.
+- **The pipeline for every model:** raw export into `Assets/`; `node scripts/models/prep-glb.mjs Assets/X.glb public/models/x.glb`; load it in `Game.build` **before** the shader warm-up; scale/orient from the bind pose like `WolfSkins`; check `renderer._pipelines.caches.size` is unchanged when it first appears; aim for ≤ ~20k tris per character; A/B with a URL flag. The owner may also drop files from Grok Imagine into `Assets/` (that's not an agent; nothing else touches the repo).
+- **Not yet measured:** desktop-app frame rate with a wolf pack on screen (5 skinned meshes + shadows). Run `scripts/dev/bench-desktop.sh` with a pack summoned before adding more skinned models.
 
 ## Daily loop
 
@@ -228,13 +237,13 @@ The webview's `console.log` goes to stdout.
 
 ## Backlog (owner priorities first)
 
-0. **Combat follow-ups (v0.5):** a real-click check of the raw-button path in the Linux app, and balance from the owner's play (time-to-kill, patrol frequency, wolf day-hunts). Bench a fight with `BB_FLAGS=fight`.
-1. **Visual polish pass:**
-   - richer Garage exterior and interior detail
-   - better hero/landing art
+0. **Real models via Meshy** (see "Next session" above): wolf death/run/bite clips, then the Kade contractors, then other characters. The owner: "once we get all the different models brought in, this is gonna look insane."
+1. **Visual polish:** (done since v0.5: bullet marks, brass, scavenging props; the Garage is already heavily dressed and dust storms exist in `Weather.ts`)
+   - better hero/landing art (regenerate `marketing-shots.mjs` once the new models are in)
    - drone and laser VFX
-   - weather (dust storms)
    - character-select presentation
+   - the midday grade is flat and washed out, but the owner likes the lighting, so ask before touching it
+   - combat is confirmed working in the desktop app, and the owner is happy with time-to-kill and with the wolves by day
 2. **Desktop performance:** the target is the 4050 hitting 60+ fps on High in the desktop app. Today it's about 35–50 fps (`scripts/dev/bench-desktop.sh`). Next: merge hand/body meshes, fewer per-frame DOM writes, instancing for repeated props, LOD for far terrain.
 3. **Content per spec v0.2:**
    - Tier 2 "Apex Vault" and Tier 3 "The Panopticon"
