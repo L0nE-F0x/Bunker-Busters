@@ -666,6 +666,17 @@ export class Game {
     this.combat.register({ hostiles: () => [seedbot] });
     this.scene.add(this.machines.group);
     this.combat.register(this.machines);
+    // townsfolk: a word in passing, and an opinion about gunfire (src/game/town/barks.ts)
+    const barks = this.settlement.barks;
+    barks.host = {
+      quiet: () => this.busy || this.mode !== 'playing',
+      talking: () => this.ui.subtitleBusy,
+      armed: () => !!this.arms?.equipped && this.arms.equipped !== 'crowbar',
+      night: () => this.atmo.isNight,
+      see: (a, b) => this.combat.clearLine(a, b, this.combat.target.collider),
+      say: (speaker, text, pos) => this.ui.subtitle(speaker, text, { pos: pos.clone() }),
+    };
+    this.combat.register({ hostiles: () => [], hear: (p, _r, k) => { if (this.player) barks.hear(p, k, this.player.position); } });
   }
 
   private collectIntel(id: string) {
