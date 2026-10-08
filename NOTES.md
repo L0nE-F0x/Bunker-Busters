@@ -1035,3 +1035,22 @@ Played headlessly end to end through `window.game`: new run, note, cooler, camp 
 - **Town wind** (`ambient.ts`): `chimes` (scrap-pipe chimes, a small prop under the Till's porch roof, batched) and `shutter` (the Till loft's loose shutter banging in gusts).
 - **Tooling:** `audio-capture.mjs` records the WAV after the limiter and prints an `out` level (clipping check). A blast at 4 m peaks at −0.1 dBFS out (the limiter holds); fights −0.5 to −1 dBFS.
 - Not verified by ear: only levels and spectrograms were checked. Wanted from the owner: fight stem taste, tinnitus level, bird levels, how often the chimes ring.
+
+## 2026-10-09: QA round 2, integration (overnight swarm)
+
+Played the merged build headlessly (desktop 1280×720 and phone 844×390): Act I end to end (note, cooler, Mara, the Garage at night with the vault spliced, crates, safe, debrief, the broadcast ending), terminal hacks under wolf attack and at low health, death during a hack, save/continue with a spliced terminal, settings with corrupt values, storm + night + low health, SeedBot at night. No console errors. Pipelines 211 → 211 through SeedBot's alert at night.
+
+**Fixed:**
+- **Kade crews never left combat.** `search()` returns early for a squad in combat, so the "lost you: search, then stand down" branch never ran. A crew that lost you stayed in combat for good: HOSTILES on the HUD, never despawned, its terminal said "Not with them shooting at you" for the rest of the shift, and it marched to wherever it last had you (seen: Pipeline Camp walking toward Last Chance, 450 m). Now, 14 s after the last sighting, they let go of cover and flanks, search, and stand down 22 s later.
+- **Corrupt settings stopped the game booting** (`quality: "potato"` → `makeQuality` threw on every launch). `loadSettings` now checks quality and difficulty, clamps the volumes, and ignores a stored value that isn't an object.
+- **Phone, gun out:** prompts sit in the lane between the vitals and the weapon cluster (right-aligned against it, kbd chip beside the text), and the subtitle sits above them on the same side. `html.armed` comes from `TouchControls`. Venom and IN SHADOW / LIT now show under the clock on phones (the whole stance row was hidden on touch).
+- **Pipeline Camp 3:** the pipe's collider reaches down to 0.3 m, so nothing fits under it. (I couldn't reproduce the wedge in 160 random approaches, crouched, jumping and sprinting, before or after.)
+- **A calendar:** `SaveData.days` counts midnights (any backward step of the clock: ticking over, sleeping till dawn, the six-hour blackout). The camp panel and the run banner read Day 1,284 + days. Old saves start at 0.
+- **Mara's radio** only quotes the Spire blueprint once you've read it. Before that she points you at the Spire (one new Kokoro clip).
+- **SeedBot's spotlight counts as light** for the stealth model. The pill read IN SHADOW while the drone was spotting you.
+
+**Seen, not changed:**
+- A bite that yanks the cable out of a Kade terminal uses up its one go per shift. That's consistent with "uploads kept", but harsh. A design call.
+- If you die mid-hack, death waits about a second for the hack's stamp to clear (`die()` needs `!busy`).
+- Phone, first seconds of a run: the LAST CHANCE GAS banner runs over the three toasts top-left.
+- A storm at night under low health is nearly black, which is by design. With the torch it's playable.
