@@ -15,6 +15,7 @@ import { buildDryCreek, type Hooks, type CreekLive } from './creek';
 import { buildCut } from './cave';
 import { buildWash } from './wash';
 import { uTownNight } from './townAtlas';
+import { TownBarks } from './barks';
 
 type Col = ReturnType<Physics['addBox']>;
 
@@ -75,7 +76,11 @@ export class Settlement {
     this.buildTrail();
     this.buildInteractables();
     this.landmarks.group.add(this.group);
+    this.barks = new TownBarks(this.crowds);
   }
+
+  /** Townsfolk talking in passing and reacting to gunfire (Game sets its host). */
+  readonly barks: TownBarks;
 
   private get hf(): Heightfield { return this.ctx.hf; }
   private get physics(): Physics { return this.ctx.physics; }
@@ -1183,6 +1188,7 @@ export class Settlement {
   update(dt: number, cam?: THREE.Vector3) {
     if (cam) for (const l of this.lods) l.update(cam);
     if (cam) for (const c of this.crowds) c.update(dt, cam);
+    if (cam) this.barks.update(dt, cam);
     const s = this.ctx.state;
     if (s && !this.synced) {
       this.synced = true;

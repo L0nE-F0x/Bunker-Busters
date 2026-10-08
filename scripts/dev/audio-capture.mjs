@@ -32,7 +32,10 @@ const pcm = await p.evaluate(async ({ secs, during }) => {
   const ctx = a.ctx;
   const taps = { master: a.master, music: a.music, amb: a.ambOut, sfx: a.sfx };
   if (a.foley) taps.foley = a.foley; // footsteps + positional loops (since the ambience pass)
+  if (a.out) taps.out = a.out; // after the limiter: what actually reaches the speakers (clipping check)
   const rec = { left: [], right: [] };
+  // the WAV is what reaches the speakers (after the compressor, makeup and limiter) when we can tap it
+  const wavTap = taps.out ? 'out' : 'master';
   const levels = [];
   const acc = {};
   const procs = [];
@@ -41,7 +44,7 @@ const pcm = await p.evaluate(async ({ secs, during }) => {
     acc[name] = { sum: 0, n: 0, peak: 0 };
     sp.onaudioprocess = (e) => {
       const l = e.inputBuffer.getChannelData(0), r = e.inputBuffer.getChannelData(1);
-      if (name === 'master') { rec.left.push(new Float32Array(l)); rec.right.push(new Float32Array(r)); }
+      if (name === wavTap) { rec.left.push(new Float32Array(l)); rec.right.push(new Float32Array(r)); }
       const A = acc[name];
       for (let i = 0; i < l.length; i++) { const v = (l[i] + r[i]) * 0.5; A.sum += v * v; A.n++; A.peak = Math.max(A.peak, Math.abs(l[i]), Math.abs(r[i])); }
     };

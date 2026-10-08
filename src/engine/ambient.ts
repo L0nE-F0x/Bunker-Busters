@@ -12,7 +12,7 @@
 
 export type AmbientKind =
   | 'drone' | 'fire' | 'neon' | 'generator'
-  | 'drip' | 'hum' | 'wind-hollow' | 'radio' | 'projector' | 'crowd' | 'sparks' | 'flies';
+  | 'drip' | 'hum' | 'wind-hollow' | 'radio' | 'projector' | 'crowd' | 'sparks' | 'flies' | 'chimes' | 'shutter';
 
 export interface VoiceEnv {
   ctx: BaseAudioContext;
@@ -286,6 +286,74 @@ export const VOICES: Record<AmbientKind, VoiceSpec> = {
           }
         },
         stop: (w) => S.stop(w),
+      };
+    },
+  },
+
+  // scrap-pipe wind chimes on a porch: five tubes (inharmonic, a little out of tune) that the wind
+  // knocks together, now and then in a calm, in clusters when a gust comes through
+  chimes: {
+    range: 24, ref: 2.5, rolloff: 1.25, hrtf: true, gain: 0.32,
+    build(env, out) {
+      const { ctx } = env;
+      // D minor pentatonic from scrap: each tube a few cents off where it should be
+      const tubes = [587, 698, 784, 880, 1047].map((f) => f * rand(0.985, 1.015));
+      const ring = (t: number, f: number, level: number) => {
+        for (const [m, k, d] of [[1, 1, 2.6], [2.76, 0.42, 1.2], [5.4, 0.2, 0.55], [8.93, 0.08, 0.3]] as const) {
+          const o = osc(ctx, 'sine', f * m);
+          const g = ctx.createGain();
+          g.gain.setValueAtTime(0.0001, t);
+          g.gain.exponentialRampToValueAtTime(level * k, t + 0.002);
+          g.gain.exponentialRampToValueAtTime(0.0001, t + d * rand(0.8, 1.1));
+          o.connect(g).connect(out);
+          o.start(t);
+          o.stop(t + d * 1.15);
+        }
+      };
+      let next = ctx.currentTime + rand(0.5, 4);
+      return {
+        tick(now, until) {
+          next = resync(next, now, rand(0.3, 2));
+          while (next < until) {
+            const gust = env.gust(), wind = Math.min(1.5, env.wind());
+            // a calm still stirs them once in a while; a gust shakes out a run
+            const busy = Math.min(1, gust * 1.4 + Math.max(0, wind - 0.6) * 0.5);
+            const n = busy > 0.3 && Math.random() < busy ? 2 + Math.floor(Math.random() * 4 * busy) : 1;
+            for (let i = 0; i < n; i++) {
+              ring(next + i * rand(0.07, 0.24), pick(tubes), rand(0.05, 0.11) * (0.5 + 0.5 * busy));
+            }
+            next += busy > 0.2 ? rand(0.6, 2.8) / busy : rand(5, 16);
+          }
+        },
+        stop() { /* the rings stop themselves */ },
+      };
+    },
+  },
+
+  // a loose shutter in the wind: quiet until a gust catches it, then a hinge creak and a wooden bang
+  shutter: {
+    range: 30, ref: 3, rolloff: 1.2, hrtf: true, gain: 0.5,
+    build(env, out) {
+      const { ctx } = env;
+      let next = ctx.currentTime + rand(1, 4);
+      return {
+        tick(now, until) {
+          next = resync(next, now, rand(0.5, 2));
+          while (next < until) {
+            const gust = env.gust();
+            if (gust > 0.3 || (env.wind() > 1.1 && Math.random() < 0.4)) {
+              const k = Math.min(1, 0.4 + gust);
+              creak(env, out, next, 0.05 * k);
+              // the bang: a dull board knock and its rattle against the frame
+              const bt = next + rand(0.3, 0.55);
+              burst(env, out, bt, 'lowpass', rand(260, 360), 1.2, 0.5 * k, 0.003, 0.12);
+              burst(env, out, bt + 0.002, 'bandpass', 1100, 2, 0.16 * k, 0.002, 0.05);
+              if (Math.random() < 0.5) burst(env, out, bt + rand(0.12, 0.2), 'lowpass', 320, 1.2, 0.18 * k, 0.003, 0.08);
+              next += rand(1.6, 4.5);
+            } else next += rand(1.2, 3);
+          }
+        },
+        stop() { /* the bangs stop themselves */ },
       };
     },
   },
