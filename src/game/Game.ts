@@ -18,13 +18,14 @@ import { Scrub, Pebbles } from './world/Scrub';
 import { Shrubs } from './world/Shrubs';
 import { Fauna } from './world/Fauna';
 import { Interior, hideExcept } from './world/interiors';
-import { DustMotes, GroundHaze, DustPuffs, SandStreaks, DustDevils, Shockwave, StormLightning, heightTexture } from './world/effects';
+import { DustMotes, GroundHaze, DustPuffs, SandStreaks, DustDevils, Shockwave, StormLightning, StormWall, heightTexture } from './world/effects';
 import { Weather } from './world/Weather';
 import { VirtualLight, lightPool } from './world/lights';
 import { updateRim, glow, desertRock } from './world/materials';
 import { buildIntelProp, type IntelProp } from './world/intelProps';
 import { Scavenge } from './world/Scavenge';
 import { NpcModels } from './world/npcSkin';
+import { updateShownMatrices, viewCull } from './world/kit';
 import { NpcCrowd } from './world/npc';
 import { HumanSkins } from './combat/humanSkin';
 import { Garage } from './bunker/Garage';
@@ -53,6 +54,7 @@ import { Combat, sphereRay, type HurtKind, type Hostile } from './combat/Combat'
 import { PlayerArms } from './combat/PlayerArms';
 import { Recovery } from './combat/Recovery';
 import { Machines } from './combat/Machines';
+import { MenuDirector } from './MenuDirector';
 
 /** Debug: ?interior=off draws the exterior even from inside sealed interiors (A/B for interior mode). */
 const NO_INTERIOR = typeof location !== 'undefined' && new URLSearchParams(location.search).get('interior') === 'off';
@@ -70,9 +72,7 @@ const BENCH = new URLSearchParams(location.search).has('bench');
 
 /** Only two hand looks exist. Work gloves for the Brute and the Scout, thin ones for the Fixer and the Defector. */
 function handArchetype(id: string) {
-  if (id === 'brute' || id === 'scout') return 'engineer';
-  if (id === 'fixer' || id === 'defector') return 'infiltrator';
-  return id;
+  return HAND_LOOKS[id] ? id : 'infiltrator';
 }
 
 type Mode = 'loading' | 'title' | 'charselect' | 'playing';
@@ -110,6 +110,7 @@ export class Game {
   streaks!: SandStreaks;
   devils!: DustDevils;
   lightning = new StormLightning();
+  stormWall!: StormWall;
   weather!: Weather;
   garage!: Garage;
   settlement!: Settlement;
@@ -163,6 +164,7 @@ export class Game {
   private revealTimer = 0;
   private autosaveTimer = 60;
   private titleT = 0;
+  private director!: MenuDirector;
   private busy = false; // minigame/modal in progress
   /** Smoothed 0..1 point light (fires, floodlights) on the player: the stealth model's night term. */
   private pointLit = 0;
@@ -256,7 +258,8 @@ export class Game {
       else if (p === 'clearing') this.ui.toast('The dust storm is passing.', 'info');
     };
     this.weather.onLightning = (k) => { this.audio.thunder(k); this.lightning.strike(this.camera.position, k); };
-    if (!SKIP.has('sky')) this.scene.add(this.lightning.mesh);
+    this.stormWall = new StormWall(this.atmo);
+    if (!SKIP.has('sky')) this.scene.add(this.lightning.mesh, this.stormWall.mesh);
     this.combat = new Combat(this.physics, this.hf, this.atmo, this.audio);
     this.combat.difficulty = this.settings.difficulty ?? 'normal';
     this.combat.puffs = this.puffs;
@@ -315,14 +318,25 @@ export class Game {
     if (SKIP.has('fog')) this.scene.fogNode = null;
     await step(0.8, 'Compiling shaders');
     this.post = new PostFX(this.renderer, this.scene, this.camera, this.atmo.sun, this.quality);
+    // Three walks the whole graph (~1,600 objects, ~600 of them bones, over half of it hidden) on
+    // every render of the scene, and a frame renders it twice (sun shadow map + scene pass). The game
+    // does it once per frame instead, right before rendering, skipping hidden subtrees (frame,
+    // warmShaders; kit.ts updateShownMatrices).
+    this.scene.matrixWorldAutoUpdate = false;
     this.resize();
     this.physics.step();
-    this.setTitleCamera(0);
+    this.director = new MenuDirector(this.camera, this.landmarks, () => this.garage?.b.origin ?? new THREE.Vector3(96, 0, -150));
+    this.atmo.hour = this.director.startTitle();
     this.atmo.update(0, this.camera.position);
     // streamed scatter must hold something before the warm-up, or its programs compile mid-play
     this.scrub.update(this.camera.position, this.atmo.wind);
     this.shrubs.update(this.camera.position);
     this.pebbles.update(this.camera.position);
+    // character select's hands and everything they hold compile now too, not on the glide down to
+    // the fire (hand materials are shared per kind, so one pair covers every look)
+    const menuHands = new Hands(HAND_LOOKS.engineer);
+    menuHands.attach(this.camera);
+    const unstageMenuHands = menuHands.stageItems();
     // in batches, a frame each, so the loading bar keeps moving through a cold start (~20 s in WebKit)
     const drawn: THREE.Object3D[] = [];
     this.scene.traverse((o) => { if ((o as THREE.Mesh).isMesh || (o as THREE.Sprite).isSprite || (o as THREE.Points).isPoints || (o as THREE.Line).isLine) drawn.push(o); });
@@ -334,6 +348,8 @@ export class Game {
       for (let f = 0; f < 2; f++) await new Promise((r) => requestAnimationFrame(r)); // a fresh frame for the scene pass
     }
     console.log(`[BunkerBusters] shader warm-up: ${drawn.length} objects in ${batches} frames, ${warmMs.toFixed(0)} ms`);
+    unstageMenuHands();
+    menuHands.dispose();
     await step(0.95, 'Polishing neon');
     this.renderer.setAnimationLoop(() => this.frame());
     window.addEventListener('resize', () => this.resize());
@@ -895,21 +911,11 @@ export class Game {
   }
 
   // ------------------------------------------------------------------ modes
-  private setTitleCamera(t: number) {
-    const o = this.garage?.b.origin ?? new THREE.Vector3(96, 0, -150);
-    // orbit on the sunset side so the bunker is back-lit, framed to the right of the logo
-    const a = 5.55 + Math.sin(t * 0.04) * 0.3;
-    const r = 40 + Math.sin(t * 0.13) * 4;
-    this.camera.position.set(o.x + Math.sin(a) * r, o.y + 7 + Math.sin(t * 0.2) * 1.2, o.z + Math.cos(a) * r);
-    const fwd = new THREE.Vector3(o.x - this.camera.position.x, 0, o.z - this.camera.position.z).normalize();
-    const right = new THREE.Vector3(-fwd.z, 0, fwd.x);
-    this.camera.lookAt(o.x - right.x * 13, o.y + 6, o.z - right.z * 13);
-  }
-
   toTitle() {
     this.mode = 'title';
     this.titleT = 0;
-    this.atmo.hour = 17.45;
+    this.atmo.hour = this.director.startTitle();
+    this.envTimer = 0;
     this.atmo.paused = false;
     this.atmo.dayLengthMinutes = 240;
     this.removePlayer();
@@ -940,32 +946,57 @@ export class Game {
 
   private toCharSelect() {
     this.mode = 'charselect';
-    this.atmo.hour = 18.55;
-    this.atmo.paused = true;
+    this.director.startSelect();
     const show = (id: string) => {
       this.hands?.dispose();
       const look = handArchetype(id);
       this.hands = new Hands(HAND_LOOKS[look] ?? HAND_LOOKS.infiltrator);
       this.hands.attach(this.camera);
       this.hands.setBase(look === 'engineer' ? 'showcaseEmp' : 'showcase');
+      this.director.pick();
     };
     const leave = () => { this.hands?.dispose(); this.hands = null; };
     // (hands are re-created fresh in startGame, so the showcase offset never leaks into play)
     this.ui.showCharSelect(
       (id) => {
-        leave();
-        clearSave();
-        this.startGame(GameState.fresh(id, SPAWN));
+        // stand up from the fire as it goes dark (the hands drop back to your sides), then the run
+        this.director.standUp();
+        this.hands?.setBase('idle');
+        setTimeout(() => {
+          leave();
+          clearSave();
+          // ...and the run starts where you stood up: at the camp fire, facing the four, the pumps
+          // (and the note on them) to your left, at the hour you chose under
+          const state = GameState.fresh(id, SPAWN);
+          const at = this.landmarks.campPoint(-12.3, 0, 0);
+          const fire = this.landmarks.campPosition;
+          state.data.position = [at.x, at.y, at.z];
+          state.data.yaw = Math.atan2(at.x - fire.x, at.z - fire.z) - Math.PI;
+          state.data.hour = this.atmo.hour;
+          this.startGame(state);
+        }, MenuDirector.STAND * 1000 + 60);
       },
       show,
       () => { leave(); this.toTitle(); },
     );
+    this.director.panelEl = document.querySelector<HTMLElement>('#charselect .cs-side');
   }
 
   private startGame(state: GameState) {
     this.state = state;
     this.mode = 'playing';
     this.cam.snapFov(); // charselect/title leave the lens elsewhere; start the run at the player's FOV
+    // out of the menus' dip to black: the picture comes up as the run begins
+    const f0 = this.post.fade.value as number;
+    if (f0 > 0) {
+      const t0 = performance.now();
+      const lift = () => {
+        const k = (performance.now() - t0) / 1100;
+        this.post.fade.value = f0 * Math.max(0, 1 - k * k);
+        if (k < 1) requestAnimationFrame(lift);
+      };
+      requestAnimationFrame(lift);
+    }
     this.atmo.paused = false;
     this.atmo.dayLengthMinutes = 26;
     this.atmo.hour = state.data.hour;
@@ -1085,6 +1116,7 @@ export class Game {
     }
     const t0 = performance.now();
     try {
+      updateShownMatrices(this.scene);
       if (SKIP.has('post')) this.renderer.render(this.scene, this.camera); else this.post.render();
     } catch (e) {
       console.warn('[BunkerBusters] shader warm-up failed', e);
@@ -1109,7 +1141,7 @@ export class Game {
     this._exterior = [
       this.atmo.sky, this.terrain.mesh, this.terrain.far, this.props.group, this.landmarks.group, this.garage.b.group,
       this.scrub.mesh, this.shrubs.group, this.pebbles.mesh, this.fauna.mesh, this.fauna.models, this.recovery.group, this.machines.group,
-      this.haze.sprite, this.streaks.sprite, this.devils.sprite, this.lightning.mesh, this.scavenge?.group,
+      this.haze.sprite, this.streaks.sprite, this.devils.sprite, this.lightning.mesh, this.stormWall.mesh, this.scavenge?.group,
       ...[...this.intelMeshes.values()].filter((g) => !inside(g)),
     ].filter((o): o is THREE.Object3D => !!o);
     return this._exterior;
@@ -1636,18 +1668,15 @@ export class Game {
 
     if (this.mode === 'title') {
       this.titleT += dt;
-      this.setTitleCamera(this.titleT);
+      const cut = this.director.title(dt);
+      if (cut !== null) { this.atmo.hour = cut; this.envTimer = 0; }
+      this.post.fade.value = this.director.fade;
     } else if (this.mode === 'charselect') {
-      const fire = this.landmarks.campPosition;
-      const eye = fire.clone().add(new THREE.Vector3(1.9, 0, 1.4));
-      eye.y = this.hf.heightAt(eye.x, eye.z) + 1.05 + Math.sin(this.t * 0.9) * 0.01; // kneeling
-      this.camera.position.copy(eye);
-      // frame the fire right of centre so the side panel doesn't cover it; hands follow
-      const toFire = fire.clone().sub(eye).setY(0).normalize();
-      const leftOf = new THREE.Vector3(toFire.z, 0, -toFire.x);
-      this.camera.lookAt(fire.x + leftOf.x * 0.9 + Math.sin(this.t * 0.2) * 0.15, fire.y + 0.25, fire.z + leftOf.z * 0.9);
-      if (this.hands) this.hands.root.position.set(0.045, 0.004, 0);
-      if (this.camera.fov !== this.cam.baseFov) { this.camera.fov = this.cam.baseFov; this.camera.updateProjectionMatrix(); }
+      // the menu director kneels you at the fire (gliding down from the title shot); hands follow
+      this.director.select(dt);
+      this.atmo.hour = damp(this.atmo.hour, this.director.selectHour, 1.2, dt);
+      this.post.fade.value = this.director.fade;
+      if (this.hands) this.hands.root.position.set(0.045, -0.012, 0.004);
       this.hands?.update(dt, { speed: 0, grounded: true, crouch: false, sprint: false, bobPhase: 0, lookDX: Math.sin(this.t * 0.7) * 4, lookDY: Math.cos(this.t * 0.5) * 3 });
     } else if (this.mode === 'playing' && this.player && this.state) {
       this.playFrame(dt);
@@ -1656,6 +1685,7 @@ export class Game {
     this.touch?.setActive(this.mode === 'playing' && this.input.locked && !this.ui.modalOpen && !this.ui.minigameOpen && !this.busy);
 
     // world systems
+    viewCull.update(this.camera, this.atmo.sun.shadow.camera); // what characters need posing this frame
     this.atmo.follow(this.camera);
     this.landmarks.update(dt, this.t, this.camera.position);
     this.settlement?.update(dt, this.camera.position);
@@ -1676,6 +1706,7 @@ export class Game {
     this.streaks.update(dt);
     this.devils.update();
     this.lightning.update(this.weather.flash, this.weather.intensity);
+    this.stormWall.update(this.camera.position, this.weather.wallDist, this.weather.wallVis, this.atmo.uUpwind.value as THREE.Vector2);
     this.updateGrenades(dt);
     this.recovery.update(dt, focusPos, this.camera.position, this.mode === 'playing' && !!this.player && !this.ui.modalOpen);
     if (this.mode === 'playing' && !this.ui.modalOpen) this.machines.update(dt, this.camera.position);
@@ -1733,6 +1764,7 @@ export class Game {
     } else {
       // interior mode: inside a sealed building that can't see out, the exterior isn't drawn (nor cast
       // into the shadow map). Hidden only around the render, so no system's own visibility is touched.
+      updateShownMatrices(this.scene); // once a frame (scene.matrixWorldAutoUpdate is off: see build)
       const inner = this.activeInterior();
       const hidden = inner ? hideExcept(this.exteriorRoots(), inner.keep, this._hidden) : null;
       if (SKIP.has('post')) this.renderer.render(this.scene, this.camera); else this.post.render();

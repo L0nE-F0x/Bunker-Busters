@@ -3,6 +3,8 @@
 // Poses: see POSES in src/game/player/Hands.ts ("flat"/"fist"/"relaxed" = rig checks; "idle" is off-screen by design).
 // More: &view=side|palm|top&hand=r|l (orbit camera), &frame={"sprint":true,"speed":6.4} (movement state), &t=secs.
 import { launch } from './browser.mjs';
+// dev server origin (BB_PORT=5183 for a second server, e.g. from a worktree)
+const ORIGIN = `http://localhost:${process.env.BB_PORT || 5173}`;
 
 const [out = 'hands.png', ...poses] = process.argv.slice(2);
 if (!poses.length) poses.push('pose=reach', 'pose=lockpick', 'pose=empHold', 'pose=idle&torch');
@@ -11,7 +13,7 @@ const p = await b.newPage({ viewport: { width: 640, height: 400 } });
 p.on('pageerror', (e) => console.log('[pageerror]', e.message));
 const shots = [];
 for (const q of poses) {
-  await p.goto('http://localhost:5173/debug/hands.html?' + q);
+  await p.goto(ORIGIN + '/debug/hands.html?' + q);
   await p.waitForFunction(() => window.__done, null, { timeout: 30000 });
   await p.waitForTimeout(200);
   shots.push(await p.screenshot());

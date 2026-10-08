@@ -230,9 +230,12 @@ class Body {
   readonly root = new THREE.Matrix4();
   visible = false;
   private wasVisible = true;
+  /** How many vertices this body owns in the shared buffers (from `v0`). */
+  readonly count: number;
   constructor(readonly rig: Rig, readonly v0: number) {
     this.local = rig.parts.map(() => new THREE.Matrix4());
     this.world = rig.parts.map(() => new THREE.Matrix4());
+    this.count = rig.parts.reduce((n, p) => n + p.pos.length / 3, 0);
   }
   private static _q = new THREE.Quaternion();
   private static _e = new THREE.Euler(0, 0, 0, 'YXZ');
@@ -1486,8 +1489,6 @@ export class Fauna {
     g.setAttribute('normal', new THREE.BufferAttribute(this.N, 3));
     g.setAttribute('fColor', new THREE.BufferAttribute(col, 4, true));
     g.setIndex(new THREE.BufferAttribute(idx, 1));
-    (g.attributes.position as THREE.BufferAttribute).setUsage(THREE.DynamicDrawUsage);
-    (g.attributes.normal as THREE.BufferAttribute).setUsage(THREE.DynamicDrawUsage);
     this.mesh = new THREE.Mesh(g, floraMaterial());
     this.mesh.name = 'fauna';
     this.mesh.frustumCulled = false;
@@ -1594,11 +1595,34 @@ export class Fauna {
     this.pack.update(c);
     for (const x of this.snakes) x.update(c);
     for (const x of this.scorpions) x.update(c);
-    let any = false;
-    for (const b of this.bodies) any = b.write(this.P, this.N) || any;
+    // only the bodies that were rewritten go up to the GPU (runs of neighbours as one range)
+    const pos = this.mesh.geometry.attributes.position as THREE.BufferAttribute;
+    const nrm = this.mesh.geometry.attributes.normal as THREE.BufferAttribute;
+    let any = false, s0 = -1, s1 = -1;
+    const range = () => {
+      if (s0 < 0) return;
+      pos.addUpdateRange(s0 * 3, (s1 - s0) * 3);
+      nrm.addUpdateRange(s0 * 3, (s1 - s0) * 3);
+    };
+    for (const b of this.bodies) {
+      if (!b.write(this.P, this.N)) continue;
+      any = true;
+      if (b.v0 === s1) s1 = b.v0 + b.count;
+      else { range(); s0 = b.v0; s1 = b.v0 + b.count; }
+    }
+    range();
+    // ranges pile up while the mesh isn't drawn (interior mode): past a few, send the whole buffer
+    if (pos.updateRanges.length > 48) { pos.clearUpdateRanges(); nrm.clearUpdateRanges(); }
     // the Meshy snakes and scorpions follow their (ghost) procedural bodies
-    if (this.snakeSkins) this.snakes.forEach((x, i) => this.snakeSkins!.set(i, x.b.visible ? x.rig.segs.map((k) => x.b.world[k]) : null, x.b.visible ? x.b.world[x.rig.head] : null));
-    if (this.scorpSkins) this.scorpions.forEach((x, i) => this.scorpSkins!.set(i, x.b.visible ? x.b.root : null));
+    // (and their meshes cost no draws, scene or shadow, while none is out)
+    if (this.snakeSkins) {
+      this.snakes.forEach((x, i) => this.snakeSkins!.set(i, x.b.visible ? x.rig.segs.map((k) => x.b.world[k]) : null, x.b.visible ? x.b.world[x.rig.head] : null));
+      this.snakeSkins.mesh.visible = this.snakes.some((x) => x.b.visible);
+    }
+    if (this.scorpSkins) {
+      this.scorpions.forEach((x, i) => this.scorpSkins!.set(i, x.b.visible ? x.b.root : null));
+      this.scorpSkins.mesh.visible = this.scorpions.some((x) => x.b.visible);
+    }
     if (any) {
       this.mesh.geometry.attributes.position.needsUpdate = true;
       this.mesh.geometry.attributes.normal.needsUpdate = true;

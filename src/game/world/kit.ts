@@ -240,6 +240,87 @@ export function shadowProxy(root: THREE.Object3D, skip: THREE.Object3D[] = [], n
   return out;
 }
 
+const _bInv = new THREE.Matrix4();
+/**
+ * Cull a skinned model like any other mesh. Three's own bounds for a SkinnedMesh are a CPU-skinned
+ * pass over every vertex, so the Meshy clones used to set `frustumCulled = false` and were drawn
+ * (and cast into the sun's shadow map) wherever they stood, even far behind the camera or 140 m out
+ * past the shadow box. Instead the caller gives a world sphere that holds the pose (centre + radius,
+ * from its own skeleton) each time it poses the model; it's stored in the mesh's frame, so both
+ * the camera pass and the shadow pass cull it. Call after the model's matrixWorld is up to date.
+ */
+export function boundSkinned(mesh: THREE.SkinnedMesh, centre: THREE.Vector3, radius: number) {
+  const s = (mesh.boundingSphere ??= new THREE.Sphere());
+  _bInv.copy(mesh.matrixWorld).invert();
+  s.center.copy(centre).applyMatrix4(_bInv);
+  s.radius = radius / mesh.matrixWorld.getMaxScaleOnAxis();
+  mesh.frustumCulled = true;
+}
+
+/**
+ * What the frame can show: the camera's frustum and the sun's shadow box. Animated characters ask
+ * it before posing (`sees`): one that can neither be seen nor cast a shadow into view skips its CPU
+ * pose (a patrol 140 m behind you, the far side of a town). Game updates it once a frame, after the
+ * player's camera moved and before the world systems run; the shadow box is last frame's (it
+ * follows the player slowly), with a margin. Until the first update it sees everything.
+ */
+class ViewCull {
+  private cam = new THREE.Frustum();
+  private sun = new THREE.Frustum();
+  private m = new THREE.Matrix4();
+  private s = new THREE.Sphere();
+  private ready = false;
+  private hasSun = false;
+  update(camera: THREE.Camera, sunCam?: THREE.Camera | null) {
+    camera.updateMatrixWorld();
+    this.m.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse);
+    this.cam.setFromProjectionMatrix(this.m, camera.coordinateSystem, camera.reversedDepth);
+    this.hasSun = !!sunCam;
+    if (sunCam) {
+      this.m.multiplyMatrices(sunCam.projectionMatrix, sunCam.matrixWorldInverse);
+      this.sun.setFromProjectionMatrix(this.m, sunCam.coordinateSystem, sunCam.reversedDepth);
+    }
+    this.ready = true;
+  }
+  /** Could a sphere at `c` (world) of radius `r` be drawn this frame, or shadow anything in view? */
+  sees(c: THREE.Vector3, r: number) {
+    if (!this.ready) return true;
+    this.s.center.copy(c);
+    this.s.radius = r + 0.5;
+    if (this.cam.intersectsSphere(this.s)) return true;
+    if (!this.hasSun) return false;
+    this.s.radius = r + 3;
+    return this.sun.intersectsSphere(this.s);
+  }
+}
+export const viewCull = new ViewCull();
+
+const baseUpdateMatrixWorld = THREE.Object3D.prototype.updateMatrixWorld;
+/**
+ * Three's `updateMatrixWorld` for a whole scene, minus hidden subtrees. Three walks every object on
+ * every render of the scene (twice a frame here: the sun's shadow map and the scene pass), hidden or
+ * not, and more than half the graph is hidden at any moment: idle skin slots and their bones, far
+ * sites' near sets, the other towns. Game turns the scene's auto-update off and calls this once a
+ * frame before rendering. A hidden object's matrixWorld is refreshed the frame it's shown again
+ * (before it's drawn); code that needs one while hidden uses getWorldPosition / updateWorldMatrix,
+ * which walk the parents themselves. Objects with their own override (cameras, skinned meshes)
+ * run it, so their extras (view inverse, bind inverse) stay right.
+ */
+export function updateShownMatrices(o: THREE.Object3D, force = false) {
+  if (o.updateMatrixWorld !== baseUpdateMatrixWorld) { o.updateMatrixWorld(force); return; }
+  if (o.matrixAutoUpdate) o.updateMatrix();
+  if (o.matrixWorldNeedsUpdate || force) {
+    if (o.matrixWorldAutoUpdate) {
+      if (o.parent === null) o.matrixWorld.copy(o.matrix);
+      else o.matrixWorld.multiplyMatrices(o.parent.matrixWorld, o.matrix);
+    }
+    o.matrixWorldNeedsUpdate = false;
+    force = true;
+  }
+  const ch = o.children;
+  for (let i = 0, n = ch.length; i < n; i++) if (ch[i].visible) updateShownMatrices(ch[i], force);
+}
+
 /** A site's local frame (position on the terrain + yaw). `p()` maps local → world, `m` is the matrix. */
 export class Frame {
   readonly m: THREE.Matrix4;

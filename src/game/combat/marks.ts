@@ -1,5 +1,5 @@
 import * as THREE from 'three/webgpu';
-import { vec3, float, uv, length, smoothstep, mix, atan, sin, instancedDynamicBufferAttribute, varying, step } from 'three/tsl';
+import { vec3, float, uv, length, smoothstep, mix, atan, sin, instancedBufferAttribute, varying, step } from 'three/tsl';
 import { noise } from '@/engine/noiseTex';
 import type { ImpactKind } from '@/engine/combatAudio';
 
@@ -23,8 +23,7 @@ export class Marks {
   constructor() {
     const N = this.N;
     this.info = new THREE.InstancedBufferAttribute(new Float32Array(N * 4), 4);
-    this.info.setUsage(THREE.DynamicDrawUsage);
-    const I: N = instancedDynamicBufferAttribute(this.info, 'vec4');
+    const I: N = instancedBufferAttribute(this.info, 'vec4');
     const vI: N = varying(I);
     const mat = new THREE.MeshStandardNodeMaterial({ transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -4 });
     // kind: 0 dirt, 1 rock/concrete, 2 metal, 3 wood
@@ -57,17 +56,19 @@ export class Marks {
     mat.roughnessNode = mix(float(0.9), float(0.3), metal);
     const geo = new THREE.PlaneGeometry(1, 1);
     this.mesh = new THREE.InstancedMesh(geo, mat, N);
-    this.mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
     for (let i = 0; i < N; i++) this.mesh.setMatrixAt(i, HIDDEN);
     this.mesh.frustumCulled = false;
     this.mesh.renderOrder = 2;
     this.mesh.name = 'bullet-marks';
     this.mesh.receiveShadow = true;
+    // no draw until the first mark (the boot warm-up shows it anyway)
+    this.mesh.visible = false;
   }
 
   /** A mark at `p` on a surface facing `n`, from a round travelling along `dir`. */
   add(kind: ImpactKind, p: THREE.Vector3, n: THREE.Vector3, dir: THREE.Vector3 | null = null, size = 1) {
     if (kind === 'flesh' || kind === 'glass') return;
+    this.mesh.visible = true;
     const j = this.next;
     this.next = (this.next + 1) % this.N;
     const k = kind === 'dirt' ? 0 : kind === 'metal' ? 2 : kind === 'wood' ? 3 : 1;
@@ -112,8 +113,7 @@ export class Brass {
   constructor(private floorAt: (p: THREE.Vector3) => number) {
     const N = this.N;
     this.kinds = new THREE.InstancedBufferAttribute(new Float32Array(N), 1);
-    this.kinds.setUsage(THREE.DynamicDrawUsage);
-    const K: N = varying(instancedDynamicBufferAttribute(this.kinds, 'float'));
+    const K: N = varying(instancedBufferAttribute(this.kinds, 'float'));
     const mat = new THREE.MeshStandardNodeMaterial();
     // 0 .38 / .30-30 brass, 1 red 12-gauge hull with a brass head
     const hull = step(0.5, K);
@@ -127,7 +127,6 @@ export class Brass {
     mat.emissiveNode = mix(brass.mul(0.08), vec3(0, 0, 0), hull);
     const geo = new THREE.CylinderGeometry(1, 1, 1, 8, 1);
     this.mesh = new THREE.InstancedMesh(geo, mat, N);
-    this.mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
     for (let i = 0; i < N; i++) {
       this.mesh.setMatrixAt(i, HIDDEN);
       this.c.push({ p: new THREE.Vector3(), v: new THREE.Vector3(), q: new THREE.Quaternion(), w: new THREE.Vector3(), floor: 0, age: 0, rest: true, kind: 0, live: false });
@@ -135,6 +134,8 @@ export class Brass {
     this.mesh.frustumCulled = false;
     this.mesh.castShadow = false;
     this.mesh.name = 'brass';
+    // drawn only while some casing is out (the boot warm-up shows it anyway)
+    this.mesh.visible = false;
   }
 
   /** Throw one out at `p` with velocity `v` (m/s). kind 0 brass, 1 shotgun hull. */
@@ -142,6 +143,8 @@ export class Brass {
     const j = this.next;
     this.next = (this.next + 1) % this.N;
     const c = this.c[j];
+    if (!c.live) this.live++;
+    this.mesh.visible = true;
     c.p.copy(p);
     c.v.copy(v);
     c.q.setFromEuler(new THREE.Euler(Math.random() * 6, Math.random() * 6, Math.random() * 6));
@@ -158,13 +161,21 @@ export class Brass {
 
   private _dq = new THREE.Quaternion();
   private _e = new THREE.Euler();
+  /** Casings out in the world (on the ground or in the air). */
+  private live = 0;
   update(dt: number) {
     let dirty = false;
     for (let j = 0; j < this.N; j++) {
       const c = this.c[j];
       if (!c.live) continue;
       c.age += dt;
-      if (c.age > 40) { c.live = false; this.mesh.setMatrixAt(j, HIDDEN); dirty = true; continue; }
+      if (c.age > 40) {
+        c.live = false;
+        this.mesh.setMatrixAt(j, HIDDEN);
+        dirty = true;
+        if (--this.live <= 0) this.mesh.visible = false;
+        continue;
+      }
       if (c.rest) continue;
       dirty = true;
       c.v.y -= 9.8 * dt;

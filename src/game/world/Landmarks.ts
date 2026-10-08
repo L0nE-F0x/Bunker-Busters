@@ -8,7 +8,7 @@ import type { Heightfield } from './Heightfield';
 import type { Physics } from '@/engine/physics';
 import { LANDMARKS } from '@/content/world';
 import type { LandmarkDef } from '@/content/types';
-import { box, cyl, beam, MeshBatch, DistanceLod, Frame, canvasTexture, grime, wire, shadowProxy } from './kit';
+import { box, cyl, beam, place, merge, MeshBatch, DistanceLod, Frame, canvasTexture, grime, wire, shadowProxy } from './kit';
 import { rustyMetal, concrete, corrugated, neon, plainStandard, fabric, wood, glow, warmWindow } from './materials';
 import { Fire, lightCone } from './effects';
 
@@ -20,6 +20,8 @@ export class Landmarks {
   flickers: Flicker[] = [];
   blinkers: { u: { value: number }; period: number; offset: number }[] = [];
   campPosition = new THREE.Vector3();
+  /** The gas station's frame (camp space: the fire at (−8, 0, 5), logs north and east of it). */
+  campFrame: Frame | null = null;
   audioSpots: { kind: AmbientKind; pos: THREE.Vector3 }[] = [];
   private lods: DistanceLod[] = [];
 
@@ -83,9 +85,9 @@ export class Landmarks {
       }
       this.collider(f, px, 1, 0, 0.7, 1, 2.5);
     }
-    // store building
+    // store building (sun-bleached stucco over a darker plinth)
     const sx = 0, sz = -12;
-    b.add(conc, box(14, 4.2, 7, sx, 2.1, sz));
+    b.add(concrete('#cdbf9f', { stains: 0.85 }), box(14, 4.2, 7, sx, 2.1, sz));
     b.add(roofMetal, box(14.6, 0.25, 7.6, sx, 4.35, sz));
     b.add(warmWindow('#ffae5a', 2.2), box(5, 1.8, 0.1, sx - 3, 1.8, sz + 3.52));
     b.add(darkGlass, box(1.6, 2.4, 0.1, sx + 3, 1.2, sz + 3.52));
@@ -96,7 +98,11 @@ export class Landmarks {
     const signX = 12, signZ = 8;
     b.add(metal, box(0.5, 9, 0.5, signX, 4.5, signZ), box(0.5, 9, 0.5, signX + 3.4, 4.5, signZ));
     this.collider(f, signX + 1.7, 4.5, signZ, 2, 4.5, 0.4);
-    const signTex = canvasTexture(1024, 640, (ctx, w, h) => {
+    // one canvas for every sign on the lot (one material, one draw): the pylon sign on top, the
+    // store's boards below (see gasDressing)
+    const signTex = canvasTexture(1024, 1280, (ctx) => {
+      const w = 1024, h = 640;
+      drawStoreSigns(ctx);
       ctx.fillStyle = '#1b130e';
       ctx.fillRect(0, 0, w, h);
       ctx.strokeStyle = '#e8d6b0';
@@ -116,8 +122,9 @@ export class Landmarks {
       grime(ctx, w, h, 1.4, 9);
     });
     const signMat = new THREE.MeshStandardNodeMaterial({ map: signTex, roughness: 0.7, emissiveMap: signTex, emissive: new THREE.Color(0.35, 0.3, 0.25) });
-    const sign = new THREE.Mesh(new THREE.BoxGeometry(4.4, 2.75, 0.3), signMat);
-    sign.position.set(signX + 1.7, 8.2, signZ);
+    const pylon = new THREE.BoxGeometry(4.4, 2.75, 0.3);
+    signUv(pylon, 0, 0, 1024, 640);
+    const sign = new THREE.Mesh(merge([place(pylon, signX + 1.7, 8.2, signZ), ...this.gasDressing(f, b)]), signMat);
     sign.castShadow = true;
     root.add(sign);
     // neon tube outline (flickers)
@@ -191,9 +198,128 @@ export class Landmarks {
     root.add(fire.group);
     this.fires.push(fire);
     this.campPosition.copy(f.p(campX + 1, 0.2, campZ + 1));
+    this.campFrame = f;
     this.audioSpots.push({ kind: 'fire', pos: this.campPosition.clone() });
 
     this.group.add(root);
+  }
+
+  /**
+   * Last Chance's store had been a bare box from three sides. Dress it like the last stop it was:
+   * fascia and plinth, a parapet MARKET board, an awning, a soda machine and an ice chest out front;
+   * restrooms (out of order) and a water heater on the east side; a propane cage and a roof ladder
+   * on the west; a back door, meter, A/C condenser, dumpster, bags, tyres, pallets and a plywood
+   * sign out back; A/C units, vents and a dish on the roof. All family materials (no new draws) in
+   * the station's batch, so the far stand-in and the shadow proxy get them too. Returns the sign
+   * faces, which share the pylon sign's canvas and material.
+   */
+  private gasDressing(f: Frame, b: MeshBatch): THREE.BufferGeometry[] {
+    const faces: THREE.BufferGeometry[] = [];
+    const cream = rustyMetal({ base: '#d8d2c4', rust: 0.45, metalness: 0.3, roughness: 0.65 });
+    const red = rustyMetal({ base: '#b8452c', rust: 0.55, metalness: 0.3, roughness: 0.6 });
+    const metal = rustyMetal({ base: '#6d6a66', rust: 0.6 });
+    const steel = rustyMetal({ base: '#a2a19a', rust: 0.35, metalness: 0.6, roughness: 0.5 });
+    const teal = rustyMetal({ base: '#3f6e6a', rust: 0.55, metalness: 0.4, roughness: 0.55 });
+    const green = rustyMetal({ base: '#3c5a3a', rust: 0.6, metalness: 0.4, roughness: 0.6 });
+    const plinth = concrete('#857a6a', { stains: 0.7 });
+    const slab = concrete('#a39a8c');
+    const rubber = plainStandard('#151311', 0.92);
+    const bag = plainStandard('#1c211d', 0.3);
+    const white = rustyMetal({ base: '#e2ddd0', rust: 0.15, metalness: 0.3, roughness: 0.5 });
+    const dark = plainStandard('#1a1c1e', 0.5, 0.3);
+    const glass = plainStandard('#0a0d10', 0.1, 0.5);
+    const crate = wood('#8a6a44');
+    const ply = wood('#a2804f');
+    const awnR = fabric('#9a3324', 0.85), awnW = fabric('#e2d6bc', 0.85);
+    const sx = 0, sz = -12, W = 7, D = 3.5; // store centre and half extents (x, z); walls 4.2 high
+
+    // shell: plinth, fascia with a red stripe, parapet cap, corner downspouts
+    b.add(plinth, box(14.1, 0.85, 7.1, sx, 0.42, sz));
+    b.add(cream, box(14.16, 0.6, 7.16, sx, 3.86, sz));
+    b.add(red, box(14.2, 0.16, 7.2, sx, 3.5, sz));
+    for (const [cx, cz] of [[-W, -D], [W, -D], [-W, D], [W, D]]) {
+      b.add(metal, cyl(0.06, 0.06, 4.1, sx + cx + Math.sign(cx) * 0.12, 2.05, sz + cz + Math.sign(cz) * 0.12, 6));
+    }
+
+    // front (+z face at sz + D): parapet sign on two posts, awning over the window, soda machine,
+    // ice chest, bench, bin
+    const fz = sz + D;
+    b.add(metal, box(0.12, 1.3, 0.12, -3.6, 4.85, fz - 0.25), box(0.12, 1.3, 0.12, 2.6, 4.85, fz - 0.25));
+    b.add(dark, box(8.2, 1.1, 0.1, -0.5, 4.95, fz - 0.12));
+    faces.push(signFace(0, 640, 1024, 200, 8.1, 1.0, -0.5, 4.95, fz - 0.06));
+    // awning: alternating stripes sloping out from the wall, on three brackets
+    for (let i = 0; i < 8; i++) {
+      b.add(i % 2 ? awnW : awnR, box(0.78, 0.04, 1.45, -6.35 + i * 0.78 + 0.39 - 0.4, 3.05, fz + 0.62, 0, 0.38));
+    }
+    for (const ax of [-6.1, -3, 0.2]) b.add(metal, beam(new THREE.Vector3(ax, 2.6, fz), new THREE.Vector3(ax, 2.83, fz + 1.25), 0.025));
+    b.add(red, box(0.95, 1.95, 0.8, -6.25, 1.17, fz + 0.55));
+    b.add(glass, box(0.6, 1.1, 0.04, -6.35, 1.25, fz + 0.96));
+    b.add(cream, box(0.18, 0.5, 0.05, -5.92, 1.2, fz + 0.96));
+    faces.push(signFace(840, 1130, 184, 140, 0.5, 0.28, -6.25, 2.0, fz + 0.96));
+    this.collider(f, -6.25, 1.1, fz + 0.55, 0.48, 0.95, 0.4);
+    b.add(cream, box(1.7, 1.15, 0.85, 5.3, 0.78, fz + 0.5));
+    b.add(steel, box(1.74, 0.08, 0.89, 5.3, 1.38, fz + 0.5));
+    faces.push(signFace(0, 850, 300, 180, 1.2, 0.66, 5.3, 0.82, fz + 0.935));
+    this.collider(f, 5.3, 0.78, fz + 0.5, 0.85, 0.6, 0.43);
+    b.add(crate, box(1.8, 0.07, 0.4, 0.5, 0.65, fz + 0.4), box(1.8, 0.07, 0.12, 0.5, 1.0, fz + 0.12, 0, -0.2));
+    b.add(metal, box(0.07, 0.45, 0.35, -0.3, 0.42, fz + 0.4), box(0.07, 0.45, 0.35, 1.3, 0.42, fz + 0.4));
+    b.add(teal, cyl(0.3, 0.27, 0.95, 4.0, 0.67, fz + 0.45, 12));
+
+    // east side: two restroom doors, a frosted window, the water heater
+    const ex = sx + W;
+    b.add(teal, box(0.06, 2.1, 0.95, ex + 0.03, 1.25, sz + 1.6), box(0.06, 2.1, 0.95, ex + 0.03, 1.25, sz - 0.6));
+    b.add(metal, box(0.04, 0.04, 0.16, ex + 0.08, 1.25, sz + 1.25), box(0.04, 0.04, 0.16, ex + 0.08, 1.25, sz - 0.95));
+    faces.push(signFace(840, 850, 184, 140, 0.42, 0.32, ex + 0.07, 1.75, sz - 0.6, Math.PI / 2));
+    faces.push(signFace(840, 1000, 184, 120, 0.42, 0.27, ex + 0.07, 1.75, sz + 1.6, Math.PI / 2));
+    b.add(glass, box(0.05, 0.5, 1.1, ex + 0.02, 3.0, sz - 2.3));
+    b.add(cream, cyl(0.32, 0.32, 1.5, ex + 0.5, 0.95, sz - 2.6, 12), cyl(0.33, 0.33, 0.06, ex + 0.5, 1.72, sz - 2.6, 12));
+    b.add(metal, cyl(0.03, 0.03, 2.6, ex + 0.5, 3.0, sz - 2.6, 6));
+    this.collider(f, ex + 0.5, 0.95, sz - 2.6, 0.33, 0.75, 0.33);
+
+    // west side: propane exchange cage (four bottles) and a ladder to the roof
+    const wx = sx - W;
+    const cx = wx - 0.75, cz = sz + 1.6;
+    for (const [px, pz] of [[-0.5, -0.8], [0.5, -0.8], [-0.5, 0.8], [0.5, 0.8]]) b.add(steel, box(0.05, 1.7, 0.05, cx + px, 1.05, cz + pz));
+    b.add(steel, box(1.05, 0.05, 1.65, cx, 1.9, cz), box(1.05, 0.05, 1.65, cx, 0.25, cz));
+    for (let i = -3; i <= 3; i++) b.add(steel, box(0.02, 1.62, 0.02, cx + 0.52, 1.07, cz + i * 0.22));
+    for (const [px, pz] of [[-0.2, -0.45], [0.2, -0.1], [-0.2, 0.3], [0.18, 0.62]]) {
+      b.add(white, cyl(0.15, 0.15, 0.55, cx + px, 0.55, cz + pz, 10), cyl(0.1, 0.15, 0.1, cx + px, 0.88, cz + pz, 10));
+    }
+    this.collider(f, cx, 1.0, cz, 0.55, 1.0, 0.85);
+    for (const lz of [-0.25, 0.25]) b.add(metal, box(0.05, 4.9, 0.05, wx - 0.12, 2.45, sz - 1.8 + lz));
+    for (let y = 0.4; y < 4.8; y += 0.32) b.add(metal, box(0.03, 0.03, 0.5, wx - 0.12, y, sz - 1.8));
+
+    // back (−z face): door, meter + conduit, condenser, dumpster and bags, tyres, pallets, plywood sign
+    const bz = sz - D;
+    b.add(metal, box(1.05, 2.15, 0.07, sx + 3.2, 1.08, bz - 0.03));
+    b.add(slab, box(1.6, 0.18, 0.9, sx + 3.2, 0.09, bz - 0.45));
+    b.add(steel, box(0.45, 0.65, 0.18, sx - 1.8, 1.6, bz - 0.1), cyl(0.035, 0.035, 2.3, sx - 1.8, 3.05, bz - 0.08, 6));
+    b.add(steel, box(1.0, 0.85, 0.95, sx - 4.6, 0.43, bz - 1.0));
+    b.add(dark, cyl(0.38, 0.38, 0.04, sx - 4.6, 0.87, bz - 1.0, 14));
+    this.collider(f, sx - 4.6, 0.43, bz - 1.0, 0.5, 0.43, 0.48);
+    b.add(green, box(2.0, 1.25, 1.25, sx - 0.4, 0.68, bz - 1.9), box(2.04, 0.08, 1.3, sx - 0.4, 1.36, bz - 1.95, 0, 0.12));
+    this.collider(f, sx - 0.4, 0.68, bz - 1.9, 1.0, 0.68, 0.63);
+    for (const [gx, gz, r] of [[0.9, -1.1, 0.34], [1.35, -1.6, 0.28], [0.95, -2.7, 0.3], [-1.7, -2.4, 0.25]]) {
+      b.add(bag, place(new THREE.DodecahedronGeometry(r, 0), sx + gx, r * 0.55, bz + gz, 0.3, gx * 3, 0.2, 1.15, 0.62, 0.95));
+    }
+    const tyre = (x: number, y: number, z: number, rx = Math.PI / 2, rz = 0) =>
+      place(new THREE.TorusGeometry(0.33, 0.12, 6, 14), x, y, z, rx, 0, rz);
+    for (let i = 0; i < 4; i++) b.add(rubber, tyre(sx + 5.3 + (i % 2) * 0.04, 0.12 + i * 0.24, bz - 1.4));
+    b.add(rubber, tyre(sx + 6.3, 0.42, bz - 0.6, 0.1, 0.25));
+    this.collider(f, sx + 5.3, 0.5, bz - 1.4, 0.45, 0.5, 0.45);
+    for (let i = 0; i < 3; i++) b.add(crate, box(1.2, 0.13, 1.0, sx + 3.4, 0.07 + i * 0.15, bz - 2.3, i * 0.06));
+    b.add(crate, box(1.2, 1.0, 0.13, sx + 4.6, 0.55, bz - 0.3, 0, 0.22));
+    b.add(ply, box(1.7, 0.95, 0.03, sx - 5.8, 0.6, bz - 0.25, 0, 0.18));
+    faces.push(place(signRect(310, 850, 520, 300, 1.66, 0.92), sx - 5.8, 0.6, bz - 0.27, 0.18, Math.PI, 0));
+
+    // roof: two A/C units, vent stacks, a dish turned at the sky
+    const ry = 4.47;
+    b.add(steel, box(1.5, 0.85, 1.15, sx - 3.2, ry + 0.43, sz - 1.0), box(1.3, 0.75, 1.05, sx + 2.6, ry + 0.38, sz + 0.6));
+    b.add(dark, box(1.0, 0.04, 0.8, sx - 3.2, ry + 0.87, sz - 1.0));
+    b.add(metal, cyl(0.08, 0.08, 0.8, sx + 5.2, ry + 0.4, sz - 2, 8), cyl(0.06, 0.06, 0.6, sx - 5.4, ry + 0.3, sz + 1.8, 8));
+    b.add(cream, place(new THREE.SphereGeometry(0.55, 12, 6, 0, Math.PI * 2, 0, 1.0), sx + 5.6, ry + 0.85, sz + 2.2, -0.9, 0.6, 0));
+    b.add(metal, cyl(0.04, 0.04, 0.8, sx + 5.6, ry + 0.4, sz + 2.2, 6));
+    return faces;
   }
 
   private radioTower(lm: LandmarkDef) {
@@ -302,12 +428,13 @@ export class Landmarks {
     // camp space (the gas station's frame): fire at (−8, 5); log A along x at z 6.4 (north of the
     // fire), log B along z at x −6.8 (east). Each point is where the hips sit, on top of the log.
     const fire = new THREE.Vector3(-8, 0, 5);
-    const seat = (id: string, x: number, z: number, notice = 5): NpcDef => {
+    // they notice you from the far side of the fire (and from where you kneel in character select)
+    const seat = (id: string, x: number, z: number, notice = 7): NpcDef => {
       const yaw = Math.atan2(fire.x - x, fire.z - z);
       return { id, look: CAMP_LOOK, pose: 'warm', x, y: 0, z, yaw, seat: 0.62, notice };
     };
     const defs = [
-      seat('mara', -9.5, 6.5, 6),
+      seat('mara', -9.5, 6.5, 7.5),
       seat('pip', -8.3, 6.25),
       seat('hollis', -6.8, 4.65),
       seat('dez', -6.8, 3.45),
@@ -315,6 +442,15 @@ export class Landmarks {
     if (!defs.length) return;
     this.campCrowd = new NpcCrowd(defs, 'camp-people');
     this.campNear.add(this.campCrowd.mesh);
+  }
+
+  /** A camp-space point in world space, `y` metres above the ground there (menu cameras). */
+  campPoint(x: number, y: number, z: number, out = new THREE.Vector3()) {
+    const f = this.campFrame;
+    if (!f) return out.copy(this.campPosition).add(new THREE.Vector3(x + 8, y, z - 5));
+    out.set(x, 0, z).applyMatrix4(f.m);
+    out.y = this.hf.heightAt(out.x, out.z) + y;
+    return out;
   }
 
   update(dt: number, t: number, cam?: THREE.Vector3) {
@@ -338,3 +474,90 @@ function place3(g: THREE.BufferGeometry, p: THREE.Vector3) {
   return g;
 }
 
+// ------------------------------------------------------------------ Last Chance's sign canvas
+// 1024×1280: the pylon sign fills the top 640 rows; the store's boards are packed below.
+const SIGN_W = 1024, SIGN_H = 1280;
+
+/** Map a geometry's 0..1 UVs onto the canvas rect (x, y, w, h) in pixels. */
+function signUv(g: THREE.BufferGeometry, x: number, y: number, w: number, h: number) {
+  const uv = g.attributes.uv as THREE.BufferAttribute;
+  for (let i = 0; i < uv.count; i++) {
+    uv.setXY(i, (x + uv.getX(i) * w) / SIGN_W, 1 - (y + h - uv.getY(i) * h) / SIGN_H);
+  }
+  return g;
+}
+/** A pw×ph plane (facing +z) showing canvas rect (x, y, w, h). */
+const signRect = (x: number, y: number, w: number, h: number, pw: number, ph: number) =>
+  signUv(new THREE.PlaneGeometry(pw, ph), x, y, w, h);
+/** …placed at (px, py, pz), turned `ry` about the vertical. */
+const signFace = (x: number, y: number, w: number, h: number, pw: number, ph: number, px: number, py: number, pz: number, ry = 0) =>
+  place(signRect(x, y, w, h, pw, ph), px, py, pz, 0, ry, 0);
+
+function drawStoreSigns(ctx: CanvasRenderingContext2D) {
+  const DISPLAY = '"Big Shoulders Stencil Display", Impact, sans-serif', UI = '"Chakra Petch", Arial, sans-serif';
+  const at = (x: number, y: number, w: number, h: number, draw: (w: number, h: number) => void) => {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.beginPath(); ctx.rect(0, 0, w, h); ctx.clip();
+    draw(w, h);
+    ctx.restore();
+  };
+  // MARKET board on the parapet
+  at(0, 640, 1024, 200, (w, h) => {
+    ctx.fillStyle = '#21403d'; ctx.fillRect(0, 0, w, h);
+    ctx.strokeStyle = '#e6d8b4'; ctx.lineWidth = 10; ctx.strokeRect(12, 12, w - 24, h - 24);
+    ctx.fillStyle = '#efe2bd'; ctx.textBaseline = 'middle'; ctx.textAlign = 'left';
+    ctx.font = `900 120px ${DISPLAY}`; ctx.fillText('MARKET', 40, h / 2 + 6, 440);
+    ctx.fillStyle = '#e8a23a'; ctx.font = `700 36px ${UI}`; ctx.textAlign = 'right';
+    ctx.fillText('ICE · BAIT · COLD DRINKS', w - 40, 76, 470);
+    ctx.fillStyle = '#d9c9a0'; ctx.font = `500 28px ${UI}`;
+    ctx.fillText('OPEN 24 HRS   EST. 1987', w - 40, 132, 470);
+    grime(ctx, w, h, 1.6, 21);
+  });
+  // ICE chest front
+  at(0, 850, 300, 180, (w, h) => {
+    ctx.fillStyle = '#dce6ea'; ctx.fillRect(0, 0, w, h);
+    ctx.fillStyle = '#1f5f9a'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.font = `900 120px ${DISPLAY}`; ctx.fillText('ICE', w / 2, 82);
+    ctx.font = `600 26px ${UI}`; ctx.fillText('PACKED FRESH DAILY', w / 2, 150);
+    ctx.strokeStyle = '#a3261c'; ctx.lineWidth = 7; ctx.beginPath(); ctx.moveTo(30, 162); ctx.lineTo(w - 30, 136); ctx.stroke();
+    grime(ctx, w, h, 1.4, 22);
+  });
+  // plywood out back, spray-painted
+  at(310, 850, 520, 300, (w, h) => {
+    ctx.fillStyle = '#b48d5a'; ctx.fillRect(0, 0, w, h);
+    for (let i = 0; i < 40; i++) {
+      ctx.strokeStyle = `rgba(90,60,30,${0.08 + (i % 5) * 0.03})`; ctx.lineWidth = 2 + (i % 3);
+      ctx.beginPath(); const y = (i * 37) % h; ctx.moveTo(0, y); ctx.bezierCurveTo(w * 0.3, y + 9, w * 0.6, y - 8, w, y + 4); ctx.stroke();
+    }
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillStyle = '#9e1f17'; ctx.font = `900 92px ${DISPLAY}`;
+    ctx.save(); ctx.rotate(-0.04); ctx.fillText('NO WATER', w / 2 + 6, 82); ctx.restore();
+    ctx.fillStyle = '#151210'; ctx.font = `900 70px ${DISPLAY}`;
+    ctx.fillText('NO GAS', w / 2 - 70, 170);
+    ctx.save(); ctx.rotate(0.05); ctx.font = `700 54px ${DISPLAY}`; ctx.fillText("DON'T ASK", w / 2 + 40, 238); ctx.restore();
+    grime(ctx, w, h, 1.2, 23);
+  });
+  // restroom plates
+  at(840, 850, 184, 140, (w, h) => {
+    ctx.fillStyle = '#e9e4d6'; ctx.fillRect(0, 0, w, h);
+    ctx.fillStyle = '#2b2b2b'; ctx.textAlign = 'center'; ctx.font = `700 30px ${UI}`; ctx.fillText('WOMEN', w / 2, 40);
+    ctx.fillStyle = '#b0221a'; ctx.font = `italic 700 30px ${UI}`;
+    ctx.save(); ctx.translate(w / 2, 96); ctx.rotate(-0.08); ctx.fillText('OUT OF', 0, -6); ctx.fillText('ORDER', 0, 26); ctx.restore();
+    grime(ctx, w, h, 1.5, 24);
+  });
+  at(840, 1000, 184, 120, (w, h) => {
+    ctx.fillStyle = '#e9e4d6'; ctx.fillRect(0, 0, w, h);
+    ctx.fillStyle = '#2b2b2b'; ctx.textAlign = 'center'; ctx.font = `700 40px ${UI}`; ctx.fillText('MEN', w / 2, 58);
+    ctx.font = `500 22px ${UI}`; ctx.fillText('KEY AT COUNTER', w / 2, 96);
+    grime(ctx, w, h, 1.5, 25);
+  });
+  // soda machine header
+  at(840, 1130, 184, 140, (w, h) => {
+    ctx.fillStyle = '#b8261c'; ctx.fillRect(0, 0, w, h);
+    ctx.fillStyle = '#f4ead2'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.font = `italic 900 58px ${DISPLAY}`; ctx.fillText('FIZZ', w / 2, 56);
+    ctx.font = `600 20px ${UI}`; ctx.fillText('ICE COLD', w / 2, 108);
+    grime(ctx, w, h, 1.2, 26);
+  });
+}

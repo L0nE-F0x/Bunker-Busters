@@ -185,6 +185,10 @@ The webview's `console.log` goes to stdout.
   - **Never mutate a factory material.** Use `rustyMetalUnique`/`fabricUnique`.
   - No GTAO pass on WebGL.
   - **No CSS `filter`, `backdrop-filter` or `mix-blend-mode` in WebKitGTK**: they're redrawn on the CPU over the canvas every frame and took menus to ~13 fps. `html.lowfx` (auto in the Linux app, `?lowfx=1` to test) must neutralise any new ones. Throttle per-frame canvas/DOM updates.
+  - **Never `setUsage(THREE.DynamicDrawUsage)` or `instancedDynamicBufferAttribute`.** Three re-uploads a dynamic buffer on every draw (scene and shadow pass), changed or not. Use static usage and set `needsUpdate` (plus update ranges) when you write.
+  - **Skinned or animated models:** give each a sphere per pose with `kit.boundSkinned` (never leave `frustumCulled = false`), and ask `kit.viewCull.sees()` before posing; hide what it can't see. Hide whole meshes (particles, instanced pools) while nothing in them is live.
+  - **The scene's matrices update once a frame, before rendering, for visible objects only** (`kit.updateShownMatrices`; `scene.matrixWorldAutoUpdate` is off). A hidden object's `matrixWorld` is stale: call `updateWorldMatrix(true, false)` / `getWorldPosition` before reading it.
+  - WebGL2 uniform blocks upload in one call per update (`renderer.ts coalesceUniformUploads`); re-check that patch after a three upgrade.
 - **Lights and distance:** never `new THREE.PointLight` in world code. Use `VirtualLight` (world/lights.ts): a fixed pool of real lights is lent to the nearest, so the light count (and every shader) never changes. New places get a `buildFar()` stand-in under a `DistanceLod` and a `shadowProxy()` for their static batch (skip anything that moves or hides).
 - **Shader warm-up (desktop freezes):** WebKitGTK compiles shaders on the main thread, so a material seen for the first time freezes the app. Freezes like that made v0.3.0 feel like "can't move".
   - `Game.warmShaders` compiles everything that's in the scene at boot (during "Compiling shaders"), plus the hands, held items and body at run start.
