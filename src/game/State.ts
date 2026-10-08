@@ -56,7 +56,12 @@ export interface SaveData {
   pack?: DroppedPack | null;
   /** v0.5: venom in the blood (seconds of poison left). */
   poison?: number;
+  /** v0.5.6: midnights passed since the run began (the calendar starts at Day 1,284). */
+  days?: number;
 }
+
+/** The day Mara hands over the radio. */
+export const START_DAY = 1284;
 
 export type GameEvents = {
   toast: { text: string; kind?: 'info' | 'good' | 'bad' | 'xp' };
@@ -112,6 +117,7 @@ export class GameState {
       arms: { equipped: null, mags: {} },
       pack: null,
       poison: 0,
+      days: 0,
     });
   }
 
@@ -130,6 +136,11 @@ export class GameState {
       this.archCache = { key, def };
     }
     return this.archCache.def;
+  }
+
+  /** "Day 1,285": the calendar, from the morning of the briefing. */
+  get dayLabel() {
+    return `Day ${(START_DAY + (this.data.days ?? 0)).toLocaleString('en-US')}`;
   }
 
   // ---------- flags ----------
@@ -483,6 +494,7 @@ function migrateSave(raw: unknown): SaveData | null {
     arms: d.arms ?? { equipped: null, mags: {} },
     pack: d.pack ?? null,
     poison: d.poison ?? 0,
+    days: typeof d.days === 'number' && d.days >= 0 ? Math.floor(d.days) : 0,
   };
 }
 

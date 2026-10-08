@@ -1059,7 +1059,7 @@ export class UI implements UIBridge {
           return `<button class="camp-person" data-person="${esc(p.id)}">${monogram(p.id as never, p.name)}<span><b>${esc(p.name)}</b><small>${esc(p.role)}</small></span>${standingPips(rep)}</button>`;
         }).join('');
         panel.innerHTML = `<div class="scan"></div>
-          <header><h3>LAST CHANCE</h3><div class="label">Camp · Day 1,284</div></header>
+          <header><h3>LAST CHANCE</h3><div class="label">Camp · ${esc(this.state?.dayLabel ?? 'Day 1,284')}</div></header>
           <div class="body camp-body">
             <div class="camp-col">
               <p class="camp-note">${esc(note)}</p>

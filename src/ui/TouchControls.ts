@@ -112,6 +112,8 @@ export class TouchControls {
     }
     const cl = (el: HTMLElement, c: string, on: boolean) => { if (el.classList.contains(c) !== on) el.classList.toggle(c, on); };
     cl(this.armsEl, 'hide', !f.armed);
+    // the HUD makes room for the weapon cluster: prompts move into the lane left of it (styles.css)
+    cl(document.documentElement, 'armed', !!f.armed);
     cl(this.armsEl, 'melee', !f.gun);
     cl(this.useBtn, 'lit', f.use && !f.useNA);
     cl(this.useBtn, 'dim', !f.use || f.useNA);

@@ -275,7 +275,9 @@ export function buildOutpost(def: OutpostDef, physics: Physics, hf: Heightfield)
     mb.add(kadeRed, place(new THREE.BoxGeometry(2.6, 1.6, 1.8), 0, 0.8, -9, 0));
     mb.add(steel, place(new THREE.CylinderGeometry(0.2, 0.2, 1.2, 10), -0.8, 1.9, -9, 0));
     solid(0, 0.8, -9, 1.3, 0.8, 0.9, 0);
-    solid(0, 1.45, -11, 20, 0.55, 0.55, 0);
+    // the pipe's collider reaches down to 0.3 m: a 0.9 m gap under a 40 m box could hold (and wedge)
+    // a crouched capsule; 0.3 m can't hold any capsule, and low shots still pass the stands' gaps
+    solid(0, 1.15, -11, 20.2, 0.85, 0.55, 0);
   } else if (def.id === 'wellhead') {
     // the stolen creek: a wellhead, a tank with Kade's name on it, pipes running west
     mb.add(rustyMetal({ base: '#7d8890', rust: 0.25, metalness: 0.8 }), place(new THREE.CylinderGeometry(3.2, 3.2, 4.2, 28), 0, 2.1, -10, 0));

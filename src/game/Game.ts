@@ -170,6 +170,8 @@ export class Game {
   private cubeCam: THREE.CubeCamera | null = null;
   private envScene = new THREE.Scene();
   private envTimer = 0;
+  /** The clock last frame, to count midnights (`SaveData.days`). */
+  private lastHour = 0;
   private landmarkSeen = new Set<string>();
   private windedHint = false;
   private ctx!: GameContext;
@@ -963,6 +965,7 @@ export class Game {
     this.atmo.hour = state.data.hour;
     const hourOverride = Number(new URLSearchParams(location.search).get('hour')); // debug: ?hour=18.6
     if (hourOverride) this.atmo.hour = hourOverride;
+    this.lastHour = this.atmo.hour;
     this.map.deserialize(state.data.discovered);
     const [x, , z] = state.data.position;
     let spawn = new THREE.Vector3(x, this.hf.heightAt(x, z) + 0.1, z);
@@ -1035,7 +1038,7 @@ export class Game {
         if (this.player) this.player.frozen = false;
         this.busy = false;
         this.input.requestLock();
-        this.ui.banner('LAST CHANCE', `${state.archetype.name} · Day 1,284`, 'info');
+        this.ui.banner('LAST CHANCE', `${state.archetype.name} · ${state.dayLabel}`, 'info');
       });
     }
     this.startLoops();
@@ -1742,6 +1745,11 @@ export class Game {
     const blocked = this.ui.modalOpen || this.ui.minigameOpen || this.busy;
     input.enabled = !blocked;
     this.cam.enabled = !blocked && input.locked;
+
+    // the calendar turns when the clock wraps past midnight. Time only runs forward, so any step back
+    // is a wrap: the clock ticking over, sleeping till dawn, or a six-hour blackout
+    if (this.atmo.hour < this.lastHour - 1e-4) s.data.days = (s.data.days ?? 0) + 1;
+    this.lastHour = this.atmo.hour;
 
     // The body keeps the build honest: quiet feet, a heavy pack, a dry mouth.
     if (!blocked) s.tickNeeds(dt);

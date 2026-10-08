@@ -2680,6 +2680,16 @@
   "where": "src/content/story.ts"
  },
  {
+  "key": "13e2qte",
+  "voice": "af_sarah",
+  "fx": "radio",
+  "speed": 0.97,
+  "speaker": "Mara Voss",
+  "words": "The Garage is northeast, up the dirt spur off the highway. Whoever built it for him drew it up at the Spire. If there's a weak spot in that fence, it's on their paper. Read it before you climb anything.",
+  "tts": "The Garage is northeast, up the dirt spur off the highway. Whoever built it for him drew it up at the Spire. If there's a weak spot in that fence, it's on their paper. Read it before you climb anything.",
+  "where": "src/content/story.ts"
+ },
+ {
   "key": "0jfr1rh",
   "voice": "af_sarah",
   "fx": "radio",

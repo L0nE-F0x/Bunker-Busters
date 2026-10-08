@@ -747,6 +747,13 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #000; color:
 .touch .prompt .p.na .kbd { background: rgba(0,0,0,0.45); color: var(--ink-dim); border-color: rgba(255,220,170,0.4); }
 /* clear of two stacked prompts below it */
 .touch .subtitle { bottom: calc(var(--sb) + 178px); font-size: 14px; max-width: min(620px, 60vw); padding: 8px 14px; }
+/* gun out: the weapon cluster (#touch .arms) takes the right of centre, so prompts sit in the lane
+   between the vitals (230 px) and the cluster (right: --sr + 214, 140 wide), right-aligned against
+   it; the subtitle takes the same side of the screen (from the left edge to the cluster) above them */
+.touch.armed .prompt { left: calc(var(--sl) + 242px); right: calc(var(--sr) + 366px); transform: none; align-items: flex-end; }
+.touch.armed #hud .prompt .p { max-width: 100%; font-size: 13px; display: grid; grid-template-columns: auto 1fr; column-gap: 8px; line-height: 1.25; padding: 7px 10px 7px 7px; }
+.touch.armed .prompt .p small { grid-column: 1 / -1; }
+.touch.armed .subtitle { left: var(--sl); right: calc(var(--sr) + 366px); transform: none; max-width: none; bottom: calc(var(--sb) + 196px); }
 .touch .detect { top: calc(var(--st) + 4px); }
 .touch .detect svg { width: 48px; height: 30px; }
 .touch .banner { top: 20vh; }
