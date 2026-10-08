@@ -148,7 +148,7 @@ export class PlayerArms {
     }
 
     // ADS: hold right mouse (or the touch aim button)
-    const wantAds = !blocked && !interacting && !!w && w.kind === 'gun' && (input.mouseDown[2] || input.isDown('TouchAim')) && input.locked;
+    const wantAds = !blocked && !interacting && !!w && w.kind === 'gun' && input.act('aim') && input.locked;
     this.ads = this.hands.arms.ads;
     const marks = this.state.focus('firearms') === 'marksman';
     if (w && w.kind === 'gun') {
@@ -163,15 +163,17 @@ export class PlayerArms {
     if (blocked) { this.reloadTick(dt, true); return { wantAds: false }; }
 
     // weapon selection
-    if (input.pressed('KeyQ')) this.equip(this.last && this.owned(this.last) ? this.last : WEAPON_ORDER.find((x) => this.owned(x) && x !== this.equipped) ?? null);
-    if (input.pressed('KeyX')) this.equip(this.equipped ? null : this.last && this.owned(this.last) ? this.last : WEAPON_ORDER.find((x) => this.owned(x)) ?? null);
+    if (input.actPressed('lastWeapon')) this.equip(this.last && this.owned(this.last) ? this.last : WEAPON_ORDER.find((x) => this.owned(x) && x !== this.equipped) ?? null);
+    if (input.actPressed('holster')) this.equip(this.equipped ? null : this.last && this.owned(this.last) ? this.last : WEAPON_ORDER.find((x) => this.owned(x)) ?? null);
     if (input.wheel && !wantAds) this.cycle(input.wheel > 0 ? 1 : -1);
+    if (input.actPressed('nextWeapon')) this.cycle(1);
+    if (input.actPressed('prevWeapon')) this.cycle(-1);
 
     // fire / swing (a press is buffered for a beat, so a click during the pump still lands)
-    const firePress = (input.mousePressed[0] && input.locked) || input.pressed('TouchFire');
+    const firePress = input.actPressed('fire') && input.locked;
     if (firePress) this.fireBuffer = 0.18;
-    if (input.pressed('KeyV')) this.melee();
-    if (input.pressed('KeyR')) this.startReload();
+    if (input.actPressed('melee')) this.melee();
+    if (input.actPressed('reload')) this.startReload();
 
     if (w && this.fireBuffer > 0 && !interacting) {
       if (w.kind === 'melee') { if (!this.hands.arms.swinging && this.meleeCd <= 0) { this.fireBuffer = 0; this.melee(); } }
@@ -246,6 +248,8 @@ export class PlayerArms {
     // feel: kick, flash, sound, smoke
     const recoilK = (fa >= 4 ? 0.5 : 1 - fa * 0.06) * (1 - ads * 0.3) * (this.player.crouching ? 0.85 : 1);
     this.hands.arms.fire(recoilK);
+    // a controller kicks with the gun (stronger for the heavy ones)
+    this.input.rumble(Math.min(1, w.recoil.pitch * 6) * recoilK, 0.45 * recoilK, 70);
     this.pendingKick += w.recoil.pitch * recoilK * (0.85 + Math.random() * 0.3);
     this.pendingYaw += (Math.random() - 0.5) * 2 * w.recoil.yaw * recoilK;
     this.cam.addTrauma(w.recoil.kick * 0.18 * recoilK);

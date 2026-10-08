@@ -52,19 +52,19 @@ export class TouchControls {
       `<div class="tb ${cls}" data-key="${key}">${glyph}${label ? `<span>${label}</span>` : ''}</div>`;
     root.innerHTML = `
       <div class="stick"><div class="ring"></div><div class="knob"></div><div class="run">SPRINT</div></div>
-      <div class="tbar">${btn('t-pause', 'Escape', GLYPH.pause)}${btn('t-kit', 'Tab', GLYPH.kit)}${btn('t-map', 'KeyM', GLYPH.map)}</div>
+      <div class="tbar">${btn('t-pause', 'Escape', GLYPH.pause)}${btn('t-kit', 'act:kit', GLYPH.kit)}${btn('t-map', 'act:map', GLYPH.map)}</div>
       <div class="cluster">
-        ${btn('t-jump', 'Space', GLYPH.jump)}
-        ${btn('t-crouch', 'KeyC', GLYPH.crouch)}
-        ${btn('t-use', 'KeyE', GLYPH.use)}
-        ${btn('t-alt', 'KeyF', '', 'ALT')}
-        ${btn('t-torch', 'KeyL', GLYPH.torch)}
+        ${btn('t-jump', 'act:jump', GLYPH.jump)}
+        ${btn('t-crouch', 'act:crouch', GLYPH.crouch)}
+        ${btn('t-use', 'act:interact', GLYPH.use)}
+        ${btn('t-alt', 'act:alt', '', 'ALT')}
+        ${btn('t-torch', 'act:torch', GLYPH.torch)}
       </div>
       <div class="arms">
-        ${btn('t-fire', 'TouchFire', GLYPH.fire)}
-        ${btn('t-aim', 'TouchAim', GLYPH.aim)}
-        ${btn('t-reload', 'KeyR', GLYPH.reload)}
-        ${btn('t-swap', 'KeyQ', GLYPH.swap)}
+        ${btn('t-fire', 'act:fire', GLYPH.fire)}
+        ${btn('t-aim', 'act:aim', GLYPH.aim)}
+        ${btn('t-reload', 'act:reload', GLYPH.reload)}
+        ${btn('t-swap', 'act:lastWeapon', GLYPH.swap)}
       </div>`;
     this.stick = root.querySelector('.stick')!;
     this.knob = root.querySelector('.knob')!;
@@ -123,7 +123,7 @@ export class TouchControls {
   }
 
   private releaseAll() {
-    for (const [, r] of this.roles) if (r.kind === 'key' && r.code !== 'KeyC') this.input.release(r.code);
+    for (const [, r] of this.roles) if (r.kind === 'key' && r.code !== 'act:crouch') this.input.release(r.code);
     this.roles.clear();
     this.input.moveX = this.input.moveZ = 0;
     this.setSprint(false);
@@ -133,7 +133,7 @@ export class TouchControls {
   private setSprint(on: boolean) {
     if (on === this.sprintKey) return;
     this.sprintKey = on;
-    if (on) this.input.press('ShiftLeft'); else this.input.release('ShiftLeft');
+    if (on) this.input.press('act:sprint'); else this.input.release('act:sprint');
     this.stick.classList.toggle('sprint', on);
   }
 
@@ -146,9 +146,9 @@ export class TouchControls {
     if (keyEl) {
       e.preventDefault();
       const code = keyEl.dataset.key!;
-      if (code === 'KeyC') {
+      if (code === 'act:crouch') {
         // crouch toggles: a thumb can't hold it while also steering and looking
-        if (this.input.isDownRaw('KeyC')) this.input.release('KeyC'); else this.input.press('KeyC');
+        if (this.input.isDownRaw(code)) this.input.release(code); else this.input.press(code);
       } else this.input.press(code);
       keyEl.classList.add('down');
       this.roles.set(e.pointerId, { kind: 'key', code, el: keyEl });
@@ -199,7 +199,7 @@ export class TouchControls {
     this.roles.delete(e.pointerId);
     if (r.kind === 'key') {
       r.el.classList.remove('down');
-      if (r.code !== 'KeyC') this.input.release(r.code);
+      if (r.code !== 'act:crouch') this.input.release(r.code);
     } else if (r.kind === 'stick') {
       this.input.moveX = this.input.moveZ = 0;
       this.setSprint(false);

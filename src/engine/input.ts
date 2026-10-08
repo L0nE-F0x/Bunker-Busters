@@ -1,4 +1,7 @@
 import { isTouch, enterFullscreen } from './device';
+import { binds, type Action } from './bindings';
+
+export type Device = 'kbm' | 'pad' | 'touch';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 const ipc = (window as any).__TAURI_INTERNALS__ as { invoke: (cmd: string, args?: object) => Promise<any> } | undefined;
@@ -21,11 +24,28 @@ export class Input {
   moveZ = 0;
   /** Touch device: there is no pointer to capture; "locked" just means the touch controls are live. */
   readonly touch = isTouch;
+  /** Controller (src/engine/gamepad.ts): analog move, -1..1 (x right, z forward). */
+  padX = 0;
+  padZ = 0;
+  /** Controller actions held / pressed this frame (written by the Pad each frame). */
+  padDown = new Set<Action>();
+  padPressed = new Set<Action>();
+  /** The device that was used last: prompts show its glyphs (html.pad / 'bb-device'). */
+  device: Device = isTouch ? 'touch' : 'kbm';
+  /** Controller vibration, wired by the Pad (no-op without one). */
+  rumbleFn: ((strong: number, weak: number, ms: number) => void) | null = null;
+  /**
+   * A "soft" capture: playing with a controller, nothing grabs the mouse (a pad press can't request
+   * pointer lock, and in the Linux app an X grab would only get in the way). A click on the view
+   * upgrades it to a real capture; Escape releases it like any other.
+   */
+  soft = false;
 
   constructor(private el: HTMLElement) {
     window.addEventListener('keydown', (e) => {
       // native capture has no browser-provided Escape-to-release, so do it here
-      if (e.code === 'Escape' && this.native && this.locked) this.exitLock();
+      if (e.code === 'Escape' && (this.native || this.soft) && this.locked) this.exitLock();
+      if (e.isTrusted) this.setDevice(this.touch ? 'touch' : 'kbm');
       if (e.repeat) return;
       if (['Tab', 'Space', 'ArrowUp', 'ArrowDown'].includes(e.code)) e.preventDefault();
       this.down.add(e.code);
@@ -40,19 +60,30 @@ export class Input {
       if (this.native && this.locked) this.exitLock(); // switched window/workspace: give the mouse back
     });
     window.addEventListener('mousemove', (e) => {
-      if (!this.locked || this.rawLive) return;
+      if (!this.touch && Math.abs(e.movementX) + Math.abs(e.movementY) > 6) this.setDevice('kbm');
+      if (!this.locked || this.rawLive || this.soft) return;
       this.mouseDX += e.movementX;
       this.mouseDY += e.movementY;
     });
     window.addEventListener('mousedown', (e) => {
+      if (!this.touch) this.setDevice('kbm');
       this.mouseDown[e.button] = true;
       this.mousePressed[e.button] = true;
+      this.down.add(`Mouse${e.button}`);
+      this.pressedThisFrame.add(`Mouse${e.button}`);
+      // a click on the view while a controller holds the soft capture: take the mouse for real
+      if (this.soft && this.locked && e.target === this.el) this.upgradeLock();
     });
-    window.addEventListener('mouseup', (e) => (this.mouseDown[e.button] = false));
+    window.addEventListener('mouseup', (e) => { this.mouseDown[e.button] = false; this.down.delete(`Mouse${e.button}`); });
     window.addEventListener('wheel', (e) => (this.wheel += Math.sign(e.deltaY)), { passive: true });
     // right mouse is aim-down-sights: never a context menu over the game
     el.addEventListener('contextmenu', (e) => e.preventDefault());
-    document.addEventListener('pointerlockchange', () => this.setLocked(document.pointerLockElement === this.el));
+    document.addEventListener('pointerlockchange', () => {
+      const on = document.pointerLockElement === this.el;
+      if (on) { this.soft = false; document.documentElement.classList.remove('padplay'); }
+      else if (this.soft) return; // a soft capture outlives the browser's lock going away
+      this.setLocked(on);
+    });
     document.addEventListener('pointerlockerror', () => document.dispatchEvent(new Event('bb-lockerror')));
     // Linux desktop app (X11/XWayland): capture the mouse natively instead of with pointer lock
     ipc?.invoke('raw_mouse_delta').then((d) => { if (d) this.native = true; }, () => {});
@@ -71,7 +102,8 @@ export class Input {
     if (v === this.locked) return;
     this.locked = v;
     if (v) this.rawFlush = true; // drop motion gathered while the cursor was free
-    if (!v) { this.moveX = this.moveZ = 0; }
+    if (!v) { this.moveX = this.moveZ = 0; this.soft = false; }
+    document.documentElement.classList.toggle('padplay', v && this.soft);
     // deferred: callers that release the mouse to open a panel (exitLock(); openInventory()) must get
     // the panel up before listeners decide whether to show the pause menu
     queueMicrotask(() => document.dispatchEvent(new Event('bb-lockchange')));
@@ -102,7 +134,8 @@ export class Input {
         const held = d[2] ?? 0, pressed = d[3] ?? 0;
         for (const [bit, b] of [[1, 0], [2, 1], [4, 2]] as const) {
           this.mouseDown[b] = (held & bit) !== 0;
-          if (pressed & bit) this.mousePressed[b] = true;
+          if (this.mouseDown[b]) this.down.add(`Mouse${b}`); else this.down.delete(`Mouse${b}`);
+          if (pressed & bit) { this.mousePressed[b] = true; this.pressedThisFrame.add(`Mouse${b}`); }
         }
         this.wheel += d[4] ?? 0;
       }
@@ -116,12 +149,33 @@ export class Input {
       return;
     }
     if (this.locked) return;
+    if (this.device === 'pad') {
+      // a controller can't ask for pointer lock (no user gesture) and doesn't need it
+      this.soft = true;
+      this.setLocked(true);
+      return;
+    }
+    this.grab();
+  }
+
+  /** Swap a soft capture for a real one (the player picked the mouse back up and clicked the view). */
+  private upgradeLock() {
+    this.grab();
+  }
+
+  /** Capture the mouse: native grab in the Linux app, pointer lock in a browser. */
+  private grab() {
     if (this.native) {
       if (this.capturing) return;
       this.capturing = true;
       ipc!.invoke('mouse_capture', { on: true }).then((ok: boolean) => {
         this.capturing = false;
-        if (ok) { this.rawLive = true; this.setLocked(true); } else document.dispatchEvent(new Event('bb-lockerror'));
+        if (ok) {
+          this.rawLive = true;
+          this.soft = false;
+          document.documentElement.classList.remove('padplay');
+          this.setLocked(true);
+        } else if (!this.soft) document.dispatchEvent(new Event('bb-lockerror'));
       }, () => { this.capturing = false; document.dispatchEvent(new Event('bb-lockerror')); });
       return;
     }
@@ -129,7 +183,7 @@ export class Input {
   }
   exitLock() {
     if (!this.locked) return;
-    if (this.touch) { this.setLocked(false); return; }
+    if (this.touch || this.soft) { this.setLocked(false); return; }
     if (this.native) {
       ipc!.invoke('mouse_capture', { on: false }).catch(() => {});
       this.setLocked(false);
@@ -145,6 +199,47 @@ export class Input {
   }
   release(code: string) {
     if (this.down.delete(code)) this.releasedThisFrame.add(code);
+  }
+
+  /** A one-frame press with no hold (the controller's Start → 'Escape'). */
+  tap(code: string) {
+    this.pressedThisFrame.add(code);
+  }
+
+  /** Record which device was used last; prompts follow it. */
+  setDevice(d: Device) {
+    if (d === this.device) return;
+    this.device = d;
+    document.documentElement.classList.toggle('pad', d === 'pad');
+    document.dispatchEvent(new Event('bb-device'));
+  }
+
+  /** Controller vibration (only when a controller is what you're playing with, and it's switched on). */
+  rumble(strong: number, weak: number, ms: number) {
+    if (this.device === 'pad' && binds.map.rumble) this.rumbleFn?.(strong, weak, ms);
+  }
+
+  /** Mouse buttons only count while the mouse is captured (a click that grabs it never fires). */
+  private codeDown(c: string) {
+    return this.down.has(c) && (!c.startsWith('Mouse') || (this.locked && !this.soft));
+  }
+  private codePressed(c: string) {
+    return this.pressedThisFrame.has(c) && (!c.startsWith('Mouse') || (this.locked && !this.soft));
+  }
+
+  /** Action held: any bound key or mouse button, the controller, or an on-screen button (`act:x`). */
+  act(a: Action) {
+    if (!this.enabled) return false;
+    if (this.padDown.has(a) || this.down.has(`act:${a}`)) return true;
+    for (const c of binds.keys(a)) if (this.codeDown(c)) return true;
+    return false;
+  }
+  /** Action pressed this frame. */
+  actPressed(a: Action) {
+    if (!this.enabled) return false;
+    if (this.padPressed.has(a) || this.pressedThisFrame.has(`act:${a}`)) return true;
+    for (const c of binds.keys(a)) if (this.codePressed(c)) return true;
+    return false;
   }
 
   isDown(code: string) {
@@ -171,5 +266,6 @@ export class Input {
     this.mouseDY = 0;
     this.wheel = 0;
     this.mousePressed = [false, false, false];
+    this.padPressed.clear();
   }
 }

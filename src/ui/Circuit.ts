@@ -1,5 +1,6 @@
 import type { AudioEngine } from '@/engine/audio';
 import { isTouch } from '@/engine/device';
+import { dirOf, padGlyph } from '@/engine/bindings';
 
 /** Oscilloscope "signal match": tune amplitude + frequency to the target trace and hold it. */
 export class CircuitGame {
@@ -36,8 +37,9 @@ export class CircuitGame {
         <footer>${isTouch ? `
           <span>Drag on the scope: up/down is amplitude, left/right is frequency. Match the green trace and hold it.</span>
           <button class="btn back">Abort</button>` : `
-          <span>Move the mouse (or <span class="kbd">W</span><span class="kbd">S</span> amplitude, <span class="kbd">A</span><span class="kbd">D</span> frequency) to match the green trace</span>
-          <span><span class="kbd">Esc</span> — abort</span>`}
+          <span class="kbh">Move the mouse (or <span class="kbd">W</span><span class="kbd">S</span> amplitude, <span class="kbd">A</span><span class="kbd">D</span> frequency) to match the green trace</span>
+          <span class="kbh"><span class="kbd">Esc</span> — abort</span>
+          <span class="padh">Left stick: up/down amplitude, left/right frequency · ${padGlyph('P1')} abort</span>`}
         </footer>
       </div>`;
     this.canvas = this.root.querySelector('canvas')!;
@@ -68,9 +70,10 @@ export class CircuitGame {
 
   private onKey = (e: KeyboardEvent) => {
     if (e.code === 'Escape') { e.preventDefault(); this.finish(false); return; }
-    this.keys.add(e.code);
+    const d = dirOf(e.code);
+    if (d) { e.preventDefault(); this.keys.add(d); }
   };
-  private onKeyUp = (e: KeyboardEvent) => this.keys.delete(e.code);
+  private onKeyUp = (e: KeyboardEvent) => { const d = dirOf(e.code); if (d) this.keys.delete(d); };
   private onMouse = (e: PointerEvent) => {
     if (this.done) return;
     if (e.pointerType !== 'mouse') e.preventDefault();
@@ -87,10 +90,10 @@ export class CircuitGame {
     this.last = now;
     this.t += dt;
     if (!this.done) {
-      if (this.keys.has('KeyW')) this.amp = Math.min(1, this.amp + dt * 0.6);
-      if (this.keys.has('KeyS')) this.amp = Math.max(0.05, this.amp - dt * 0.6);
-      if (this.keys.has('KeyD')) this.freq = Math.min(6.4, this.freq + dt * 2.4);
-      if (this.keys.has('KeyA')) this.freq = Math.max(0.8, this.freq - dt * 2.4);
+      if (this.keys.has('up')) this.amp = Math.min(1, this.amp + dt * 0.6);
+      if (this.keys.has('down')) this.amp = Math.max(0.05, this.amp - dt * 0.6);
+      if (this.keys.has('right')) this.freq = Math.min(6.4, this.freq + dt * 2.4);
+      if (this.keys.has('left')) this.freq = Math.max(0.8, this.freq - dt * 2.4);
       const err = Math.abs(this.amp - this.tAmp) / 1 + Math.abs(this.freq - this.tFreq) / 5.6;
       const match = Math.max(0, 1 - err / (this.tol * 2));
       if (err < this.tol) {

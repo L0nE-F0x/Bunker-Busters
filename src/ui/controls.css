@@ -1,0 +1,73 @@
+/* ---------- controller glyphs (prompts, hotbar, the Controls screen) ---------- */
+.pg {
+  display: inline-flex; align-items: center; justify-content: center; height: 26px; min-width: 26px; padding: 0 7px;
+  font-family: var(--mono); font-size: 12px; font-weight: 700; color: var(--ink); line-height: 1;
+  background: rgba(0, 0, 0, 0.5); border: 1px solid rgba(255, 220, 170, 0.55); border-radius: 5px; vertical-align: middle;
+}
+.pg.face { width: 26px; padding: 0; border-radius: 50%; border-width: 2px; font-size: 13px; }
+.pg.face.f0 { color: #5dff9a; border-color: rgba(93, 255, 154, 0.8); }
+.pg.face.f1 { color: #ff6a55; border-color: rgba(255, 106, 85, 0.8); }
+.pg.face.f2 { color: #5cb2ff; border-color: rgba(92, 178, 255, 0.8); }
+.pg.face.f3 { color: #ffd34d; border-color: rgba(255, 211, 77, 0.8); }
+.pg.face.ps.f0 { color: #8fb8ff; border-color: rgba(143, 184, 255, 0.8); }
+.pg.face.ps.f1 { color: #ff6a6a; border-color: rgba(255, 106, 106, 0.8); }
+.pg.face.ps.f2 { color: #ff8fd6; border-color: rgba(255, 143, 214, 0.8); }
+.pg.face.ps.f3 { color: #5dffb0; border-color: rgba(93, 255, 176, 0.8); }
+.pg.pill { border-radius: 13px; padding: 0 9px; letter-spacing: 0.04em; }
+.pg.dpad { border-radius: 4px; font-size: 14px; }
+.pgw { display: inline-flex; align-items: center; white-space: nowrap; }
+.pg-hold { font-family: var(--font); font-size: 10px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; color: var(--ink-dim); margin-right: 5px; vertical-align: middle; }
+
+/* ---------- controller focus ring (menus) and the hidden cursor while playing on a pad ---------- */
+html.pad .pad-focus { outline: 2px solid var(--amber); outline-offset: 2px; box-shadow: 0 0 0 5px rgba(255, 179, 71, 0.16), 0 0 22px rgba(255, 138, 42, 0.3); }
+html.pad .btn.pad-focus:not(.primary):not(:disabled) { background: linear-gradient(90deg, rgba(255, 138, 42, 0.35), rgba(255, 138, 42, 0.05)); border-color: var(--amber); color: #fff; }
+html.pad .menu .btn.pad-focus, html.pad .pause .btn.pad-focus:not(.cx-b) { padding-left: 30px; }
+html.pad .menu .btn.pad-focus::before, html.pad .pause .btn.pad-focus:not(.primary):not(.cx-b)::before { content: '▸'; position: absolute; left: 12px; color: var(--amber); }
+html.pad .cs-card.pad-focus { outline-offset: 1px; }
+html.padplay, html.padplay * { cursor: none !important; }
+
+/* ---------- Settings → Controls ---------- */
+.pause.cx { width: min(760px, 95vw); max-height: 94vh; padding: 24px 28px 20px; gap: 6px; }
+.cx-head { display: flex; align-items: baseline; gap: 16px; }
+.cx-head h3 { margin: 0 !important; }
+.cx-pad { margin-left: auto; font-size: 11px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--ink-faint); }
+.cx-pad.on { color: var(--green); }
+.cx-cols, .cx-row { display: grid; grid-template-columns: minmax(0, 1fr) 118px 118px 150px; gap: 8px; align-items: center; }
+.cx-cols { padding: 6px 12px 6px 0; border-bottom: 1px solid var(--line); font-size: 10px; letter-spacing: 0.22em; text-transform: uppercase; color: var(--amber); font-weight: 600; }
+.cx-cols span:not(:first-child) { text-align: center; }
+.cx-list { overflow-y: auto; min-height: 120px; max-height: calc(94vh - 250px); padding: 2px 8px 6px 2px; margin: 0 -8px 0 0; scrollbar-width: thin; scrollbar-color: rgba(255, 179, 71, 0.35) transparent; }
+.cx-group { margin: 12px 0 4px; font-size: 10px; letter-spacing: 0.26em; text-transform: uppercase; color: var(--ink-faint); font-weight: 600; }
+.cx-row { padding: 2px 0; border-left: 2px solid transparent; transition: background 0.4s ease, border-color 0.4s ease; }
+.cx-row.flash { background: rgba(255, 179, 71, 0.1); border-left-color: var(--amber); }
+.cx-name { font-size: 14px; color: var(--ink); padding-left: 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cx-row.fixed .cx-name { color: var(--ink-dim); }
+.cx-b {
+  height: 32px; font-family: var(--mono); font-size: 13px; font-weight: 600; color: var(--ink); cursor: pointer;
+  background: rgba(0, 0, 0, 0.35); border: 1px solid rgba(255, 220, 170, 0.3); border-bottom-width: 3px; border-radius: 5px;
+  display: inline-flex; align-items: center; justify-content: center; gap: 2px; padding: 0 8px; white-space: nowrap; overflow: hidden;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+.cx-b:hover, html.pad .cx-b.pad-focus { background: rgba(255, 138, 42, 0.18); border-color: var(--amber); color: #fff; }
+.cx-b.none { color: var(--ink-faint); }
+.cx-b.wait { color: var(--amber); border-color: var(--amber); background: rgba(255, 138, 42, 0.12); font-family: var(--font); font-size: 12px; letter-spacing: 0.04em; animation: pulse 1.2s infinite; }
+.cx-b .pg { height: 22px; min-width: 22px; font-size: 11px; }
+.cx-b .pg.face { width: 22px; }
+.cx-b .pgw { display: inline-flex; align-items: center; white-space: nowrap; }
+.pg-hold { font-size: 9px; margin-right: 4px; }
+.cx-fixed { text-align: center; font-family: var(--mono); font-size: 12px; color: var(--ink-faint); }
+.cx-msg { margin: 8px 0 2px; min-height: 2.6em; font-size: 13px; line-height: 1.4; color: var(--ink-dim); }
+.cx-foot { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.cx-foot .btn { padding: 10px 18px; font-size: 13px; }
+.cx-foot .done { margin-left: auto; min-width: 120px; }
+.cx-rumble { display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--ink-dim); }
+.cx-rumble select { background: #1a120c; color: var(--ink); border: 1px solid var(--line); padding: 6px 8px; font-family: var(--font); }
+@media (max-width: 700px) {
+  .cx-cols, .cx-row { grid-template-columns: minmax(0, 1fr) 84px 84px 110px; gap: 5px; }
+  .cx-name { font-size: 12px; }
+}
+@media (max-height: 560px) { .pause.cx { padding: 14px 20px; } .pause.cx h3 { font-size: 34px; } .cx-list { max-height: calc(96vh - 200px); } }
+
+/* minigame footers: keyboard hints, or the controller's when one is in use */
+.padh { display: none; }
+html.pad .padh { display: inline-flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+html.pad .kbh { display: none; }
