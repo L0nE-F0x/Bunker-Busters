@@ -1,8 +1,10 @@
 import * as THREE from 'three/webgpu';
-import { texture, uniform, mix, smoothstep, max, min, vec3 } from 'three/tsl';
+import { texture, uniform, mix, smoothstep, max, min, vec3, float, attribute } from 'three/tsl';
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { clone as cloneSkinned } from 'three/addons/utils/SkeletonUtils.js';
 import { BONE, type Human } from './Humans';
+import { boundSkinned } from '../world/kit';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 type N = any;
@@ -36,13 +38,16 @@ interface Slot {
   root: THREE.Group;
   model: THREE.Object3D;
   b: Record<string, THREE.Bone>;
-  props: THREE.Object3D[];
+  /** The body's skinned mesh(es): bounded each frame so both passes can cull them. */
+  skinned: THREE.SkinnedMesh[];
 }
 
 const _q = new THREE.Quaternion(), _q2 = new THREE.Quaternion(), _q3 = new THREE.Quaternion(), _pq = new THREE.Quaternion();
 const _m = new THREE.Matrix4(), _v = new THREE.Vector3(), _w = new THREE.Vector3(), _e = new THREE.Vector3(), _s = new THREE.Vector3();
 const _x = new THREE.Vector3(), _y = new THREE.Vector3(), _z = new THREE.Vector3(), _p = new THREE.Vector3();
 const _dq = { hips: new THREE.Quaternion(), chest: new THREE.Quaternion(), head: new THREE.Quaternion() };
+const _root = new THREE.Vector3(), _target = new THREE.Vector3(), _procMid = new THREE.Vector3(), _pole = new THREE.Vector3();
+const _mid = new THREE.Vector3(), _twist = new THREE.Vector3(), _twist2 = new THREE.Vector3(), _toe = new THREE.Vector3(), _hipW = new THREE.Vector3();
 
 /** Rotation of a frame with +Y along `y` and +Z toward `zHint` (the Humans.ts frameTo convention). */
 function basis(y: THREE.Vector3, zHint: THREE.Vector3, out: THREE.Quaternion) {
@@ -88,36 +93,31 @@ export class HumanSkins {
 
   private constructor(src: THREE.Object3D, hatSrc: THREE.Object3D, maskSrc: THREE.Object3D, count: number, leader: number[]) {
     this.group.name = 'contractors';
-    // one node material per kind (the loader's are physical): body, respirator, and the hard hat in
-    // two tints (leader orange, crew white) that share one program through a uniform
-    const swap = (root: THREE.Object3D, make: (map: THREE.Texture | null) => THREE.Material, shadow: boolean) => {
-      let mat: THREE.Material | null = null;
-      root.traverse((o) => {
-        const m = o as THREE.Mesh;
-        if (!m.isMesh) return;
-        const old = m.material as THREE.MeshStandardMaterial;
-        mat ??= make(old.map ?? null);
-        m.material = mat;
-        m.castShadow = shadow;
-        m.receiveShadow = true;
-        m.frustumCulled = false;
-      });
+    // The hard hat and the respirator are skinned into the body (all on the Head bone), so a
+    // contractor is one draw and one depth draw, not three: one node material samples the body,
+    // hat and mask maps by a per-vertex `gear` tag (0 body, 1 mask, 2 crew hat, 3 leader hat).
+    // The hat's shell takes the crew/leader tint; the red KADE badge doesn't (saturation masks it).
+    const mapOf = (root: THREE.Object3D) => {
+      let map: THREE.Texture | null = null;
+      root.traverse((o) => { const m = o as THREE.Mesh; if (m.isMesh) map ??= (m.material as THREE.MeshStandardMaterial).map ?? null; });
+      return map as THREE.Texture | null;
     };
-    swap(src, (map) => new THREE.MeshStandardNodeMaterial({ map, roughness: 0.85, metalness: 0 }), true);
-    swap(maskSrc, (map) => new THREE.MeshStandardNodeMaterial({ map, roughness: 0.6, metalness: 0.1 }), false);
-    let hatMap: THREE.Texture | null = null;
-    hatSrc.traverse((o) => { const m = o as THREE.Mesh; if (m.isMesh) hatMap = (m.material as THREE.MeshStandardMaterial).map ?? null; });
-    const hatMat = (tint: string) => {
-      const m = new THREE.MeshStandardNodeMaterial({ roughness: 0.45, metalness: 0 });
-      if (hatMap) {
-        // tint the shell, leave the red KADE badge alone (saturation masks it)
-        const t: N = texture(hatMap);
-        const sat: N = max(t.r, max(t.g, t.b)).sub(min(t.r, min(t.g, t.b))).div(max(t.r, max(t.g, t.b)).max(0.001));
-        m.colorNode = mix(t.rgb.mul(uniform(new THREE.Color(tint)) as N), t.rgb, smoothstep(0.3, 0.5, sat));
-      } else m.colorNode = vec3(uniform(new THREE.Color(tint)) as N);
-      return m;
-    };
-    const hatCrew = hatMat('#e8e4da'), hatLead = hatMat('#e05a1a');
+    const bodyMap = mapOf(src), hatMap = mapOf(hatSrc), maskMap = mapOf(maskSrc);
+    const mat = new THREE.MeshStandardNodeMaterial({ roughness: 0.85, metalness: 0 });
+    {
+      const gear: N = attribute('gear', 'float');
+      const white = vec3(0.8, 0.8, 0.8);
+      const tb: N = bodyMap ? texture(bodyMap).rgb : white;
+      const tm: N = maskMap ? texture(maskMap).rgb : white;
+      const th: N = hatMap ? texture(hatMap).rgb : white;
+      const tint: N = gear.greaterThan(2.5).select(uniform(new THREE.Color('#e05a1a')) as N, uniform(new THREE.Color('#e8e4da')) as N);
+      const hi: N = max(th.r, max(th.g, th.b));
+      const sat: N = hi.sub(min(th.r, min(th.g, th.b))).div(hi.max(0.001));
+      const hat: N = hatMap ? mix(th.mul(tint), th, smoothstep(0.3, 0.5, sat)) : tint;
+      mat.colorNode = gear.lessThan(0.5).select(tb, gear.lessThan(1.5).select(tm, hat));
+      mat.roughnessNode = gear.lessThan(0.5).select(float(0.85), gear.lessThan(1.5).select(float(0.6), float(0.45)));
+      mat.metalnessNode = gear.greaterThan(0.5).and(gear.lessThan(1.5)).select(float(0.1), float(0));
+    }
 
     // bind data, measured with the model at the origin
     src.updateMatrixWorld(true);
@@ -134,6 +134,7 @@ export class HumanSkins {
       seg(`${s}UpLeg`, `${s}Leg`); seg(`${s}Leg`, `${s}Foot`); seg(`${s}Foot`, `${s}ToeBase`);
     }
     this.hipsH = this.bind.Hips?.p.y ?? 0.996;
+    const [crewGeo, leadGeo] = this.gearUp(src, bones, hatSrc, maskSrc);
 
     for (let i = 0; i < count; i++) {
       const model = cloneSkinned(src);
@@ -144,21 +145,84 @@ export class HumanSkins {
       const b: Record<string, THREE.Bone> = {};
       model.traverse((o) => { if ((o as THREE.Bone).isBone) b[o.name] = o as THREE.Bone; });
       for (const bone of Object.values(b)) bone.matrixWorldAutoUpdate = true;
-      // head props, in Head-bone space (1 unit = 1 cm there; numbers from Assets/MESHY_ASSETS.md §5)
-      const props: THREE.Object3D[] = [];
-      if (b.Head) {
-        const hat = hatSrc.clone(true);
-        hat.traverse((o) => { if ((o as THREE.Mesh).isMesh) (o as THREE.Mesh).material = leader.includes(i) ? hatLead : hatCrew; });
-        hat.position.set(-1.5, 20, -5);
-        hat.scale.setScalar(15);
-        const mask = maskSrc.clone(true);
-        mask.position.set(-1.3, 10, -4);
-        mask.scale.setScalar(14.5);
-        b.Head.add(hat, mask);
-        props.push(hat, mask);
-      }
-      this.slots.push({ root, model, b, props });
+      const skinned: THREE.SkinnedMesh[] = [];
+      model.traverse((o) => {
+        const m = o as THREE.SkinnedMesh;
+        if (!m.isMesh) return;
+        if (m.isSkinnedMesh) {
+          m.geometry = leader.includes(i) ? leadGeo : crewGeo;
+          skinned.push(m);
+        }
+        m.material = mat;
+        m.castShadow = true;
+        m.receiveShadow = true;
+        m.frustumCulled = false; // until pose() bounds it (boundSkinned)
+      });
+      this.slots.push({ root, model, b, skinned });
     }
+  }
+
+  /**
+   * The body's geometry with the hat and respirator merged in, skinned 100% to the Head bone where
+   * they used to ride it as separate meshes (Head-bone space, 1 unit = 1 cm there; fits from
+   * Assets/MESHY_ASSETS.md §5). Returns the crew and leader variants (they differ only in the tag).
+   */
+  private gearUp(src: THREE.Object3D, bones: Record<string, THREE.Bone>, hatSrc: THREE.Object3D, maskSrc: THREE.Object3D) {
+    let body: THREE.SkinnedMesh | null = null;
+    src.traverse((o) => { if ((o as THREE.SkinnedMesh).isSkinnedMesh) body ??= o as THREE.SkinnedMesh; });
+    if (!body) throw new Error('contractor: no skinned body');
+    const B = body as THREE.SkinnedMesh;
+    const tag = (g: THREE.BufferGeometry, v: number) => {
+      g.setAttribute('gear', new THREE.Float32BufferAttribute(new Float32Array(g.attributes.position.count).fill(v), 1));
+      return g;
+    };
+    const keep = (g: THREE.BufferGeometry, names: string[]) => {
+      for (const k of Object.keys(g.attributes)) if (!names.includes(k)) g.deleteAttribute(k);
+      return g;
+    };
+    const bodyGeo = keep(B.geometry.clone(), ['position', 'normal', 'uv', 'skinIndex', 'skinWeight']);
+    const parts: THREE.BufferGeometry[] = [tag(bodyGeo, 0)];
+    const head = bones.Head;
+    const hi = head ? B.skeleton.bones.indexOf(head) : -1;
+    const skinIdx = bodyGeo.attributes.skinIndex as THREE.BufferAttribute;
+    if (head && hi >= 0) {
+      const bindInv = new THREE.Matrix4().copy(B.bindMatrix).invert();
+      const put = (from: THREE.Object3D, pos: [number, number, number], scale: number, v: number) => {
+        const prop = from.clone(true);
+        prop.position.set(pos[0], pos[1], pos[2]);
+        prop.scale.setScalar(scale);
+        head.add(prop);
+        src.updateMatrixWorld(true);
+        prop.traverse((o) => {
+          const m = o as THREE.Mesh;
+          if (!m.isMesh) return;
+          const g = keep(m.geometry.clone(), ['position', 'normal', 'uv']);
+          if (!g.index) g.setIndex(Array.from({ length: g.attributes.position.count }, (_, j) => j));
+          g.applyMatrix4(new THREE.Matrix4().multiplyMatrices(bindInv, m.matrixWorld));
+          const n = g.attributes.position.count;
+          const si = new Uint8Array(n * 4), sw = new Float32Array(n * 4);
+          for (let j = 0; j < n; j++) { si[j * 4] = hi; sw[j * 4] = 1; }
+          g.setAttribute('skinIndex', new THREE.BufferAttribute(skinIdx.array instanceof Uint8Array ? si : new Uint16Array(si), 4, skinIdx.normalized));
+          g.setAttribute('skinWeight', new THREE.BufferAttribute(sw, 4));
+          parts.push(tag(g, v));
+        });
+        head.remove(prop);
+      };
+      put(maskSrc, [-1.3, 10, -4], 14.5, 1);
+      put(hatSrc, [-1.5, 20, -5], 15, 2);
+      src.updateMatrixWorld(true);
+    }
+    const crew = mergeGeometries(parts, false);
+    if (!crew) throw new Error('contractor: gear merge failed');
+    crew.computeBoundingSphere();
+    // the leader's copy shares every buffer but the tag
+    const lead = new THREE.BufferGeometry();
+    lead.setIndex(crew.index);
+    for (const [k, a] of Object.entries(crew.attributes)) lead.setAttribute(k, a);
+    const tagL = (crew.attributes.gear.array as Float32Array).map((x) => (x === 2 ? 3 : x));
+    lead.setAttribute('gear', new THREE.Float32BufferAttribute(tagL, 1));
+    lead.boundingSphere = crew.boundingSphere;
+    return [crew, lead];
   }
 
   hide(i: number) {
@@ -167,7 +231,7 @@ export class HumanSkins {
   }
 
   /** Fit slot `i` onto person `h`'s procedural skeleton for this frame. */
-  pose(i: number, h: Human, near: boolean) {
+  pose(i: number, h: Human) {
     const s = this.slots[i];
     if (!s) return;
     const H = h.look_.height;
@@ -175,7 +239,6 @@ export class HumanSkins {
     s.root.visible = true;
     s.root.position.set(0, 0, 0);
     s.root.scale.setScalar(H * (1.78 / MODEL_H));
-    for (const p of s.props) p.visible = near;
     const B = s.b;
 
     // torso frames from the procedural bones (their rotation; the matrices carry the height scale)
@@ -186,8 +249,12 @@ export class HumanSkins {
     rot(BONE.hips, _dq.hips);
     rot(BONE.chest, _dq.chest);
     rot(BONE.head, _dq.head);
+    // every setWorld below trusts its parent's matrixWorld (set just before it, top-down), so the
+    // chain above the hips is brought up to date once here instead of once per bone
+    B.Hips.parent!.updateWorldMatrix(true, false);
     // the pelvis: at the procedural one, lifted to the model's own hip height
     _p.setFromMatrixPosition(m[BONE.hips]);
+    _hipW.copy(_p);
     _v.set(0, 1, 0).applyQuaternion(_dq.hips).multiplyScalar((this.hipsH - 0.95) * H);
     this.setWorld(B.Hips, _q.copy(_dq.hips).multiply(this.bind.Hips.q), _w.copy(_p).add(_v));
     // the spine eases from the hips' frame to the chest's
@@ -208,36 +275,39 @@ export class HumanSkins {
     this.limb(B, 'Left', 'UpLeg', 'Leg', 'Foot', sd2(BONE.thighL, BONE.shinL, BONE.footL), H, m);
     this.limb(B, 'Right', 'UpLeg', 'Leg', 'Foot', sd2(BONE.thighR, BONE.shinR, BONE.footR), H, m);
     s.root.updateMatrixWorld(true);
+    // a sphere round the pelvis holds the whole pose (it follows a ragdoll too)
+    for (const sk of s.skinned) boundSkinned(sk, _hipW, 1.35 * H);
   }
 
   /** Upper/lower/end bones of a procedural limb. */
   private limb(B: Record<string, THREE.Bone>, sd: Side, up: string, lo: string, end: string, P: [number, number, number], H: number, m: THREE.Matrix4[]) {
     const bu = B[sd + up], bl = B[sd + lo], be = B[sd + end];
     if (!bu || !bl || !be) return;
-    // the joint and the procedural limb's twist reference (its +Z)
-    const root = bu.getWorldPosition(new THREE.Vector3());
-    const target = new THREE.Vector3().setFromMatrixPosition(m[P[2]]);
-    const procMid = new THREE.Vector3().setFromMatrixPosition(m[P[1]]);
+    // the joint (its parent was just set; limb joints keep their bind offset) and the procedural
+    // limb's twist reference (its +Z)
+    const root = _root.copy(bu.position).applyMatrix4(bu.parent!.matrixWorld);
+    const target = _target.setFromMatrixPosition(m[P[2]]);
+    const procMid = _procMid.setFromMatrixPosition(m[P[1]]);
     const k = H * (1.78 / MODEL_H);
     const a = this.len[sd + up] * k, b = this.len[sd + lo] * k;
     // bend toward where the procedural elbow/knee is
-    const pole = new THREE.Vector3().subVectors(procMid, root);
-    const mid = ik(root, target, a, b, pole, new THREE.Vector3());
-    const twist = new THREE.Vector3().setFromMatrixColumn(m[P[0]], 2).normalize();
+    const pole = _pole.subVectors(procMid, root);
+    const mid = ik(root, target, a, b, pole, _mid);
+    const twist = _twist.setFromMatrixColumn(m[P[0]], 2).normalize();
     // upper: bind direction → root→mid
     this.aim(bu, sd + up, _v.subVectors(mid, root), twist);
-    const twist2 = new THREE.Vector3().setFromMatrixColumn(m[P[1]], 2).normalize();
+    const twist2 = _twist2.setFromMatrixColumn(m[P[1]], 2).normalize();
     this.aim(bl, sd + lo, _v.subVectors(target, mid), twist2);
     if (end === 'Foot') {
       // the foot: toes along the procedural foot's +Z, sole down
-      const toe = new THREE.Vector3().setFromMatrixColumn(m[P[2]], 2).normalize();
+      const toe = _toe.setFromMatrixColumn(m[P[2]], 2).normalize();
       const d0 = this.dir[sd + 'Foot'];
       basis(toe, UP, _q2);
       basis(d0, UP, _q3);
       this.setWorld(be, _q.copy(_q2).multiply(_q3.invert()).multiply(this.bind[sd + 'Foot'].q));
     } else {
       // the hand continues the forearm (mitts, no fingers)
-      bl.getWorldQuaternion(_q2);
+      _q2.setFromRotationMatrix(_m.extractRotation(bl.matrixWorld));
       _q3.copy(this.bind[sd + lo].q).invert();
       this.setWorld(be, _q.copy(_q2).multiply(_q3).multiply(this.bind[sd + end].q));
     }
@@ -251,10 +321,13 @@ export class HumanSkins {
     this.setWorld(bone, _q.copy(_q2).multiply(_q3.invert()).multiply(this.bind[name].q));
   }
 
-  /** Give `bone` this world rotation (and position), whatever its parents are doing. */
+  /**
+   * Give `bone` this world rotation (and position). Its parent's matrixWorld must be current: bones
+   * are set top-down, and `pose` refreshes the chain above the hips first. (Walking the parents up
+   * on every call cost ~15 matrix updates per bone, ~0.3 ms a frame for a squad in WebKit.)
+   */
   private setWorld(bone: THREE.Bone, q: THREE.Quaternion, p?: THREE.Vector3) {
     const parent = bone.parent!;
-    parent.updateWorldMatrix(true, false);
     _pq.setFromRotationMatrix(_m.extractRotation(parent.matrixWorld));
     bone.quaternion.copy(_pq.invert().multiply(q));
     if (p) bone.position.copy(_p.copy(p).applyMatrix4(_m.copy(parent.matrixWorld).invert()));

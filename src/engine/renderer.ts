@@ -117,6 +117,37 @@ function quietShadowAlphaTest(renderer: THREE.WebGPURenderer) {
 }
 
 /**
+ * WebGL2: one bufferSubData per uniform-block update, not one per changed uniform. Three writes each
+ * changed uniform's slot as its own range (merging only neighbours), and every program's "render"
+ * block (camera, sun, fog, time: ~80 uniforms, ~30 of them changing each render) is refreshed for
+ * the shadow pass and again for the scene pass: ~1,350 tiny GL calls a frame in a firefight. In
+ * WebKitGTK every GL call is a validated round trip, so the count is what costs, not the bytes.
+ * Uploading the span from the first changed slot to the last is the same data (the CPU copy holds
+ * every current value) in one call: ~1.5 KB instead of 30 calls of 16-64 bytes.
+ */
+function coalesceUniformUploads(renderer: THREE.WebGPURenderer) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const be = (renderer as any).backend;
+  if (!be?.isWebGLBackend || typeof be.updateBinding !== 'function') return;
+  const updateBinding = be.updateBinding;
+  const span = { start: 0, count: 0 };
+  be.updateBinding = function (binding: { updateRanges?: { start: number; count: number }[] }) {
+    const r = binding.updateRanges;
+    if (r && r.length > 1) {
+      let lo = Infinity, hi = 0;
+      for (const x of r) { if (x.start < lo) lo = x.start; if (x.start + x.count > hi) hi = x.start + x.count; }
+      span.start = lo;
+      span.count = hi - lo;
+      // (the ranges are three's pooled per-uniform objects: swap the list, don't touch them;
+      // Bindings clears the list right after this call)
+      r.length = 0;
+      r.push(span);
+    }
+    return updateBinding.call(this, binding);
+  };
+}
+
+/**
  * WebGPU first, WebGL2 fallback. Some driver stacks (e.g. Chrome + Vulkan on hybrid-GPU Linux)
  * expose WebGPU but fail at the canvas swapchain; if the device reports errors right after start
  * we remember that and reload on the WebGL2 backend.
@@ -144,6 +175,7 @@ export async function createRenderer(canvas: HTMLCanvasElement) {
   });
   await renderer.init();
   quietShadowAlphaTest(renderer);
+  coalesceUniformUploads(renderer);
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFShadowMap;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;

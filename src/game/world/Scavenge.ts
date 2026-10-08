@@ -1,5 +1,5 @@
 import * as THREE from 'three/webgpu';
-import { MeshBatch } from './kit';
+import { MeshBatch, shadowProxy } from './kit';
 import { desertRock, fabric, plainStandard, rustyMetal, wood } from './materials';
 import { rockGeometry } from './Props';
 import type { Heightfield } from './Heightfield';
@@ -85,6 +85,8 @@ export class Scavenge {
     });
 
     this.group = mb.build('scavenge', true, true);
+    // static for good (looting doesn't move a thing): its casters go through one depth draw
+    shadowProxy(this.group);
   }
 
   /** A stash at the origin, +Z toward the viewer: the cairn and rag stick, and the thing itself. */

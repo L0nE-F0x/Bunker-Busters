@@ -542,7 +542,6 @@ export class Props {
     this.tumbleMesh = new THREE.InstancedMesh(geo, mat, N);
     this.tumbleMesh.castShadow = true;
     this.tumbleMesh.frustumCulled = false;
-    this.tumbleMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
     this.group.add(this.tumbleMesh);
     for (let i = 0; i < N; i++) {
       const sc = 0.8 + rand() * 0.8;

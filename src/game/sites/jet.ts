@@ -1050,7 +1050,6 @@ export class JetSite extends Site {
     const geo = framePrism(src, dst);
     this.shaftMat.fade.value = 0.55;
     const mesh = new THREE.InstancedMesh(geo, this.shaftMat.material, this.shaftDefs.length);
-    mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
     mesh.frustumCulled = false;
     mesh.renderOrder = 20;
     mesh.name = 'jet-shafts';

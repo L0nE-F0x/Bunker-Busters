@@ -1,6 +1,7 @@
 import * as THREE from 'three/webgpu';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { clone as cloneSkinned } from 'three/addons/utils/SkeletonUtils.js';
+import { boundSkinned } from './kit';
 
 /**
  * The named townsfolk as Meshy models (scripts/models/build-glb.mjs: rig + clips renamed to roles:
@@ -27,7 +28,7 @@ interface Clip { name: string; dur: number; tracks: Track[]; hips: THREE.Vector3
 interface Template { scene: THREE.Object3D; clips: Map<string, Clip>; bind: Map<string, { q: THREE.Quaternion; p: THREE.Vector3 }>; prop?: THREE.Object3D }
 
 const _q = new THREE.Quaternion(), _q2 = new THREE.Quaternion(), _pq = new THREE.Quaternion();
-const _v = new THREE.Vector3(), _v2 = new THREE.Vector3(), _m = new THREE.Matrix4();
+const _v = new THREE.Vector3(), _v2 = new THREE.Vector3(), _m = new THREE.Matrix4(), _c = new THREE.Vector3();
 const UP = new THREE.Vector3(0, 1, 0);
 
 export class NpcModels {
@@ -51,7 +52,7 @@ export class NpcModels {
             mat ??= new THREE.MeshStandardNodeMaterial({ map: (m.material as THREE.MeshStandardMaterial).map, roughness: 0.7, metalness: 0 });
             m.material = mat;
             m.castShadow = false;
-            m.frustumCulled = false;
+            m.frustumCulled = true; // rigid on the Head bone: its own bounds follow it
           });
           const d = Math.PI / 180;
           pg.scene.position.set(...P.pos);
@@ -89,7 +90,7 @@ function template(scene: THREE.Object3D, anims: THREE.AnimationClip[]): Template
     m.material = mat;
     m.castShadow = true;
     m.receiveShadow = true;
-    m.frustumCulled = false;
+    m.frustumCulled = false; // until the actor bounds it (boundSkinned, per update)
   });
   scene.updateMatrixWorld(true);
   const bones: Record<string, THREE.Bone> = {};
@@ -132,6 +133,7 @@ export class NpcActor {
   readonly root = new THREE.Group();
   private model: THREE.Object3D;
   private B: Record<string, THREE.Bone> = {};
+  private skinned: THREE.SkinnedMesh[] = [];
   private cur: Clip;
   private prev: Clip | null = null;
   private tCur = Math.random() * 3;
@@ -143,7 +145,10 @@ export class NpcActor {
   constructor(private T: Template, seated: boolean, hipY: number) {
     this.model = cloneSkinned(T.scene);
     this.root.add(this.model);
-    this.model.traverse((o) => { if ((o as THREE.Bone).isBone) this.B[o.name] = o as THREE.Bone; });
+    this.model.traverse((o) => {
+      if ((o as THREE.Bone).isBone) this.B[o.name] = o as THREE.Bone;
+      if ((o as THREE.SkinnedMesh).isSkinnedMesh) this.skinned.push(o as THREE.SkinnedMesh);
+    });
     if (T.prop && this.B.Head) this.B.Head.add(T.prop.clone(true));
     this.cur = T.clips.get('idle') ?? [...T.clips.values()][0];
     // hips stay where the idle clip puts them; seated people sink onto the game's seat
@@ -206,16 +211,21 @@ export class NpcActor {
       if (N) { this.turn(N, UP, look * 0.4); this.turn(N, lat, -nod * 0.4); }
       if (H) { this.turn(H, UP, look * 0.6); this.turn(H, lat, -nod * 0.6); }
     }
+    // a sphere round the hips holds the pose (seated or standing), so both passes can cull it
+    const hips = this.B.Hips;
+    if (hips) {
+      _c.setFromMatrixPosition(hips.matrixWorld);
+      for (const sk of this.skinned) boundSkinned(sk, _c, 1.3);
+    }
   }
 
   /** Rotate a bone about a world axis at its own joint (independent of the rig's bone axes). */
   private turn(bone: THREE.Bone, axis: THREE.Vector3, angle: number) {
     if (Math.abs(angle) < 1e-4) return;
-    const parent = bone.parent!;
-    parent.updateWorldMatrix(true, false);
-    _pq.setFromRotationMatrix(_m.extractRotation(parent.matrixWorld));
-    _q.setFromAxisAngle(axis, angle);
-    bone.quaternion.premultiply(_pq.clone().invert().multiply(_q).multiply(_pq));
+    // (the actor's matrices were just refreshed top-down, so the parent's is current)
+    _pq.setFromRotationMatrix(_m.extractRotation(bone.parent!.matrixWorld));
+    _q.setFromAxisAngle(axis, angle).multiply(_pq);
+    bone.quaternion.premultiply(_pq.invert().multiply(_q));
     bone.updateMatrixWorld(true);
   }
 }

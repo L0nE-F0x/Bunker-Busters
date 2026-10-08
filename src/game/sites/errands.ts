@@ -2,7 +2,7 @@ import * as THREE from 'three/webgpu';
 import type { GameContext, Interactable } from '../context';
 import type { Landmarks } from '../world/Landmarks';
 import type { GameState } from '../State';
-import { MeshBatch, DistanceLod, Frame } from '../world/kit';
+import { MeshBatch, DistanceLod, Frame, shadowProxy } from '../world/kit';
 import { glow, plainStandard, rustyMetal, wood } from '../world/materials';
 import { LANDMARKS } from '@/content/world';
 import { OUTPOSTS } from '@/content/recovery';
@@ -72,6 +72,7 @@ export class Errands {
       mb.add(dark, new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 16, 0.012, 4));
       const near = mb.build('dez-relay');
       near.applyMatrix4(f.m);
+      shadowProxy(near); // one depth draw (it follows the relay's own visibility)
       this.relay = near;
       near.visible = false;
       const wrap = new THREE.Group();
@@ -115,6 +116,9 @@ export class Errands {
       bk.add(wood('#c99a3a'), T(new THREE.CylinderGeometry(0.005, 0.005, 0.17, 6).rotateZ(Math.PI / 2), tx + 0.03, gy + 0.76, tz + 0.03, 0, yaw - 0.4));
       this.book = bk.build('survey-book');
       this.book.applyMatrix4(f.m);
+      // static sets: one depth draw each (the book's proxy goes when the book does)
+      shadowProxy(near);
+      shadowProxy(this.book);
       const wrap = new THREE.Group();
       wrap.add(near, this.book);
       this.group.add(wrap);
@@ -148,6 +152,7 @@ export class Errands {
       // the tag: "KADE · SEEP ROUTE"
       mb.add(plainStandard('#b02a22', 0.5), T(new THREE.BoxGeometry(0.07, 0.05, 0.003), 0, 1.0, 0.012, lean));
       const stake = mb.build(`survey-stake-${i}`);
+      shadowProxy(stake);
       stake.position.set(x, y0 - 0.05, z);
       stake.rotation.y = yaw;
       const wrap = new THREE.Group();
