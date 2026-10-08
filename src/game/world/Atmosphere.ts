@@ -336,10 +336,16 @@ export class Atmosphere {
         const mT = this.uMoonDir.cross(vec3(0, 1, 0.001)).normalize();
         const mB = this.uMoonDir.cross(mT);
         const mUv = vec2(dot(rd, mT), dot(rd, mB)).mul(28);
-        const maria = smoothstep(0.38, 0.62, noise(mUv.add(0.21)).r).mul(-0.42).add(noise(mUv.mul(2.7)).b.mul(0.22)).add(0.9);
+        const maria = smoothstep(0.36, 0.6, noise(mUv.add(0.21)).r).mul(-0.62).add(noise(mUv.mul(2.7)).b.mul(0.24)).add(0.92);
         const limb = smoothstep(0.99936, 0.99985, mmu).mul(0.3).add(0.7);
+        // a gibbous phase: the disk is a sphere lit from the (set) sun, with a soft terminator and a
+        // faint earthshine on the dark side. Kept below white so the maria survive the bloom.
+        const dxy = vec2(dot(rd, mT), dot(rd, mB)).div(0.0335);
+        const dz = clamp(float(1).sub(dot(dxy, dxy)), 0, 1).sqrt();
+        const mN = mT.mul(dxy.x).add(mB.mul(dxy.y)).sub(this.uMoonDir.mul(dz));
+        const phase = smoothstep(-0.12, 0.2, dot(mN, this.uSunDir)).mul(0.94).add(0.06);
         const moonGlow = pow(max(mmu, 0), 3000).mul(0.12).add(pow(max(mmu, 0), 120).mul(0.03));
-        col.addAssign(vec3(0.86, 0.9, 1.0).mul(moonDisk.mul(maria).mul(limb).mul(2.4).add(moonGlow)).mul(this.uNight).mul(pow(clear, 3)));
+        col.addAssign(vec3(0.86, 0.9, 1.0).mul(moonDisk.mul(maria).mul(limb).mul(phase).mul(1.25).add(moonGlow)).mul(this.uNight).mul(pow(clear, 3)));
       });
 
       // faint dust band glow near horizon
