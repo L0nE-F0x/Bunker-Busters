@@ -261,6 +261,7 @@ export class Game {
     await step(0.62, 'Charting the wasteland');
     this.map = new MapData(this.hf);
     this.cam = new FirstPersonCamera(this.camera);
+    this.applyView();
     this.camera.near = 0.05;
     this.camera.fov = this.cam.baseFov;
     this.camera.updateProjectionMatrix();
@@ -763,7 +764,10 @@ export class Game {
     const recipeRow = (r: Recipe) => {
       const n = s.craftYield(r);
       const detail = n === r.out.qty ? r.detail : r.detail.replace(/→ \d+/, `→ ${n}`);
-      return { id: r.id, name: r.name, detail, disabled: this.recipeBlock(r) };
+      const disabled = this.recipeBlock(r);
+      // "… · Electronics 1" over "Needs Electronics 1" said it twice: the reason line carries it
+      const shown = disabled && r.skill && disabled.startsWith('Needs') ? detail.replace(` · ${SKILLS[r.skill.id].name} ${r.skill.level}`, '') : detail;
+      return { id: r.id, name: r.name, detail: shown, disabled };
     };
     const recipes = RECIPES.map(recipeRow);
     const refreshRecipes = () => recipes.splice(0, recipes.length, ...RECIPES.map(recipeRow));
@@ -937,6 +941,7 @@ export class Game {
   private startGame(state: GameState) {
     this.state = state;
     this.mode = 'playing';
+    this.cam.snapFov(); // charselect/title leave the lens elsewhere; start the run at the player's FOV
     this.atmo.paused = false;
     this.atmo.dayLengthMinutes = 26;
     this.atmo.hour = state.data.hour;
@@ -1215,6 +1220,7 @@ export class Game {
     this.settings = s;
     saveSettings(s);
     this.applyAudioSettings();
+    this.applyView();
     this.input.sensitivity = s.sensitivity;
     if (this.combat) this.combat.difficulty = s.difficulty ?? 'normal';
     if (s.quality !== this.quality.level && this.post) {
@@ -1226,6 +1232,18 @@ export class Game {
       this.dust.sprite.count = this.quality.dustCount;
       this.streaks.sprite.count = Math.round(this.quality.dustCount * 0.3);
     }
+  }
+
+  /** Field of view, invert look, head bob and the fps readout. */
+  private applyView() {
+    const s = this.settings;
+    if (this.cam) {
+      this.cam.baseFov = s.fov;
+      this.cam.invertY = s.invertY;
+      this.cam.bob = s.bob;
+      if (this.mode === 'playing') this.cam.snapFov();
+    }
+    this.ui.showFps(s.showFps);
   }
 
   private applyAudioSettings() {
@@ -1668,6 +1686,9 @@ export class Game {
     if (!this.loopsStarted && this.audio.ready && this.mode !== 'loading') this.startLoops();
 
     if (BENCH) this.bench(now);
+    this.ui.tickFps(now);
+    // the viewmodel keeps its authored size on screen at any field of view (see viewmodelDepth)
+    if (this.hands && this.cam) this.hands.root.scale.z = Hands.VIEW_SCALE * this.cam.viewmodelDepth();
     const tPhys = performance.now();
     // step by the real frame time (the world default of 1/60 per frame ran physics 2.4× fast at 144 Hz)
     this.physics.world.timestep = Math.max(1 / 240, dt);

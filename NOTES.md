@@ -990,3 +990,26 @@ The iGPU is GPU-bound in this test (~30 fps) since the graphics pass. The deskto
 - **Stealth light model:** `combat.target.light` = 1 by day; at night it's the point light on your chest from the VirtualLight pool (`lightPool.illuminance`: inverse square, no occlusion, smoothed), or 1 with the torch. Contractor sight range ×(0.42 + 0.63·light) at night (was a flat 0.42, or 1.5 with the torch); their detection rate and aim scale with it, and so do sentries and the Hornet. HUD pill at night: IN SHADOW / LIT (hidden on touch with the rest of `.stance`). Measured at RP7 at 23:00: barrel 1.0, floodlight 0.99, yard 0.49, edge 0.08. A guard 45 m off never noticed you in the dark, and did with the torch.
 - **Verified headless:** solver-driven full runs at difficulty 1–3 (all daemons uploaded), keyboard input, the trace failure (alert + damage + lockout), rewards and XP at Survey Camp and RP7, a stood-down sentry surviving save + `?continue`, the Garage and data-centre flows, and the phone landscape layout with real taps and a spike. Pipelines 209 → 209 at an outpost terminal and through a hack.
 - **Not done / next:** no desktop-app (WebKitGTK) run of the overlay yet. Ideas: a daemon that turns a sentry on its own crew; Tier 2/3 bunkers built around SPLICE (the Panopticon's cameras); an occlusion ray for the brightest light.
+
+## 2026-10-09: QA and UX pass (overnight swarm, QA agent)
+
+Played headlessly end to end through `window.game`: new run, note, cooler, camp (rest, craft, radio, Pip's ledger, wait for night), the Garage (gate, side door, fuse, vault, crates, safe), death and pack recovery, the debrief (Act I → Act II), Dry Creek talks, stashes and wrecks, a squad + wolf fight, save/continue. No console errors. Every visible interactable was reached and focused from a free standing spot (105 checked), plus the hidden ones once their flags are set.
+
+**Fixed:**
+- The EXIT brochure at the jet was unreachable: its interactable applied the site frame twice (`Site.spot` is already world-space) and sat ~390 m north of the jet.
+- Campfire embers drew as hard white squares (no shape mask); now soft round sparks.
+- Escape in Settings or Controls also closed the pause menu under it and dropped you into the game. Only the topmost panel answers keys now; Controls closes on Escape.
+- Two interaction prompts (E + F) ran into the subtitle box. Desktop prompts grow downward from their old spot; on phones the subtitle sits above two prompts.
+- Loot toasted every item twice ("+3 Water" per item, then "3× Water, …"): a cooler made seven toasts. Per-item toasts are held to the end of the task and dropped when a summary toast, banner or intel card names them.
+- Map: the quest goal's label printed on top of Dry Creek's; overlapping labels step down a line.
+- Camp recipes said a skill requirement twice.
+
+**New settings** (persisted; older settings load with defaults, bad values clamped): Field of view (50–90° vertical, shown as the horizontal angle for the window), Head bob (0–1, also scales strafe roll), Invert look (desktop), FPS counter (DOM written twice a second). The viewmodel keeps its authored size at any FOV: `FirstPersonCamera.viewmodelDepth()` scales the hands' camera-space z by tan(32°)/tan(fov/2) (the same projection as at 64°), easing back to 1 while aiming. The run starts at the chosen FOV (no zoom-in on load).
+
+**Checked, fine:** the Meshy townsfolk and the camp four from four sides by day (no clipping found after the seat fix; Mara's feet hang a little on the camp log), Sol/Ren/Wick seats, Nia/Doc/Inez standing. walk-probe (150 lines, `DEV_ORIGIN` now picks the dev server): stalls only at real obstacles and slopes > 45°.
+
+**Not fixed (for a next round):**
+- Phone: the prompt rows overlap the Aim/Swap/Reload buttons when a gun is out (`.arms` sits right of centre at mid height); there's no free lane for a wide prompt at 844×390.
+- Pipeline Camp 3's pipe collider (a 40 m box 0.85 m off the ground) can wedge the player underneath it.
+- Mara's camp radio cites "the Spire blueprint" before you've read it (a dialogue edit means a re-voice).
+- The camp panel always says Day 1,284.

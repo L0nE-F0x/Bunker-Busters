@@ -31,7 +31,14 @@ export class FirstPersonCamera {
   private t = 0;
   private fov = 64;
   private shake = new Simplex2(7);
-  readonly baseFov = 64;
+  /** The FOV the viewmodel was authored at. */
+  static readonly DEFAULT_FOV = 64;
+  /** Settings → Field of view. */
+  baseFov = FirstPersonCamera.DEFAULT_FOV;
+  /** Settings → Invert look. */
+  invertY = false;
+  /** Settings → Head bob (0 = steady camera, 1 = full gait bob and strafe roll). */
+  bob = 1;
   /** Aiming down the sights: the FOV to zoom to, and how far into the zoom (0..1). */
   aimFov = 50;
   aimK = 0;
@@ -76,6 +83,23 @@ export class FirstPersonCamera {
     this.pitch = pitch;
   }
 
+  /** Jump the lens to the base FOV (a new setting, or a run starting) instead of easing there. */
+  snapFov() {
+    this.fov = this.baseFov;
+    this.camera.fov = this.baseFov;
+    this.camera.updateProjectionMatrix();
+  }
+
+  /**
+   * Depth scale for the viewmodel (a child of this camera) so the hands and gun fill the screen the
+   * same at any field-of-view setting: squashing camera-space z by tan(64°/2) / tan(fov/2) gives the
+   * exact projection they have at 64°. Aiming eases back to 1, so the sights zoom as authored.
+   */
+  viewmodelDepth() {
+    const k = Math.tan(THREE.MathUtils.degToRad(FirstPersonCamera.DEFAULT_FOV / 2)) / Math.tan(THREE.MathUtils.degToRad(this.baseFov / 2));
+    return k + (1 - k) * this.aimK;
+  }
+
   get forward() {
     return new THREE.Vector3(-Math.sin(this.yaw) * Math.cos(this.pitch), Math.sin(this.pitch), -Math.cos(this.yaw) * Math.cos(this.pitch));
   }
@@ -87,7 +111,7 @@ export class FirstPersonCamera {
       const zoom = this.camera.fov / this.baseFov;
       const s = 0.0021 * input.sensitivity * (this.aimK > 0.05 ? zoom : 1);
       this.yaw -= input.mouseDX * s;
-      this.pitch = clamp(this.pitch - input.mouseDY * s, -1.48, 1.48);
+      this.pitch = clamp(this.pitch - input.mouseDY * s * (this.invertY ? -1 : 1), -1.48, 1.48);
     }
     // eye height eases between standing and crouched
     this.eye = damp(this.eye, f.crouch ? 1.02 : 1.62, 10, dt);
@@ -101,7 +125,7 @@ export class FirstPersonCamera {
     if (f.grounded && f.speed > 0.5 && Math.floor(prevPhase / Math.PI + 0.5) !== Math.floor(this.bobPhase / Math.PI + 0.5)) {
       this.onStep?.(Math.min(1.2, 0.35 + f.speed / 6) * (f.crouch ? 0.45 : 1));
     }
-    const amp = f.sprint ? 1.6 : f.crouch ? 0.55 : 1;
+    const amp = (f.sprint ? 1.6 : f.crouch ? 0.55 : 1) * this.bob;
     const bobY = (Math.abs(Math.cos(this.bobPhase)) - 0.5) * 0.045 * amp * move;
     const bobX = Math.sin(this.bobPhase) * 0.022 * amp * move;
 
@@ -109,7 +133,7 @@ export class FirstPersonCamera {
     this.dipVel += (-this.dip * 70 - this.dipVel * 11) * dt;
     this.dip += this.dipVel * dt;
 
-    this.roll = damp(this.roll, -f.strafe * 0.018 - bobX * 0.35, 8, dt);
+    this.roll = damp(this.roll, (-f.strafe * 0.018 - bobX * 0.35) * this.bob, 8, dt);
 
     // trauma shake
     this.trauma = Math.max(0, this.trauma - dt * 1.3);

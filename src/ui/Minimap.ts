@@ -126,7 +126,7 @@ export class MapData {
   }
 }
 
-function drawMarker(ctx: CanvasRenderingContext2D, m: MapMarker, x: number, y: number, scale: number, label: boolean) {
+function drawMarker(ctx: CanvasRenderingContext2D, m: MapMarker, x: number, y: number, scale: number, label: boolean, labelDy = 0) {
   ctx.save();
   ctx.translate(x, y);
   ctx.shadowColor = m.color;
@@ -155,7 +155,7 @@ function drawMarker(ctx: CanvasRenderingContext2D, m: MapMarker, x: number, y: n
     ctx.fillStyle = '#f3e9d8';
     ctx.shadowColor = '#000';
     ctx.shadowBlur = 4;
-    ctx.fillText(m.label, x + 12 * scale, y + 4 * scale);
+    ctx.fillText(m.label, x + 12 * scale, y + 4 * scale + labelDy);
     ctx.shadowBlur = 0;
   }
 }
@@ -314,7 +314,21 @@ export function drawWorldMap(canvas: HTMLCanvasElement, data: MapData, px: numbe
   ctx.imageSmoothingEnabled = true;
   ctx.drawImage(data.fogImage, 0, 0, S, S);
   const toPx = (x: number) => (x / data.size + 0.5) * S;
-  for (const m of markers) drawMarker(ctx, m, toPx(m.x), toPx(m.z), S / 600, true);
+  // labels that would land on one another (the quest goal on its town, say) step down a line
+  const k0 = S / 600;
+  ctx.font = `600 ${12 * k0}px "Chakra Petch", sans-serif`;
+  const placed: { x0: number; x1: number; y0: number; y1: number }[] = [];
+  for (const m of markers) {
+    const x = toPx(m.x), y = toPx(m.z);
+    const w = ctx.measureText(m.label).width;
+    let dy = 0;
+    for (let tries = 0; tries < 4; tries++) {
+      const r = { x0: x + 12 * k0, x1: x + 12 * k0 + w, y0: y - 8 * k0 + dy, y1: y + 6 * k0 + dy };
+      if (!placed.some((p) => r.x0 < p.x1 && r.x1 > p.x0 && r.y0 < p.y1 && r.y1 > p.y0)) { placed.push(r); break; }
+      dy += 14 * k0;
+    }
+    drawMarker(ctx, m, x, y, k0, true, dy);
+  }
   ctx.save();
   ctx.translate(toPx(px), toPx(pz));
   ctx.rotate(-yaw + Math.PI);

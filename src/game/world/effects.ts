@@ -421,7 +421,9 @@ export class Fire {
     const ez = sin(time.mul(1.1).add(hash(instanceIndex.add(9)).mul(20))).mul(0.4).mul(life);
     em.positionNode = vec3(ex.add(hash(instanceIndex.add(1)).sub(0.5).mul(0.6)), life.mul(uS.mul(4)), ez);
     em.scaleNode = vec2(uS.mul(0.04), uS.mul(0.04));
-    em.colorNode = vec4(vec3(1.0, 0.45, 0.1).mul(float(8).mul(float(1).sub(life))), smoothstep(1, 0.6, life));
+    // a soft round spark: without the disc each ember drew as a hard square (big ones near the eye)
+    const disc = smoothstep(1, 0.15, length(uv().sub(0.5)).mul(2));
+    em.colorNode = vec4(vec3(1.0, 0.45, 0.1).mul(float(8).mul(float(1).sub(life))), smoothstep(1, 0.6, life).mul(disc));
     const embers = new THREE.Sprite(em);
     embers.count = 60;
     this.group.add(embers);
