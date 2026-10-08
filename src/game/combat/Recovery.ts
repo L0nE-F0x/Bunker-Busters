@@ -225,7 +225,7 @@ class Squad {
   }
 }
 
-interface Outpost {
+export interface Outpost {
   def: OutpostDef;
   build: OutpostBuild;
   squad: Squad | null;
@@ -296,6 +296,19 @@ export class Recovery implements HostileProvider {
 
   /** An outpost respawned (machines rebuild). */
   onRespawn: ((id: string) => void) | null = null;
+  /** An outpost's crew spawned (the player came near): re-apply this shift's hacks. */
+  onSpawn: ((id: string) => void) | null = null;
+
+  /** How many times this outpost has been restaffed (marks keyed to it reset with each shift). */
+  respawnCount(id: string) {
+    return this.host.marks[`respawn.${id}`] ?? 0;
+  }
+
+  /** The outpost's crew is shooting at someone right now. */
+  outpostFighting(id: string) {
+    const op = this.outposts.find((o) => o.def.id === id);
+    return !!op?.squad && op.squad.alert === 'combat' && op.squad.alive.length > 0;
+  }
 
   /** A sentry or a drone saw you: the outpost's crew hears about it. */
   alertOutpost(id: string, at: THREE.Vector3) {
@@ -369,6 +382,7 @@ export class Recovery implements HostileProvider {
     op.squad = sq;
     op.state = 'active';
     op.lockerOpen = (this.host.marks[`locker.${op.def.id}`] ?? -1) >= this.respawns(op);
+    this.onSpawn?.(op.def.id);
   }
 
   private respawns(op: Outpost) {
@@ -713,7 +727,7 @@ export class Recovery implements HostileProvider {
       op.build.fire.light.intensity = op.build.fire.group.visible ? 12 : 0;
       if (op.state === 'dormant' && d < 240) {
         const clearedAt = host.marks[`cleared.${op.def.id}`];
-        if (clearedAt != null && host.playTime() - clearedAt < 30 * 60) { op.state = 'cleared'; continue; }
+        if (clearedAt != null && host.playTime() - clearedAt < 30 * 60) { op.state = 'cleared'; this.onSpawn?.(op.def.id); continue; }
         this.spawnOutpost(op);
       } else if (op.state === 'active' && d > 330 && op.squad && op.squad.alert !== 'combat') {
         this.despawnSquad(op.squad);
@@ -853,7 +867,9 @@ export class Recovery implements HostileProvider {
         const dist = h.eye.distanceTo(T.chest);
         const close = Math.max(0, 1 - dist / 70);
         const moving = Math.min(1.5, Math.hypot(T.velocity.x, T.velocity.z) / 3.4);
-        const rate = (0.25 + close * 1.8) * (0.6 + T.noise * 0.4) * (0.7 + moving * 0.4) * (m.state === 'search' ? 2.2 : 1) / diff.react;
+        // a shape in the dark takes longer to resolve into a person than one stood in the light
+        const lit = T.night > 0.5 && !T.torch ? 0.55 + 0.45 * T.light : 1;
+        const rate = (0.25 + close * 1.8) * (0.6 + T.noise * 0.4) * (0.7 + moving * 0.4) * lit * (m.state === 'search' ? 2.2 : 1) / diff.react;
         m.detect = Math.min(1, m.detect + rate * dt);
         if (m.detect >= 1) this.engage(sq, T.feet, 0.25);
         else if (m.detect > 0.35 && m.state === 'idle') {
@@ -1026,7 +1042,7 @@ export class Recovery implements HostileProvider {
       // the first shots go wide; the longer they watch you, the tighter it gets
       const settle = 1 + 2.6 * Math.exp(-m.seeT / 1.3);
       const run = Math.hypot(T.velocity.x, T.velocity.z) > 4.5 ? 1.6 : 1;
-      const dark = T.night > 0.5 && !T.torch ? 1.5 : 1;
+      const dark = T.night > 0.5 && !T.torch ? 1.5 - 0.5 * T.light : 1;
       const onMove = moving ? 2.2 : 1;
       const crouchK = T.crouch ? 0.9 : 1;
       // rounds cracking past them spoil it
@@ -1072,7 +1088,8 @@ export class Recovery implements HostileProvider {
     const dist = toP.length();
     const alert = m.state === 'combat' || m.state === 'search';
     let range = alert ? 130 : 72;
-    if (T.night > 0.5) range *= T.torch ? 1.5 : 0.42;
+    // at night a dark figure is hard to pick out; one stood in firelight or a floodlight isn't
+    if (T.night > 0.5) range *= T.torch ? 1.5 : 0.42 + 0.63 * T.light;
     range *= 0.3 + 0.7 * T.visibility;
     if (T.crouch && !alert) range *= 0.62;
     if (dist > range) return false;

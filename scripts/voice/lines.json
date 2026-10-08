@@ -820,6 +820,46 @@
   "where": "src/content/recovery.ts"
  },
  {
+  "key": "01zpbfn",
+  "voice": "am_fenrir",
+  "fx": "radio",
+  "speed": 1.05,
+  "speaker": "Kade Recovery",
+  "words": "Field unit just logged an intrusion. Somebody go check the laptop.",
+  "tts": "Field unit just logged an intrusion. Somebody go check the laptop.",
+  "where": "src/game/combat/terminals.ts"
+ },
+ {
+  "key": "0gd4say",
+  "voice": "am_michael",
+  "fx": "radio",
+  "speed": 1.05,
+  "speaker": "Kade Recovery",
+  "words": "Field unit just logged an intrusion. Somebody go check the laptop.",
+  "tts": "Field unit just logged an intrusion. Somebody go check the laptop.",
+  "where": "src/game/combat/terminals.ts"
+ },
+ {
+  "key": "0h6ts29",
+  "voice": "bm_george",
+  "fx": "radio",
+  "speed": 1.05,
+  "speaker": "Kade Recovery",
+  "words": "Field unit just logged an intrusion. Somebody go check the laptop.",
+  "tts": "Field unit just logged an intrusion. Somebody go check the laptop.",
+  "where": "src/game/combat/terminals.ts"
+ },
+ {
+  "key": "05t1ssb",
+  "voice": "bm_daniel",
+  "fx": "radio",
+  "speed": 1.05,
+  "speaker": "Kade Recovery",
+  "words": "Field unit just logged an intrusion. Somebody go check the laptop.",
+  "tts": "Field unit just logged an intrusion. Somebody go check the laptop.",
+  "where": "src/game/combat/terminals.ts"
+ },
+ {
   "key": "0b3lxol",
   "voice": "am_fenrir",
   "fx": "radio",
@@ -2690,6 +2730,16 @@
   "where": "src/game/town/Settlement.ts"
  },
  {
+  "key": "1s5et2s",
+  "voice": "af_nicole",
+  "fx": "pa",
+  "speed": 0.98,
+  "speaker": "Nimbus",
+  "words": "Oh. Someone is in my access controller. That's fine. I'll log it as a feature.",
+  "tts": "Oh. Someone is in my access controller. That's fine. I'll log it as a feature.",
+  "where": "src/game/sites/datacenter.ts"
+ },
+ {
   "key": "0w6hwif",
   "voice": "af_nicole",
   "fx": "pa",
@@ -3010,6 +3060,16 @@
   "where": "src/game/bunker/Garage.ts"
  },
  {
+  "key": "1fw6ul5",
+  "voice": "am_echo",
+  "fx": "bot",
+  "speed": 1.1,
+  "speaker": "SeedBot",
+  "words": "FIRMWARE REVIEW IN PROGRESS. PLEASE DO NOT STEAL ANYTHING DURING THIS TIME.",
+  "tts": "Firmware Review In Progress. Please Do Not Steal Anything During This Time.",
+  "where": "src/game/bunker/Garage.ts"
+ },
+ {
   "key": "105lp9s",
   "voice": "am_echo",
   "fx": "bot",
@@ -3128,6 +3188,16 @@
   "words": "A reseller. With a megaphone. That's two nouns. She thought about me long enough for two nouns. If you get to Apex, tell her Bunkrly delivered. Even if it didn't.",
   "tts": "A reseller. With a megaphone. That's two nouns. She thought about me long enough for two nouns. If you get to Apex, tell her Bunker dot lee delivered. Even if it didn't.",
   "where": "src/content/dialogue.ts"
+ },
+ {
+  "key": "1ri4zqu",
+  "voice": "am_puck",
+  "fx": "megaphone",
+  "speed": 1.05,
+  "speaker": "Tanner Pivotson",
+  "words": "Did you just sudo my door? I paid for the enterprise tier!",
+  "tts": "Did you just sudo my door? I paid for the enterprise tier!",
+  "where": "src/game/bunker/Garage.ts"
  },
  {
   "key": "06ven8m",

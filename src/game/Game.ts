@@ -45,6 +45,7 @@ import { RECIPES, type Recipe } from '@/content/craft';
 import { SKILLS } from '@/content/skills';
 import { GARAGE } from '@/content/bunkers/garage';
 import { ITEMS, HOTBAR_ITEMS, KEEP_ON_DEATH } from '@/content/items';
+import { KadeTerminals } from './combat/terminals';
 import { OUTPOSTS } from '@/content/recovery';
 import { XP_REWARDS, fallFactor, empRadius } from '@/content/progression';
 import { damp } from '@/engine/noise';
@@ -129,6 +130,8 @@ export class Game {
   recovery!: Recovery;
   /** Sentries, Hornet drones and mines at the outposts. */
   machines!: Machines;
+  /** The Kade field terminals (one per outpost): hack targets. */
+  terminals!: KadeTerminals;
   private wantAds = false;
   /** The dropped pack in the world: a duffel and a beacon. */
   private packMesh!: THREE.Group;
@@ -156,6 +159,8 @@ export class Game {
   private autosaveTimer = 60;
   private titleT = 0;
   private busy = false; // minigame/modal in progress
+  /** Smoothed 0..1 point light (fires, floodlights) on the player: the stealth model's night term. */
+  private pointLit = 0;
   /** Warm these on the next frame's render (see warmShaders), staging anything not yet in the scene. */
   private warmNext: { roots: THREE.Object3D[]; stage?: () => (() => void) | undefined } | null = null;
   private cubeRT: THREE.CubeRenderTarget | null = null;
@@ -373,6 +378,39 @@ export class Game {
         }
         return ok;
       },
+      hack: (o) => self.withMinigame('keypad', async () => {
+        const s = self.state!;
+        let difficulty = o.difficulty;
+        if (s.focus('electronics') === 'hotline') difficulty = Math.max(0, difficulty - 1);
+        if (s.capstone('electronics') === 'overclock') difficulty = Math.max(0, difficulty - 1);
+        // a Kade box takes a Kade ID: swipe a lanyard for a bigger buffer and a lazier trace
+        let badge = false;
+        const badges = s.count('kade_badge');
+        if (o.kade && badges > 0) {
+          const pick = await self.ui.choose({
+            speaker: o.title,
+            text: 'The reader under the screen wants a contractor ID. You have a dead man\'s lanyard in your pocket. The photo is smiling.',
+            choices: [
+              { id: 'badge', label: `Swipe a Recovery Lanyard, then splice in (${badges} left)` },
+              { id: 'raw', label: 'Splice in cold' },
+              { id: 'leave', label: 'Leave it' },
+            ],
+          });
+          if (pick !== 'badge' && pick !== 'raw') return { done: [], traced: false, aborted: true };
+          badge = pick === 'badge' && s.removeItem('kade_badge', 1);
+        }
+        const res = await self.ui.hack({
+          title: o.title, host: o.host, difficulty, daemons: o.daemons,
+          bonusBuffer: badge ? 1 : 0, traceMult: badge ? 1.5 : 1,
+          spikes: () => s.count('spike'), useSpike: () => s.removeItem('spike', 1),
+          // taking a hit pulls you off the keyboard
+          interrupt: (bail) => s.events.on('health', (e) => { if (e.delta < 0) bail('You\'re hit. You yank the cable.'); }),
+        });
+        if (res.done.length && s.capstone('electronics') === 'salvage' && s.addItem('battery', 1, true)) {
+          s.events.emit('toast', { text: 'Salvage: you pocket a lithium cell from the box.', kind: 'good' });
+        }
+        return res;
+      }),
       choose: (o) => self.withMinigame('idle', () => self.ui.choose(o)),
       converse: (o) => self.withMinigame('idle', () => self.ui.converse(o)),
       banner: (a, b, k) => self.ui.banner(a, b, k),
@@ -637,6 +675,13 @@ export class Game {
       interactables: this.interactables,
     });
     this.recovery.onRespawn = (id) => this.machines.reset(id);
+    this.terminals = new KadeTerminals({
+      recovery: this.recovery, machines: this.machines, ui: this.ctx.ui, audio: this.audio,
+      state: () => self.state ?? null,
+      toast: (t, k) => self.ui.toast(t, k),
+      subtitle: (a, b, v) => self.ui.subtitle(a, b, v),
+    }, this.interactables);
+    this.recovery.onSpawn = (id) => this.terminals.reapply(id);
     this.recovery.safe = this.fauna.safe;
     // SeedBot can be shot: every hit puts it on full alert; four quick ones knock it out of the sky
     const drone = this.garage.drone;
@@ -1717,6 +1762,11 @@ export class Game {
     tg.hidden = this.garage.playerInside;
     tg.night = this.atmo.isNight ? 1 : Math.max(0, Math.min(1, (0.15 - this.atmo.sunElevation) / 0.25));
     tg.visibility = 1 - this.weather.intensity * 0.75;
+    // the stealth model: by day everyone's lit; at night it's the fires, the floodlights, the muzzle
+    // flashes, and your own torch. Smoothed so a guttering fire doesn't strobe you in and out of sight.
+    const pointLit = 1 - Math.exp(-lightPool.illuminance(tg.chest) / 0.6);
+    this.pointLit += (pointLit - this.pointLit) * Math.min(1, dt * 4);
+    tg.light = tg.torch ? 1 : Math.min(1, 1 - tg.night + tg.night * Math.max(0.08, this.pointLit));
     tg.alive = s.data.health > 0;
     tg.collider = player.collider;
     tg.height = player.height;
@@ -1867,6 +1917,7 @@ export class Game {
       detection: Math.max(this.garage.drone.detection, aw.best),
       threat: aw.hunting > 0 ? 'hunted' : aw.best > 0.3 ? 'watched' : null,
       venom: (s.data.poison ?? 0) > 0,
+      light: this.combat.target.night < 0.5 ? null : this.combat.target.light > 0.55 ? 'lit' : this.combat.target.light < 0.3 ? 'shadow' : null,
       droneState: this.garage.drone.state,
       canSee: this.garage.drone.canSee,
       crouch: player.crouching,

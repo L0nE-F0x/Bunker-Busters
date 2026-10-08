@@ -24,6 +24,7 @@ export const ICONS: Record<string, string> = {
   ammo: S('<path d="M14 14 v24 h6 v-24 c0 -5 -6 -5 -6 0z"/><path d="M26 14 v24 h6 v-24 c0 -5 -6 -5 -6 0z"/><path d="M14 32 h6 M26 32 h6"/>', '#ffd27a'),
   shells: S('<rect x="12" y="12" width="9" height="26" rx="2"/><rect x="27" y="12" width="9" height="26" rx="2"/><path d="M12 32 h9 M27 32 h9"/>', '#ff6a5a'),
   antivenom: S('<rect x="12" y="16" width="24" height="20" rx="3"/><path d="M18 16 v-4 h12 v4"/><path d="M19 26 c3 -4 7 4 10 0" stroke="#5dff9a"/>', '#5dff9a'),
+  spike: S('<rect x="10" y="18" width="18" height="14" rx="2"/><path d="M28 22 h8 l6 3 l-6 3 h-8"/><path d="M14 18 v-5 M20 18 v-5 M24 18 v-5"/><path d="M17 23 l-2 4 h4 l-2 4" stroke="#7fe8ff"/>', '#3ff2e0'),
   badge: S('<rect x="14" y="16" width="20" height="24" rx="2"/><path d="M20 16 l4 -8 l4 8"/><circle cx="24" cy="25" r="4"/><path d="M18 34 h12"/>', '#ffb347'),
 };
 

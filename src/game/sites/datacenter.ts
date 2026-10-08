@@ -6,6 +6,7 @@ import type { GameState } from '../State';
 import { Sparks } from '../world/effects';
 import { ITEMS } from '@/content/items';
 import { XP_REWARDS } from '@/content/progression';
+import { DAEMONS } from '@/content/hacks';
 import { Site } from './Site';
 import { ColdStorageBuild, CH, FY, INSIDE, CAGE, HALL, LOBBY } from './datacenterBuild';
 
@@ -24,6 +25,7 @@ const F = {
   weights: 'site.datacenter.ai.weights',
   killed: 'site.datacenter.ai.killed',
   talked: 'site.datacenter.ai.talked',
+  ups: 'site.datacenter.ups',
 } as const;
 
 const PIN = '9995';
@@ -212,6 +214,7 @@ export class DataCenterSite extends Site {
       choices: [
         { id: 'pin', label: 'Enter a PIN' },
         { id: 'spoof', label: 'Spoof the badge reader', disabled: elec >= 2 ? undefined : 'Requires Electronics 2' },
+        { id: 'splice', label: 'Splice into the access controller', disabled: elec >= 1 ? undefined : 'Requires Electronics 1' },
         { id: 'blow', label: 'Breach charge on the door rail', disabled: demo < 1 ? 'Requires Demolition 1' : this.s.count('charge') < 1 ? 'Need a breach charge' : undefined },
         { id: 'leave', label: 'Leave it' },
       ],
@@ -225,6 +228,8 @@ export class DataCenterSite extends Site {
       const ok = await this.ctx.ui.circuit({ title: 'BADGE READER · CORE', difficulty: 3 });
       if (ok) this.openCore('The reader decides you are Priya. Priya was well liked.', XP_REWARDS.keypadShorted + 10);
       else this.ctx.audio.play('deny');
+    } else if (pick === 'splice') {
+      await this.splice();
     } else if (pick === 'blow') {
       if (!this.s.removeItem('charge', 1)) return;
       const quiet = this.s.focus('demolition') === 'shaped';
@@ -233,6 +238,37 @@ export class DataCenterSite extends Site {
       this.sparks.emit(this.b.pts.coreDoor.clone().setY(FY + 1.2), 40, 3.5, { up: 1, floorY: FY + 0.02, size: 0.03 });
       this.openCore(quiet ? 'Shaped charge. The rail lets go of the door politely.' : 'The rail shears. The glass rings for a long time.', XP_REWARDS.breach);
     }
+  }
+
+  /** SPLICE the campus access controller: the core door, the solar bus, the UPS cabinet. */
+  private async splice() {
+    const d = DAEMONS;
+    const daemons = [d.core, ...(this.s.has(F.power) || this.s.has(F.killed) ? [] : [d.solar]), ...(this.s.has(F.ups) ? [] : [d.ups])];
+    const res = await this.ctx.ui.hack({ title: 'ACCESS CONTROLLER', host: 'COLDSTORAGE CAMPUS 4', difficulty: 3, daemons: daemons.map(({ id, name, blurb }) => ({ id, name, blurb })) });
+    if (res.aborted) return;
+    for (const id of res.done) {
+      if (id === 'core') {
+        this.openCore('The controller releases the door. It doesn\'t ask who you are. Nobody here asks any more.', XP_REWARDS.keypadShorted + 15);
+        this.ctx.ui.subtitle('Nimbus', 'Oh. Someone is in my access controller. That\'s fine. I\'ll log it as a feature.');
+      } else if (id === 'solar') {
+        if (this.s.set(F.power)) {
+          this.ctx.audio.play('zap', { pos: this.ctx.player.position });
+          this.toast('Somewhere outside, breakers clack down the line. The hall lights come up row by row.', 'good');
+          this.s.addXP(40, 'Solar rerouted');
+        }
+      } else if (id === 'ups' && this.s.set(F.ups)) {
+        const got = this.loot([{ id: 'battery', qty: 2 }]);
+        this.ctx.audio.play('unlock', { pos: this.ctx.player.position });
+        this.toast(got ? `The UPS cabinet by the door clunks open: ${got}.` : 'The UPS cabinet opens. Your pack is too full for the cells.', got ? 'good' : 'bad');
+        this.s.addXP(15, 'UPS ejected');
+      }
+    }
+    if (res.traced) {
+      this.s.damage(8);
+      this.ctx.audio.play('zap', { pos: this.ctx.player.position });
+      this.ctx.cam.addTrauma(0.3);
+      this.toast('Trace complete. The reader dumps forty-eight volts into your thumb, on policy.', 'bad');
+    } else if (!res.done.length) this.ctx.audio.play('deny');
   }
 
   private openCore(line: string, xp: number) {

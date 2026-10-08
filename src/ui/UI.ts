@@ -14,6 +14,7 @@ import type { AudioEngine } from '@/engine/audio';
 import type { LockResult, TalkChoiceView, UIBridge } from '@/game/context';
 import { LockpickGame } from './Lockpick';
 import { CircuitGame, KeypadGame } from './Circuit';
+import { HackGame, type HackOpts, type HackResult } from './Hack';
 import { Minimap, MapData, drawWorldMap, type MapMarker } from './Minimap';
 import { mountUpdateNotice } from './Updater';
 import { isTouch, isIOS, isStandalone, canFullscreen, isFullscreen, enterFullscreen } from '@/engine/device';
@@ -51,6 +52,8 @@ export interface HudFrame {
   /** Hostiles out in the world: something is hunting you, or getting curious. */
   threat?: 'hunted' | 'watched' | null;
   venom?: boolean;
+  /** Night stealth: in shadow, lit (firelight, floodlight, torch), or nothing to say (day, twilight). */
+  light?: 'shadow' | 'lit' | null;
 }
 
 /** DOM overlay. Owns HUD widgets, menus, modal panels and minigames. */
@@ -313,7 +316,7 @@ export class UI implements UIBridge {
         <div class="meta"><span class="arch"></span><span class="xptext"></span></div>
         <div class="spwrap"></div>
       </div>
-      <div class="stance"><span class="pill venom">Venom</span><span class="pill crouch">Crouch</span><span class="pill sprint">Sprint</span></div>`;
+      <div class="stance"><span class="pill venom">Venom</span><span class="pill lightp"></span><span class="pill crouch">Crouch</span><span class="pill sprint">Sprint</span></div>`;
     for (const k of ['objective', 'toasts', 'minimap', 'clock', 'detect', 'subtitle', 'prompt', 'hotbar', 'vitals', 'stance', 'crosshair', 'xhair', 'hitmark', 'dmgarcs', 'weapon']) {
       this.els[k] = hud.querySelector(`.${k}`)!;
     }
@@ -422,6 +425,7 @@ export class UI implements UIBridge {
     if (el) el.textContent = label;
   }
 
+  private lastLight = '';
   updateHUD(dt: number, f: HudFrame) {
     if (!this.hud || !this.state) return;
     if (f.objective !== this.lastObjective) {
@@ -456,6 +460,14 @@ export class UI implements UIBridge {
     this.els.stance.querySelector('.crouch')!.classList.toggle('on', f.crouch);
     this.els.stance.querySelector('.sprint')!.classList.toggle('on', f.sprint);
     this.els.stance.querySelector('.venom')!.classList.toggle('on', !!f.venom);
+    // the stealth model, at night: are you a shadow or a target?
+    const lt = f.light === 'shadow' ? 'In shadow' : f.light === 'lit' ? 'Lit' : '';
+    if (lt !== this.lastLight) {
+      this.lastLight = lt;
+      const el = this.els.stance.querySelector('.lightp') as HTMLElement;
+      el.textContent = lt;
+      el.className = `pill lightp ${f.light ?? ''}`;
+    }
     // clock
     const hh = Math.floor(f.hour), mm = Math.floor((f.hour - hh) * 60);
     const phase = f.hour < 5 || f.hour > 20.5 ? 'NIGHT' : f.hour < 7.5 ? 'DAWN' : f.hour < 16.5 ? 'DAY' : f.hour < 19 ? 'GOLDEN HOUR' : 'DUSK';
@@ -1040,5 +1052,14 @@ export class UI implements UIBridge {
     const r = await new CircuitGame(this.root, this.audio, { ...opts, skill: this.state?.boardSkill() ?? 0 }).run();
     this.minigameOpen = false;
     return r;
+  }
+
+  async hack(opts: Omit<HackOpts, 'skill'> & { skill?: number }): Promise<HackResult> {
+    this.minigameOpen = true;
+    try {
+      return await new HackGame(this.root, this.audio, { ...opts, skill: opts.skill ?? this.state?.boardSkill() ?? 0 }).run();
+    } finally {
+      this.minigameOpen = false;
+    }
   }
 }

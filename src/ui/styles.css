@@ -317,6 +317,9 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #000; color:
 .stance .pill { padding: 5px 10px; border: 1px solid rgba(255,255,255,0.12); background: rgba(10,7,5,0.5); }
 .stance .pill.on { border-color: var(--teal); color: var(--teal); }
 .stance .pill.venom { display: none; }
+.stance .pill.lightp:empty { display: none; }
+.stance .pill.lightp.shadow { border-color: rgba(63, 242, 224, 0.45); color: var(--teal); }
+.stance .pill.lightp.lit { border-color: var(--amber); color: var(--amber); }
 .stance .pill.venom.on { display: inline-block; border-color: #7dff5a; color: #7dff5a; animation: pulse 1.2s infinite; }
 
 .levelup { position: absolute; left: 50%; top: 40%; transform: translate(-50%, -50%); text-align: center; animation: lvlIn 0.7s cubic-bezier(.2,1.4,.3,1), bannerOut 0.8s ease 3.4s forwards; }

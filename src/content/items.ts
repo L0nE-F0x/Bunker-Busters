@@ -27,6 +27,11 @@ const defs: ItemDef[] = [
     description: 'Fills you up and steadies your hands. A little health, a lot of not-hungry.',
     flavor: '"Best before: civilisation."',
   },
+  {
+    id: 'spike', name: 'Trace Spike', category: 'tool', weight: 0.15, stack: 6, value: 15, icon: 'spike',
+    description: 'A cell, a coil and a lot of tape. Jam it in the port mid-splice (F) and the trace stalls for six seconds. The camp can wind them.',
+    flavor: 'Kade\'s incident reports call this "unscheduled latency".',
+  },
   // --- Arms (v0.5) ---
   {
     id: 'crowbar', name: 'Crowbar', category: 'weapon', weight: 0.8, stack: 1, value: 15, icon: 'crowbar',
