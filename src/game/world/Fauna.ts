@@ -654,6 +654,8 @@ class Wolf implements Hostile {
   /** The Meshy model and this wolf's slot in it (null: draw the procedural body). */
   skin: WolfSkins | null = null;
   slot = 0;
+  /** Stride amplitude at the moment it died (the fall starts from that pose). */
+  deathAmp = 0;
   constructor(readonly b: Body, readonly rig: ReturnType<typeof wolfRig>) {}
 
   private readonly _a = new THREE.Vector3();
@@ -719,7 +721,15 @@ class Wolf implements Hostile {
       const e = k * k * (3 - 2 * k);
       const roll = this.deadSide * e * 1.45;
       if (this.skin) {
-        this.skin.pose(this.slot, { pos: V(this.pos.x, g, this.pos.z), yaw: this.yaw, pitch: 0, roll: 0, bob: 0, phase: this.phase, amp: 0, low: 0, look: 0, nod: 0, tail: 0, dead: k, side: this.deadSide });
+        // a wolf shot mid-run skids on a little before it goes down
+        if (this.speed > 0.05) {
+          const from = V(this.pos.x, c.hf.heightAt(this.pos.x, this.pos.z), this.pos.z);
+          this.pos.x += Math.sin(this.yaw) * this.speed * c.dt;
+          this.pos.z += Math.cos(this.yaw) * this.speed * c.dt;
+          if (c.combat?.slide(from, this.pos, 0.45, 0.4) !== null && c.combat) this.speed = 0; // into a wall: stop there
+          this.speed *= Math.exp(-c.dt * 4.5);
+        }
+        this.skin.pose(this.slot, { pos: V(this.pos.x, c.hf.heightAt(this.pos.x, this.pos.z), this.pos.z), yaw: this.yaw, pitch: 0, roll: 0, bob: 0, phase: this.phase, amp: this.deathAmp, low: 0, look: 0, nod: 0, tail: 0, deadT: this.dead, side: this.deadSide });
         this.b.visible = false;
         this.center.set(this.pos.x, g + 0.32, this.pos.z);
         return;
@@ -757,8 +767,9 @@ class Wolf implements Hostile {
         phase: this.phase, amp: A, low: low / 0.08, look: this.look,
         nod: this.howl > 0 ? 0.85 : (sp > 6 ? -0.12 : 0) - snap * 0.45,
         tail: (sp > 6 ? -0.25 : low ? 0.3 : 0) + Math.sin(c.t * 2 + this.phase) * 0.06,
-        dead: 0, side: 1,
+        deadT: -1, side: 1,
       });
+      this.deathAmp = A;
       this.b.visible = false;
       return;
     }
