@@ -160,8 +160,13 @@ export abstract class Bunker<S extends BunkerShell = BunkerShell> {
       spot.lid.userData.opening = false;
       spot.lid.rotation.x = has(this.flag(`loot.${spot.id}`)) ? -1.9 : 0;
     }
-    this.wrongCodes = {};
-    this.greeted = false;
+    // a fresh run or a loaded save: the owner greets you again and the keypads forget your guesses.
+    // Not on every door opening (that replayed the greeting over his own "My gate!" line, and
+    // wiped a keypad's wrong-code count)
+    if (instant) {
+      this.wrongCodes = {};
+      this.greeted = false;
+    }
   }
 
   private setDoor(d: Door, on: boolean, instant: boolean) {
