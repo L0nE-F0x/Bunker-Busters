@@ -213,7 +213,11 @@ export class Game {
     this.shrubs = new Shrubs(this.hf, Math.min(1, 0.5 + this.quality.grassDensity * 0.5));
     if (!SKIP.has('scrub')) this.scene.add(this.shrubs.group);
     this.fauna = new Fauna(this.hf, this.props.perches, this.props.wrecks);
-    if (!SKIP.has('fauna')) this.scene.add(this.fauna.mesh);
+    if (!SKIP.has('fauna')) {
+      this.scene.add(this.fauna.mesh);
+      const wolves = await this.fauna.loadModels();
+      if (wolves) this.scene.add(wolves.group);
+    }
     this.pebbles = new Pebbles(this.hf, rockGeometry(5, 0), desertRock(), Math.round(4000 * Math.min(1, this.quality.grassDensity)));
     if (!SKIP.has('scrub')) this.scene.add(this.pebbles.mesh);
     await step(0.55, 'Kicking up dust');
@@ -1018,7 +1022,7 @@ export class Game {
     const inside = (o: THREE.Object3D) => this.garage.houseBox.containsPoint(o.getWorldPosition(new THREE.Vector3()));
     this._exterior = [
       this.atmo.sky, this.terrain.mesh, this.terrain.far, this.props.group, this.landmarks.group, this.garage.b.group,
-      this.scrub.mesh, this.shrubs.group, this.pebbles.mesh, this.fauna.mesh, this.recovery.group, this.machines.group,
+      this.scrub.mesh, this.shrubs.group, this.pebbles.mesh, this.fauna.mesh, this.fauna.skins?.group, this.recovery.group, this.machines.group,
       this.haze.sprite, this.streaks.sprite, this.devils.sprite, this.scavenge?.group,
       ...[...this.intelMeshes.values()].filter((g) => !inside(g)),
     ].filter((o): o is THREE.Object3D => !!o);

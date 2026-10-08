@@ -1,4 +1,5 @@
 import * as THREE from 'three/webgpu';
+import { WolfSkins } from './wolfSkin';
 import { Plant, FUR, LEAF } from './flora';
 import { floraMaterial } from './materials';
 import type { Heightfield } from './Heightfield';
@@ -650,6 +651,9 @@ class Wolf implements Hostile {
   detour = 0;
   detourT = 0;
   stuckT = 0;
+  /** The Meshy model and this wolf's slot in it (null: draw the procedural body). */
+  skin: WolfSkins | null = null;
+  slot = 0;
   constructor(readonly b: Body, readonly rig: ReturnType<typeof wolfRig>) {}
 
   private readonly _a = new THREE.Vector3();
@@ -714,6 +718,12 @@ class Wolf implements Hostile {
       const k = Math.min(1, this.dead / 0.55);
       const e = k * k * (3 - 2 * k);
       const roll = this.deadSide * e * 1.45;
+      if (this.skin) {
+        this.skin.pose(this.slot, { pos: V(this.pos.x, g, this.pos.z), yaw: this.yaw, pitch: 0, roll: 0, bob: 0, phase: this.phase, amp: 0, low: 0, look: 0, nod: 0, tail: 0, dead: k, side: this.deadSide });
+        this.b.visible = false;
+        this.center.set(this.pos.x, g + 0.32, this.pos.z);
+        return;
+      }
       this.b.place(V(this.pos.x, g + 0.8 - e * 0.52, this.pos.z), this.yaw, 0, roll, 1.3);
       const { legs, neck, head, tail } = this.rig;
       legs.forEach((l, i) => {
@@ -736,8 +746,23 @@ class Wolf implements Hostile {
     // stalking: low to the ground; a lunge stretches out; a hit rocks it
     const low = this.pack && (this.pack.state === 'stalk' || this.pack.state === 'circle') && this.role !== 'lunge' ? 0.08 : 0;
     const rock = this.stagger > 0 ? Math.sin(this.stagger * 30) * this.stagger * 0.5 : 0;
-    this.b.place(V(this.pos.x, g + 0.8 + bob - low, this.pos.z), this.yaw, pitch + (this.bite > 0 ? 0.12 : 0), rock, 1.3);
     this.center.set(this.pos.x, g + 0.8 - low, this.pos.z);
+    if (this.skin) {
+      let lookYaw = 0;
+      if (target) lookYaw = clamp(angDiff(this.yaw, Math.atan2(target.x - this.pos.x, target.z - this.pos.z)), -1.1, 1.1);
+      this.look = lerp(this.look, lookYaw, Math.min(1, c.dt * 3));
+      const snap = this.bite > 0 ? Math.sin((1 - this.bite / 0.3) * Math.PI) : 0;
+      this.skin.pose(this.slot, {
+        pos: V(this.pos.x, g, this.pos.z), yaw: this.yaw, pitch: pitch * 0.8 + (this.bite > 0 ? 0.1 : 0), roll: rock, bob: 0,
+        phase: this.phase, amp: A, low: low / 0.08, look: this.look,
+        nod: this.howl > 0 ? 0.85 : (sp > 6 ? -0.12 : 0) - snap * 0.45,
+        tail: (sp > 6 ? -0.25 : low ? 0.3 : 0) + Math.sin(c.t * 2 + this.phase) * 0.06,
+        dead: 0, side: 1,
+      });
+      this.b.visible = false;
+      return;
+    }
+    this.b.place(V(this.pos.x, g + 0.8 + bob - low, this.pos.z), this.yaw, pitch + (this.bite > 0 ? 0.12 : 0), rock, 1.3);
     const { legs, neck, head, tail } = this.rig;
     legs.forEach((l, k) => {
       // trot: diagonal pairs move together
@@ -1067,7 +1092,7 @@ class Pack implements HostileProvider {
 
   update(c: Ctx) {
     if (this.state === 'gone') {
-      for (const w of this.wolves) { w.b.visible = false; w.out = false; }
+      for (const w of this.wolves) { w.b.visible = false; w.out = false; w.skin?.hide(w.slot); }
       if ((this.wait -= c.dt) > 0) return;
       this.spawn(c);
       return;
@@ -1075,7 +1100,10 @@ class Pack implements HostileProvider {
     const live = this.active;
     const lead = live[0] ?? this.wolves.find((w) => w.out) ?? this.wolves[0];
     const d = Math.hypot(lead.pos.x - c.player.x, lead.pos.z - c.player.z);
-    for (const w of this.wolves) w.b.visible = w.out && Math.hypot(w.pos.x - c.player.x, w.pos.z - c.player.z) < 260;
+    for (const w of this.wolves) {
+      w.b.visible = w.out && Math.hypot(w.pos.x - c.player.x, w.pos.z - c.player.z) < 260;
+      if (!w.b.visible) w.skin?.hide(w.slot);
+    }
     const night = c.hour > 19.3 || c.hour < 5.2;
     const t = c.combat?.target;
     const safe = this.safe(c);
@@ -1174,7 +1202,7 @@ class Pack implements HostileProvider {
     // gone for good once far enough (or everyone's down and you've walked off)
     const far = live.every((w) => Math.hypot(w.pos.x - c.player.x, w.pos.z - c.player.z) > (this.state === 'flee' ? 130 : 200));
     const bodiesFar = this.wolves.every((w) => !w.out || w.alive || Math.hypot(w.pos.x - c.player.x, w.pos.z - c.player.z) > 160);
-    if (far && bodiesFar) { this.state = 'gone'; this.wait = rnd(70, 180) * (night ? 0.6 : 1); for (const w of this.wolves) w.out = false; return; }
+    if (far && bodiesFar) { this.state = 'gone'; this.wait = rnd(70, 180) * (night ? 0.6 : 1); for (const w of this.wolves) { w.out = false; w.skin?.hide(w.slot); } return; }
 
     // walls: whatever the pack decided, nobody walks through a building
     for (const w of this.wolves) {
@@ -1443,6 +1471,16 @@ export class Fauna {
     p.state = hunt ? 'stalk' : 'watch';
     p.hunting = hunt;
     p.watchT = 30;
+  }
+
+  /** The Meshy wolf, if it loaded (null: the procedural one). */
+  skins: WolfSkins | null = null;
+  /** Load the wolf model and hand each pack member its slot. Before the boot shader warm-up. */
+  async loadModels() {
+    if (new URLSearchParams(location.search).has('procwolf')) return null; // A/B against the old wolf
+    this.skins = await WolfSkins.load(this.pack.wolves.length);
+    if (this.skins) this.pack.wolves.forEach((w, i) => { w.skin = this.skins; w.slot = i; });
+    return this.skins;
   }
 
   private ctx(player: THREE.Vector3, hour: number, dt: number, sprinting: boolean, audio?: AudioEngine): Ctx {

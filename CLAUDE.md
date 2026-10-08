@@ -219,6 +219,9 @@ The webview's `console.log` goes to stdout.
   - Cast and text rules: `src/content/voices.ts` (speaker → Kokoro voice + fx: room/radio/megaphone/pa/bot). Player: `src/engine/voice.ts`, called from `UI.subtitle`, `pages` and the choice cards.
   - **After editing any dialogue, re-voice:** `node scripts/voice/extract.mjs && ~/.local/share/bb-tts/venv/bin/python scripts/voice/generate.py`. It only renders new or changed lines and deletes stale clips. Kokoro (venv + model) lives in `~/.local/share/bb-tts`, outside the repo.
   - Lines are matched by sentence, so runtime text (names, counts) is just skipped. New speakers need a `CAST` entry or they stay silent (notes, signs and the player are silent on purpose).
+- **Models** (v0.5.4): characters and big animals can be real models (Meshy, owner's paid plan: private licence, no attribution). Source exports live in `Assets/`; `node scripts/models/prep-glb.mjs Assets/X.glb public/models/x.glb` strips Meshy's glowing emissive hookup and unused extensions and re-encodes textures as JPEG.
+  - The wolf: `world/wolfSkin.ts`. One skinned clone per pack slot, one shared `MeshStandardNodeMaterial`. The baked walk clip is driven by the wolf's gait phase; crouch, head look, bite, howl, tail and death are layered as rotations about the body's own axes (bone axes don't matter). Loaded in `Game.build` before the warm-up; `?procwolf` A/Bs the old procedural wolf, which is also the fallback if loading fails.
+  - Shooting still uses `Wolf.shape()` (capsule + head sphere), sized to match the model.
 - Fonts are self-hosted via `@fontsource` (`src/fonts.ts`). Import paths have **no `.css` suffix** (the packages' export maps add it).
 - In bash with `set -o pipefail`, don't use `grep -q` on a producer's output (SIGPIPE → false failure).
 - Node scripts: use `fileURLToPath(new URL(…))`, not `.pathname`. The repo path contains a space.
