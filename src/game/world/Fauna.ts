@@ -1559,8 +1559,15 @@ export class Fauna {
     // ranges pile up while the mesh isn't drawn (interior mode): past a few, send the whole buffer
     if (pos.updateRanges.length > 48) { pos.clearUpdateRanges(); nrm.clearUpdateRanges(); }
     // the Meshy snakes and scorpions follow their (ghost) procedural bodies
-    if (this.snakeSkins) this.snakes.forEach((x, i) => this.snakeSkins!.set(i, x.b.visible ? x.rig.segs.map((k) => x.b.world[k]) : null, x.b.visible ? x.b.world[x.rig.head] : null));
-    if (this.scorpSkins) this.scorpions.forEach((x, i) => this.scorpSkins!.set(i, x.b.visible ? x.b.root : null));
+    // (and their meshes cost no draws, scene or shadow, while none is out)
+    if (this.snakeSkins) {
+      this.snakes.forEach((x, i) => this.snakeSkins!.set(i, x.b.visible ? x.rig.segs.map((k) => x.b.world[k]) : null, x.b.visible ? x.b.world[x.rig.head] : null));
+      this.snakeSkins.mesh.visible = this.snakes.some((x) => x.b.visible);
+    }
+    if (this.scorpSkins) {
+      this.scorpions.forEach((x, i) => this.scorpSkins!.set(i, x.b.visible ? x.b.root : null));
+      this.scorpSkins.mesh.visible = this.scorpions.some((x) => x.b.visible);
+    }
     if (any) {
       this.mesh.geometry.attributes.position.needsUpdate = true;
       this.mesh.geometry.attributes.normal.needsUpdate = true;
