@@ -490,7 +490,7 @@ export class Landmarks {
       sp.light.intensity = near ? night * 9 * buzz : 0;
       sp.leds[0].value = Math.sin(t * 2.1) > 0 ? 5 : 0.4;
       sp.leds[1].value = Math.sin(t * 5.3 + 1) > 0.6 ? 6 : 0.3;
-      sp.fairy.forEach((u, i) => (u.value = night * (2.2 + 1.2 * Math.sin(t * 1.3 + i * 2.1))));
+      sp.fairy.forEach((u, i) => (u.value = night * (4 + 2 * Math.sin(t * 1.3 + i * 2.1))));
       // the shared site pools (sites set these near themselves; the Spire is far from both)
       if (near) { uSiteNight.value = night; uSiteFlicker.value = buzz > 0.5 ? 1 : 0.7; }
     }

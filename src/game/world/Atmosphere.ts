@@ -121,6 +121,11 @@ export class Atmosphere {
   storm = 0;
   stormFront = 0;
   flash = 0;
+  /** The storm wall's distance (m) and visibility (Weather): its head shades the sun as it comes. */
+  wallDist = 1e9;
+  wallVis = 0;
+  /** 0..1, how much of the sun the approaching wall is blocking. */
+  sunShade = 0;
   /** Storm gust 0..1 (see uGust). */
   gust = 0;
   /** Settled dust on surfaces 0..1: a storm piles it on, then it slowly blows off again. */
@@ -504,7 +509,17 @@ export class Atmosphere {
     const lightDir = isDay ? sunDir : moonDir;
     this.sun.color.copy(this.sunColor);
     const horizonFade = isDay ? smoothN(-0.06, 0.04, sunDir.y) : smoothN(-0.06, -0.16, sunDir.y);
-    this.sun.intensity = lerp(a.sunI, b.sunI, t) * Math.max(0.05, horizonFade) * (1 - this.dustiness * 0.35) * (1 - st * 0.93);
+    // the storm wall's boiling head (~250 m tall) puts the sun out before the murk arrives: early for
+    // a low sun on its side of the sky, only once it's nearly overhead for a sun behind you
+    {
+      const up = this.uUpwind.value as THREE.Vector2;
+      const hl = Math.hypot(sunDir.x, sunDir.z) || 1;
+      const behind = Math.max(0, (sunDir.x * up.x + sunDir.z * up.y) / hl);
+      const reach = 200 + Math.max(0, Math.min(1100, 250 / Math.max(0.05, Math.tan(Math.asin(clampN(sunDir.y, 0.02, 1))))) - 200) * behind;
+      const target = this.wallVis * smoothN(reach + 80, reach - 60, this.wallDist);
+      this.sunShade += (target - this.sunShade) * Math.min(1, dt * 1.5);
+    }
+    this.sun.intensity = lerp(a.sunI, b.sunI, t) * Math.max(0.05, horizonFade) * (1 - this.dustiness * 0.35) * (1 - st * 0.93) * (1 - this.sunShade * 0.7);
     if (!isDay) this.sun.color.set('#6f8cd0');
     this.sun.position.copy(focus).addScaledVector(lightDir, 300);
     this.sun.target.position.copy(focus);

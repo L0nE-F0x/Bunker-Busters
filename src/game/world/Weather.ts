@@ -146,5 +146,7 @@ export class Weather {
     this.atmo.storm = this.intensity;
     this.atmo.flash = this.flash;
     this.atmo.stormFront = this.front;
+    this.atmo.wallDist = this.wallDist;
+    this.atmo.wallVis = this.wallVis;
   }
 }

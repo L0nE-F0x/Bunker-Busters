@@ -373,7 +373,7 @@ export function dressSpire(b: MeshBatch, collide: Collide): SpireDressing {
           const t = i / 12;
           const p = a.clone().lerp(c, t);
           p.y -= 0.35 * 4 * t * (1 - t) + 0.05;
-          b.add(fairy[k++ % 3].material, place(new THREE.SphereGeometry(0.035, 6, 4), p.x, p.y, p.z));
+          b.add(fairy[k++ % 3].material, place(new THREE.SphereGeometry(0.05, 6, 4), p.x, p.y, p.z));
         }
       }
     }
