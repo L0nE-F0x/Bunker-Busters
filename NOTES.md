@@ -1128,3 +1128,80 @@ The fight bench had dropped 46 → 42 fps with the Meshy models in. Measured fir
 - Camp/town head props (Hollis's cap, Dez's headset) are still separate draws; the contractor `gear` merge would fold them in too.
 
 **After merging main (08e1b8d, the other seven agents' work):** ElectricArc (SeedBot taser/EMP, storm lightning) dropped `DynamicDrawUsage`; the town's startle/barks logic sits inside the viewCull skip; errand props (relay, survey table and book, stakes) cast through shadow proxies. Pipelines stay flat through the camp at night, a fight with an explosion, a storm with the wall and three strikes, SeedBot's zap and EMP, and an outpost terminal hack (main 215 throughout, this branch 212 throughout). Re-measured against main, 5 interleaved rounds, mean frame CPU p25: fight 6.3 → 5.3 ms, spawn 6.4 → 5.0, Dry Creek 6.9 → 5.9; draws (shadow) 165 (31) → 141 (22), 145 (27) → 129 (18), 185 (46) → 154 (23); GL calls/frame 3,510 → 1,925, 3,215 → 1,810, 3,795 → 2,050.
+
+## 2026-10-09: the bunker runtime (overnight swarm, bunker agent)
+
+The backlog said "extract a generic bunker runtime from `Garage.ts` first". That's done, and the Garage is now one instance of it with no change in behaviour.
+
+- **`game/bunker/Bunker.ts`** (abstract `Bunker<Shell>`):
+  - Setup: a bunker class builds its shell, registers its drones with `guard()`, then calls `init()`. The shell is a `BunkerShell` (`shell.ts`): group, origin, `points`, `doors`, `innerBox`, `groundsBox`, tripwires, lasers, cameras, loot spots, lock meshes, an inside-only group and an LOD.
+  - It runs whatever `content/bunkers/<id>.ts` → `security` describes:
+  - **Entries:** each has a primary method and an optional secondary (one method, or a choice card).
+    - Methods: `lockpick`, `circuit`, `keypad`, `splice`, `charge` and `open`.
+    - `keypad` has hints driven by flags. Too many wrong codes locks it out and rings the alarm.
+    - `splice` filters its daemons through `daemonPending`. What each daemon does lives in `onDaemon`.
+    - `charge` is quiet at Demolition 4 when you're crouched, unless the data says `quiet: false`.
+    - `open` is a known gap with nothing to beat.
+    - `openEntry(id, {line, trauma})` is the only way a door opens.
+  - **Hazards** (`hazards.ts`):
+    - `Tripwires`, and `LaserGrid` with its power box.
+    - `CameraGrid` (new): it sweeps, sees in a horizontal cone with line of sight, and calls the alarm once detection fills. Flag `<id>.cameras.off`.
+    - Drone events: alarm, the zap (you're caught), sputter and reboot lines, crashes. EMP.
+  - **Alarm** (`triggerAlarm`) and the **owner's voice** (greeting, taunts, alarm barks).
+  - **Loot:** each container takes `guaranteed` or a slice of the roll table. Looting them all marks the bunker busted and fires `bunkerComplete`.
+  - **Interior mode:** `interior` is built from `innerBox` plus the portal entries, and `cull` hides the inside-only draws.
+  - **Save flags** come from ids and are unchanged for the Garage: `<id>.<entry>.open`, `<id>.<wire>.disarmed`, `<id>.lasers.off`, `<id>.cameras.off`, `<id>.loot.<spot>`, `<id>.complete`. Renaming an id orphans its flag in existing saves.
+  - Hooks: `talk()` (intercoms), `onDaemon`, `daemonPending`, `frame`, `updateLights`, `objective`, `startAudio`.
+- **The Garage** (`Garage.ts`, 860 → 270 lines):
+  - Its data is in `content/bunkers/garage.ts` (`security`).
+  - The class keeps:
+    - Tanner's conversation and its effects
+    - the SPLICE daemons (the vault line, SeedBot docking)
+    - the lights
+    - the objective text
+  - Game sees the same API as before: `b`, `drone`, `houseBox`, `yardBox`, `playerInside`, `alarm`, `sparks`, `interior`, `emp`, `cull`, `update`, `outsidePoint`…
+- **Voice clips:**
+  - Spoken lines in bunker data are `{ speaker, text }`, so `scripts/voice/extract.mjs` finds them. Otherwise SeedBot's sputter, reboot and EMP lines would have been dropped as stale on the next re-voice.
+  - Re-extracted: the same 466 clips.
+  - Tanner's door and alarm lines were never voiced (they go through `taunt()`, which computes the speaker), and they still aren't.
+- **Tier 2 skeleton, not placed in the world:**
+  - `content/bunkers/apex.ts`: Vesper Kade's vault. A hangar door, an airlock (keypad or SPLICE), cameras, a laser corridor with a breaker, and the cistern room. A TODO list is in the file.
+  - Her taunts are empty on purpose, so nothing placeholder gets voiced.
+  - `bunker/apex/` holds a greybox `ApexBuilder` and `Apex`.
+  - Nothing in Game imports it, and the build tree-shakes it out.
+  - Two DAEMONS added: `airlock` and `cameras`.
+  - Its placeholder location (−460, −80) is past the current map edge.
+- **Proof** (headless, RTX 4050), run on the branch and again after merging main:
+  - **Deterministic heist trace** (`/tmp/swarm-bunker/heist.mjs`):
+    - Setup: the frame loop is frozen, `Math.random` is seeded, the clock is simulated and the minigame UIs are stubbed. A fresh Garage is driven by `update(1/60)` with a scripted player.
+    - Coverage:
+      - approach, greeting and 80 s of taunts; every intercom effect
+      - picks on the gate, side door and vault; the gap
+      - tripwires: crossed standing and crouched, disarmed, yanked loud and quiet
+      - side door: shorted, and both charges
+      - the fuse box at Electronics 0, 1 and 5; both lasers
+      - keypad: lockout, hints, success
+      - SPLICE: aborted, traced, vault; the vault charge
+      - crates, the safe and the busted banner
+      - SeedBot: patrol, alert, zap, EMP, reboot
+      - objectives, and `applyFlags` from a save
+      - interior `hides()` and `cull` from 64 views
+    - Result: 774 events, identical to main's apart from the order of the interactables list.
+  - **Real UI** (`realui.mjs`):
+    - F at the vault opens the real choice card.
+    - The real SPLICE matrix was solved by clicking: 3/3 daemons (vault open, lasers off, SeedBot docked).
+    - The keypad was typed 1-2-3-4, and the intercom was used.
+  - **Save from main:** a mid-heist save made on main, loaded with `?continue`, restores identical flags, doors, colliders, lasers, tripwires, lids and visible interactables.
+  - **Screenshots at night** (gate, yard, hall with lasers, alarm, vault, interior mode): the pixel diffs are within the run-to-run noise floor. Draw counts are equal, and pipelines stay at 212.
+  - **The Apex skeleton end to end** through the runtime (`apex.mjs`):
+    - the greeting, a hangar pick, and a camera calling the alarm
+    - keypad lockout, and SPLICE (cameras looped, airlock opened, a trace)
+    - a laser trip, the breaker, and a vault charge
+    - loot, ending in `apex.complete` and `bunkerComplete`
+    - interior hiding, and flags restoring the world
+- **Seen, not changed** (behaviour kept on purpose):
+  - Every `applyFlags()` resets `greeted`, so Tanner repeats "Hey! You! This is a PRIVATE apocalypse" right after each door opens within 55 m, often over his own "My gate!" line. One-line fix: reset `greeted` only when `instant`.
+  - Opening any door also resets the keypad's wrong-code count.
+- **Next:**
+  - Apex for real: a builder, a place, Vesper's dialogue on an intercom, Kade patrols as its guard layer, lights.
+  - A `Bunker` registry in Game once there are two. Interactables, update/cull, interiors, `exteriorRoots`, EMP and the map markers all still name `garage`.

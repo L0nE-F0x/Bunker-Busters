@@ -105,7 +105,11 @@ src/game/world/             Atmosphere (sky, fog, sun, day/night), Heightfield +
                             shadowProxy, Frame), lights (VirtualLight pool), npc (people)
 src/game/town/              Dry Creek, The Cut and the wash (Settlement.ts: build half + NPC dialogue/quests half)
 src/game/sites/             points of interest, one class each: jet, drivein, datacenter, tube (Site.ts: flag contract)
-src/game/bunker/            GarageBuilder (Tier 1 geometry), Garage (locks, hazards, loot, taunts), Drone (SeedBot AI)
+src/game/bunker/            bunker runtime: Bunker.ts runs a heist from data (content/bunkers/<id>.ts `security`: entries with
+                            lockpick/circuit/keypad/SPLICE/charge/open methods, tripwires, lasers + power box, cameras, drones,
+                            alarm, owner voice, loot, interior, save flags <id>.<entry>.open etc.) on a builder's shell (shell.ts);
+                            hazards.ts. Garage = GarageBuilder + Tanner's talk/daemons/lights; Drone (SeedBot AI);
+                            apex/ = Tier 2 skeleton (greybox, not placed; built only by the dev harness)
 src/game/player/            Player (Rapier controller), FirstPersonCamera, Hands (procedural viewmodel + poses),
                             Arms (weapon models + viewmodel animation; hands are solved onto the weapon),
                             CharacterModel (third-person body, now a shadow-only caster), ThirdPersonCamera (unused)
@@ -257,7 +261,7 @@ The webview's `console.log` goes to stdout.
    - a hacking minigame
    - a stealth/light model
    - crafting
-   - Extract a generic bunker runtime from `Garage.ts` first.
+   - The bunker runtime exists (`bunker/Bunker.ts`, NOTES 2026-10-09); Apex Vault has a data stub + greybox to build on.
 4. **Distribution:**
    - Windows installer not yet tested on real hardware
    - code signing
