@@ -1006,8 +1006,9 @@ export class ElectricArc {
     this.used = 0;
   }
 
-  /** One bolt from `a` to `b`. `jag` = lateral wander per segment (m), `width` = ribbon width (m). */
-  bolt(a: THREE.Vector3, b: THREE.Vector3, opts: { width?: number; jag?: number } = {}) {
+  /** One bolt from `a` to `b`. `jag` = lateral wander per segment (m), `width` = ribbon width (m).
+   *  `path` (optional) receives the bolt's jagged centre line, segs + 1 points (for branches). */
+  bolt(a: THREE.Vector3, b: THREE.Vector3, opts: { width?: number; jag?: number; path?: THREE.Vector3[] } = {}) {
     if (this.used >= this.maxBolts) return;
     const w = opts.width ?? 0.03, jag = opts.jag ?? 0.12;
     const d = this._d.copy(b).sub(a);
@@ -1034,6 +1035,7 @@ export class ElectricArc {
         const t = i / S;
         const p = this._p.copy(a).addScaledVector(d, len * t)
           .addScaledVector(s1, wk[i * 2] - t * wk[S * 2]).addScaledVector(s2, wk[i * 2 + 1] - t * wk[S * 2 + 1]);
+        if (r === 0 && opts.path) (opts.path[i] ??= new THREE.Vector3()).copy(p);
         const hw = w * (0.6 + 0.4 * Math.sin(t * Math.PI));
         const v0 = (base + i * 2) * 3, v1 = v0 + 3;
         arr[v0] = p.x - side.x * hw; arr[v0 + 1] = p.y - side.y * hw; arr[v0 + 2] = p.z - side.z * hw;
@@ -1051,5 +1053,57 @@ export class ElectricArc {
     this.n = this.used;
     this.pos.needsUpdate = true;
     this.mesh.visible = this.used > 0;
+  }
+}
+
+/**
+ * Dry lightning inside a dust storm: a forked channel far out in the murk, struck once per stroke
+ * (Weather.onLightning) and then lit by the storm's own flash pulses, so re-strikes keep the same
+ * shape like real lightning. One additive mesh; farther strokes sink into the dust.
+ */
+export class StormLightning {
+  readonly arcs = new ElectricArc(6, 26, '#c8ceff');
+  private readonly path: THREE.Vector3[] = [];
+  private readonly _a = new THREE.Vector3();
+  private readonly _b = new THREE.Vector3();
+  private vis = 0;
+
+  constructor() {
+    this.arcs.mesh.name = 'storm-lightning';
+    this.arcs.mesh.renderOrder = -900; // drawn with the sky, behind every other transparent
+  }
+
+  get mesh() {
+    return this.arcs.mesh;
+  }
+
+  /** A new stroke around `cam`: `k` 0..1 = how close (and bright). */
+  strike(cam: THREE.Vector3, k: number) {
+    const dist = 220 + (1 - k) * 520 + Math.random() * 120;
+    const ang = Math.random() * Math.PI * 2;
+    const gx = cam.x + Math.cos(ang) * dist, gz = cam.z + Math.sin(ang) * dist;
+    const top = this._a.set(gx + (Math.random() - 0.5) * 120, cam.y + 260 + Math.random() * 120, gz + (Math.random() - 0.5) * 120);
+    const ground = this._b.set(gx, cam.y - 20, gz);
+    const a = this.arcs;
+    a.begin();
+    a.bolt(top, ground, { width: 2.6, jag: 26, path: this.path });
+    // forks peel off the main channel and die out before the ground
+    const p = this.path, n = p.length - 1;
+    for (let f = 0; f < 4; f++) {
+      const from = p[Math.floor(n * (0.15 + Math.random() * 0.55))];
+      const len = 50 + Math.random() * 110;
+      const dx = Math.random() - 0.5, dz = Math.random() - 0.5;
+      _v1.set(from.x + dx * len * 1.4, from.y - len * (0.5 + Math.random() * 0.4), from.z + dz * len * 1.4);
+      a.bolt(_v2.copy(from), _v1, { width: 1.3 - f * 0.2, jag: 12 });
+    }
+    a.end();
+    this.vis = 0.35 + 0.65 * k;
+  }
+
+  /** `flash` = Weather.flash (0..1), `storm` = strength 0..1. */
+  update(flash: number, storm: number) {
+    const on = flash > 0.03 && storm > 0.3;
+    this.arcs.mesh.visible = on;
+    if (on) this.arcs.intensity.value = Math.min(1.4, flash * 1.6) * this.vis * (1.2 - storm * 0.5);
   }
 }
