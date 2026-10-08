@@ -25,7 +25,7 @@ import { updateRim, glow, desertRock } from './world/materials';
 import { buildIntelProp, type IntelProp } from './world/intelProps';
 import { Scavenge } from './world/Scavenge';
 import { NpcModels } from './world/npcSkin';
-import { updateShownMatrices } from './world/kit';
+import { updateShownMatrices, viewCull } from './world/kit';
 import { NpcCrowd } from './world/npc';
 import { HumanSkins } from './combat/humanSkin';
 import { Garage } from './bunker/Garage';
@@ -1571,6 +1571,7 @@ export class Game {
     this.touch?.setActive(this.mode === 'playing' && this.input.locked && !this.ui.modalOpen && !this.ui.minigameOpen && !this.busy);
 
     // world systems
+    viewCull.update(this.camera, this.atmo.sun.shadow.camera); // what characters need posing this frame
     this.atmo.follow(this.camera);
     this.landmarks.update(dt, this.t, this.camera.position);
     this.settlement?.update(dt, this.camera.position);

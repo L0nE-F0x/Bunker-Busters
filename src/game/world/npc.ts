@@ -6,6 +6,7 @@ import {
 import { noise } from '@/engine/noiseTex';
 import { rimColor, rimStrength } from './materials';
 import type { NpcModels, NpcActor } from './npcSkin';
+import { viewCull } from './kit';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 type N = any;
@@ -80,6 +81,8 @@ interface Figure {
   look: number;
   nod: number;
   idle: number;
+  /** Time the model's clips haven't been advanced (it was out of view and out of the sun's box). */
+  owed?: number;
 }
 
 const MAX = 16;
@@ -411,6 +414,8 @@ function figure(out: Sink, def: NpcDef) {
   return { neck, hipY: V(0, pelvisY, 0).applyMatrix4(root).y };
 }
 
+const _npcC = new THREE.Vector3();
+
 /** One mesh for a site's people. `update` breathes them and turns heads toward the camera. */
 export class NpcCrowd {
   /** Meshy townsfolk, loaded before any crowd is built (null: everyone procedural). */
@@ -494,7 +499,18 @@ export class NpcCrowd {
       f.nod += (nod - f.nod) * k;
       this.uA[i].w = f.look;
       this.uB[i].w = f.nod;
-      f.actor?.update(dt, dist < reach, f.look, f.nod);
+      const a = f.actor;
+      if (a) {
+        // a model nobody can see (nor its shadow) isn't posed; it catches up on its clips when it is
+        if (viewCull.sees(_npcC.setFromMatrixPosition(a.root.matrixWorld).setY(_npcC.y + 0.9), 1.4)) {
+          a.root.visible = true;
+          a.update(dt + (f.owed ?? 0), dist < reach, f.look, f.nod);
+          f.owed = 0;
+        } else {
+          a.root.visible = false;
+          f.owed = (f.owed ?? 0) + dt;
+        }
+      }
     });
   }
 }

@@ -257,6 +257,44 @@ export function boundSkinned(mesh: THREE.SkinnedMesh, centre: THREE.Vector3, rad
   mesh.frustumCulled = true;
 }
 
+/**
+ * What the frame can show: the camera's frustum and the sun's shadow box. Animated characters ask
+ * it before posing (`sees`): one that can neither be seen nor cast a shadow into view skips its CPU
+ * pose (a patrol 140 m behind you, the far side of a town). Game updates it once a frame, after the
+ * player's camera moved and before the world systems run; the shadow box is last frame's (it
+ * follows the player slowly), with a margin. Until the first update it sees everything.
+ */
+class ViewCull {
+  private cam = new THREE.Frustum();
+  private sun = new THREE.Frustum();
+  private m = new THREE.Matrix4();
+  private s = new THREE.Sphere();
+  private ready = false;
+  private hasSun = false;
+  update(camera: THREE.Camera, sunCam?: THREE.Camera | null) {
+    camera.updateMatrixWorld();
+    this.m.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse);
+    this.cam.setFromProjectionMatrix(this.m, camera.coordinateSystem, camera.reversedDepth);
+    this.hasSun = !!sunCam;
+    if (sunCam) {
+      this.m.multiplyMatrices(sunCam.projectionMatrix, sunCam.matrixWorldInverse);
+      this.sun.setFromProjectionMatrix(this.m, sunCam.coordinateSystem, sunCam.reversedDepth);
+    }
+    this.ready = true;
+  }
+  /** Could a sphere at `c` (world) of radius `r` be drawn this frame, or shadow anything in view? */
+  sees(c: THREE.Vector3, r: number) {
+    if (!this.ready) return true;
+    this.s.center.copy(c);
+    this.s.radius = r + 0.5;
+    if (this.cam.intersectsSphere(this.s)) return true;
+    if (!this.hasSun) return false;
+    this.s.radius = r + 3;
+    return this.sun.intersectsSphere(this.s);
+  }
+}
+export const viewCull = new ViewCull();
+
 const baseUpdateMatrixWorld = THREE.Object3D.prototype.updateMatrixWorld;
 /**
  * Three's `updateMatrixWorld` for a whole scene, minus hidden subtrees. Three walks every object on
