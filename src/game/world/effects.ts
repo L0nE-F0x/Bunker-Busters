@@ -575,7 +575,15 @@ export class GlowSprites {
     })();
     this.sprite = new THREE.Sprite(mat);
     this.sprite.count = this.items.length;
-    this.sprite.frustumCulled = false;
+    // culled by a sphere round all its halos (three's own sprite test is a unit sphere at the
+    // origin, which knows nothing of the instances): a site's halos stop costing a draw whenever
+    // the site is out of view
+    const local = new THREE.Sphere().setFromPoints(this.items.map((it) => it.p));
+    local.radius += Math.max(0, ...this.items.map((it) => it.size));
+    const world = new THREE.Sphere();
+    const sprite = this.sprite;
+    sprite.frustumCulled = this.items.length > 0;
+    sprite.intersectsFrustum = (f: THREE.Frustum) => f.intersectsSphere(world.copy(local).applyMatrix4(sprite.matrixWorld));
     this.sprite.renderOrder = 22;
     this.sprite.name = 'glowHalos';
     return this.sprite;
