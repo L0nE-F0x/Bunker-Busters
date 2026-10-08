@@ -7,6 +7,9 @@ import { TouchControls } from '@/ui/TouchControls';
 import { PostFX } from '@/engine/postfx';
 import { Physics } from '@/engine/physics';
 import { Input } from '@/engine/input';
+import { pad } from '@/engine/gamepad';
+import { binds } from '@/engine/bindings';
+import { PadNav } from '@/ui/PadNav';
 import { AudioEngine, type LoopHandle } from '@/engine/audio';
 import { Acoustics, isSoft } from '@/engine/surface';
 import { Atmosphere } from './world/Atmosphere';
@@ -91,6 +94,8 @@ export class Game {
   ui: UI;
   /** On-screen controls (phones/tablets only). */
   touch: TouchControls | null = null;
+  /** Controller menu navigation (the Pad drives it whenever you aren't playing). */
+  private padNav: PadNav;
   settings: Settings = loadSettings();
   quality: QualitySettings;
   post!: PostFX;
@@ -190,6 +195,16 @@ export class Game {
   constructor(private renderer: THREE.WebGPURenderer, public isWebGPU: boolean, private canvas: HTMLCanvasElement) {
     this.input = new Input(canvas);
     this.ui = new UI(this.audio);
+    // controls: the saved bindings, persisted whenever the Controls screen changes them
+    binds.set(this.settings.binds);
+    binds.onChange = (m) => { this.settings.binds = m; saveSettings(this.settings); };
+    pad.attach(this.input);
+    this.padNav = new PadNav(this.ui.root);
+    pad.nav = (f) => this.padNav.handle(f);
+    // nothing on screen while playing (the grab failed, "click to resume"): A or Start picks it back up
+    this.padNav.onIdle = (f) => {
+      if (this.mode === 'playing' && (f.a || f.start) && !this.ui.modalOpen && !this.ui.minigameOpen && !this.busy) this.input.requestLock();
+    };
     if (isTouch) this.touch = new TouchControls(this.input);
     const qOverride = new URLSearchParams(location.search).get('q') as Settings['quality'] | null;
     this.quality = makeQuality(qOverride ?? this.settings.quality);
@@ -1040,7 +1055,7 @@ export class Game {
       },
       onHurt: (amt, from, kind) => this.playerHurt(amt, from, kind),
       onHit: (k) => { this.ui.hitmark(k); this.audio.combat?.hitmark(k); if (k === 'kill') state.data.stats.kills = (state.data.stats.kills ?? 0) + 1; },
-      trauma: (k) => this.cam.addTrauma(k),
+      trauma: (k) => { this.cam.addTrauma(k); this.input.rumble(k, k * 0.6, 160 + k * 240); },
     };
     // hands, everything they can hold, and the shadow body compile on the first frame, under the fade
     this.warmNext = { roots: [this.camera, this.player.model.root], stage: () => this.hands?.stageItems() };
@@ -1385,6 +1400,7 @@ export class Game {
     this.cam.addTrauma(0.15 + k * 0.45);
     this.hands?.jolt(0.3 + k * 0.6);
     this.audio.combat?.hurt(kind === 'zap' ? 'melee' : kind, 0.6 + k * 0.6);
+    this.input.rumble(0.35 + k * 0.6, 0.25 + k * 0.4, 120 + k * 180);
     if (from) {
       // screen-space bearing of the source, for the red arc round the crosshair
       const dx = from.x - this.player.position.x, dz = from.z - this.player.position.z;
@@ -1659,6 +1675,9 @@ export class Game {
     this.post.exposure.value = this.atmo.exposure * (1 + st * 0.25);
     this.post.grain.value = 0.045 + st * 0.025;
 
+    // controllers: play input while playing, menu navigation otherwise
+    pad.update(dt, this.mode === 'playing' && this.input.locked && !this.ui.modalOpen && !this.ui.minigameOpen && !this.busy);
+
     if (this.mode === 'title') {
       this.titleT += dt;
       const cut = this.director.title(dt);
@@ -1800,7 +1819,7 @@ export class Game {
 
     // UI hotkeys
     if (!blocked) {
-      const tab = input.pressed('Tab') || input.pressed('KeyI') ? 'kit' : input.pressed('KeyK') ? 'skills' : input.pressed('KeyJ') ? 'journal' : null;
+      const tab = input.actPressed('kit') ? 'kit' : input.actPressed('skills') ? 'skills' : input.actPressed('journal') ? 'journal' : null;
       if (tab) {
         this.input.exitLock();
         const firstKit = !s.has('tut.kit');
@@ -1808,7 +1827,7 @@ export class Game {
           if (firstKit && s.set('tut.kit')) this.ui.toast('Skills live on their own tab (K). Each one branches twice: a focus at rank 2, a capstone at rank 4.', 'info');
           this.afterModal();
         }, tab, this.story);
-      } else if (input.pressed('KeyM')) {
+      } else if (input.actPressed('map')) {
         this.input.exitLock();
         const intel = WORLD_INTEL.filter((i) => s.has(`intel:${i.id}`)).map((i) => ({ title: i.title, body: i.body }));
         this.ui.openMap(player.position.x, player.position.z, player.yaw, this.markers(), intel, () => this.afterModal());
@@ -1816,11 +1835,11 @@ export class Game {
         this.input.exitLock();
       }
       HOTBAR_ITEMS.forEach((id, i) => {
-        if (input.pressed(`Digit${i + 1}`)) this.useItem(id);
+        if (input.actPressed(`hotbar${i + 1}` as 'hotbar1')) this.useItem(id);
       });
     }
 
-    if (!blocked && input.pressed('KeyL') && this.hands) {
+    if (!blocked && input.actPressed('torch') && this.hands) {
       this.hands.flashlightOn = !this.hands.flashlightOn;
       player.flashlight = this.hands.flashlightOn;
       this.audio.play('click');
@@ -1850,7 +1869,7 @@ export class Game {
     tg.collider = player.collider;
     tg.height = player.height;
 
-    const strafe = blocked ? 0 : (input.isDown('KeyD') ? 1 : 0) - (input.isDown('KeyA') ? 1 : 0) + input.moveX;
+    const strafe = blocked ? 0 : (input.act('right') ? 1 : 0) - (input.act('left') ? 1 : 0) + input.moveX + input.padX;
     const hs = Math.hypot(player.velocity.x, player.velocity.z);
     this.cam.update(dt, input, { feet: player.position, crouch: player.crouching, sprint: player.sprinting, speed: hs, grounded: player.grounded, strafe, exertion: player.exertion });
     // going down: the view sags to the ground and rolls
@@ -1898,9 +1917,9 @@ export class Game {
       // the action lands when the hand gets there, not on the keypress
       if (this.hands?.busy) {
         // hands already doing something: wait for them
-      } else if (input.pressed('KeyE')) {
+      } else if (input.actPressed('interact')) {
         if (pa === true) { if (this.hands) this.hands.reach(() => void f.primary.run()); else void f.primary.run(); } else this.audio.play('deny');
-      } else if (input.pressed('KeyF') && f.secondary) {
+      } else if (input.actPressed('alt') && f.secondary) {
         const sec = f.secondary;
         if (sec.available() === true) { if (this.hands) this.hands.press(() => void sec.run()); else void sec.run(); } else this.audio.play('deny');
       }

@@ -1,5 +1,6 @@
 import type { AudioEngine } from '@/engine/audio';
 import { isTouch } from '@/engine/device';
+import { dirOf } from '@/engine/bindings';
 import './hack.css';
 
 /** One payload the player can splice into the box. Ids are the caller's; the UI only shows them. */
@@ -243,9 +244,9 @@ export class HackGame {
   private onKey = (e: KeyboardEvent) => {
     if (this.done) return;
     if (e.code === 'Escape') { e.preventDefault(); this.jackOut(); return; }
-    const along = this.axis === 'row' ? ['KeyA', 'ArrowLeft', 'KeyD', 'ArrowRight'] : ['KeyW', 'ArrowUp', 'KeyS', 'ArrowDown'];
-    const i = along.indexOf(e.code);
-    if (i >= 0) { e.preventDefault(); this.step(i < 2 ? -1 : 1); return; }
+    const d = dirOf(e.code);
+    const along = this.axis === 'row' ? (d === 'left' ? -1 : d === 'right' ? 1 : 0) : (d === 'up' ? -1 : d === 'down' ? 1 : 0);
+    if (along) { e.preventDefault(); this.step(along); return; }
     if (e.code === 'Space' || e.code === 'Enter' || e.code === 'NumpadEnter') {
       e.preventDefault();
       const cell = this.axis === 'row' ? this.at(this.line, this.cur) : this.at(this.cur, this.line);

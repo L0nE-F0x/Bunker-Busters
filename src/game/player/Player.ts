@@ -123,16 +123,19 @@ export class Player {
   update(dt: number, input: Input, camYaw: number, faceCamera = false) {
     let mx = 0, mz = 0;
     if (!this.frozen) {
-      if (input.isDown('KeyW') || input.isDown('ArrowUp')) mz += 1;
-      if (input.isDown('KeyS') || input.isDown('ArrowDown')) mz -= 1;
-      if (input.isDown('KeyA') || input.isDown('ArrowLeft')) mx -= 1;
-      if (input.isDown('KeyD') || input.isDown('ArrowRight')) mx += 1;
-      if (input.enabled) { mx += input.moveX; mz += input.moveZ; } // touch stick (analog)
+      if (input.act('forward')) mz += 1;
+      if (input.act('back')) mz -= 1;
+      if (input.act('left')) mx -= 1;
+      if (input.act('right')) mx += 1;
+      if (input.enabled) { mx += input.moveX + input.padX; mz += input.moveZ + input.padZ; } // touch / controller stick (analog)
+      // keys and a stick together never go faster than full
+      const m = Math.hypot(mx, mz);
+      if (m > 1) { mx /= m; mz /= m; }
     }
-    const wantCrouch = !this.frozen && (input.isDown('KeyC') || input.isDown('ControlLeft'));
+    const wantCrouch = !this.frozen && input.act('crouch');
     this.setCrouch(wantCrouch);
     const moving = mx !== 0 || mz !== 0;
-    this.sprinting = moving && !this.crouching && input.isDown('ShiftLeft') && mz > 0 && this.stumble < 0.3 && !this.winded;
+    this.sprinting = moving && !this.crouching && input.act('sprint') && mz > 0 && this.stumble < 0.3 && !this.winded;
 
     // keys give full speed; a half-pushed stick walks slower (but never crawls)
     const push = Math.hypot(mx, mz);
@@ -167,7 +170,7 @@ export class Player {
 
     // jump with coyote time + buffer; a landing needs a beat of recovery before the next jump
     this.coyote = this.grounded ? 0.1 : Math.max(0, this.coyote - dt);
-    this.jumpBuffer = input.pressed('Space') && !this.frozen ? 0.15 : Math.max(0, this.jumpBuffer - dt);
+    this.jumpBuffer = input.actPressed('jump') && !this.frozen ? 0.15 : Math.max(0, this.jumpBuffer - dt);
     this.recover = Math.max(0, this.recover - dt);
     this.stumble = Math.max(0, this.stumble - dt * 1.4);
     let jumped = false;

@@ -10,6 +10,7 @@ import {
   THIRST_PER_SEC, HUNGER_PER_SEC, needDrain, foodBonus, survivalCarry,
 } from '@/content/progression';
 import { EventBus } from '@/engine/events';
+import { defaultBinds, sanitizeBinds, type BindMap } from '@/engine/bindings';
 import type { WeaponId, Difficulty } from '@/content/weapons';
 
 /** What you dropped where you fell: walk back for it. A second death loses it. */
@@ -527,10 +528,12 @@ export interface Settings {
   bob: number;
   /** v0.5.6: a small frames-per-second readout in the corner. */
   showFps: boolean;
+  /** v0.5.6: key and controller bindings (src/engine/bindings.ts); older settings get the defaults. */
+  binds: BindMap;
 }
 
 // phones start on Low: a phone GPU at native resolution under the full post stack crawls
-export const DEFAULT_SETTINGS: Settings = { quality: isMobile ? 'low' : 'high', difficulty: 'normal', master: 0.8, music: 0.5, sfx: 0.9, sensitivity: 1, voice: true, voiceOff051: true, voiceOn052: true, fov: 64, invertY: false, bob: 1, showFps: false };
+export const DEFAULT_SETTINGS: Settings = { quality: isMobile ? 'low' : 'high', difficulty: 'normal', master: 0.8, music: 0.5, sfx: 0.9, sensitivity: 1, voice: true, voiceOff051: true, voiceOn052: true, fov: 64, invertY: false, bob: 1, showFps: false, binds: defaultBinds() };
 
 const num = (v: unknown, lo: number, hi: number, dflt: number) => (typeof v === 'number' && Number.isFinite(v) ? Math.min(hi, Math.max(lo, v)) : dflt);
 
@@ -554,9 +557,10 @@ export function loadSettings(): Settings {
     s.sensitivity = num(s.sensitivity, 0.1, 5, DEFAULT_SETTINGS.sensitivity);
     s.invertY = s.invertY === true;
     s.showFps = s.showFps === true;
+    s.binds = sanitizeBinds(s.binds);
     return s;
   } catch {
-    return { ...DEFAULT_SETTINGS };
+    return { ...DEFAULT_SETTINGS, binds: defaultBinds() };
   }
 }
 

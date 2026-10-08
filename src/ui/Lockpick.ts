@@ -1,6 +1,7 @@
 import type { AudioEngine } from '@/engine/audio';
 import type { LockResult } from '@/game/context';
 import { isTouch } from '@/engine/device';
+import { dirOf } from '@/engine/bindings';
 
 interface Pin { target: number; lift: number; vel: number; set: boolean; jitter: number; flash: number }
 
@@ -96,12 +97,13 @@ export class LockpickGame {
     if (this.done) return;
     if (e.code === 'Escape' || e.code === 'KeyQ') { e.preventDefault(); this.finish('abort'); return; }
     if (e.repeat) return;
-    if (e.code === 'KeyA' || e.code === 'ArrowLeft') this.select(this.sel - 1);
-    if (e.code === 'KeyD' || e.code === 'ArrowRight') this.select(this.sel + 1);
-    if (e.code === 'KeyW' || e.code === 'ArrowUp' || e.code === 'Space') { e.preventDefault(); this.lifting = true; }
+    const d = dirOf(e.code);
+    if (d === 'left') this.select(this.sel - 1);
+    if (d === 'right') this.select(this.sel + 1);
+    if (d === 'up' || e.code === 'Space') { e.preventDefault(); this.lifting = true; }
   };
   private onKeyUp = (e: KeyboardEvent) => {
-    if (e.code === 'KeyW' || e.code === 'ArrowUp' || e.code === 'Space') this.release();
+    if (dirOf(e.code) === 'up' || e.code === 'Space') this.release();
   };
   private onMouse = (e: PointerEvent) => {
     if (this.lifting || this.done) return;

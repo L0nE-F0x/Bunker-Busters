@@ -20,6 +20,15 @@ import { mountUpdateNotice } from './Updater';
 import { isTouch, isIOS, isStandalone, canFullscreen, isFullscreen, enterFullscreen } from '@/engine/device';
 import type { ArmsHud } from '@/game/combat/PlayerArms';
 import { DIFFICULTY } from '@/content/weapons';
+import { binds, actionGlyph, actionKey, kbdGlyph, keyLabel, padName, type Action } from '@/engine/bindings';
+import { openControls } from './ControlsView';
+
+/** Which device's glyphs to show (html.pad is set by Input when a controller was used last). */
+const device = () => (isTouch ? 'touch' : document.documentElement.classList.contains('pad') ? 'pad' : 'kbm');
+/** An action's first key as a keycap, for the static help lines in footers. */
+const kk = (a: Action) => kbdGlyph(binds.keys(a)[0] ?? '');
+/** HUD prompt keys (Game sends 'E', 'F', 'LMB') → the action they stand for. */
+const PROMPT_ACT: Record<string, Action> = { E: 'interact', F: 'alt', LMB: 'fire' };
 
 const esc = (s: string) => s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]!));
 
@@ -88,6 +97,8 @@ export class UI implements UIBridge {
       <div class="tip">Tip: crouch to step over tripwires. SeedBot's battery is at 12% — it naps more than you'd think.</div>`);
     this.loadingEl.id = 'loading';
     document.body.appendChild(this.loadingEl);
+    // a controller picked up (or put down): the hotbar and badges change their glyphs
+    document.addEventListener('bb-device', () => { this.refreshHotbar(); this.refreshVitals(); });
     const fader = h('div', '', '<div class="msg"></div>');
     fader.id = 'fader';
     document.body.appendChild(fader);
@@ -141,8 +152,9 @@ export class UI implements UIBridge {
   }
 
   showControls() {
+    if (!isTouch) { openControls(this.root, this.audio); return; }
     const ov = h('div', 'overlay');
-    if (isTouch) {
+    {
       ov.innerHTML = `
       <div class="panel pause interactive">
         <div class="scan"></div>
@@ -160,34 +172,14 @@ export class UI implements UIBridge {
         <button class="btn">Back</button>
       </div>`;
       this.mountBackPanel(ov);
-      return;
     }
-    ov.innerHTML = `
-      <div class="panel pause interactive">
-        <div class="scan"></div>
-        <h3>CONTROLS</h3>
-        <div class="controls">
-          <span><span class="kbd">W</span><span class="kbd">A</span><span class="kbd">S</span><span class="kbd">D</span></span><span>Move</span>
-          <span><span class="kbd">Mouse</span></span><span>Look</span>
-          <span><span class="kbd">Shift</span></span><span>Sprint (noisy)</span>
-          <span><span class="kbd">C</span> / <span class="kbd">Ctrl</span></span><span>Crouch (quiet, steps over tripwires)</span>
-          <span><span class="kbd">Space</span></span><span>Jump</span>
-          <span><span class="kbd">E</span> / <span class="kbd">F</span></span><span>Interact · alternate action</span>
-          <span><span class="kbd">1</span><span class="kbd">2</span><span class="kbd">3</span><span class="kbd">4</span></span><span>EMP · ration · water · medkit</span>
-          <span><span class="kbd">F</span></span><span>The other way in: a charge, a keypad, the wire</span>
-          <span><span class="kbd">LMB</span> / <span class="kbd">RMB</span></span><span>Fire or swing · aim down the sights</span>
-          <span><span class="kbd">R</span> · <span class="kbd">V</span></span><span>Reload · melee (from behind, unseen: a silent takedown)</span>
-          <span><span class="kbd">Q</span> · <span class="kbd">Wheel</span> · <span class="kbd">X</span></span><span>Last weapon · cycle weapons · holster</span>
-          <span><span class="kbd">L</span></span><span>Flashlight (SeedBot spots you more easily)</span>
-          <span><span class="kbd">Tab</span> / <span class="kbd">I</span></span><span>Kit</span>
-          <span><span class="kbd">K</span></span><span>Skills: ranks, focuses, capstones</span>
-          <span><span class="kbd">J</span></span><span>Journal: quests, people, the story so far</span>
-          <span><span class="kbd">M</span></span><span>Map & intel</span>
-          <span><span class="kbd">Esc</span></span><span>Pause</span>
-        </div>
-        <button class="btn">Back</button>
-      </div>`;
-    this.mountBackPanel(ov);
+  }
+
+  /** The Kit / Skills / Journal footer: how to switch tabs and close, in the device's own glyphs. */
+  private tabHelp(tab: 'kit' | 'skills' | 'journal') {
+    if (device() === 'pad') return `<span class="pg pill">${padName('P4')}</span> <span class="pg pill">${padName('P5')}</span> tabs · <span class="pg face f1">${padName('P1')}</span> close`;
+    const others = (['kit', 'skills', 'journal'] as const).filter((t) => t !== tab).map((t) => `${kk(t)} ${t}`).join(' · ');
+    return `${kk(tab)} close · ${others}`;
   }
 
   /** A panel over another menu: its button or Escape closes just this one. */
@@ -384,14 +376,16 @@ export class UI implements UIBridge {
     (this.hud.querySelector('.xpbar i') as HTMLElement).style.width = `${(d.xp / this.state.xpToNext) * 100}%`;
     this.hud.querySelector('.arch')!.textContent = this.state.archetype.role.toUpperCase();
     this.hud.querySelector('.xptext')!.innerHTML = `<b>${d.xp}</b> / ${this.state.xpToNext} XP`;
-    this.hud.querySelector('.spwrap')!.innerHTML = d.skillPoints > 0 ? `<span class="sp-badge">${d.skillPoints} SKILL POINT${d.skillPoints > 1 ? 'S' : ''} · ${isTouch ? 'KIT' : 'K'}</span>` : '';
+    this.hud.querySelector('.spwrap')!.innerHTML = d.skillPoints > 0 ? `<span class="sp-badge">${d.skillPoints} SKILL POINT${d.skillPoints > 1 ? 'S' : ''} · ${isTouch ? 'KIT' : device() === 'pad' ? `${padName(binds.pad('kit'))} → SKILLS` : actionKey('skills')}</span>` : '';
   }
 
   refreshHotbar() {
     if (!this.state) return;
     this.els.hotbar.innerHTML = HOTBAR_ITEMS.map((id, i) => {
       const q = this.state!.count(id);
-      return `<div class="slot ${q ? '' : 'empty'}" data-key="Digit${i + 1}"><span class="k">${i + 1}</span>${ICONS[ITEMS[id].icon]}<span class="q">${q}</span></div>`;
+      const a = `hotbar${i + 1}` as Action;
+      const k = device() === 'pad' && binds.pad(a) ? padName(binds.pad(a)) : keyLabel(binds.keys(a)[0] ?? '');
+      return `<div class="slot ${q ? '' : 'empty'}" data-key="act:${a}"><span class="k">${k}</span>${ICONS[ITEMS[id].icon]}<span class="q">${q}</span></div>`;
     }).join('');
   }
 
@@ -401,7 +395,7 @@ export class UI implements UIBridge {
     this.refreshVitals();
     if (this.bannerBusy) { this.pendingLevel = level; return; }
     this.audio.play('levelUp');
-    const el = h('div', 'levelup', `<div class="ring">${level}</div><div class="t">LEVEL UP</div><div class="s">+1 skill point — ${isTouch ? 'open your kit' : 'press <span class="kbd">K</span>'} to spend</div>`);
+    const el = h('div', 'levelup', `<div class="ring">${level}</div><div class="t">LEVEL UP</div><div class="s">+1 skill point — ${isTouch ? 'open your kit' : device() === 'pad' ? `open your kit (${actionGlyph('kit', 'pad')})` : `press ${kk('skills')}`} to spend</div>`);
     this.hud.appendChild(el);
     setTimeout(() => el.remove(), 4300);
   }
@@ -484,9 +478,10 @@ export class UI implements UIBridge {
     // prompts
     const pr = this.els.prompt;
     // on touch the prompts are buttons themselves (data-key → TouchControls)
+    const dev = device();
     const html = f.prompt.map((p) => isTouch
-      ? `<div class="p ${p.na ? 'na' : ''}" data-key="Key${p.key}"><span class="kbd">${p.key === 'E' ? 'USE' : 'ALT'}</span>${p.label}${p.na ? `<small>${p.na}</small>` : ''}</div>`
-      : `<div class="p ${p.na ? 'na' : ''}"><span class="kbd">${p.key}</span>${p.label}${p.na ? `<small>${p.na}</small>` : ''}</div>`).join('');
+      ? `<div class="p ${p.na ? 'na' : ''}" data-key="act:${PROMPT_ACT[p.key] ?? p.key}"><span class="kbd">${p.key === 'E' ? 'USE' : 'ALT'}</span>${p.label}${p.na ? `<small>${p.na}</small>` : ''}</div>`
+      : `<div class="p ${p.na ? 'na' : ''}">${PROMPT_ACT[p.key] ? actionGlyph(PROMPT_ACT[p.key], dev) : `<span class="kbd">${p.key}</span>`}${p.label}${p.na ? `<small>${p.na}</small>` : ''}</div>`).join('');
     if (pr.dataset.html !== html) { pr.innerHTML = html; pr.dataset.html = html; }
     // stance
     this.els.stance.querySelector('.crouch')!.classList.toggle('on', f.crouch);
@@ -615,7 +610,7 @@ export class UI implements UIBridge {
       onClose?.();
     };
     const keyClose = (e: KeyboardEvent) => {
-      if (!['Escape', 'Tab', 'KeyI', 'KeyJ', 'KeyK', 'KeyM'].includes(e.code)) return;
+      if (e.code !== 'Escape' && !binds.actionsOf(e.code).some((a) => a === 'kit' || a === 'skills' || a === 'journal' || a === 'map')) return;
       // a panel opened on top (Settings or Controls over the pause menu) handles its own keys
       const overlays = this.root.querySelectorAll(':scope > .overlay');
       if (overlays[overlays.length - 1] !== ov) return;
@@ -647,8 +642,10 @@ export class UI implements UIBridge {
     this.audio.play('ui');
     let tab = initial;
     let render = () => {};
-    const want = (code: string): 'kit' | 'skills' | 'journal' | null =>
-      code === 'Tab' || code === 'KeyI' ? 'kit' : code === 'KeyK' ? 'skills' : code === 'KeyJ' ? 'journal' : null;
+    const want = (code: string): 'kit' | 'skills' | 'journal' | null => {
+      const acts = binds.actionsOf(code);
+      return acts.includes('kit') ? 'kit' : acts.includes('skills') ? 'skills' : acts.includes('journal') ? 'journal' : null;
+    };
     this.openModal(() => {
       const m = h('div', 'panel modal interactive');
       let selected: string | null = s.data.inventory[0]?.id ?? null;
@@ -670,7 +667,7 @@ export class UI implements UIBridge {
         if (tab === 'skills') {
           m.innerHTML = `${header('SKILLS', `${esc(s.archetype.name)} · LEVEL ${d.level}`)}
             ${skillsHTML(s, skill)}
-            <footer><span class="kb"><span class="kbd">K</span> close · <span class="kbd">Tab</span> kit · <span class="kbd">J</span> journal</span><span>A focus or capstone costs a point and doesn't raise the rank.</span></footer>`;
+            <footer><span class="kb">${this.tabHelp('skills')}</span><span>A focus or capstone costs a point and doesn't raise the rank.</span></footer>`;
           bindSkills(m, s, {
             select: (id) => { skill = id; this.audio.play('ui'); render(); },
             spent: () => { this.audio.play('uiConfirm'); this.refreshVitals(); render(); },
@@ -680,7 +677,7 @@ export class UI implements UIBridge {
           if (story) {
             m.innerHTML = `${header('JOURNAL', esc(s.archetype.name))}
               ${journalHTML(s, story, jsel)}
-              <footer><span class="kb"><span class="kbd">J</span> close · <span class="kbd">K</span> skills</span><span>The corner of the screen follows the tracked quest, or the story.</span></footer>`;
+              <footer><span class="kb">${this.tabHelp('journal')}</span><span>The corner of the screen follows the tracked quest, or the story.</span></footer>`;
             bindJournal(m, story, jsel, () => { this.audio.play('ui'); render(); });
           } else {
             m.innerHTML = `${header('JOURNAL', esc(s.archetype.name))}<div class="body"><p class="empty">Nothing written yet.</p></div>`;
@@ -718,7 +715,7 @@ export class UI implements UIBridge {
                 </div>
               </div>
             </div>
-            <footer><span class="kb"><span class="kbd">Tab</span> close · <span class="kbd">K</span> skills · <span class="kbd">J</span> journal</span><span>${d.stats.picks} locks · caught ${d.stats.caught}× · ${d.stats.busted} bunkers · food ${Math.round(d.hunger)} · water ${Math.round(d.thirst)}</span></footer>`;
+            <footer><span class="kb">${this.tabHelp('kit')}</span><span>${d.stats.picks} locks · caught ${d.stats.caught}× · ${d.stats.busted} bunkers · food ${Math.round(d.hunger)} · water ${Math.round(d.thirst)}</span></footer>`;
           m.querySelectorAll('.cell[data-id]').forEach((c) => (c as HTMLElement).onclick = () => { selected = (c as HTMLElement).dataset.id!; this.audio.play('ui'); render(); });
           const use = m.querySelector('.use') as HTMLElement | null;
           if (use && selected) use.onclick = () => { onUse(selected!); if (!s.count(selected!)) selected = null; this.refreshHotbar(); render(); };
@@ -761,7 +758,7 @@ export class UI implements UIBridge {
             <div class="intel-list">${intel.length ? intel.map((i) => `<div class="intel-item"><b>${i.title}</b><span>${i.body}</span></div>`).join('') : '<div class="intel-item"><span>Nothing yet. Rumour has it the old gas station has a note pinned up.</span></div>'}</div>
           </div>
         </div>
-        <footer><span class="kb"><span class="kbd">M</span> close</span></footer>`;
+        <footer><span class="kb">${device() === 'pad' ? `${actionGlyph('map', 'pad')} / <span class="pg face f1">${padName('P1')}</span> close` : `${kk('map')} close`}</span></footer>`;
       drawWorldMap(m.querySelector('canvas')!, this.map!, px, pz, yaw, markers);
       return m;
     }, onClose);
@@ -820,8 +817,9 @@ export class UI implements UIBridge {
           <span>Head bob</span><input type="range" min="0" max="1" step="0.1" data-k="bob" value="${settings.bob}">
           ${isTouch ? '' : `<span>Invert look</span><select data-k="invertY"><option value="0" ${settings.invertY ? '' : 'selected'}>OFF</option><option value="1" ${settings.invertY ? 'selected' : ''}>ON (pull back to look up)</option></select>`}
           <span>FPS counter</span><select data-k="showFps"><option value="0" ${settings.showFps ? '' : 'selected'}>OFF</option><option value="1" ${settings.showFps ? 'selected' : ''}>ON</option></select>
+          ${isTouch ? '' : '<span>Keys & controller</span><button class="btn to-controls">Controls…</button>'}
         </div>
-        <button class="btn primary">Done</button>
+        <button class="btn primary done">Done</button>
       </div>`;
     ov.querySelectorAll('[data-k]').forEach((inp) => {
       inp.addEventListener('input', () => {
@@ -841,10 +839,19 @@ export class UI implements UIBridge {
       if (el) el.textContent = `${Math.round((hor * 180) / Math.PI)}°`;
     };
     fovLabel();
-    const esc = (e: KeyboardEvent) => { if (e.code === 'Escape') { e.stopPropagation(); done(); } };
+    const esc = (e: KeyboardEvent) => {
+      if (e.code !== 'Escape') return;
+      // the Controls screen over this one handles its own Escape
+      const overlays = this.root.querySelectorAll(':scope > .overlay');
+      if (overlays[overlays.length - 1] !== ov) return;
+      e.stopPropagation();
+      done();
+    };
     const done = () => { ov.remove(); window.removeEventListener('keydown', esc, true); };
     window.addEventListener('keydown', esc, true);
-    (ov.querySelector('button') as HTMLElement).onclick = done;
+    (ov.querySelector('.done') as HTMLElement).onclick = done;
+    const toControls = ov.querySelector('.to-controls') as HTMLElement | null;
+    if (toControls) toControls.onclick = () => { this.audio.play('ui'); this.showControls(); };
     this.root.appendChild(ov);
   }
 
@@ -939,7 +946,7 @@ export class UI implements UIBridge {
         };
       };
       const onKey = (e: KeyboardEvent) => {
-        if (e.code !== 'Enter' && e.code !== 'Space' && e.code !== 'Escape' && e.code !== 'KeyE') return;
+        if (e.code !== 'Enter' && e.code !== 'Space' && e.code !== 'Escape' && !binds.is(e.code, 'interact')) return;
         e.preventDefault();
         e.stopPropagation();
         if (e.code === 'Escape') { finish(); return; }
