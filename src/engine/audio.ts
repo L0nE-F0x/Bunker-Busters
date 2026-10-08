@@ -34,6 +34,8 @@ export interface SoundScene {
   front?: number;
   /** Wind heading on the ground plane (x, z as Atmosphere.windDir's x, y). The storm comes from −windDir. */
   windDir?: { x: number; y: number };
+  /** 0..1 how much of a fight you're in: hunted ≈ 0.6, rounds flying → 1 (drives the music's fight stem). */
+  combat?: number;
 }
 
 /** A convolution reverb that's only connected (and so only costs anything) while it's being fed. */
@@ -79,6 +81,8 @@ class Verb {
 export class AudioEngine {
   ctx!: AudioContext;
   private master!: GainNode;
+  /** The very end of the chain (after the limiter): what reaches the speakers (harness tap). */
+  private out!: AudioNode;
   private sfx!: GainNode;
   /** Diegetic world sound (footsteps, positional loops): dry-ish outdoors, into the room reverb indoors. */
   private foley!: GainNode;
@@ -167,6 +171,7 @@ export class AudioEngine {
     limiter.attack.value = 0.001;
     limiter.release.value = 0.12;
     this.master.connect(comp).connect(makeup).connect(limiter).connect(ctx.destination);
+    this.out = limiter;
     this.master.gain.value = this.volume.master;
 
     this.reverb = ctx.createConvolver();
@@ -841,7 +846,7 @@ export class AudioEngine {
       this.foleyHall.gain.setTargetAtTime(0.3 * (1 - this.enclosed), t, 0.3);
     }
 
-    this.score?.update({ mood: scene.mood, night: scene.night, tension, alarm: scene.alarm });
+    this.score?.update({ mood: scene.mood, night: scene.night, tension, alarm: scene.alarm, combat: scene.combat });
 
     const l = this.ctx.listener;
     const p = camera.position;
@@ -883,6 +888,11 @@ export class AudioEngine {
     if (!this.started) return null;
     if (!VOICES[kind]) return null;
     return this.spots.add(kind, pos);
+  }
+
+  /** Harness: what the score is doing about a fight. */
+  get musicState() {
+    return this.score?.fightState ?? null;
   }
 
   /** Positional loops: total and currently built (harness/bench). */

@@ -111,6 +111,8 @@ export class Game {
   weather!: Weather;
   garage!: Garage;
   settlement!: Settlement;
+  /** Hostiles hunting the player (last frame's `combat.awareness()`; the music's fight stem). */
+  private huntedBy = 0;
   scavenge!: Scavenge;
   private humanSkins: HumanSkins | null = null;
   sites: Site[] = [];
@@ -1614,6 +1616,7 @@ export class Game {
       floor: this.acoustics?.surface,
       front: this.weather.front,
       windDir: this.atmo.windDir,
+      combat: playing ? Math.max(this.combat.heat, this.huntedBy > 0 ? 0.6 : 0) : 0,
     });
     if (!this.loopsStarted && this.audio.ready && this.mode !== 'loading') this.startLoops();
 
@@ -1850,6 +1853,7 @@ export class Game {
     }
 
     const aw = this.combat.awareness();
+    this.huntedBy = aw.hunting;
     this.ui.updateHUD(dt, {
       objective: this.objective(),
       detection: Math.max(this.garage.drone.detection, aw.best),
