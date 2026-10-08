@@ -20,7 +20,7 @@ function rod(a: THREE.Vector3, b: THREE.Vector3, r: number, seg = 5) {
 }
 
 /** Where the Survey Says stakes go: on the line from the Survey Camp up toward the Cut (nudged to clear ground). */
-const STAKE_AT: [number, number][] = [[4, 291], [18, 311], [32, 330]];
+const STAKE_AT: [number, number][] = [[4, 291], [18, 311], [26, 322]];
 
 /**
  * The small props the road favours need away from their own sites (content/quests.ts):

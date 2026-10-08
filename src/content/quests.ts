@@ -623,8 +623,8 @@ export const QUESTS: QuestDef[] = [
     start: (v) => v.has('wick.survey'),
     steps: [
       {
-        id: 'stakes', text: 'Pull Kade\'s three survey stakes', at: 'cave',
-        hint: 'Orange tape on pale stakes, strung down the slope between the Cut and the Survey Camp.',
+        id: 'stakes', text: 'Pull Kade\'s three survey stakes', at: 'survey',
+        hint: 'Orange tape on pale stakes, strung up the slope from the Kade Survey Camp toward the Cut. Mind the camp.',
         done: (v) => STAKES.every((f) => v.has(f)),
       },
       {

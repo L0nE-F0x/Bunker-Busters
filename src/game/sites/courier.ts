@@ -154,7 +154,7 @@ export class CourierSite extends Site {
       char: wood('#221a14'),
       pennant: fabric('#ff6a1a'),
       whip: plainStandard('#e8e2d2', 0.5),
-      panel: plainStandard('#18263a', 0.25, 0.35),
+      panel: plainStandard('#0f1826', 0.45, 0.1),
       phone: plainStandard('#101113', 0.35, 0.2),
       bottle: plainStandard('#8fb3bd', 0.2),
     };
@@ -214,7 +214,7 @@ export class CourierSite extends Site {
     B(M.steel, rod(V(bb.x, bb.y - 0.08, 0.05), V(rearX, R - 0.04, 0.05), 0.005, 3));
     // tail light at the end of the rack
     B(M.dark, T(new THREE.BoxGeometry(0.03, 0.05, 0.08), -1.22, 0.63, 0));
-    B(red.material, T(new THREE.BoxGeometry(0.012, 0.035, 0.06), -1.24, 0.63, 0));
+    B(red.material, T(new THREE.SphereGeometry(0.03, 10, 8), -1.245, 0.63, 0, 0, 0, 0, V(0.6, 1, 1.4)));
     // lay it on its right side, the bars propping it up a little, and put it down
     const lay = new THREE.Matrix4().compose(V(1.4, 0, 1.6), new THREE.Quaternion().setFromEuler(new THREE.Euler(-Math.PI / 2 + 0.1, 0.5, 0.03, 'YXZ')), V(1, 1, 1));
     let low = Infinity;
@@ -302,15 +302,19 @@ export class CourierSite extends Site {
       mb.add(M.panel, T(new THREE.BoxGeometry(0.36, 0.012, 0.26), px + c.x, 0.03, pz + c.z, 0.1, pyaw, s * 0.04));
       mb.add(M.steel, T(new THREE.BoxGeometry(0.37, 0.006, 0.27), px + c.x, 0.022, pz + c.z, 0.1, pyaw, s * 0.04));
     }
-    mb.add(M.rock, T(rockGeometry(51, 1), px + 0.5, 0.07, pz + 0.12, 0, 0.3, 0, V(0.2, 0.12, 0.18)));
-    // the phone leans on that stone, screen up and toward whoever comes
-    const ph = V(px + 0.36, 0.12, pz + 0.1);
-    mb.add(M.phone, T(new THREE.BoxGeometry(0.08, 0.16, 0.009), ph.x, ph.y, ph.z, -0.75, pyaw + 0.15));
-    const screen = T(uvRect(new THREE.PlaneGeometry(0.07, 0.145), 704 / 1024, 0, 320 / 1024, 1), ph.x, ph.y, ph.z, -0.75, pyaw + 0.15);
-    screen.translate(...V(0, 0, 0.0052).applyEuler(new THREE.Euler(-0.75, pyaw + 0.15, 0, 'YXZ')).toArray() as [number, number, number]);
+    // the phone leans back on a stone, screen up and toward whoever comes (+z, where you walk in)
+    const pyw = 0.3, tilt = -0.8;
+    const ph = V(px + 0.62, 0.062, pz + 0.22);
+    const behind = V(Math.sin(pyw), 0, Math.cos(pyw)).multiplyScalar(-0.13);
+    mb.add(M.rock, T(rockGeometry(51, 1), ph.x + behind.x, 0.07, ph.z + behind.z, 0, 0.3, 0, V(0.17, 0.11, 0.13)));
+    mb.add(M.phone, T(new THREE.BoxGeometry(0.08, 0.16, 0.009), ph.x, ph.y, ph.z, tilt, pyw));
+    const screen = T(uvRect(new THREE.PlaneGeometry(0.07, 0.145), 704 / 1024, 0, 320 / 1024, 1), ph.x, ph.y, ph.z, tilt, pyw);
+    screen.translate(...V(0, 0, 0.0052).applyEuler(new THREE.Euler(tilt, pyw, 0, 'YXZ')).toArray() as [number, number, number]);
     const screenMesh = new THREE.Mesh(screen, this.screenMat);
     screenMesh.name = 'courier-screen';
-    mb.add(M.dark, new THREE.TubeGeometry(new THREE.CatmullRomCurve3([V(px + 0.38, 0.04, pz), V(ph.x - 0.05, 0.03, ph.z + 0.06), V(ph.x - 0.02, 0.06, ph.z + 0.07)]), 8, 0.004, 3));
+    // the charge cable from the panel to the phone's foot
+    const foot = V(0, -0.08, 0).applyEuler(new THREE.Euler(tilt, pyw, 0, 'YXZ')).add(ph);
+    mb.add(M.dark, new THREE.TubeGeometry(new THREE.CatmullRomCurve3([V(px + 0.36, 0.035, pz + 0.05), V((px + 0.36 + foot.x) / 2, 0.012, (pz + foot.z) / 2 + 0.08), V(foot.x, 0.012, foot.z + 0.02)]), 10, 0.004, 3));
     this.screen = new VirtualLight('#9ff5dc', 0, 3.6, 2);
     this.screen.position.set(ph.x, ph.y + 0.25, ph.z + 0.15);
     this.screen.parent = root;
