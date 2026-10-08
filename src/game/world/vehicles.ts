@@ -536,8 +536,9 @@ export function buildCar(sink: CarSink, m: THREE.Matrix4, o: CarOpts): CarResult
     top.scale(1.4, 0.6, 1);
     put(fabric('#2a2622'), top);
   }
-  put(paint, ...paintCells);
-  // inner shell of the painted cells (pillars and roof seen from inside)
+  // inner shell of the painted cells (pillars and roof seen from inside). Built before the cells are
+  // placed: put() transforms its geometry in place, and a shell cloned afterwards was placed twice
+  // (headliners floating tens of metres over the wrecks).
   for (const g of paintCells) {
     const h = g.clone();
     const p = h.attributes.position as THREE.BufferAttribute;
@@ -551,6 +552,7 @@ export function buildCar(sink: CarSink, m: THREE.Matrix4, o: CarOpts): CarResult
     f.computeVertexNormals();
     headliner.push(f);
   }
+  put(paint, ...paintCells);
   put(K.head, ...headliner);
   // glass: each pane survives or not; the side glass may be wound down a bit
   if (!burnt) {

@@ -473,12 +473,19 @@ export class Props {
         ctx.globalAlpha = 1;
         grime(ctx, w, h, 1.2, i + 3);
       });
-      const y = this.hf.heightAt(bx, bz);
+      // on a slope each post finds its own ground; the frame rides at the higher one
+      const postY = [-4, 4].map((sx) => {
+        const p = new THREE.Vector3(sx, 0, 0).applyAxisAngle(new THREE.Vector3(0, 1, 0), yaw);
+        return this.hf.heightAt(bx + p.x, bz + p.z);
+      });
+      const y = Math.max(this.hf.heightAt(bx, bz), ...postY);
       const grp = new THREE.Group();
       // frame + painted back of every billboard: one batch in world space (was two draws each)
       const at = new THREE.Matrix4().compose(new THREE.Vector3(bx, y - 0.2, bz), new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), yaw), new THREE.Vector3(1, 1, 1));
+      // posts run from 0.4 m under their own ground to the top of the frame (9 m above the base)
+      const post = (sx: number, gy: number) => { const len = (y - 0.2 + 9) - (gy - 0.4); return box(0.35, len, 0.35, sx, 9 - len / 2, 0); };
       frames.add(postMat, ...[
-        box(0.35, 9, 0.35, -4, 4.5, 0), box(0.35, 9, 0.35, 4, 4.5, 0), box(10.6, 0.3, 0.3, 0, 5.8, -0.2), box(10.6, 0.2, 1.2, 0, 5.7, 0.5),
+        post(-4, postY[0]), post(4, postY[1]), box(10.6, 0.3, 0.3, 0, 5.8, -0.2), box(10.6, 0.2, 1.2, 0, 5.7, 0.5),
         place(new THREE.PlaneGeometry(10, 5), 0, 8.4, 0, 0, Math.PI, 0),
       ].map((g) => g.applyMatrix4(at)));
       const panelMat = new THREE.MeshStandardNodeMaterial({ map: tex, roughness: 0.8 });
@@ -492,10 +499,11 @@ export class Props {
       grp.rotation.y = yaw;
       this.group.add(grp);
       this.perches.push(new THREE.Vector3(-2.5, 10.9, 0).applyAxisAngle(new THREE.Vector3(0, 1, 0), yaw).add(new THREE.Vector3(bx, y - 0.2, bz)));
-      for (const sx of [-4, 4]) {
+      [-4, 4].forEach((sx, k) => {
         const p = new THREE.Vector3(sx, 0, 0).applyAxisAngle(new THREE.Vector3(0, 1, 0), yaw);
-        this.physics.addCylinder({ x: bx + p.x, y: y + 4.5, z: bz + p.z }, 4.5, 0.3);
-      }
+        const half = (y + 8.8 - postY[k]) / 2;
+        this.physics.addCylinder({ x: bx + p.x, y: postY[k] + half, z: bz + p.z }, half, 0.3);
+      });
     });
     this.group.add(frames.build('billboardFrames'));
   }

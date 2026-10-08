@@ -23,7 +23,7 @@ export type ImpactKind = 'dirt' | 'rock' | 'metal' | 'flesh' | 'wood' | 'glass';
 export type Foley =
   | 'dry' | 'cylOpen' | 'cylClose' | 'cylSpin' | 'round' | 'shell' | 'pumpBack' | 'pumpFwd' | 'leverOpen' | 'leverClose'
   | 'gate' | 'swing' | 'swingHeavy' | 'draw' | 'holster' | 'empty' | 'casing';
-export type Creature = 'growl' | 'snarl' | 'bite' | 'yelp' | 'whimper' | 'rattle' | 'hiss' | 'click' | 'grunt' | 'hurt' | 'die' | 'shout' | 'pain';
+export type Creature = 'growl' | 'snarl' | 'bite' | 'yelp' | 'whimper' | 'rattle' | 'hiss' | 'click' | 'squelch' | 'bodyfall';
 
 const SPEED_OF_SOUND = 343;
 
@@ -391,26 +391,19 @@ export class CombatAudio {
       case 'click':
         for (let i = 0; i < 4; i++) this.burst(out, t + i * 0.06 + Math.random() * 0.03, 'highpass', 5000, 2, 0.06 * k, 0.001, 0.01);
         break;
-      case 'grunt':
-        this.formant(out, t, 'sawtooth', 115 * pitch, [[600, 5, 1], [1150, 6, 0.6], [2500, 8, 0.25]], 0.2 * k, 0.02, 0.18, 0, 95 * pitch);
-        break;
-      case 'hurt':
-        this.formant(out, t, 'sawtooth', 160 * pitch, [[750, 5, 1], [1250, 6, 0.6], [2700, 8, 0.25]], 0.28 * k, 0.015, 0.3, 9, 120 * pitch);
-        this.burst(out, t, 'bandpass', 1400, 1, 0.08 * k, 0.01, 0.2);
-        break;
-      case 'pain':
-        this.formant(out, t, 'sawtooth', 140 * pitch, [[650, 5, 1], [1100, 6, 0.55], [2600, 8, 0.2]], 0.2 * k, 0.05, 0.6, 6, 100 * pitch);
-        break;
-      case 'die':
-        this.formant(out, t, 'sawtooth', 135 * pitch, [[560, 5, 1], [980, 6, 0.6], [2400, 8, 0.2]], 0.22 * k, 0.03, 0.9, 7, 70 * pitch);
-        break;
-      case 'shout': {
-        // a word shouted across the flats: two syllables, vowel-ish formants, a hard onset
-        this.formant(out, t, 'sawtooth', 175 * pitch, [[800, 5, 1], [1300, 6, 0.7], [2800, 8, 0.3]], 0.2 * k, 0.012, 0.22, 0, 165 * pitch);
-        this.formant(out, t + 0.26, 'sawtooth', 150 * pitch, [[500, 5, 1], [1700, 6, 0.6], [2700, 8, 0.3]], 0.17 * k, 0.012, 0.32, 0, 120 * pitch);
-        this.burst(out, t, 'bandpass', 3000, 2, 0.08 * k, 0.004, 0.03);
+      case 'squelch': {
+        // a radio keyed up across the flats: a click, a breath of static, a chirp on release. The
+        // line itself is the subtitle; no synthesised voice (it never sounded like a person).
+        this.burst(out, t, 'highpass', 3000, 1, 0.18 * k, 0.001, 0.012);
+        this.burst(out, t + 0.01, 'bandpass', 2200, 0.9, 0.07 * k, 0.02, 0.22 + Math.random() * 0.2);
+        this.tone(out, t + 0.32, 'square', 1450 * pitch, 0.025 * k, 0.003, 0.06, 1250 * pitch);
         break;
       }
+      case 'bodyfall':
+        this.burst(out, t, 'lowpass', 240, 0.8, 0.7 * k, 0.004, 0.22);
+        this.burst(out, t + 0.12, 'lowpass', 320, 0.8, 0.35 * k, 0.003, 0.15);
+        this.burst(out, t + 0.02, 'bandpass', 1400, 1.2, 0.12 * k, 0.003, 0.18);
+        break;
     }
   }
 
@@ -537,30 +530,8 @@ export class CombatAudio {
       this.tone(o, t, 'sine', 90, 0.55 * k, 0.002, 0.2, 45);
     }
     if (kind === 'bullet') this.burst(o, t, 'bandpass', 2400, 1.2, 0.25 * k, 0.001, 0.05);
-    // the grunt
-    this.formantClose(t + 0.02, 140 + Math.random() * 25, 0.12 * k);
-  }
-
-  private formantClose(t: number, f0: number, peak: number) {
-    const ctx = this.b.ctx;
-    const o = ctx.createOscillator();
-    o.type = 'sawtooth';
-    o.frequency.setValueAtTime(f0, t);
-    o.frequency.exponentialRampToValueAtTime(f0 * 0.7, t + 0.2);
-    const g = ctx.createGain();
-    g.gain.setValueAtTime(0.0001, t);
-    g.gain.exponentialRampToValueAtTime(peak, t + 0.015);
-    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.22);
-    const lp = ctx.createBiquadFilter();
-    lp.type = 'lowpass';
-    lp.frequency.value = 1200;
-    const bp = ctx.createBiquadFilter();
-    bp.type = 'bandpass';
-    bp.frequency.value = 650;
-    bp.Q.value = 3;
-    o.connect(bp).connect(lp).connect(g).connect(this.b.sfx);
-    o.start(t);
-    o.stop(t + 0.25);
+    // the wind knocked out of you: a sharp, breathy exhale (noise, not a synthesised voice)
+    this.burst(o, t + 0.03, 'bandpass', 900 + Math.random() * 200, 0.9, 0.16 * k, 0.012, 0.24, 520);
   }
 
   /** Low-health heartbeat: call every frame with 0..1 how close to death. */

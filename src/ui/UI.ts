@@ -760,7 +760,7 @@ export class UI implements UIBridge {
           <span>Music</span><input type="range" min="0" max="1" step="0.05" data-k="music" value="${settings.music}">
           <span>Effects</span><input type="range" min="0" max="1" step="0.05" data-k="sfx" value="${settings.sfx}">
           <span>${isTouch ? 'Look sensitivity' : 'Mouse sensitivity'}</span><input type="range" min="0.3" max="2.5" step="0.05" data-k="sensitivity" value="${settings.sensitivity}">
-          <span>Voiced taunts</span><select data-k="voice"><option value="1" ${settings.voice ? 'selected' : ''}>ON (speech synthesis)</option><option value="0" ${settings.voice ? '' : 'selected'}>OFF (subtitles only)</option></select>
+          <span>Voiced taunts</span><select data-k="voice"><option value="0" ${settings.voice ? '' : 'selected'}>OFF (subtitles only)</option><option value="1" ${settings.voice ? 'selected' : ''}>ON (robotic speech synthesis)</option></select>
         </div>
         <button class="btn primary">Done</button>
       </div>`;

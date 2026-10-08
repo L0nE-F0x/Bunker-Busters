@@ -384,7 +384,7 @@ export class Recovery implements HostileProvider {
     const k = d.source === 'blast' ? 260 : d.takedown ? 30 : d.melee ? 120 : d.weapon === 'shotgun' ? 190 : d.weapon === 'rifle' ? 120 : 80;
     const imp = _a.copy(d.dir).setY(Math.max(0.15, d.dir.y + 0.25)).normalize().multiplyScalar(k);
     h.ragdoll = new Ragdoll(this.host.physics, h.mats, h.vel.clone(), imp, m.hitBone);
-    if (!d.takedown) this.host.audio.combat?.voice('die', h.headPos, m.voice, 0.9);
+    this.host.audio.combat?.voice('bodyfall', h.pos.clone().setY(h.pos.y + 0.3), 1, d.takedown ? 0.6 : 1);
     const sq = m.squad;
     sq.morale -= m.post.role === 'leader' ? 0.4 : 0.22;
     const live = sq.alive;
@@ -405,7 +405,6 @@ export class Recovery implements HostileProvider {
     // being shot tells you roughly where from
     if (d.source === 'player') this.engage(m.squad, this.host.combat.target.feet, 0.1);
     if (Math.random() < 0.4) this.bark(m, 'hurt');
-    else this.host.audio.combat?.voice('hurt', m.h.headPos, m.voice);
     // break cover and move
     if (m.cover && Math.random() < 0.5) m.coverT = m.coverDur;
   }
@@ -545,7 +544,7 @@ export class Recovery implements HostileProvider {
     const lines = BARKS[kind];
     if (!lines) return;
     this.barkT = kind === 'idle' ? 12 : 3;
-    this.host.audio.combat?.voice('shout', m.h.headPos, m.voice, kind === 'idle' ? 0.5 : 1);
+    this.host.audio.combat?.voice('squelch', m.h.headPos, m.voice, kind === 'idle' ? 0.5 : 1);
     this.host.bark(pick(lines), m.h.headPos);
   }
 

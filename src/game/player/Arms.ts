@@ -298,6 +298,10 @@ interface Handling {
   adsZ: number;
   /** Left wrist frame relative to the weapon (model space), or null: the left hand stays free. */
   left: F6 | null;
+  /** Two-handed pistol grip: the left hand is the right hand mirrored across the gun, then moved by
+   *  [x, y, z] (model space) and turned `yaw` about the gun's up axis, so the support palm presses
+   *  against the gripping fingers (thumbs forward). Overrides `left`. */
+  mirror?: [number, number, number, number];
   /** Finger curls: right [i, m, r, p, thumb, oppose], left likewise. */
   rCurl: [number, number, number, number, number, number];
   lCurl: [number, number, number, number, number, number];
@@ -317,9 +321,10 @@ const HANDLING: Record<WeaponId, Handling> = {
     low: [0.16, -0.62, -0.3, -1.1, 0.3, 0],
     adsZ: -0.46,
     // two-handed: the left hand wraps the right, thumbs forward along the frame
-    left: [-0.018, -0.035, 0.0, -0.15, 0.55, -Math.PI / 2 - 0.15],
+    left: null,
+    mirror: [-0.026, -0.02, -0.026, 0.55],
     rCurl: [0.62, 0.9, 0.95, 1, 0.55, 0.7],
-    lCurl: [0.8, 0.85, 0.9, 0.95, 0.4, 0.6],
+    lCurl: [0.62, 0.7, 0.78, 0.86, 0.2, 0.4],
     // muzzle up, cylinder swung out to the left facing you
     reload: [0.05, -0.22, -0.46, 0.85, 0.35, -0.55],
     loadAt: [-0.026, 0.046, -0.012],
@@ -384,6 +389,10 @@ const BASH: F6 = [0.02, -0.12, -0.5, -0.25, -0.35, 0.55];
 const _m = new THREE.Matrix4(), _m2 = new THREE.Matrix4(), _inv = new THREE.Matrix4();
 const _p = new THREE.Vector3(), _q = new THREE.Quaternion(), _s = new THREE.Vector3(), _e = new THREE.Euler(0, 0, 0, 'YXZ');
 const _one = new THREE.Vector3(1, 1, 1);
+/** Mirror across x (conjugating a frame by it gives its left-right mirror image). */
+const _mx = new THREE.Matrix4().makeScale(-1, 1, 1);
+/** The right hand's grip anchor in its wrist frame (HandRig: grip at (s·0.004, −0.03, −0.062), s = −1). */
+const RIGHT_GRIP = new THREE.Vector3(-0.004, -0.03, -0.062);
 
 function frameMatrix(f: F6, out: THREE.Matrix4, scale = 1) {
   _e.set(f[3], f[4], f[5], 'YXZ');
@@ -720,8 +729,14 @@ export class Arms {
     _inv.copy(_m2).invert();
     this.rightRoot.multiplyMatrices(m.root.matrix, _inv);
     // left hand: on the forend, or shuttling rounds while reloading
-    if (h.left) {
-      frameMatrix(h.left, _m2, 1.3 / h.scale);
+    if (h.left || h.mirror) {
+      if (h.mirror) {
+        // the right wrist in gun space, mirrored across the gun's x and shifted beside it
+        _m2.copy(_inv).multiply(_m.makeTranslation(-RIGHT_GRIP.x, -RIGHT_GRIP.y, -RIGHT_GRIP.z));
+        _m2.premultiply(_mx).multiply(_mx);
+        _m2.premultiply(_m.makeRotationY(h.mirror[3]));
+        _m2.premultiply(_m.makeTranslation(h.mirror[0], h.mirror[1], h.mirror[2]));
+      } else frameMatrix(h.left!, _m2, 1.3 / h.scale);
       this.leftRoot.multiplyMatrices(m.root.matrix, _m2);
       this.leftOn = !this.swing || this.swing.bash;
       if (this.reload) {

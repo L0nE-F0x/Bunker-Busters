@@ -502,15 +502,20 @@ export interface Settings {
   sfx: number;
   sensitivity: number;
   voice: boolean;
+  /** v0.5.1: speech-synthesis taunts went off by default (it never sounded like a person). */
+  voiceOff051?: boolean;
 }
 
 // phones start on Low: a phone GPU at native resolution under the full post stack crawls
-export const DEFAULT_SETTINGS: Settings = { quality: isMobile ? 'low' : 'high', difficulty: 'normal', master: 0.8, music: 0.5, sfx: 0.9, sensitivity: 1, voice: true };
+export const DEFAULT_SETTINGS: Settings = { quality: isMobile ? 'low' : 'high', difficulty: 'normal', master: 0.8, music: 0.5, sfx: 0.9, sensitivity: 1, voice: false, voiceOff051: true };
 
 export function loadSettings(): Settings {
   try {
     const raw = localStorage.getItem(SETTINGS_KEY);
-    return raw ? { ...DEFAULT_SETTINGS, ...JSON.parse(raw) } : { ...DEFAULT_SETTINGS };
+    const s: Settings = raw ? { ...DEFAULT_SETTINGS, ...JSON.parse(raw) } : { ...DEFAULT_SETTINGS };
+    // once: robot speech off for everyone who had the old default (it can still be turned back on)
+    if (!s.voiceOff051) { s.voice = false; s.voiceOff051 = true; }
+    return s;
   } catch {
     return { ...DEFAULT_SETTINGS };
   }

@@ -22,6 +22,7 @@ import { DustMotes, GroundHaze, DustPuffs, SandStreaks, DustDevils, Shockwave, h
 import { Weather } from './world/Weather';
 import { VirtualLight, lightPool } from './world/lights';
 import { updateRim, glow, desertRock } from './world/materials';
+import { buildIntelProp, type IntelProp } from './world/intelProps';
 import { Garage } from './bunker/Garage';
 import { Settlement } from './town/Settlement';
 import { buildSites, type Site } from './sites';
@@ -135,7 +136,7 @@ export class Game {
   private shockwaves: Shockwave[] = [];
   private flash: VirtualLight;
   private intelMeshes = new Map<string, THREE.Object3D>();
-  private intelGems: THREE.Object3D[] = [];
+  private intelProps: { g: THREE.Object3D; prop: IntelProp; phase: number }[] = [];
   private markerCache: MapMarker[] | null = null;
   private markerAt = 0;
   private readonly _fwd = new THREE.Vector3();
@@ -471,38 +472,62 @@ export class Game {
     this.arms?.validate();
   }
 
+  /**
+   * The nearest spot to (x, z) with flat ground and nothing solid on it (a pump, a wall, a cliff
+   * face): rings out to 6 m. Props dropped on authored coordinates ended up inside things.
+   */
+  private clearSpot(x: number, z: number): [number, number] {
+    const down = new THREE.Vector3(0, -1, 0);
+    const ok = (px: number, pz: number) => {
+      if (this.hf.normalAt(px, pz).y < 0.93) return false;
+      const gy = this.hf.heightAt(px, pz);
+      // a downward ray from above should only meet the ground (or a slab within a hand's height of it)
+      for (const [ox, oz] of [[0, 0], [0.6, 0], [-0.6, 0], [0, 0.6], [0, -0.6], [0.45, 0.45], [-0.45, 0.45], [0.45, -0.45], [-0.45, -0.45]]) {
+        const hit = this.combat.worldRay(new THREE.Vector3(px + ox, gy + 2.2, pz + oz), down, 3);
+        if (hit && hit.t < 2.0) return false;
+      }
+      // and nothing standing right beside it at knee height (pillars, posts, walls)
+      for (let k = 0; k < 8; k++) {
+        const a = (k / 8) * Math.PI * 2;
+        if (this.combat.worldRay(new THREE.Vector3(px, gy + 0.5, pz), new THREE.Vector3(Math.cos(a), 0, Math.sin(a)), 0.9)) return false;
+      }
+      return true;
+    };
+    if (ok(x, z)) return [x, z];
+    for (let r = 0.8; r <= 6; r += 0.6) for (let k = 0; k < 12; k++) {
+      const a = (k / 12) * Math.PI * 2 + r;
+      const px = x + Math.cos(a) * r, pz = z + Math.sin(a) * r;
+      if (ok(px, pz)) return [px, pz];
+    }
+    return [x, z];
+  }
+
   private buildIntel() {
     this.buildPack();
     for (const it of WORLD_INTEL) {
-      const g = new THREE.Group();
-      const x = it.position[0], z = it.position[2];
-      g.position.set(x, this.hf.heightAt(x, z) + 1.1, z);
-      const holo = glow('#c896ff', 5);
-      const gem = new THREE.Mesh(new THREE.OctahedronGeometry(0.18, 0), holo.material);
-      gem.name = 'gem';
-      g.add(gem);
-      this.intelGems.push(gem);
-      const paper = new THREE.Mesh(new THREE.PlaneGeometry(0.32, 0.42), new THREE.MeshStandardNodeMaterial({ color: '#e8dcc0', roughness: 0.8, side: THREE.DoubleSide }));
-      paper.position.y = -0.5;
-      paper.rotation.x = -1.2;
-      g.add(paper);
-      // vertical light beam
-      // additive, so one pass over both faces matches the default two-pass DoubleSide transparency
-      const beamMat = new THREE.MeshBasicNodeMaterial({ transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide, forceSinglePass: true });
-      beamMat.colorNode = Fn(() => {
-        const v = uv();
-        const edge = smoothstep(0.5, 0.0, length(v.x.sub(0.5)));
-        const fade = smoothstep(1.0, 0.0, v.y).mul(sin(time.mul(3)).mul(0.2).add(0.8));
-        return vec4(color('#c896ff').mul(edge.mul(fade).mul(1.4)), float(1));
-      })();
-      const beam = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, 6, 12, 1, true), beamMat);
-      beam.position.y = 2.2;
-      g.add(beam);
+      // the thing itself, lying where it was left, with a glint now and then (see intelProps)
+      let [x, z] = this.clearSpot(it.position[0], it.position[2]);
+      let y = this.hf.heightAt(x, z);
+      // the gas note lies where Mara says it is: on the pump island, between the dead pumps
+      const gas = it.id === 'intel.gas.note' ? LANDMARKS.find((l) => l.id === 'gas') : undefined;
+      if (gas) {
+        const [cx, , cz] = gas.position, r = gas.rotation;
+        // the island nearer the note's old spot, local (±3, 0); its concrete top is 0.45 m up
+        const lx = 3, lz = 0.35;
+        x = cx + lx * Math.cos(r) + lz * Math.sin(r);
+        z = cz - lx * Math.sin(r) + lz * Math.cos(r);
+        y = this.hf.heightAt(cx, cz) + 0.45;
+      }
+      const prop = buildIntelProp(it.id, { crate: !gas });
+      const g = prop.group;
+      g.position.set(x, y, z);
+      g.rotation.y = ((Math.sin(x * 12.9898 + z * 78.233) * 43758.5453) % 1) * Math.PI * 2;
+      this.intelProps.push({ g, prop, phase: Math.abs(x * 0.37 + z * 0.11) % 1 });
       this.scene.add(g);
       this.intelMeshes.set(it.id, g);
       this.interactables.push({
         id: it.id,
-        pos: g.position.clone().setY(g.position.y - 0.8),
+        pos: g.position.clone().setY(g.position.y + (it.id === 'intel.highway.greg' ? 1.3 : gas ? 0.1 : 0.35)),
         radius: 2.4,
         visible: () => !this.state?.has(`intel:${it.id}`),
         primary: {
@@ -1537,10 +1562,13 @@ export class Game {
     if (this.mode === 'playing' && !this.ui.modalOpen) this.machines.update(dt, this.camera.position);
     this.combat.update(dt);
     this.updateEnvironment(dt);
-    for (const gem of this.intelGems) {
-      if (!gem.parent?.visible) continue;
-      gem.rotation.y += dt * 1.5;
-      gem.position.y = Math.sin(this.t * 2) * 0.08;
+    // intel: a glint every few seconds (stronger close, gone far away), the call box's light blinks
+    for (const ip of this.intelProps) {
+      if (!ip.g.visible) continue;
+      const d = ip.g.position.distanceTo(this.camera.position);
+      ip.prop.glint.t.value = ((this.t / 3.2 + ip.phase) % 1);
+      ip.prop.glint.k.value = d > 70 ? 0 : Math.min(1, 1.6 - d / 45) * (this.atmo.isNight ? 1.4 : 1);
+      if (ip.prop.blink) ip.prop.blink.value = (this.t % 1.4) < 0.5 ? 8 : 0.2;
     }
     // gameplay-driven post
     this.post.damage.value = damp(this.post.damage.value as number, 0, 2.5, dt);
