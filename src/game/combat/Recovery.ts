@@ -3,7 +3,7 @@ import type { Physics } from '@/engine/physics';
 import type { AudioEngine } from '@/engine/audio';
 import type { Heightfield } from '../world/Heightfield';
 import type { Interactable } from '../context';
-import { HumanCrowd, Ragdoll, BONE, type HumanLook, type HumanWeapon, type Human } from './Humans';
+import { HumanCrowd, Ragdoll, BONE, type HumanLook, type HumanWeapon, type Human, type HitZone } from './Humans';
 import type { HumanSkins } from './humanSkin';
 import { buildOutpost, type OutpostBuild, type CoverPoint } from './Outposts';
 import { capsuleRay, sphereRay, type Combat, type Hostile, type HostileProvider, type NoiseKind, type RayHit, type Damage } from './Combat';
@@ -120,6 +120,16 @@ class Member implements Hostile {
   bodyAt = new THREE.Vector3();
   deadT = 0;
   voice = rnd(0.85, 1.15);
+  /** Rounds cracking past: 0..1, decays. Makes it duck, and spoils its aim. */
+  supp = 0;
+  /** A leg wound: hobbling (seconds left). */
+  limpT = 0;
+  /** Badly hurt: pulling back to cover further from the threat (once). */
+  fallback = false;
+  /** Laying fire on where you went to ground, so a squadmate can move. */
+  suppressing = false;
+  /** The killing blow, kept while it dies on its feet (the ragdoll starts from it). */
+  lastHit: Damage | null = null;
   readonly gun: NpcGun;
 
   constructor(readonly h: Human, public squad: Squad, readonly post: { pos: THREE.Vector3; yaw: number; role: CrewRole; path: THREE.Vector3[] }) {
@@ -128,8 +138,13 @@ class Member implements Hostile {
     this.hp = HP[post.role];
   }
 
+  /** A body still falling can take another round. */
+  shootable() {
+    return this.h.active && this.h.dyingT >= 0 && !this.h.ragdoll;
+  }
+
   raycast(o: THREE.Vector3, d: THREE.Vector3, max: number): RayHit | null {
-    if (!this.h.active || !this.alive) return null;
+    if (!this.h.active || (!this.alive && !this.shootable())) return null;
     const r = this.h.raycast(o, d, max, capsuleRay, sphereRay);
     if (r) {
       // remember which part, for the ragdoll's impulse
@@ -145,11 +160,30 @@ class Member implements Hostile {
     return r;
   }
 
+  /** Which part a hit landed on (from `hitBone`) and which side of the body (+1 its left). */
+  zoneOf(d: Damage): { zone: HitZone; side: number } {
+    const b = this.hitBone;
+    const zone: HitZone = d.source === 'blast' || d.melee ? 'body' : b === BONE.head ? 'head' : b === BONE.uArmL || b === BONE.uArmR ? 'arm' : b === BONE.thighL || b === BONE.thighR ? 'leg' : 'body';
+    let side = b === BONE.uArmL || b === BONE.thighL ? 1 : b === BONE.uArmR || b === BONE.thighR ? -1 : 0;
+    if (!side) {
+      const y = this.h.yaw;
+      side = (d.point.x - this.h.pos.x) * Math.cos(y) - (d.point.z - this.h.pos.z) * Math.sin(y) >= 0 ? 1 : -1;
+    }
+    return { zone, side };
+  }
+
   damage(d: Damage): boolean {
-    if (!this.alive) return false;
+    if (!this.alive) {
+      // still on its feet, dying: another round puts it down now
+      if (this.h.dyingT >= 0 && !this.h.ragdoll) { this.lastHit = d; this.squad.owner.fall(this, d); }
+      return false;
+    }
     this.hp -= d.amount;
     this.h.flinch.copy(d.dir).setY(0).normalize();
     this.h.flinchK = Math.min(1, 0.5 + d.amount / 40);
+    const { zone, side } = this.zoneOf(d);
+    this.h.hit(zone, d.dir, Math.min(1, 0.4 + d.amount / 50), side);
+    this.lastHit = d;
     if (this.hp <= 0) {
       this.squad.owner.kill(this, d);
       return true;
@@ -183,13 +217,15 @@ class Squad {
   combatT = 0;
   searchT = 0;
   hiddenT = 0;
+  /** Who's keeping your head down while you're in cover (null: nobody). */
+  suppressor: Member | null = null;
   constructor(readonly owner: Recovery, readonly outpost: Outpost | null) {}
   get alive() {
     return this.members.filter((m) => m.alive);
   }
 }
 
-interface Outpost {
+export interface Outpost {
   def: OutpostDef;
   build: OutpostBuild;
   squad: Squad | null;
@@ -262,6 +298,19 @@ export class Recovery implements HostileProvider {
   onRespawn: ((id: string) => void) | null = null;
   /** A road pair just spawned at `at` (Dez calls it on the radio once he's on their channel). */
   onPatrol: ((at: THREE.Vector3) => void) | null = null;
+  /** An outpost's crew spawned (the player came near): re-apply this shift's hacks. */
+  onSpawn: ((id: string) => void) | null = null;
+
+  /** How many times this outpost has been restaffed (marks keyed to it reset with each shift). */
+  respawnCount(id: string) {
+    return this.host.marks[`respawn.${id}`] ?? 0;
+  }
+
+  /** The outpost's crew is shooting at someone right now. */
+  outpostFighting(id: string) {
+    const op = this.outposts.find((o) => o.def.id === id);
+    return !!op?.squad && op.squad.alert === 'combat' && op.squad.alive.length > 0;
+  }
 
   /** A sentry or a drone saw you: the outpost's crew hears about it. */
   alertOutpost(id: string, at: THREE.Vector3) {
@@ -296,10 +345,14 @@ export class Recovery implements HostileProvider {
     h.vel.set(0, 0, 0);
     h.flinchK = 0;
     h.reloadT = 0;
+    h.dyingT = -1;
+    h.hitT = 99;
+    h.cower = 0;
     return h;
   }
 
   private release(m: Member) {
+    m.h.dyingT = -1;
     m.h.ragdoll?.freeze();
     m.h.ragdoll = null;
     m.h.hide();
@@ -331,6 +384,7 @@ export class Recovery implements HostileProvider {
     op.squad = sq;
     op.state = 'active';
     op.lockerOpen = (this.host.marks[`locker.${op.def.id}`] ?? -1) >= this.respawns(op);
+    this.onSpawn?.(op.def.id);
   }
 
   private respawns(op: Outpost) {
@@ -390,11 +444,20 @@ export class Recovery implements HostileProvider {
     const h = m.h;
     h.dead = true;
     if (m.cover) { m.cover.taken = false; m.cover = null; }
-    // the shot carries them: bullets push, a shotgun throws, a blast launches
-    const k = d.source === 'blast' ? 260 : d.takedown ? 30 : d.melee ? 120 : d.weapon === 'shotgun' ? 190 : d.weapon === 'rifle' ? 120 : 80;
-    const imp = _a.copy(d.dir).setY(Math.max(0.15, d.dir.y + 0.25)).normalize().multiplyScalar(k);
-    h.ragdoll = new Ragdoll(this.host.physics, h.mats, h.vel.clone(), imp, m.hitBone);
-    this.host.audio.combat?.voice('bodyfall', h.pos.clone().setY(h.pos.y + 0.3), 1, d.takedown ? 0.6 : 1);
+    m.suppressing = false;
+    h.cower = 0;
+    // How it goes down. A head shot, a close shotgun blast, a blast, a blow or a runner drops at
+    // once (ragdoll); otherwise, often, it dies on its feet first: the knees go, it folds over the
+    // wound, and then it falls (a takedown slumps the same way, quietly).
+    const { zone, side } = m.zoneOf(d);
+    const close = h.pos.distanceTo(this.host.combat.target.feet);
+    const instant = d.source === 'blast' || (d.melee && !d.takedown) || zone === 'head' || (d.weapon === 'shotgun' && close < 9) || Math.hypot(h.vel.x, h.vel.z) > 3.2;
+    if (d.takedown || (!instant && Math.random() < 0.6)) {
+      h.dyingT = 0;
+      h.dyingDur = d.takedown ? 0.42 : zone === 'leg' ? rnd(0.35, 0.5) : rnd(0.5, 0.85);
+      if (!d.takedown) h.hit(zone, d.dir, 1, side);
+      m.lastHit = d;
+    } else this.fall(m, d);
     const sq = m.squad;
     sq.morale -= m.post.role === 'leader' ? 0.4 : 0.22;
     const live = sq.alive;
@@ -409,9 +472,69 @@ export class Recovery implements HostileProvider {
     } else if (sq.outpost) this.cleared(sq.outpost);
   }
 
+  /**
+   * Hand a dead contractor to the ragdoll, with a push that sells the shot: a head shot snaps the
+   * head and drops the body where it stood, a shotgun up close throws it, a rifle round knocks it
+   * back, a leg shot spins it down, a blast launches it, and one dying on its feet pitches forward.
+   */
+  fall(m: Member, d: Damage) {
+    const h = m.h;
+    if (h.ragdoll) return;
+    const { zone, side } = m.zoneOf(d);
+    const close = h.pos.distanceTo(this.host.combat.target.feet);
+    const dir = _c.copy(d.dir);
+    const more: { bone: number; v: THREE.Vector3 }[] = [];
+    let bone = m.hitBone;
+    let k: number;
+    let lift = 0.25;
+    const fwd = _d.set(Math.sin(h.yaw), 0, Math.cos(h.yaw));
+    if (d.source === 'blast') { k = 230; lift = 0.6; bone = BONE.chest; more.push({ bone: BONE.hips, v: dir.clone().setY(0.9).normalize().multiplyScalar(90) }); }
+    else if (h.dyingT >= 0 && h.dyingT >= h.dyingDur * 0.9) {
+      // folded over on its feet: it pitches forward onto its face (or sideways off a bad leg)
+      k = 55; lift = 0; bone = BONE.chest;
+      dir.copy(fwd).multiplyScalar(0.8).addScaledVector(_b.set(Math.cos(h.yaw), 0, -Math.sin(h.yaw)), zone === 'leg' ? h.hitSide * 0.8 : 0).add(_a.copy(d.dir).setY(0).multiplyScalar(0.3)).normalize();
+    } else if (d.takedown) { k = 30; lift = 0; bone = BONE.chest; }
+    else if (d.melee) { k = 120; bone = BONE.chest; }
+    else if (zone === 'head') {
+      // lights out: the head snaps with the round, the body drops where it stood
+      k = d.weapon === 'shotgun' ? 70 : d.weapon === 'rifle' ? 45 : 30; lift = 0; bone = BONE.chest;
+      more.push({ bone: BONE.head, v: _a.copy(dir).setY(0.1).normalize().multiplyScalar(d.weapon === 'revolver' ? 16 : 22).clone() });
+      h.vel.multiplyScalar(0.3);
+    } else if (d.weapon === 'shotgun') {
+      const kk = THREE.MathUtils.clamp(1.4 - close / 12, 0.45, 1.3);
+      k = 200 * kk; lift = 0.35;
+      more.push({ bone: BONE.hips, v: dir.clone().setY(0.2).normalize().multiplyScalar(110 * kk) });
+    } else if (zone === 'leg') {
+      // the leg goes out from under it: kicked back at the knee, the body twists down onto that side
+      k = 22; lift = 0;
+      more.push({ bone: BONE.chest, v: _b.set(Math.cos(h.yaw), 0, -Math.sin(h.yaw)).multiplyScalar(h.hitSide * 40).addScaledVector(dir, 25).clone() });
+    } else {
+      k = d.weapon === 'rifle' ? 140 : 90;
+      // an arm or a hand: the body takes the round's push (a light part would fly off)
+      if (bone !== BONE.chest && bone !== BONE.hips) bone = BONE.chest;
+    }
+    void side;
+    const imp = _a.copy(dir).setY(Math.max(lift, dir.y + lift)).normalize().multiplyScalar(k);
+    h.ragdoll = new Ragdoll(this.host.physics, h.mats, h.vel.clone(), imp, bone, more);
+    h.dyingT = -1;
+    this.host.audio.combat?.voice('bodyfall', h.pos.clone().setY(h.pos.y + 0.3), 1, d.takedown ? 0.6 : 1);
+  }
+
   hurt(m: Member, d: Damage) {
     m.squad.morale -= 0.04;
     m.reloadT = Math.max(0, m.reloadT - 0.2);
+    // a hit throws them off: no shot for a moment, and the aim has to settle again
+    const { zone } = m.zoneOf(d);
+    m.fireT = Math.max(m.fireT, (zone === 'arm' ? 0.75 : 0.4) + Math.random() * 0.3);
+    m.seeT = Math.min(m.seeT, 0.25);
+    if (zone === 'leg') m.limpT = 7;
+    // badly hurt: pull back to cover further off and let the others hold you
+    if (!m.fallback && m.hp < HP[m.post.role] * 0.45 && m.state === 'combat' && m.squad.alive.length > 1) {
+      m.fallback = true;
+      m.coverT = 99;
+      m.flank = false;
+      this.bark(m, 'hurt');
+    }
     // being shot tells you roughly where from
     if (d.source === 'player') this.engage(m.squad, this.host.combat.target.feet, 0.1);
     if (Math.random() < 0.4) this.bark(m, 'hurt');
@@ -476,6 +599,23 @@ export class Recovery implements HostileProvider {
       this.host.banner('OUTPOST CLEARED', `${op.def.name}. The footlocker's yours, and so is whatever water they were sitting on.`);
       this.host.xp([0, 50, 90, 140][op.def.tier], `Cleared ${op.def.name}`);
     } else this.host.toast(`${op.def.name} cleared again. Kade will send more. Kade always sends more.`, 'good');
+  }
+
+  // ------------------------------------------------------------------ under fire
+
+  /** One of your rounds went past (or into cover by) a contractor: it ducks, and its aim suffers. */
+  whizz(o: THREE.Vector3, dir: THREE.Vector3, len: number, hit: Hostile | null) {
+    for (const m of this.members) {
+      if (!m.alive || m === hit || !m.h.active) continue;
+      const c = m.h.chestPos;
+      const along = THREE.MathUtils.clamp(_a.subVectors(c, o).dot(dir), 0, len);
+      if (along < 1.5) continue;
+      const miss = _b.copy(o).addScaledVector(dir, along).distanceTo(c);
+      if (miss > 2.4) continue;
+      m.supp = Math.min(1.3, m.supp + 0.12 + 0.5 * (1 - miss / 2.4));
+      // in cover and peeking: get down
+      if (m.state === 'combat' && m.cover && m.peek && m.supp > 0.45) { m.peek = false; m.peekT = rnd(0.9, 1.7); }
+    }
   }
 
   // ------------------------------------------------------------------ hearing
@@ -592,7 +732,7 @@ export class Recovery implements HostileProvider {
       op.build.fire.light.intensity = op.build.fire.group.visible ? 12 : 0;
       if (op.state === 'dormant' && d < 240) {
         const clearedAt = host.marks[`cleared.${op.def.id}`];
-        if (clearedAt != null && host.playTime() - clearedAt < 30 * 60) { op.state = 'cleared'; continue; }
+        if (clearedAt != null && host.playTime() - clearedAt < 30 * 60) { op.state = 'cleared'; this.onSpawn?.(op.def.id); continue; }
         this.spawnOutpost(op);
       } else if (op.state === 'active' && d > 330 && op.squad && op.squad.alert !== 'combat') {
         this.despawnSquad(op.squad);
@@ -642,6 +782,14 @@ export class Recovery implements HostileProvider {
       sq.flankT -= dt;
       const seen = live.some((m) => m.canSee);
       sq.hiddenT = seen ? 0 : sq.hiddenT + dt;
+      // you've gone to ground: one of them keeps your head down while the others move
+      const sup = sq.suppressor;
+      if (sup && (!sup.alive || sup.state !== 'combat' || seen || this.t - sq.knownT > 9 || sup.flank)) { sup.suppressing = false; sq.suppressor = null; }
+      if (!sq.suppressor && !seen && sq.hiddenT > 1.4 && this.t - sq.knownT < 6 && live.length >= 2) {
+        const m = live.filter((x) => x.state === 'combat' && !x.flank && !x.fallback && x.reloadT <= 0 && x.mag > 1 && x.h.pos.distanceTo(sq.known) < x.gun.range * 0.9)
+          .sort((a, b) => a.h.pos.distanceTo(sq.known) - b.h.pos.distanceTo(sq.known))[0];
+        if (m) { sq.suppressor = m; m.suppressing = true; }
+      }
       // lost you: search, then stand down
       if (this.t - sq.knownT > 14) this.search(sq, sq.known);
       // nerve breaks
@@ -651,7 +799,7 @@ export class Recovery implements HostileProvider {
       // send someone round when you've gone to ground
       if (sq.flankT <= 0 && sq.hiddenT > 3 && live.length >= 2) {
         sq.flankT = rnd(10, 16);
-        const m = live.filter((x) => x.state === 'combat' && x.reloadT <= 0).sort(() => Math.random() - 0.5)[0];
+        const m = live.filter((x) => x.state === 'combat' && x.reloadT <= 0 && !x.suppressing && !x.fallback).sort(() => Math.random() - 0.5)[0];
         if (m) {
           const side = Math.random() < 0.5 ? 1 : -1;
           const dir = _a.subVectors(m.h.pos, sq.known).setY(0).normalize().applyAxisAngle(UP, side * 1.4);
@@ -687,6 +835,14 @@ export class Recovery implements HostileProvider {
   private tick(m: Member, dt: number) {
     const h = m.h;
     if (!m.alive) {
+      // dying on its feet: it sags where it stands (a runner's momentum bleeds off), then falls
+      if (h.dyingT >= 0 && !h.ragdoll) {
+        h.vel.multiplyScalar(Math.exp(-dt * 6));
+        _from.copy(h.pos);
+        h.pos.addScaledVector(h.vel, dt);
+        this.host.combat.slide(_from, h.pos, 0.35, 0.5);
+        if (h.dyingT >= h.dyingDur && m.lastHit) this.fall(m, m.lastHit);
+      }
       if (m.deadT >= 0) { m.deadT += dt; if (h.ragdoll?.frozen || m.deadT > 6) this.bodyReady(m); }
       m.center.copy(h.chestPos);
       return;
@@ -697,6 +853,10 @@ export class Recovery implements HostileProvider {
     m.center.copy(h.chestPos);
     m.fireT = Math.max(0, m.fireT - dt);
     m.react = Math.max(0, m.react - dt);
+    m.supp = Math.max(0, m.supp - dt * 0.45);
+    m.limpT = Math.max(0, m.limpT - dt);
+    m.runSpeed = m.limpT > 0 ? 2.4 : 4.6;
+    h.cower = 0;
 
     // ---- perception (staggered)
     m.thinkT -= dt;
@@ -712,7 +872,9 @@ export class Recovery implements HostileProvider {
         const dist = h.eye.distanceTo(T.chest);
         const close = Math.max(0, 1 - dist / 70);
         const moving = Math.min(1.5, Math.hypot(T.velocity.x, T.velocity.z) / 3.4);
-        const rate = (0.25 + close * 1.8) * (0.6 + T.noise * 0.4) * (0.7 + moving * 0.4) * (m.state === 'search' ? 2.2 : 1) / diff.react;
+        // a shape in the dark takes longer to resolve into a person than one stood in the light
+        const lit = T.night > 0.5 && !T.torch ? 0.55 + 0.45 * T.light : 1;
+        const rate = (0.25 + close * 1.8) * (0.6 + T.noise * 0.4) * (0.7 + moving * 0.4) * lit * (m.state === 'search' ? 2.2 : 1) / diff.react;
         m.detect = Math.min(1, m.detect + rate * dt);
         if (m.detect >= 1) this.engage(sq, T.feet, 0.25);
         else if (m.detect > 0.35 && m.state === 'idle') {
@@ -856,13 +1018,16 @@ export class Recovery implements HostileProvider {
           // peek and shoot, then duck
           m.peekT -= dt;
           if (m.peekT <= 0) { m.peek = !m.peek; m.peekT = m.peek ? rnd(1.6, 3.2) : rnd(0.8, 1.8); }
+          // pinned: rounds cracking past keep it down; the one laying down fire stays up
+          if (m.supp > 0.8 && m.peek && !m.suppressing) { m.peek = false; m.peekT = rnd(0.6, 1.2); }
+          if (m.suppressing && m.supp < 0.6) m.peek = true;
           h.crouch = m.peek ? (m.cover.h > 0.9 ? 0 : 0.35) : 1;
           // nothing to shoot from here for a while: push up
           if (m.peek && !m.canSee && m.peekT < 0.2 && T.alive) m.coverT += 2.5;
         }
       } else {
         // open ground: hold at the preferred range, kneel to shoot
-        const want = g.prefer;
+        const want = m.fallback ? g.prefer + 12 : g.prefer;
         if (Math.abs(dist - want) > 4) {
           const goal = _d.copy(known).addScaledVector(toK.normalize(), -want);
           goal.y = this.host.hf.heightAt(goal.x, goal.z);
@@ -870,31 +1035,53 @@ export class Recovery implements HostileProvider {
         } else { h.vel.set(0, 0, 0); h.crouch = 0.55; }
       }
     }
-    h.pose = m.canSee || !moving ? 'aim' : 'ready';
+    // under fire in the open (or caught standing), it flinches down
+    if (m.supp > 0.3 && !moving && !m.suppressing) h.cower = Math.min(1, (m.supp - 0.3) * 1.6);
+    h.pose = m.canSee || !moving || m.suppressing ? 'aim' : 'ready';
     if (!moving) h.yaw += angDiff(h.yaw, h.aimYaw) * Math.min(1, dt * 6);
 
     // ---- shooting
     const crouchedHidden = m.cover && !m.peek && !moving && m.cover.h > 0.6;
-    if (m.canSee && !crouchedHidden && m.react <= 0 && m.fireT <= 0 && dist < g.range && T.alive) {
+    const pinned = m.supp > 0.85 && !m.suppressing;
+    if (m.canSee && !crouchedHidden && !pinned && m.react <= 0 && m.fireT <= 0 && dist < g.range && T.alive) {
       // the first shots go wide; the longer they watch you, the tighter it gets
       const settle = 1 + 2.6 * Math.exp(-m.seeT / 1.3);
       const run = Math.hypot(T.velocity.x, T.velocity.z) > 4.5 ? 1.6 : 1;
-      const dark = T.night > 0.5 && !T.torch ? 1.5 : 1;
+      const dark = T.night > 0.5 && !T.torch ? 1.5 - 0.5 * T.light : 1;
       const onMove = moving ? 2.2 : 1;
       const crouchK = T.crouch ? 0.9 : 1;
-      const spread = g.spread * settle * run * dark * onMove * crouchK / diff.aim;
+      // rounds cracking past them spoil it
+      const shaken = 1 + Math.min(1, m.supp) * 1.8;
+      const spread = g.spread * settle * run * dark * onMove * crouchK * shaken / diff.aim;
       const aim = _d.copy(T.chest).add(_a.set(rnd(-0.12, 0.12), rnd(-0.25, 0.18), rnd(-0.12, 0.12)));
-      const muzzle = h.muzzle.clone();
-      this.host.combat.enemyRound(muzzle, aim, spread, g.dmg, h.weapon === 'revolver' ? 'revolver' : h.weapon === 'shotgun' ? 'shotgun' : 'rifle', { pellets: g.pellets });
-      this.host.combat.enemyFlash(muzzle, _a.subVectors(aim, muzzle).normalize(), h.weapon === 'shotgun' ? 1.3 : 1);
-      this.host.audio.combat?.gunshot(h.weapon === 'revolver' ? 'revolver' : h.weapon === 'shotgun' ? 'shotgun' : 'rifle', muzzle);
-      this.host.combat.noise(h.pos, 150, 'gunshot');
-      h.recoil = 1;
-      m.mag--;
-      m.burst--;
-      if (m.burst <= 0) { m.burst = Math.max(1, Math.round(rnd(1, g.burst))); m.fireT = g.interval * rnd(1.4, 2.4); }
-      else m.fireT = g.interval * rnd(0.85, 1.15);
+      this.shoot(m, aim, spread, 1);
+    } else if (m.suppressing && !m.canSee && !crouchedHidden && !moving && m.react <= 0 && m.fireT <= 0 && dist < g.range && T.alive) {
+      // suppressing: bursts into where you went to ground (the cover takes them, unless you peek)
+      const aim = _d.copy(known).add(_a.set(rnd(-0.7, 0.7), rnd(0.55, 1.35), rnd(-0.7, 0.7)));
+      const to = _b.subVectors(aim, h.eye);
+      const len = to.length();
+      // its own cover in the way: stand up / shift instead of shooting the rock in front of it
+      const block = this.host.combat.worldRay(h.eye, to.divideScalar(len), len, T.collider);
+      if (block && block.t < Math.min(3, len * 0.4)) { if (m.cover) m.coverT += dt * 4; }
+      else this.shoot(m, aim, g.spread * 2.2 + 0.015, 1.25);
     }
+  }
+
+  /** Fire one round (or a shotgun's load) at `aim`: tracer, flash, report, noise, recoil, the mag. */
+  private shoot(m: Member, aim: THREE.Vector3, spread: number, pace: number) {
+    const h = m.h;
+    const g = m.gun;
+    const gun = h.weapon === 'revolver' ? 'revolver' : h.weapon === 'shotgun' ? 'shotgun' : 'rifle';
+    const muzzle = h.muzzle.clone();
+    this.host.combat.enemyRound(muzzle, aim, spread, g.dmg, gun, { pellets: g.pellets });
+    this.host.combat.enemyFlash(muzzle, _a.subVectors(aim, muzzle).normalize(), h.weapon === 'shotgun' ? 1.3 : 1);
+    this.host.audio.combat?.gunshot(gun, muzzle);
+    this.host.combat.noise(h.pos, 150, 'gunshot');
+    h.recoil = 1;
+    m.mag--;
+    m.burst--;
+    if (m.burst <= 0) { m.burst = Math.max(1, Math.round(rnd(1, g.burst))); m.fireT = g.interval * rnd(1.4, 2.4) * pace; }
+    else m.fireT = g.interval * rnd(0.85, 1.15) * pace;
   }
 
   /** Line of sight from the eye to the player, within a cone and a range that night and dust shrink. */
@@ -906,7 +1093,8 @@ export class Recovery implements HostileProvider {
     const dist = toP.length();
     const alert = m.state === 'combat' || m.state === 'search';
     let range = alert ? 130 : 72;
-    if (T.night > 0.5) range *= T.torch ? 1.5 : 0.42;
+    // at night a dark figure is hard to pick out; one stood in firelight or a floodlight isn't
+    if (T.night > 0.5) range *= T.torch ? 1.5 : 0.42 + 0.63 * T.light;
     range *= 0.3 + 0.7 * T.visibility;
     if (T.crouch && !alert) range *= 0.62;
     if (dist > range) return false;
@@ -924,14 +1112,16 @@ export class Recovery implements HostileProvider {
     m.cover = null;
     const T = this.host.combat.target;
     const h = m.h;
-    const prefer = m.gun.prefer;
+    // badly hurt: somewhere further back than where it is now
+    const prefer = m.fallback ? Math.max(m.gun.prefer + 12, h.pos.distanceTo(threat) + 6) : m.gun.prefer;
+    const minT = m.fallback ? h.pos.distanceTo(threat) + 2 : 3;
     let best: CoverPoint | null = null;
     let bestS = Infinity;
     const consider = (c: CoverPoint) => {
       if (c.taken) return;
       const dT = c.pos.distanceTo(threat);
       const dM = c.pos.distanceTo(h.pos);
-      if (dM > 28 || dT < 3) return;
+      if (dM > 28 || dT < minT) return;
       // facing the threat?
       const toT = _a.subVectors(threat, c.pos).setY(0).normalize();
       if (toT.dot(c.out) < 0.2) return;

@@ -31,7 +31,14 @@ export class FirstPersonCamera {
   private t = 0;
   private fov = 64;
   private shake = new Simplex2(7);
-  readonly baseFov = 64;
+  /** The FOV the viewmodel was authored at. */
+  static readonly DEFAULT_FOV = 64;
+  /** Settings → Field of view. */
+  baseFov = FirstPersonCamera.DEFAULT_FOV;
+  /** Settings → Invert look. */
+  invertY = false;
+  /** Settings → Head bob (0 = steady camera, 1 = full gait bob and strafe roll). */
+  bob = 1;
   /** Aiming down the sights: the FOV to zoom to, and how far into the zoom (0..1). */
   aimFov = 50;
   aimK = 0;
@@ -42,6 +49,18 @@ export class FirstPersonCamera {
 
   addTrauma(v: number) {
     this.trauma = Math.min(1, this.trauma + v);
+  }
+
+  /** A blow knocks the head: pitch, yaw, roll offsets on a stiff spring (the aim itself isn't moved). */
+  private punchO = new THREE.Vector3();
+  private punchV = new THREE.Vector3();
+  /** Knocked by a hit from `bearing` (radians, 0 = ahead, + = to the left), strength 0..1. */
+  punch(bearing: number, k: number) {
+    const s = Math.sin(bearing), c = Math.cos(bearing);
+    // the head snaps back from a hit in front, and turns and tilts away from one at the side
+    this.punchV.x += c * 6 * k;
+    this.punchV.y += -s * 4 * k;
+    this.punchV.z += -s * 8 * k;
   }
 
   /** Footstep callback, fired at the low point of each stride so sound and head-bob agree. */
@@ -64,6 +83,23 @@ export class FirstPersonCamera {
     this.pitch = pitch;
   }
 
+  /** Jump the lens to the base FOV (a new setting, or a run starting) instead of easing there. */
+  snapFov() {
+    this.fov = this.baseFov;
+    this.camera.fov = this.baseFov;
+    this.camera.updateProjectionMatrix();
+  }
+
+  /**
+   * Depth scale for the viewmodel (a child of this camera) so the hands and gun fill the screen the
+   * same at any field-of-view setting: squashing camera-space z by tan(64°/2) / tan(fov/2) gives the
+   * exact projection they have at 64°. Aiming eases back to 1, so the sights zoom as authored.
+   */
+  viewmodelDepth() {
+    const k = Math.tan(THREE.MathUtils.degToRad(FirstPersonCamera.DEFAULT_FOV / 2)) / Math.tan(THREE.MathUtils.degToRad(this.baseFov / 2));
+    return k + (1 - k) * this.aimK;
+  }
+
   get forward() {
     return new THREE.Vector3(-Math.sin(this.yaw) * Math.cos(this.pitch), Math.sin(this.pitch), -Math.cos(this.yaw) * Math.cos(this.pitch));
   }
@@ -75,7 +111,7 @@ export class FirstPersonCamera {
       const zoom = this.camera.fov / this.baseFov;
       const s = 0.0021 * input.sensitivity * (this.aimK > 0.05 ? zoom : 1);
       this.yaw -= input.mouseDX * s;
-      this.pitch = clamp(this.pitch - input.mouseDY * s, -1.48, 1.48);
+      this.pitch = clamp(this.pitch - input.mouseDY * s * (this.invertY ? -1 : 1), -1.48, 1.48);
     }
     // eye height eases between standing and crouched
     this.eye = damp(this.eye, f.crouch ? 1.02 : 1.62, 10, dt);
@@ -89,7 +125,7 @@ export class FirstPersonCamera {
     if (f.grounded && f.speed > 0.5 && Math.floor(prevPhase / Math.PI + 0.5) !== Math.floor(this.bobPhase / Math.PI + 0.5)) {
       this.onStep?.(Math.min(1.2, 0.35 + f.speed / 6) * (f.crouch ? 0.45 : 1));
     }
-    const amp = f.sprint ? 1.6 : f.crouch ? 0.55 : 1;
+    const amp = (f.sprint ? 1.6 : f.crouch ? 0.55 : 1) * this.bob;
     const bobY = (Math.abs(Math.cos(this.bobPhase)) - 0.5) * 0.045 * amp * move;
     const bobX = Math.sin(this.bobPhase) * 0.022 * amp * move;
 
@@ -97,7 +133,7 @@ export class FirstPersonCamera {
     this.dipVel += (-this.dip * 70 - this.dipVel * 11) * dt;
     this.dip += this.dipVel * dt;
 
-    this.roll = damp(this.roll, -f.strafe * 0.018 - bobX * 0.35, 8, dt);
+    this.roll = damp(this.roll, (-f.strafe * 0.018 - bobX * 0.35) * this.bob, 8, dt);
 
     // trauma shake
     this.trauma = Math.max(0, this.trauma - dt * 1.3);
@@ -111,10 +147,14 @@ export class FirstPersonCamera {
 
     const right = new THREE.Vector3(Math.cos(this.yaw), 0, -Math.sin(this.yaw));
     this.camera.position.set(f.feet.x, f.feet.y + this.eye + bobY + this.dip + heave, f.feet.z).addScaledVector(right, bobX);
+    // the punch spring (critically damped-ish: a quick knock, a quick settle)
+    this.punchV.addScaledVector(this.punchO, -170 * dt).multiplyScalar(Math.exp(-dt * 17));
+    this.punchO.addScaledVector(this.punchV, dt);
+    const po = this.punchO;
     this.camera.rotation.set(
-      this.pitch + this.shake.noise(k, 1) * 0.04 * sh + bobY * 0.15 + this.dip * 0.35 + heave * 0.8,
-      this.yaw + this.shake.noise(2, k) * 0.04 * sh,
-      this.roll + this.shake.noise(k, k) * 0.05 * sh,
+      this.pitch + this.shake.noise(k, 1) * 0.04 * sh + bobY * 0.15 + this.dip * 0.35 + heave * 0.8 + po.x,
+      this.yaw + this.shake.noise(2, k) * 0.04 * sh + po.y,
+      this.roll + this.shake.noise(k, k) * 0.05 * sh + po.z,
     );
 
     const free = this.baseFov + (f.sprint ? 7 : 0) - (f.crouch ? 2 : 0);

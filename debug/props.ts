@@ -13,7 +13,9 @@ import { floraMaterial, desertRock } from '@/game/world/materials';
 import { rockGeometry } from '@/game/world/Props';
 import { Fauna } from '@/game/world/Fauna';
 import type { Heightfield } from '@/game/world/Heightfield';
-import { HumanCrowd, type HumanLook } from '@/game/combat/Humans';
+import { HumanCrowd, type HumanLook, type HitZone } from '@/game/combat/Humans';
+import { HumanSkins } from '@/game/combat/humanSkin';
+import { WolfSkins } from '@/game/world/wolfSkin';
 
 const qs = new URLSearchParams(location.search);
 const num = (k: string, d: number) => Number(qs.get(k) ?? d);
@@ -59,7 +61,22 @@ scene.add(ground);
 
 const seed = num('seed', 1);
 const rand = mulberry32(seed);
+// the Meshy contractor bodies, for what=human&meshy
+const humanSkins = qs.get('what') === 'human' && qs.has('meshy') ? await HumanSkins.load(4, [3]) : null;
+// the Meshy wolf: what=wolf&leap=0.5 | &low=1 | &roll=0.3&look=0.8 | &amp=0.85&phase=1 | &dead=1.2
+const wolfSkins = qs.get('what') === 'wolf' ? await WolfSkins.load(3) : null;
 const BUILDERS: Record<string, () => THREE.Object3D> = {
+  wolf: () => {
+    const s = wolfSkins!;
+    for (let i = 0; i < 3; i++) {
+      s.pose(i, {
+        pos: new THREE.Vector3((i - 1) * 1.6, 0, 0), yaw: num('wyaw', Math.PI / 2), pitch: num('wpitch', 0), roll: num('roll', 0), bob: 0,
+        phase: num('phase', 0) + i * 1.2, amp: num('amp', 0), low: num('low', 0), look: num('look', 0), nod: num('nod', 0), tail: num('tail', 0),
+        deadT: num('dead', -1), side: 1, leap: num('leap', 0),
+      });
+    }
+    return s.group;
+  },
   car: () => {
     const b = new MeshBatch();
     const kind = (qs.get('kind') || 'sedan') as CarKind;
@@ -110,11 +127,23 @@ const BUILDERS: Record<string, () => THREE.Object3D> = {
       { ...base, weapon: 'revolver', build: 0.93, height: 0.96 },
       { ...base, helmet: '#e05a1a', leader: true, uniform: '#2c3038' },
     ];
-    const c = new HumanCrowd(looks);
+    const c = new HumanCrowd(looks, humanSkins);
     c.lineup(new THREE.Vector3(0, 0, 0), hf);
     const pose = qs.get('pose');
     if (pose) c.people.forEach((p) => { p.pose = pose as never; for (let k = 0; k < 30; k++) p.update(1 / 30, hf); });
     if (qs.has('walk')) c.people.forEach((p) => { p.vel.set(0, 0, -Number(qs.get('walk'))); for (let k = 0; k < 17; k++) p.update(1 / 30, hf); });
+    // &hit=body|head|arm|leg&at=0.1&side=1: a round from the front (toward −Z... they face −Z), `at` s ago
+    // &cower=1: under fire. &dying=0.4: s into dying on its feet (&hit sets the wound)
+    const hit = qs.get('hit') as HitZone | null;
+    if (hit || qs.has('dying') || qs.has('cower')) c.people.forEach((p) => {
+      if (hit) p.hit(hit, new THREE.Vector3(0, 0, 1), 1, num('side', 1));
+      if (qs.has('dying')) { p.dyingT = 0; p.dyingDur = num('dur', 0.6); }
+      p.cower = num('cower', 0);
+      const t = qs.has('dying') ? num('dying', 0.5) : num('at', 0.1);
+      for (let k = 0, n = Math.round(t * 60); k < n; k++) p.update(1 / 60, hf);
+    });
+    c.people.forEach((p) => humanSkins?.pose(p.slot, p, true));
+    if (humanSkins) { const g = new THREE.Group(); g.add(c.mesh, humanSkins.group); return g; }
     return c.mesh;
   },
   rock: () => {

@@ -3,7 +3,7 @@ import {
   Fn, vec2, vec3, vec4, float, uniform, instanceIndex, hash, time, cameraPosition, fract, uv, length, smoothstep, mix, max,
   pow, dot, normalize, sin, positionLocal, positionWorld, texture, color, clamp,
   normalWorld, abs, viewportLinearDepth, linearDepth, cameraNear, cameraFar, instancedDynamicBufferAttribute, exp,
-  cameraViewMatrix, atan, renderGroup, step, instancedBufferAttribute, uniformArray, varying,
+  cameraViewMatrix, atan, renderGroup, step, instancedBufferAttribute, uniformArray, varying, select, floor,
 } from 'three/tsl';
 import type { Atmosphere } from './Atmosphere';
 import type { Heightfield } from './Heightfield';
@@ -11,6 +11,7 @@ import { noise } from '@/engine/noiseTex';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { VirtualLight } from './lights';
 import { setGroundHeight } from './materials';
+import { canvasTexture } from './kit';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 type N = any;
@@ -123,8 +124,12 @@ export class GroundHaze {
       const view = normalize(pos.sub(cameraPosition));
       const mu = max(dot(view, atmo.uSunDir), 0);
       const lit = atmo.uHaze.mul(0.9).add(atmo.uSunColor.mul(pow(mu, 4).mul(0.6)));
-      const a = shape.mul(fade).mul(soft).mul(atmo.uDust.mul(0.22).add(0.04).add(atmo.uStorm.mul(0.4)));
-      return vec4(mix(lit, (atmo.uStormColor as N).mul(1.15), atmo.uStorm.mul(0.6)), a);
+      const a = shape.mul(fade).mul(soft).mul(atmo.uDust.mul(0.22).add(0.04).add(atmo.uStorm.mul(0.5)));
+      // in a storm each cloud has its own density: some sun-shot and pale, some dark and ruddy, all
+      // heavier underneath, so the murk close by has rolling shapes instead of one flat tint
+      const tone = seed.x.mul(0.6).add(0.7).mul(mix(float(0.72), float(1.12), uv().y));
+      const stormC = (atmo.uStormColor as N).mul(tone).add(atmo.uSunColor.mul(pow(mu, 4).mul(0.25).mul(float(1).sub(atmo.uNight))));
+      return vec4(mix(lit, stormC, atmo.uStorm.mul(0.85)), a);
     })();
     this.sprite = new THREE.Sprite(mat);
     this.sprite.count = count;
@@ -140,39 +145,122 @@ export class GroundHaze {
   }
 }
 
+/** The first instances of SandStreaks are wind-blown debris instead of streaks. */
+const DEBRIS = 48;
+const TUMBLEWEEDS = 7;
+/** …and the next WISPS are broad, faint sheets of dust sweeping past (the streaks' big brothers). */
+const WISPS = 90;
+
+/** Tumbleweed (left half) and four scraps of litter (right half): paper, a dry leaf, a plastic shred, a twig. */
+function debrisAtlas() {
+  return canvasTexture(256, 128, (ctx) => {
+    let sd = 7;
+    const rnd = () => ((sd = (sd * 16807) % 2147483647) / 2147483647);
+    ctx.clearRect(0, 0, 256, 128);
+    // tumbleweed: a ball of dry, wiry stems, denser and darker in the middle
+    ctx.lineCap = 'round';
+    for (let i = 0; i < 300; i++) {
+      const a = rnd() * Math.PI * 2, r = Math.sqrt(rnd()) * 50;
+      const x = 64 + Math.cos(a) * r, y = 64 + Math.sin(a) * r;
+      const b = a + (rnd() - 0.5) * 2.6, len = 14 + rnd() * 26;
+      const ex = Math.max(8, Math.min(120, x + Math.cos(b) * len)), ey = Math.max(8, Math.min(120, y + Math.sin(b) * len));
+      const t = rnd();
+      const k = 0.55 + 0.45 * (r / 50); // the core is shaded by the stems around it
+      ctx.strokeStyle = `rgb(${Math.round((70 + t * 70) * k)},${Math.round((56 + t * 52) * k)},${Math.round((38 + t * 34) * k)})`;
+      ctx.lineWidth = 1.2 + rnd() * 2;
+      ctx.beginPath();
+      ctx.moveTo(x, y);
+      ctx.quadraticCurveTo(x + (rnd() - 0.5) * 24, y + (rnd() - 0.5) * 24, ex, ey);
+      ctx.stroke();
+    }
+    // paper scrap
+    ctx.fillStyle = '#d9d2bf';
+    ctx.beginPath();
+    ctx.moveTo(140, 12); ctx.lineTo(182, 8); ctx.lineTo(186, 50); ctx.lineTo(162, 56); ctx.lineTo(136, 46);
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(90,80,60,0.5)';
+    ctx.lineWidth = 1;
+    for (let i = 0; i < 4; i++) { ctx.beginPath(); ctx.moveTo(144, 20 + i * 8); ctx.lineTo(176, 18 + i * 8); ctx.stroke(); }
+    // dry leaf
+    ctx.fillStyle = '#8a6a3a';
+    ctx.beginPath();
+    ctx.ellipse(224, 32, 12, 24, 0.6, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = '#5a4424';
+    ctx.beginPath(); ctx.moveTo(210, 52); ctx.lineTo(238, 12); ctx.stroke();
+    // plastic shred
+    ctx.fillStyle = 'rgba(120,150,170,0.85)';
+    ctx.beginPath();
+    ctx.moveTo(134, 74); ctx.lineTo(186, 70); ctx.lineTo(178, 92); ctx.lineTo(188, 116); ctx.lineTo(140, 108); ctx.lineTo(148, 90);
+    ctx.fill();
+    // twig with a fork
+    ctx.strokeStyle = '#6a5034';
+    ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.moveTo(200, 118); ctx.lineTo(248, 72); ctx.stroke();
+    ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(226, 93); ctx.lineTo(236, 112); ctx.stroke();
+  });
+}
+
 /**
  * Blowing sand: thin streaks racing low over the ground with the wind, the signature of a dust
  * storm (and a hint of it on gusty days). One sprite draw call; every streak is placed on the GPU
  * from instanceIndex, wraps around the camera, hugs the terrain, and is rotated in screen space to
  * line up with the projected wind direction.
+ *
+ * The first DEBRIS instances ride the same wind as debris: tumbleweeds bounding along the ground
+ * (on windy days too) and, in a storm, scraps of paper, leaves, plastic and twigs flung past at
+ * head height. Same draw call, same program.
  */
 export class SandStreaks {
   sprite: THREE.Sprite;
   readonly uOffset = uniform(new THREE.Vector2());
   readonly uDir = uniform(new THREE.Vector2(1, 0));
   readonly uAmount = uniform(0);
+  readonly uDebris = uniform(new THREE.Vector2());
   private offset = new THREE.Vector2();
 
   constructor(private atmo: Atmosphere, hf: Heightfield, heightTex: THREE.Texture, count = 900) {
     const mat = new THREE.SpriteNodeMaterial({ transparent: true, depthWrite: false });
     const B = float(48);
+    const fi = float(instanceIndex);
+    const isDeb = fi.lessThan(DEBRIS);
+    const isTw = fi.lessThan(TUMBLEWEEDS);
     const seed = vec3(hash(instanceIndex.add(17)), hash(instanceIndex.add(4099)), hash(instanceIndex.add(8191)));
-    const speedK = hash(instanceIndex.add(23)).mul(0.7).add(0.65);
-    const lxz = fract(seed.xz.add(this.uOffset.mul(speedK).div(B))).sub(0.5).mul(B);
+    // tumbleweeds roll a little slower than the wind, litter flies with it
+    const speedK = select(isTw, hash(instanceIndex.add(23)).mul(0.25).add(0.5), hash(instanceIndex.add(23)).mul(0.7).add(0.65));
+    // debris lives in a tighter box than the streaks, so the few pieces there are stay close by
+    const box = select(isDeb, select(isTw, float(40), float(26)), B);
+    const lxz = fract(seed.xz.add(this.uOffset.mul(speedK).div(box))).sub(0.5).mul(box);
     const wxz = cameraPosition.xz.add(lxz);
     const ground = texture(heightTex, wxz.div(hf.size).add(0.5)).r;
     // most streaks skim the sand; a few loft up to head height
     const lift = pow(seed.y, 2.4).mul(2.6).add(0.04);
     const flutter = sin(time.mul(seed.x.mul(3).add(4)).add(seed.z.mul(40))).mul(0.06).mul(lift);
-    const pos = vec3(wxz.x, ground.add(lift).add(flutter), wxz.y);
+    // debris: a tumbleweed bounds along on its own radius; litter flutters between knee and roof height
+    const twSize = seed.z.mul(0.45).add(0.5);
+    const hop = abs(sin(time.mul(seed.x.mul(1.5).add(2.2)).add(seed.y.mul(30)))).mul(pow(seed.z, 2).mul(0.7).add(0.15));
+    const litSize = seed.z.mul(0.12).add(0.07);
+    const litY = pow(seed.y, 1.6).mul(3.4).add(0.25).add(sin(time.mul(seed.x.mul(2).add(1.5)).add(seed.z.mul(50))).mul(0.45));
+    const debY = select(isTw, twSize.mul(0.45).add(hop), litY);
+    const isWisp = fi.lessThan(DEBRIS + WISPS).and(isDeb.not());
+    const wispY = pow(seed.y, 1.3).mul(2.4).add(0.35);
+    const pos = vec3(wxz.x, ground.add(select(isDeb, debY, select(isWisp, wispY, lift.add(flutter)))), wxz.y);
     mat.positionNode = pos;
     // align with the wind as seen on screen; foreshortened when it blows toward/away from the camera
     const wv = cameraViewMatrix.mul(vec4(this.uDir.x, 0, this.uDir.y, 0)).xy;
     const along = clamp(length(wv), 0.12, 1);
-    mat.rotationNode = atan(wv.y, wv.x);
+    // tumbleweeds roll the way they travel across the screen; litter spins
+    const roll = time.mul(speedK.mul(3.2).div(twSize)).mul(select(wv.x.greaterThan(0), float(-1), float(1)));
+    const spin = time.mul(seed.x.mul(6).add(2)).mul(select(seed.y.greaterThan(0.5), float(1), float(-1)));
+    mat.rotationNode = select(isDeb, select(isTw, roll, spin), atan(wv.y, wv.x));
     const len = hash(instanceIndex.add(5)).mul(2.6).add(0.9);
-    mat.scaleNode = vec2(len.mul(along), hash(instanceIndex.add(6)).mul(0.06).add(0.025));
+    const debS = select(isTw, twSize, litSize);
+    const thick = select(isWisp, hash(instanceIndex.add(6)).mul(0.9).add(0.35), hash(instanceIndex.add(6)).mul(0.06).add(0.025));
+    const long = select(isWisp, len.mul(2.2).add(2), len);
+    mat.scaleNode = select(isDeb, vec2(debS, debS), vec2(long.mul(along), thick));
 
+    const atlas = debrisAtlas();
     mat.colorNode = Fn(() => {
       const p = uv();
       // bright leading head, long fading tail, soft edges across
@@ -184,8 +272,25 @@ export class SandStreaks {
       const pulse = smoothstep(0.2, 0.7, sin(time.mul(speedK.mul(2.3)).add(seed.x.mul(60))).mul(0.5).add(0.5));
       const view = normalize(pos.sub(cameraPosition));
       const mu = max(dot(view, atmo.uSunDir), 0);
-      const lit = (atmo.uStormColor as N).mul(1.6).add(atmo.uSunColor.mul(pow(mu, 6).mul(0.5).mul(float(1).sub(atmo.uNight))));
-      return vec4(lit, head.mul(across).mul(fade).mul(pulse).mul(this.uAmount).mul(0.4));
+      const day = float(1).sub(atmo.uNight);
+      const lit = (atmo.uStormColor as N).mul(1.6).add(atmo.uSunColor.mul(pow(mu, 6).mul(0.5).mul(day)));
+      // wisps: a soft, ragged ribbon with no bright head, torn by the noise as it flies
+      const rag = noise(vec2(p.x.mul(0.6).add(seed.x.mul(7)), p.y.mul(0.35).add(time.mul(0.15)))).r;
+      const wisp = smoothstep(0.0, 0.3, p.x).mul(smoothstep(1.0, 0.6, p.x)).mul(smoothstep(0.5, 0.1, abs(p.y.sub(0.5)))).mul(smoothstep(0.3, 0.7, rag));
+      const shape = select(isWisp, wisp.mul(0.32), head.mul(across).mul(0.4));
+      const streak = vec4(lit, shape.mul(fade).mul(pulse).mul(this.uAmount));
+      // debris: one atlas cell each, lit flat by sky and sun, sinking into the murk with distance
+      const cell = floor(hash(instanceIndex.add(31)).mul(3.999));
+      const cuv = select(isTw, p.mul(vec2(0.5, 1)), vec2(float(0.5).add(cell.mod(2).mul(0.25)).add(p.x.mul(0.25)), floor(cell.div(2)).mul(0.5).add(p.y.mul(0.5))));
+      const tex = texture(atlas, cuv);
+      const light = atmo.uHaze.mul(0.35).add(atmo.uSunColor.mul(day.mul(0.4).add(0.05))).add((atmo.uStormColor as N).mul(0.35));
+      const dFade = smoothstep(box.mul(0.5), box.mul(0.3), dist).mul(smoothstep(0.4, 1.2, dist));
+      // the amount thins the crowd (each piece has its own threshold) rather than ghosting it
+      const amt = select(isTw, this.uDebris.x, this.uDebris.y);
+      const th = hash(instanceIndex.add(77)).mul(0.9);
+      const dAmt = smoothstep(th, th.add(0.1), amt);
+      const debris = vec4(tex.rgb.mul(light), tex.a.mul(dFade).mul(dAmt));
+      return select(isDeb, debris, streak);
     })();
     this.sprite = new THREE.Sprite(mat);
     this.sprite.count = count;
@@ -197,7 +302,11 @@ export class SandStreaks {
     const w = this.atmo.wind;
     const amount = Math.min(1, this.atmo.storm * 1.3 + Math.max(0, this.atmo.windStrength - 1.1) * 0.25);
     this.uAmount.value = amount;
-    this.sprite.visible = amount > 0.01;
+    // tumbleweeds go on any properly windy day; litter only flies in a storm
+    const tw = Math.min(1, this.atmo.storm * 2 + Math.max(0, this.atmo.windStrength - 1.0) * 1.5);
+    const lit = Math.min(1, Math.max(0, this.atmo.storm - 0.12) * 2.2);
+    (this.uDebris.value as THREE.Vector2).set(tw, lit);
+    this.sprite.visible = amount > 0.01 || tw > 0.01;
     this.offset.x += w.x * dt * 3.2;
     this.offset.y += w.y * dt * 3.2;
     (this.uOffset.value as THREE.Vector2).copy(this.offset);
@@ -313,7 +422,9 @@ export class DustPuffs {
     const travel = B.xyz.mul(float(1).sub(exp(age.mul(k).negate())).div(k));
     const pos = A.xyz.add(travel).add(this.uWind.mul(age.mul(0.5))).add(vec3(0, age.mul(0.12), 0));
     mat.positionNode = pos;
-    const size = B.w.mul(age.mul(1.1).add(0.45)).mul(alive.select(float(1), float(0)));
+    // a negative size marks a puff of dark smoke (a burning motor) instead of sand
+    const smoke = B.w.lessThan(0);
+    const size: N = abs(B.w).mul(age.mul(smoke.select(float(1.6), float(1.1))).add(0.45)).mul(alive.select(float(1), float(0)));
     mat.scaleNode = vec2(size, size.mul(0.8));
     mat.rotationNode = hash(instanceIndex).mul(6.28).add(age.mul(0.3));
     mat.colorNode = Fn(() => {
@@ -327,7 +438,8 @@ export class DustPuffs {
       const mu = max(dot(view, atmo.uSunDir), 0);
       const night = float(1).sub(atmo.uNight.mul(0.75));
       const lit = atmo.uHaze.mul(0.75).add(atmo.uSunColor.mul(pow(mu, 3).mul(0.7).add(0.25))).mul(night);
-      return vec4(lit, shape.mul(fade).mul(soft).mul(0.32));
+      const sooty = lit.mul(0.1).add(0.012);
+      return vec4(select(smoke, sooty, lit) as N, shape.mul(fade).mul(soft).mul(smoke.select(float(0.55), float(0.32))));
     })();
     this.sprite = new THREE.Sprite(mat);
     this.sprite.count = N;
@@ -336,7 +448,7 @@ export class DustPuffs {
   }
 
   /** `n` puffs around `p`: `spread` m/s outward, `up` m/s upward, `size` m, optional push `dir`. */
-  emit(p: THREE.Vector3, n: number, spread: number, up: number, size: number, dir?: THREE.Vector3) {
+  emit(p: THREE.Vector3, n: number, spread: number, up: number, size: number, dir?: THREE.Vector3, smoke = false) {
     const A = this.a.array as Float32Array, B = this.b.array as Float32Array;
     for (let i = 0; i < n; i++) {
       const j = this.next;
@@ -350,7 +462,7 @@ export class DustPuffs {
       B[j * 4] = Math.cos(ang) * sp + (dir?.x ?? 0);
       B[j * 4 + 1] = up * (0.5 + Math.random() * 0.8);
       B[j * 4 + 2] = Math.sin(ang) * sp + (dir?.z ?? 0);
-      B[j * 4 + 3] = size * (0.7 + Math.random() * 0.6);
+      B[j * 4 + 3] = size * (0.7 + Math.random() * 0.6) * (smoke ? -1 : 1);
     }
     this.a.needsUpdate = true;
     this.b.needsUpdate = true;
@@ -421,7 +533,9 @@ export class Fire {
     const ez = sin(time.mul(1.1).add(hash(instanceIndex.add(9)).mul(20))).mul(0.4).mul(life);
     em.positionNode = vec3(ex.add(hash(instanceIndex.add(1)).sub(0.5).mul(0.6)), life.mul(uS.mul(4)), ez);
     em.scaleNode = vec2(uS.mul(0.04), uS.mul(0.04));
-    em.colorNode = vec4(vec3(1.0, 0.45, 0.1).mul(float(8).mul(float(1).sub(life))), smoothstep(1, 0.6, life));
+    // a soft round spark: without the disc each ember drew as a hard square (big ones near the eye)
+    const disc = smoothstep(1, 0.15, length(uv().sub(0.5)).mul(2));
+    em.colorNode = vec4(vec3(1.0, 0.45, 0.1).mul(float(8).mul(float(1).sub(life))), smoothstep(1, 0.6, life).mul(disc));
     const embers = new THREE.Sprite(em);
     embers.count = 60;
     this.group.add(embers);
@@ -828,3 +942,170 @@ export class Shockwave {
 }
 
 const _v1 = new THREE.Vector3(), _v2 = new THREE.Vector3(), _v3 = new THREE.Vector3();
+
+/**
+ * Electric arcs: jagged bolts drawn as crossed ribbons (readable from any side without knowing the
+ * camera). Up to `maxBolts` per frame in ONE additive mesh; the CPU rewrites its few hundred
+ * vertices only while something is arcing. Points are in the mesh's parent space.
+ *   arcs.begin(); arcs.bolt(a, b, { width, jag }); …; arcs.end();
+ */
+export class ElectricArc {
+  readonly mesh: THREE.Mesh;
+  readonly intensity = uniform(1);
+  private readonly pos: THREE.BufferAttribute;
+  private readonly segs: number;
+  private n = 0;
+  private used = 0;
+  private readonly walk: number[] = [];
+  private readonly _d = new THREE.Vector3();
+  private readonly _s1 = new THREE.Vector3();
+  private readonly _s2 = new THREE.Vector3();
+  private readonly _p = new THREE.Vector3();
+
+  constructor(private readonly maxBolts = 4, segs = 14, color: THREE.ColorRepresentation = '#8fd0ff') {
+    this.segs = segs;
+    const vPerRibbon = (segs + 1) * 2;
+    const nv = maxBolts * 2 * vPerRibbon;
+    const geo = new THREE.BufferGeometry();
+    this.pos = new THREE.BufferAttribute(new Float32Array(nv * 3), 3);
+    this.pos.setUsage(THREE.DynamicDrawUsage);
+    const uvA = new Float32Array(nv * 2);
+    const idx: number[] = [];
+    for (let r = 0; r < maxBolts * 2; r++) {
+      const base = r * vPerRibbon;
+      for (let i = 0; i <= segs; i++) {
+        uvA[(base + i * 2) * 2] = i / segs;
+        uvA[(base + i * 2 + 1) * 2] = i / segs;
+        uvA[(base + i * 2 + 1) * 2 + 1] = 1;
+        if (i < segs) {
+          const a = base + i * 2;
+          idx.push(a, a + 1, a + 2, a + 1, a + 3, a + 2);
+        }
+      }
+    }
+    geo.setAttribute('position', this.pos);
+    geo.setAttribute('uv', new THREE.BufferAttribute(uvA, 2));
+    geo.setIndex(idx);
+    geo.boundingSphere = new THREE.Sphere(new THREE.Vector3(), 1e4);
+    const mat = new THREE.MeshBasicNodeMaterial({ transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide, fog: false });
+    const c = uniform(new THREE.Color(color));
+    const k = this.intensity;
+    mat.colorNode = Fn(() => {
+      const across = abs(uv().y.sub(0.5)).mul(2);
+      // white-hot core inside a blue sheath; the ends fade so bolts don't stop in hard cuts
+      const core = smoothstep(0.35, 0.0, across);
+      const sheath = pow(float(1).sub(across), 2.2);
+      const ends = smoothstep(0.0, 0.06, uv().x).mul(smoothstep(1.0, 0.94, uv().x));
+      return vec4(c.mul(sheath.mul(2.5)).add(vec3(1, 1, 1).mul(core.mul(6))).mul(ends).mul(k), 1);
+    })();
+    this.mesh = new THREE.Mesh(geo, mat);
+    this.mesh.frustumCulled = false;
+    this.mesh.renderOrder = 24;
+    this.mesh.name = 'arcs';
+  }
+
+  begin() {
+    this.used = 0;
+  }
+
+  /** One bolt from `a` to `b`. `jag` = lateral wander per segment (m), `width` = ribbon width (m).
+   *  `path` (optional) receives the bolt's jagged centre line, segs + 1 points (for branches). */
+  bolt(a: THREE.Vector3, b: THREE.Vector3, opts: { width?: number; jag?: number; path?: THREE.Vector3[] } = {}) {
+    if (this.used >= this.maxBolts) return;
+    const w = opts.width ?? 0.03, jag = opts.jag ?? 0.12;
+    const d = this._d.copy(b).sub(a);
+    const len = d.length();
+    if (len < 1e-4) return;
+    d.divideScalar(len);
+    // two sides perpendicular to the bolt and to each other
+    const s1 = this._s1.set(0, 1, 0).cross(d);
+    if (s1.lengthSq() < 1e-4) s1.set(1, 0, 0).cross(d);
+    s1.normalize();
+    const s2 = this._s2.copy(d).cross(s1).normalize();
+    const S = this.segs, wk = this.walk;
+    // a random walk with its drift removed, so it leaves `a` and lands exactly on `b`
+    let ox = 0, oy = 0;
+    for (let i = 0; i <= S; i++) {
+      if (i > 0) { ox += (Math.random() - 0.5) * jag; oy += (Math.random() - 0.5) * jag; }
+      wk[i * 2] = ox; wk[i * 2 + 1] = oy;
+    }
+    const arr = this.pos.array as Float32Array;
+    for (let r = 0; r < 2; r++) {
+      const side = r === 0 ? s1 : s2;
+      const base = (this.used * 2 + r) * (S + 1) * 2;
+      for (let i = 0; i <= S; i++) {
+        const t = i / S;
+        const p = this._p.copy(a).addScaledVector(d, len * t)
+          .addScaledVector(s1, wk[i * 2] - t * wk[S * 2]).addScaledVector(s2, wk[i * 2 + 1] - t * wk[S * 2 + 1]);
+        if (r === 0 && opts.path) (opts.path[i] ??= new THREE.Vector3()).copy(p);
+        const hw = w * (0.6 + 0.4 * Math.sin(t * Math.PI));
+        const v0 = (base + i * 2) * 3, v1 = v0 + 3;
+        arr[v0] = p.x - side.x * hw; arr[v0 + 1] = p.y - side.y * hw; arr[v0 + 2] = p.z - side.z * hw;
+        arr[v1] = p.x + side.x * hw; arr[v1 + 1] = p.y + side.y * hw; arr[v1 + 2] = p.z + side.z * hw;
+      }
+    }
+    this.used++;
+  }
+
+  /** Collapse unused ribbons and upload. Hides the mesh when nothing arced. */
+  end() {
+    if (this.used === 0 && this.n === 0) { this.mesh.visible = false; return; }
+    const per = (this.segs + 1) * 2 * 3 * 2;
+    if (this.used < this.n) (this.pos.array as Float32Array).fill(0, this.used * per, this.n * per);
+    this.n = this.used;
+    this.pos.needsUpdate = true;
+    this.mesh.visible = this.used > 0;
+  }
+}
+
+/**
+ * Dry lightning inside a dust storm: a forked channel far out in the murk, struck once per stroke
+ * (Weather.onLightning) and then lit by the storm's own flash pulses, so re-strikes keep the same
+ * shape like real lightning. One additive mesh; farther strokes sink into the dust.
+ */
+export class StormLightning {
+  readonly arcs = new ElectricArc(6, 26, '#c8ceff');
+  private readonly path: THREE.Vector3[] = [];
+  private readonly _a = new THREE.Vector3();
+  private readonly _b = new THREE.Vector3();
+  private vis = 0;
+
+  constructor() {
+    this.arcs.mesh.name = 'storm-lightning';
+    this.arcs.mesh.renderOrder = -900; // drawn with the sky, behind every other transparent
+  }
+
+  get mesh() {
+    return this.arcs.mesh;
+  }
+
+  /** A new stroke around `cam`: `k` 0..1 = how close (and bright). */
+  strike(cam: THREE.Vector3, k: number) {
+    const dist = 220 + (1 - k) * 520 + Math.random() * 120;
+    const ang = Math.random() * Math.PI * 2;
+    const gx = cam.x + Math.cos(ang) * dist, gz = cam.z + Math.sin(ang) * dist;
+    const top = this._a.set(gx + (Math.random() - 0.5) * 120, cam.y + 260 + Math.random() * 120, gz + (Math.random() - 0.5) * 120);
+    const ground = this._b.set(gx, cam.y - 20, gz);
+    const a = this.arcs;
+    a.begin();
+    a.bolt(top, ground, { width: 2.6, jag: 26, path: this.path });
+    // forks peel off the main channel and die out before the ground
+    const p = this.path, n = p.length - 1;
+    for (let f = 0; f < 4; f++) {
+      const from = p[Math.floor(n * (0.15 + Math.random() * 0.55))];
+      const len = 50 + Math.random() * 110;
+      const dx = Math.random() - 0.5, dz = Math.random() - 0.5;
+      _v1.set(from.x + dx * len * 1.4, from.y - len * (0.5 + Math.random() * 0.4), from.z + dz * len * 1.4);
+      a.bolt(_v2.copy(from), _v1, { width: 1.3 - f * 0.2, jag: 12 });
+    }
+    a.end();
+    this.vis = 0.35 + 0.65 * k;
+  }
+
+  /** `flash` = Weather.flash (0..1), `storm` = strength 0..1. */
+  update(flash: number, storm: number) {
+    const on = flash > 0.03 && storm > 0.3;
+    this.arcs.mesh.visible = on;
+    if (on) this.arcs.intensity.value = Math.min(1.4, flash * 1.6) * this.vis * (1.2 - storm * 0.5);
+  }
+}

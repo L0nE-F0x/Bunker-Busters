@@ -5,6 +5,7 @@ import { footstep, landing, type StepOpts } from './foley';
 import { HARDNESS, type Room, type Surface } from './surface';
 import { CombatAudio } from './combatAudio';
 import { VoicePlayer } from './voice';
+import { Wildlife } from './wildlife';
 
 /**
  * Positional ambience loops (Landmarks/sites push `{ kind, pos }` into `landmarks.audioSpots`).
@@ -12,7 +13,7 @@ import { VoicePlayer } from './voice';
  *   drone: SeedBot's rotors · fire: camp fire · neon: tube buzz · generator: small diesel
  *   drip: water in a cave · hum: server/transformer hum · wind-hollow: wind through a hull or pipe
  *   radio: a radio murmuring to itself · projector: film projector clatter · crowd: low voices round a fire
- *   sparks: a shorting cable
+ *   sparks: a shorting cable · flies: over a wreck · chimes: scrap wind chimes · shutter: a loose shutter in gusts
  * Spots are distance-gated: beyond a kind's range they have no nodes at all.
  */
 export type { AmbientKind } from './ambient';
@@ -34,6 +35,8 @@ export interface SoundScene {
   front?: number;
   /** Wind heading on the ground plane (x, z as Atmosphere.windDir's x, y). The storm comes from −windDir. */
   windDir?: { x: number; y: number };
+  /** 0..1 how much of a fight you're in: hunted ≈ 0.6, rounds flying → 1 (drives the music's fight stem). */
+  combat?: number;
 }
 
 /** A convolution reverb that's only connected (and so only costs anything) while it's being fed. */
@@ -79,6 +82,14 @@ class Verb {
 export class AudioEngine {
   ctx!: AudioContext;
   private master!: GainNode;
+  /** A lowpass over the whole mix that closes when you're deafened (blasts, shotguns indoors). */
+  private dull!: BiquadFilterNode;
+  /** Where the tinnitus goes in (after the dulling, so it rings clear). */
+  private ears!: AudioNode;
+  private ring: { o: OscillatorNode[]; g: GainNode; until: number } | null = null;
+  private deafUntil = 0;
+  /** The very end of the chain (after the limiter): what reaches the speakers (harness tap). */
+  out!: AudioNode;
   private sfx!: GainNode;
   /** Diegetic world sound (footsteps, positional loops): dry-ish outdoors, into the room reverb indoors. */
   private foley!: GainNode;
@@ -110,6 +121,8 @@ export class AudioEngine {
   private cicadaT = 12;
   private coyoteT = 80;
   private hawkT = 60;
+  /** Doves, quail and wrens by morning; poorwills, owls and coyote yips by night. */
+  wildlife: Wildlife | null = null;
   private crickets = [
     { f: 4450, period: 0.82, pan: -0.55, on: false, t: 2, next: 0 },
     { f: 4980, period: 1.07, pan: 0.6, on: false, t: 6, next: 0 },
@@ -138,6 +151,8 @@ export class AudioEngine {
   private voiceBus!: GainNode;
   private voice!: VoicePlayer;
   private voicesOn = true;
+  /** The score's level under speech (VoicePlayer's duck). */
+  private musicDuck = 1;
 
   get ready() {
     return this.started;
@@ -166,7 +181,14 @@ export class AudioEngine {
     limiter.ratio.value = 20;
     limiter.attack.value = 0.001;
     limiter.release.value = 0.12;
-    this.master.connect(comp).connect(makeup).connect(limiter).connect(ctx.destination);
+    // the ears: wide open, until something goes off too close (see deafen)
+    this.dull = ctx.createBiquadFilter();
+    this.dull.type = 'lowpass';
+    this.dull.frequency.value = 20000;
+    this.dull.Q.value = 0.5;
+    this.master.connect(this.dull).connect(comp).connect(makeup).connect(limiter).connect(ctx.destination);
+    this.out = limiter;
+    this.ears = comp;
     this.master.gain.value = this.volume.master;
 
     this.reverb = ctx.createConvolver();
@@ -225,14 +247,21 @@ export class AudioEngine {
     this.crackleBuf = crackleBuffer(ctx);
     this.spots = new SpotManager(this.voiceEnv(ctx), this.foley, this.roomBus);
     this.startWind();
+    this.wildlife = new Wildlife({ ctx, out: this.amb, reverb: this.reverbSend, noise: this.noiseBuf });
     this.score = new Music(ctx, this.music, this.reverbSend, this.noiseBuf);
-    this.combat = new CombatAudio({ ctx, noise: this.noiseBuf, sfx: this.sfx, reverb: this.reverbSend, room: this.roomBus, listener: () => this.listenerPos });
+    this.combat = new CombatAudio({
+      ctx, noise: this.noiseBuf, sfx: this.sfx, reverb: this.reverbSend, room: this.roomBus, listener: () => this.listenerPos,
+      enclosed: () => this.enclosed,
+      deafen: (k) => this.deafen(k),
+    });
     this.voiceBus = ctx.createGain();
     this.voiceBus.gain.value = this.volume.sfx;
     this.voiceBus.connect(this.master);
-    this.voice = new VoicePlayer(ctx, this.voiceBus, (pos) => this.panner(pos, 6, 1.1), (on) => {
-      // talk sits on top of the score: duck it while someone speaks
-      this.music.gain.setTargetAtTime(this.volume.music * (on ? 0.45 : 1), ctx.currentTime, on ? 0.15 : 0.6);
+    this.voice = new VoicePlayer(ctx, this.voiceBus, (pos) => this.panner(pos, 6, 1.1), (k) => {
+      // talk sits on top of the score: duck it while someone speaks (a bark only a little)
+      const down = k < this.musicDuck;
+      this.musicDuck = k;
+      this.music.gain.setTargetAtTime(this.volume.music * k, ctx.currentTime, down ? 0.15 : 0.6);
     });
     this.voice.enabled = this.voicesOn;
   }
@@ -273,6 +302,57 @@ export class AudioEngine {
     };
   }
 
+  /**
+   * Too loud, too close (`k` 0..1): the world goes dull and far away for a moment and a high whine
+   * rings over it, then the hearing comes back. A blast at your feet is k≈1; a shotgun in a small
+   * room is a little of it.
+   */
+  deafen(k: number) {
+    if (!this.started || k < 0.05) return;
+    const ctx = this.ctx;
+    const t = ctx.currentTime + 0.1; // let the bang itself land first
+    const hold = 0.25 + 0.6 * k, back = 1.2 + 3.2 * k;
+    const f = this.dull.frequency;
+    // only ever make it worse: a small one during a big one's recovery doesn't reopen the ears
+    const floor = 20000 * Math.pow(520 / 20000, Math.min(1, k));
+    if (t + hold + back > this.deafUntil || f.value > floor) {
+      f.cancelScheduledValues(t);
+      f.setValueAtTime(Math.max(floor, Math.min(f.value, 20000)), t);
+      f.exponentialRampToValueAtTime(floor, t + 0.05);
+      f.setValueAtTime(floor, t + hold);
+      f.exponentialRampToValueAtTime(20000, t + hold + back);
+      this.deafUntil = Math.max(this.deafUntil, t + hold + back);
+    }
+    // the ring: two close sines (a beating, not a test tone), fading slower than the dulling
+    const peak = 0.022 * Math.min(1, k);
+    const end = t + hold + back * 1.3;
+    if (!this.ring || this.ring.until < ctx.currentTime + 0.2) {
+      const g = ctx.createGain();
+      g.gain.value = 0;
+      g.connect(this.ears);
+      const fr = 3700 + Math.random() * 700;
+      const o = [fr, fr * 1.004].map((hz, i) => {
+        const osc = ctx.createOscillator();
+        osc.frequency.value = hz;
+        const og = ctx.createGain();
+        og.gain.value = i ? 0.6 : 1;
+        osc.connect(og).connect(g);
+        osc.start(t);
+        return osc;
+      });
+      this.ring = { o, g, until: 0 };
+    }
+    const r = this.ring;
+    const g = r.g.gain;
+    g.cancelScheduledValues(t);
+    g.setTargetAtTime(Math.max(peak, g.value), t, 0.06);
+    g.setTargetAtTime(0, t + hold, back * 0.45);
+    r.until = Math.max(r.until, end);
+    for (const o of r.o) { try { o.stop(r.until + 0.5); } catch { /* fine */ } }
+    const done = r;
+    setTimeout(() => { if (this.ring === done && done.until < this.ctx.currentTime) { done.g.disconnect(); this.ring = null; } }, (r.until - ctx.currentTime + 0.8) * 1000);
+  }
+
   /** Musical stingers (bunker busted, caught). */
   sting(kind: 'busted' | 'caught') {
     this.score?.sting(kind);
@@ -282,7 +362,7 @@ export class AudioEngine {
     Object.assign(this.volume, v);
     if (!this.started) return;
     this.master.gain.value = this.volume.master;
-    this.music.gain.value = this.volume.music;
+    this.music.gain.value = this.volume.music * this.musicDuck;
     this.sfx.gain.value = this.volume.sfx;
     this.foley.gain.value = this.volume.sfx;
     this.voiceBus.gain.value = this.volume.sfx;
@@ -807,6 +887,7 @@ export class AudioEngine {
       this.chorusIdle = chorusTime ? 0 : this.chorusIdle + dt;
       if (this.chorusIdle > 12) { c.stop(t + 0.1); this.chorus = null; this.chorusIdle = 0; }
     }
+    this.wildlife?.update(dt, h, scene.mood === 'play' && outdoorsLife);
     if (scene.mood === 'play' && outdoorsLife) {
       this.cicadaT -= dt;
       if (this.cicadaT <= 0) {
@@ -841,7 +922,7 @@ export class AudioEngine {
       this.foleyHall.gain.setTargetAtTime(0.3 * (1 - this.enclosed), t, 0.3);
     }
 
-    this.score?.update({ mood: scene.mood, night: scene.night, tension, alarm: scene.alarm });
+    this.score?.update({ mood: scene.mood, night: scene.night, tension, alarm: scene.alarm, combat: scene.combat });
 
     const l = this.ctx.listener;
     const p = camera.position;
@@ -883,6 +964,11 @@ export class AudioEngine {
     if (!this.started) return null;
     if (!VOICES[kind]) return null;
     return this.spots.add(kind, pos);
+  }
+
+  /** Harness: what the score is doing about a fight. */
+  get musicState() {
+    return this.score?.fightState ?? null;
   }
 
   /** Positional loops: total and currently built (harness/bench). */

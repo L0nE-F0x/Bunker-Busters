@@ -1138,7 +1138,8 @@ export class JetSite extends Site {
       },
     });
     this.interactables.push({
-      id: 'jet.brochure', pos: this.frame.p(this.spots.brochure.x, this.spots.brochure.y + 0.3, this.spots.brochure.z), radius: 1.6,
+      // spots are already world-space (Site.spot applies the frame)
+      id: 'jet.brochure', pos: this.spots.brochure.clone().setY(this.spots.brochure.y + 0.3), radius: 1.6,
       primary: { label: 'Read the gold brochure', available: () => true, run: () => this.readBrochure() },
     });
     // the hold: four ways in

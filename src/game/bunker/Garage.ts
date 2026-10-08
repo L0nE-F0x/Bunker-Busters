@@ -7,6 +7,7 @@ import { Sparks } from '../world/effects';
 import { uPoolNight, uPoolBoost } from './garageAtlas';
 import { GARAGE } from '@/content/bunkers/garage';
 import { ITEMS } from '@/content/items';
+import { DAEMONS } from '@/content/hacks';
 import { XP_REWARDS, empRadius, stealthMeter } from '@/content/progression';
 import { TANNER, visibleChoices } from '@/content/dialogue';
 import type { TalkCtx } from '@/content/dialogue';
@@ -292,12 +293,7 @@ export class Garage {
             this.s.damage(15);
             this.s.events.emit('toast', { text: 'You yanked every wire. Lasers off. So is your hair.', kind: 'bad' });
           }
-          this.s.set(F.lasers);
-          this.applyFlags();
-          ctx.audio.play('disarm');
-          const fb = this.b.points.fuseBox;
-          this.sparks.emit(fb.clone().add(new THREE.Vector3(-0.45, 0.3, 0)), 36, 3, { up: 1, floorY: this.b.origin.y + 0.1, size: 0.025, life: 0.8 });
-          for (const l of this.b.lasers) for (const e of [l.a, l.b]) this.sparks.emit(e, 10, 1.6, { up: 0.5, floorY: this.b.origin.y + 0.1, size: 0.02, life: 0.5 });
+          this.lasersOff();
         },
       },
     });
@@ -410,11 +406,13 @@ export class Garage {
       text: 'Five pins, or a keypad Tanner is very proud of, or a noise.',
       choices: [
         { id: 'pad', label: 'Use the keypad', disabled: locked ? 'Keypad locked out' : undefined },
+        { id: 'splice', label: 'Splice the keypad controller', disabled: this.s.skill('electronics') >= 2 ? undefined : 'Requires Electronics 2' },
         { id: 'charge', label: 'Place a breach charge', disabled: charge === true ? undefined : charge },
         { id: 'no', label: 'Step back' },
       ],
     });
     if (pick === 'charge') { this.breach('vault'); return; }
+    if (pick === 'splice') { await this.spliceVault(); return; }
     if (pick !== 'pad') return;
     const res = await this.ctx.ui.keypad({ title: 'RUNWAY ROOM', code: '1234', hint: this.vaultHint() });
     if (res === 'ok') {
@@ -500,6 +498,38 @@ export class Garage {
     this.applyFlags();
     this.ctx.audio.play('door', { pos: this.b.points.sideDoor });
     this.taunt('That door was load-bearing! Emotionally!');
+  }
+
+  private lasersOff() {
+    this.s.set(F.lasers);
+    this.applyFlags();
+    this.ctx.audio.play('disarm');
+    const fb = this.b.points.fuseBox;
+    this.sparks.emit(fb.clone().add(new THREE.Vector3(-0.45, 0.3, 0)), 36, 3, { up: 1, floorY: this.b.origin.y + 0.1, size: 0.025, life: 0.8 });
+    for (const l of this.b.lasers) for (const e of [l.a, l.b]) this.sparks.emit(e, 10, 1.6, { up: 0.5, floorY: this.b.origin.y + 0.1, size: 0.02, life: 0.5 });
+  }
+
+  /** SPLICE the vault keypad's controller: it also runs the lasers and SeedBot's dock. */
+  private async spliceVault() {
+    const d = DAEMONS;
+    const daemons = [d.vault, d.seedbot, ...(this.s.has(F.lasers) ? [] : [d.lasers])];
+    const res = await this.ctx.ui.hack({ title: 'RUNWAY ROOM', host: 'PIVOTSON HOME SECURITY', difficulty: 2, daemons: daemons.map(({ id, name, blurb }) => ({ id, name, blurb })) });
+    if (res.aborted) return;
+    if (res.done.length) this.s.addXP(15 * res.done.length, 'Spliced Tanner\'s keypad');
+    for (const id of res.done) {
+      if (id === 'vault') {
+        this.ctx.ui.subtitle('Tanner Pivotson', 'Did you just sudo my door? I paid for the enterprise tier!', { pos: this.b.points.megaphone });
+        this.ctx.audio.play('megaphone', { pos: this.b.points.megaphone });
+        this.s.set(F.vault);
+        this.applyFlags();
+        this.ctx.audio.play('door', { pos: this.b.points.vaultDoor });
+        this.ctx.cam.addTrauma(0.15);
+      } else if (id === 'seedbot') {
+        this.drone.recall(40);
+        this.ctx.ui.subtitle('SeedBot', 'FIRMWARE REVIEW IN PROGRESS. PLEASE DO NOT STEAL ANYTHING DURING THIS TIME.', { pos: this.drone.position.clone() });
+      } else if (id === 'lasers') this.lasersOff();
+    }
+    if (res.traced) this.triggerAlarm(this.b.points.vaultDoor, 'Trace complete. The keypad screams your IP address.');
   }
 
   private openVault() {

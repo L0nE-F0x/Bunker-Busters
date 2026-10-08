@@ -14,6 +14,7 @@ import type { AudioEngine } from '@/engine/audio';
 import type { LockResult, TalkChoiceView, UIBridge } from '@/game/context';
 import { LockpickGame } from './Lockpick';
 import { CircuitGame, KeypadGame } from './Circuit';
+import { HackGame, type HackOpts, type HackResult } from './Hack';
 import { Minimap, MapData, drawWorldMap, type MapMarker } from './Minimap';
 import { mountUpdateNotice } from './Updater';
 import { isTouch, isIOS, isStandalone, canFullscreen, isFullscreen, enterFullscreen } from '@/engine/device';
@@ -51,6 +52,8 @@ export interface HudFrame {
   /** Hostiles out in the world: something is hunting you, or getting curious. */
   threat?: 'hunted' | 'watched' | null;
   venom?: boolean;
+  /** Night stealth: in shadow, lit (firelight, floodlight, torch), or nothing to say (day, twilight). */
+  light?: 'shadow' | 'lit' | null;
 }
 
 /** DOM overlay. Owns HUD widgets, menus, modal panels and minigames. */
@@ -156,8 +159,7 @@ export class UI implements UIBridge {
         </div>
         <button class="btn">Back</button>
       </div>`;
-      ov.querySelector('button')!.onclick = () => ov.remove();
-      this.root.appendChild(ov);
+      this.mountBackPanel(ov);
       return;
     }
     ov.innerHTML = `
@@ -185,7 +187,15 @@ export class UI implements UIBridge {
         </div>
         <button class="btn">Back</button>
       </div>`;
-    ov.querySelector('button')!.onclick = () => ov.remove();
+    this.mountBackPanel(ov);
+  }
+
+  /** A panel over another menu: its button or Escape closes just this one. */
+  private mountBackPanel(ov: HTMLElement) {
+    const esc = (e: KeyboardEvent) => { if (e.code === 'Escape') { e.preventDefault(); e.stopImmediatePropagation(); close(); } };
+    const close = () => { ov.remove(); window.removeEventListener('keydown', esc, true); };
+    window.addEventListener('keydown', esc, true);
+    ov.querySelector('button')!.onclick = close;
     this.root.appendChild(ov);
   }
 
@@ -313,7 +323,7 @@ export class UI implements UIBridge {
         <div class="meta"><span class="arch"></span><span class="xptext"></span></div>
         <div class="spwrap"></div>
       </div>
-      <div class="stance"><span class="pill venom">Venom</span><span class="pill crouch">Crouch</span><span class="pill sprint">Sprint</span></div>`;
+      <div class="stance"><span class="pill venom">Venom</span><span class="pill lightp"></span><span class="pill crouch">Crouch</span><span class="pill sprint">Sprint</span></div>`;
     for (const k of ['objective', 'toasts', 'minimap', 'clock', 'detect', 'subtitle', 'prompt', 'hotbar', 'vitals', 'stance', 'crosshair', 'xhair', 'hitmark', 'dmgarcs', 'weapon']) {
       this.els[k] = hud.querySelector(`.${k}`)!;
     }
@@ -326,13 +336,37 @@ export class UI implements UIBridge {
     state.events.on('xp', ({ amount, reason }) => { this.toast(`+${amount} XP · ${reason}`, 'xp'); this.refreshVitals(); });
     state.events.on('levelup', ({ level }) => this.levelUp(level));
     state.events.on('health', () => this.refreshVitals());
-    state.events.on('item', ({ id, qty }) => { this.toast(`+${qty} ${ITEMS[id]?.name ?? id}`, 'good'); this.audio.play('pickup'); });
+    state.events.on('item', ({ id, qty }) => this.itemGot(id, qty));
     state.events.on('inventoryChanged', () => this.refreshHotbar());
     this.refreshVitals();
     this.refreshHotbar();
   }
 
+  private pendingItems: { id: string; qty: number; name: string }[] = [];
+
+  /**
+   * "+2 Water" per pickup, held until the end of the task: a loot summary toast, banner or intel card
+   * shown in the same breath ("2× Water, 6× .38") already says it, so those items aren't toasted twice.
+   */
+  private itemGot(id: string, qty: number) {
+    if (!this.pendingItems.length) {
+      setTimeout(() => {
+        const left = this.pendingItems.splice(0);
+        if (!left.length) return;
+        this.audio.play('pickup');
+        for (const it of left) if (it.qty > 0) this.toast(`+${it.qty} ${it.name}`, 'good');
+      }, 0);
+    }
+    this.pendingItems.push({ id, qty, name: ITEMS[id]?.name ?? id });
+  }
+
+  /** Items a summary line already names are dropped from the pending per-item toasts. */
+  private claimItems(text: string) {
+    for (const it of this.pendingItems) if (it.qty > 0 && text.includes(`${it.qty}× ${it.name}`)) it.qty = 0;
+  }
+
   toast(text: string, kind: 'info' | 'good' | 'bad' | 'xp' = 'info') {
+    this.claimItems(text);
     const t = h('div', `toast ${kind}`, text);
     this.els.toasts?.appendChild(t);
     setTimeout(() => t.remove(), 4800);
@@ -377,6 +411,7 @@ export class UI implements UIBridge {
 
   /** Big centred banner. Queued so simultaneous events never overlap. */
   banner(title: string, sub: string, kind: 'good' | 'bad' | 'info' = 'good') {
+    this.claimItems(sub);
     this.bannerQueue.push([title, sub, kind]);
     if (!this.bannerBusy) this.nextBanner();
   }
@@ -422,6 +457,7 @@ export class UI implements UIBridge {
     if (el) el.textContent = label;
   }
 
+  private lastLight = '';
   updateHUD(dt: number, f: HudFrame) {
     if (!this.hud || !this.state) return;
     if (f.objective !== this.lastObjective) {
@@ -456,6 +492,14 @@ export class UI implements UIBridge {
     this.els.stance.querySelector('.crouch')!.classList.toggle('on', f.crouch);
     this.els.stance.querySelector('.sprint')!.classList.toggle('on', f.sprint);
     this.els.stance.querySelector('.venom')!.classList.toggle('on', !!f.venom);
+    // the stealth model, at night: are you a shadow or a target?
+    const lt = f.light === 'shadow' ? 'In shadow' : f.light === 'lit' ? 'Lit' : '';
+    if (lt !== this.lastLight) {
+      this.lastLight = lt;
+      const el = this.els.stance.querySelector('.lightp') as HTMLElement;
+      el.textContent = lt;
+      el.className = `pill lightp ${f.light ?? ''}`;
+    }
     // clock
     const hh = Math.floor(f.hour), mm = Math.floor((f.hour - hh) * 60);
     const phase = f.hour < 5 || f.hour > 20.5 ? 'NIGHT' : f.hour < 7.5 ? 'DAWN' : f.hour < 16.5 ? 'DAY' : f.hour < 19 ? 'GOLDEN HOUR' : 'DUSK';
@@ -572,6 +616,9 @@ export class UI implements UIBridge {
     };
     const keyClose = (e: KeyboardEvent) => {
       if (!['Escape', 'Tab', 'KeyI', 'KeyJ', 'KeyK', 'KeyM'].includes(e.code)) return;
+      // a panel opened on top (Settings or Controls over the pause menu) handles its own keys
+      const overlays = this.root.querySelectorAll(':scope > .overlay');
+      if (overlays[overlays.length - 1] !== ov) return;
       e.preventDefault();
       e.stopPropagation();
       if (e.code !== 'Escape' && keys?.(e.code)) return;
@@ -721,6 +768,7 @@ export class UI implements UIBridge {
   }
 
   showIntel(title: string, body: string, reveal: string, onClose: () => void) {
+    this.claimItems(reveal);
     this.audio.play('intel');
     this.openModal((close) => {
       const m = h('div', 'panel intel-reader interactive', `<div class="scan"></div>
@@ -768,6 +816,10 @@ export class UI implements UIBridge {
           <span>Effects</span><input type="range" min="0" max="1" step="0.05" data-k="sfx" value="${settings.sfx}">
           <span>${isTouch ? 'Look sensitivity' : 'Mouse sensitivity'}</span><input type="range" min="0.3" max="2.5" step="0.05" data-k="sensitivity" value="${settings.sensitivity}">
           <span>Voices</span><select data-k="voice"><option value="1" ${settings.voice ? 'selected' : ''}>ON</option><option value="0" ${settings.voice ? '' : 'selected'}>OFF (subtitles only)</option></select>
+          <span>Field of view <b class="val" data-v="fov"></b></span><input type="range" min="50" max="90" step="1" data-k="fov" value="${settings.fov}">
+          <span>Head bob</span><input type="range" min="0" max="1" step="0.1" data-k="bob" value="${settings.bob}">
+          ${isTouch ? '' : `<span>Invert look</span><select data-k="invertY"><option value="0" ${settings.invertY ? '' : 'selected'}>OFF</option><option value="1" ${settings.invertY ? 'selected' : ''}>ON (pull back to look up)</option></select>`}
+          <span>FPS counter</span><select data-k="showFps"><option value="0" ${settings.showFps ? '' : 'selected'}>OFF</option><option value="1" ${settings.showFps ? 'selected' : ''}>ON</option></select>
         </div>
         <button class="btn primary">Done</button>
       </div>`;
@@ -776,16 +828,52 @@ export class UI implements UIBridge {
         const k = (inp as HTMLElement).dataset.k as keyof Settings;
         const v = (inp as HTMLInputElement).value;
         const next = { ...settings } as Record<string, unknown>;
-        next[k] = k === 'quality' || k === 'difficulty' ? v : k === 'voice' ? v === '1' : Number(v);
+        next[k] = k === 'quality' || k === 'difficulty' ? v : k === 'voice' || k === 'invertY' || k === 'showFps' ? v === '1' : Number(v);
         Object.assign(settings, next);
         onChange(settings);
+        fovLabel();
       });
     });
+    // three.js counts the vertical angle; players know the horizontal one, so show that (at this window's shape)
+    const fovLabel = () => {
+      const el = ov.querySelector('[data-v="fov"]');
+      const hor = 2 * Math.atan(Math.tan((settings.fov * Math.PI) / 360) * (innerWidth / Math.max(1, innerHeight)));
+      if (el) el.textContent = `${Math.round((hor * 180) / Math.PI)}°`;
+    };
+    fovLabel();
     const esc = (e: KeyboardEvent) => { if (e.code === 'Escape') { e.stopPropagation(); done(); } };
     const done = () => { ov.remove(); window.removeEventListener('keydown', esc, true); };
     window.addEventListener('keydown', esc, true);
     (ov.querySelector('button') as HTMLElement).onclick = done;
     this.root.appendChild(ov);
+  }
+
+  private fpsEl: HTMLElement | null = null;
+  private fpsN = 0;
+  private fpsT = 0;
+
+  /** Settings → FPS counter. */
+  showFps(on: boolean) {
+    if (on && !this.fpsEl) {
+      this.fpsEl = h('div', 'fps-counter', '');
+      this.root.appendChild(this.fpsEl);
+      this.fpsN = 0;
+      this.fpsT = 0;
+    } else if (!on && this.fpsEl) {
+      this.fpsEl.remove();
+      this.fpsEl = null;
+    }
+  }
+
+  /** Called once per rendered frame; touches the DOM twice a second at most. */
+  tickFps(now: number) {
+    if (!this.fpsEl) return;
+    this.fpsN++;
+    if (!this.fpsT) this.fpsT = now;
+    if (now - this.fpsT < 500) return;
+    this.fpsEl.textContent = `${Math.round((this.fpsN * 1000) / (now - this.fpsT))} FPS`;
+    this.fpsN = 0;
+    this.fpsT = now;
   }
 
   resumeHint(show: boolean) {
@@ -1040,5 +1128,14 @@ export class UI implements UIBridge {
     const r = await new CircuitGame(this.root, this.audio, { ...opts, skill: this.state?.boardSkill() ?? 0 }).run();
     this.minigameOpen = false;
     return r;
+  }
+
+  async hack(opts: Omit<HackOpts, 'skill'> & { skill?: number }): Promise<HackResult> {
+    this.minigameOpen = true;
+    try {
+      return await new HackGame(this.root, this.audio, { ...opts, skill: opts.skill ?? this.state?.boardSkill() ?? 0 }).run();
+    } finally {
+      this.minigameOpen = false;
+    }
   }
 }
