@@ -12,12 +12,18 @@ export type WeatherPhase = 'calm' | 'front' | 'storm' | 'clearing';
  * Debug: `game.weather.storm(1)` (hold at full strength, `storm(0.5, true)` = jump there instantly),
  * `game.weather.rollIn()` (play a natural storm now), `game.weather.auto()`. URL: `?storm` / `?storm=0.6`.
  */
+/** How far upwind the storm's ground-level wall first shows (m). */
+const WALL_FROM = 1100;
+
 export class Weather {
   /** Storm strength 0..1 (smoothed). */
   intensity = 0;
   /** How visible the approaching dust wall on the horizon is, 0..1. */
   front = 0;
   phase: WeatherPhase = 'calm';
+  /** The storm's leading edge at ground level (StormWall): metres upwind of the player, and 0..1 shown. */
+  wallDist = WALL_FROM;
+  wallVis = 0;
   /** Called when a phase starts (for toasts / audio cues). */
   onPhase?: (p: WeatherPhase) => void;
   /** Dry lightning inside a thick storm: `k` 0..1 = how close (bright flash, loud and soon thunder). */
@@ -97,7 +103,7 @@ export class Weather {
 
   /** `scheduled` = false keeps the automatic cycle paused (title screen, menus). */
   update(dt: number, scheduled: boolean) {
-    let target = 0, frontTarget = 0;
+    let target = 0, frontTarget = 0, wallVis = 0, rateUp = 0.09;
     if (this.manual !== null) {
       target = this.manual;
     } else {
@@ -107,11 +113,19 @@ export class Weather {
         case 'calm':
           if (this.timer <= 0) this.setPhase('front', 45 + Math.random() * 20);
           break;
-        case 'front':
+        case 'front': {
           frontTarget = clamp(k * 2.2, 0, 1);
-          target = k > 0.7 ? 0.35 : 0.06;
+          // the wall rises over the horizon and rolls in at a steady ~25-35 m/s; the air stays
+          // fairly clear until it arrives (so you watch it come), then the murk slams shut
+          const w = clamp((k - 0.3) / 0.62, 0, 1);
+          this.wallDist = WALL_FROM * (1 - w);
+          wallVis = clamp((k - 0.3) / 0.12, 0, 1) * clamp((this.wallDist - 6) / 60, 0, 1);
+          const arrived = this.wallDist < 140;
+          target = arrived ? 0.62 : k > 0.6 ? 0.12 : 0.06;
+          if (arrived) rateUp = 0.32;
           if (this.timer <= 0) this.setPhase('storm', 90 + Math.random() * 90);
           break;
+        }
         case 'storm':
           target = this.peak * (0.85 + 0.15 * Math.sin(this.timer * 0.21));
           frontTarget = clamp(1 - k * 6, 0, 1);
@@ -124,7 +138,8 @@ export class Weather {
       }
     }
     // storms build faster than they clear
-    const rate = target > this.intensity ? 0.09 : 0.05;
+    const rate = target > this.intensity ? rateUp : 0.05;
+    this.wallVis = damp(this.wallVis, wallVis, 3, dt);
     this.intensity = clamp(this.intensity + clamp(target - this.intensity, -rate * dt, rate * dt), 0, 1);
     this.front = damp(this.front, frontTarget, 0.6, dt);
     this.updateLightning(dt);

@@ -18,7 +18,7 @@ import { Scrub, Pebbles } from './world/Scrub';
 import { Shrubs } from './world/Shrubs';
 import { Fauna } from './world/Fauna';
 import { Interior, hideExcept } from './world/interiors';
-import { DustMotes, GroundHaze, DustPuffs, SandStreaks, DustDevils, Shockwave, StormLightning, heightTexture } from './world/effects';
+import { DustMotes, GroundHaze, DustPuffs, SandStreaks, DustDevils, Shockwave, StormLightning, StormWall, heightTexture } from './world/effects';
 import { Weather } from './world/Weather';
 import { VirtualLight, lightPool } from './world/lights';
 import { updateRim, glow, desertRock } from './world/materials';
@@ -110,6 +110,7 @@ export class Game {
   streaks!: SandStreaks;
   devils!: DustDevils;
   lightning = new StormLightning();
+  stormWall!: StormWall;
   weather!: Weather;
   garage!: Garage;
   settlement!: Settlement;
@@ -250,7 +251,8 @@ export class Game {
       else if (p === 'clearing') this.ui.toast('The dust storm is passing.', 'info');
     };
     this.weather.onLightning = (k) => { this.audio.thunder(k); this.lightning.strike(this.camera.position, k); };
-    if (!SKIP.has('sky')) this.scene.add(this.lightning.mesh);
+    this.stormWall = new StormWall(this.atmo);
+    if (!SKIP.has('sky')) this.scene.add(this.lightning.mesh, this.stormWall.mesh);
     this.combat = new Combat(this.physics, this.hf, this.atmo, this.audio);
     this.combat.difficulty = this.settings.difficulty ?? 'normal';
     this.combat.puffs = this.puffs;
@@ -1087,7 +1089,7 @@ export class Game {
     this._exterior = [
       this.atmo.sky, this.terrain.mesh, this.terrain.far, this.props.group, this.landmarks.group, this.garage.b.group,
       this.scrub.mesh, this.shrubs.group, this.pebbles.mesh, this.fauna.mesh, this.fauna.models, this.recovery.group, this.machines.group,
-      this.haze.sprite, this.streaks.sprite, this.devils.sprite, this.lightning.mesh, this.scavenge?.group,
+      this.haze.sprite, this.streaks.sprite, this.devils.sprite, this.lightning.mesh, this.stormWall.mesh, this.scavenge?.group,
       ...[...this.intelMeshes.values()].filter((g) => !inside(g)),
     ].filter((o): o is THREE.Object3D => !!o);
     return this._exterior;
@@ -1653,6 +1655,7 @@ export class Game {
     this.streaks.update(dt);
     this.devils.update();
     this.lightning.update(this.weather.flash, this.weather.intensity);
+    this.stormWall.update(this.camera.position, this.weather.wallDist, this.weather.wallVis, this.atmo.uUpwind.value as THREE.Vector2);
     this.updateGrenades(dt);
     this.recovery.update(dt, focusPos, this.camera.position, this.mode === 'playing' && !!this.player && !this.ui.modalOpen);
     if (this.mode === 'playing' && !this.ui.modalOpen) this.machines.update(dt, this.camera.position);

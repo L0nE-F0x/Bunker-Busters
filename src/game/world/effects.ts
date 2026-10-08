@@ -1109,3 +1109,105 @@ export class StormLightning {
     if (on) this.arcs.intensity.value = Math.min(1.4, flash * 1.6) * this.vis * (1.2 - storm * 0.5);
   }
 }
+
+/**
+ * The leading edge of a dust storm at ground level: a boiling brown wall that rolls in from upwind
+ * and over you (the sky's horizon band is the storm body behind it). One arc of a cylinder around
+ * the camera, `dist` metres out and centred on the upwind direction; it's depth-tested, so a ridge
+ * nearer than the front stands out against it and is swallowed once the front has passed it. The
+ * head leans forward over you as it arrives. Unfogged: it carries its own haze. Hidden when calm.
+ */
+export class StormWall {
+  readonly mesh: THREE.Mesh;
+  private readonly uDist = uniform(1200);
+  private readonly uVis = uniform(0);
+  private static readonly SPAN = 1.45; // half the arc (rad)
+  private static readonly H = 340; // height of the head (m)
+
+  constructor(atmo: Atmosphere) {
+    const A = StormWall.SPAN, H = StormWall.H;
+    const cols = 96, rows = 14;
+    const pos: number[] = [], uvs: number[] = [], idx: number[] = [];
+    for (let j = 0; j <= rows; j++) {
+      const v = j / rows;
+      const r = 1 - 0.2 * v * v; // the head overhangs its own foot
+      for (let i = 0; i <= cols; i++) {
+        const u = i / cols, a = (u * 2 - 1) * A;
+        pos.push(Math.sin(a) * r, v, -Math.cos(a) * r);
+        uvs.push(u, v);
+      }
+    }
+    for (let j = 0; j < rows; j++) for (let i = 0; i < cols; i++) {
+      const a = j * (cols + 1) + i, b = a + cols + 1;
+      idx.push(a, b, a + 1, a + 1, b, b + 1);
+    }
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+    geo.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
+    geo.setIndex(idx);
+
+    const mat = new THREE.MeshBasicNodeMaterial({ transparent: true, depthWrite: false, side: THREE.DoubleSide, fog: false });
+    const u = uv().x, v = uv().y;
+    // metres along the front and up it: the billows grow as the wall comes closer
+    const s = u.sub(0.5).mul(2 * A).mul(this.uDist);
+    const hm = v.mul(H);
+    const t = time;
+    // cauliflower skyline (a function of s only), slowly morphing
+    const crest = noise(vec2(s.div(900), t.mul(0.006))).r.mul(0.55)
+      .add(noise(vec2(s.div(260).add(0.37), t.mul(0.015))).g.mul(0.3))
+      .add(noise(vec2(s.div(80).add(0.71), t.mul(0.03))).r.mul(0.15));
+    const top = crest.mul(0.85).add(0.22);
+    // billows boil up out of the skirt and roll forward
+    const b1 = noise(vec2(s.div(380), hm.div(300).sub(t.mul(0.018)))).r;
+    const b2 = noise(vec2(s.div(130).add(b1.mul(0.35)), hm.div(110).sub(t.mul(0.045)))).g;
+    const b3 = noise(vec2(s.div(38).add(b2.mul(0.2)), hm.div(34).sub(t.mul(0.11)))).r;
+    const billow = b1.mul(0.45).add(b2.mul(0.38)).add(b3.mul(0.17));
+    const edge = smoothstep(top, top.sub(0.1).sub(b2.mul(0.12)), v.add(b3.sub(0.5).mul(0.05)));
+    // ragged wisps where the head thins out; the ends of the arc melt into the haze
+    const thin = smoothstep(top.sub(0.25), top, v);
+    const wisps = mix(float(1), smoothstep(0.32, 0.62, billow), thin);
+    const ends = smoothstep(0.0, 0.16, u).mul(smoothstep(1.0, 0.84, u));
+    const alpha = edge.mul(wisps).mul(ends).mul(0.97).mul(this.uVis);
+
+    // shading: a dark, ground-hugging skirt; sun-caught tops on the lit side, a silver rim against
+    // the sun; lightning glows inside. Far off, the air between thins it toward the storm haze.
+    const storm = atmo.uStormColor as N;
+    const upwind3 = vec3(atmo.uUpwind.x, 0, atmo.uUpwind.y);
+    const sunDir = atmo.uSunDir as N;
+    const sunUp = smoothstep(-0.08, 0.06, sunDir.y);
+    const lit = max(dot(upwind3.negate(), sunDir), 0).mul(0.6).add(0.4).mul(sunUp);
+    const lift = smoothstep(0.0, 0.45, v).mul(0.5).add(billow.mul(billow).mul(0.9));
+    const skirt = smoothstep(0.0, 0.12, v).mul(0.4).add(0.6);
+    const viewDir = normalize(positionWorld.sub(cameraPosition));
+    const rim = pow(max(dot(viewDir, sunDir), 0), 4).mul(thin.mul(0.7).add(0.15)).mul(sunUp);
+    // each puff's sunward top is bright and its underside dark (the billow field's own vertical
+    // slope on screen stands in for a normal), and the folds between puffs hold shadow
+    const slopeUp = clamp(b2.mul(0.7).add(b1.mul(0.3)).dFdy().negate().mul(40), -1, 1);
+    const fold = smoothstep(0.25, 0.7, billow).mul(0.75).add(0.4);
+    const relief = slopeUp.mul(0.35).mul(lit.add(0.2)).add(1);
+    let col: N = storm.mul(float(0.3).add(lift.mul(lit.mul(0.9).add(0.25)))).mul(skirt).mul(fold).mul(relief);
+    // a haboob is tan-brown, a little less saturated than the storm's own dusk-lit haze
+    col = mix(col, vec3(dot(col, vec3(0.3, 0.55, 0.15))), 0.22);
+    col = col.add((atmo.uSunColor as N).mul(rim).mul(0.35));
+    col = col.add(vec3(0.5, 0.48, 0.62).mul(atmo.uFlash).mul(0.5));
+    col = mix(col, storm.mul(1.15), smoothstep(300, 1600, this.uDist).mul(0.45));
+    mat.colorNode = col;
+    mat.opacityNode = alpha;
+    this.mesh = new THREE.Mesh(geo, mat);
+    this.mesh.name = 'storm-wall';
+    this.mesh.frustumCulled = false;
+    this.mesh.renderOrder = -850; // with the sky's transparents, under dust and particles
+    this.mesh.visible = false;
+  }
+
+  /** `dist` = metres to the front, `vis` 0..1; `upwind` = Atmosphere.uUpwind (XZ, unit). */
+  update(cam: THREE.Vector3, dist: number, vis: number, upwind: THREE.Vector2) {
+    this.mesh.visible = vis > 0.002;
+    if (!this.mesh.visible) return;
+    this.uDist.value = dist;
+    this.uVis.value = vis;
+    this.mesh.position.set(cam.x, cam.y - 45, cam.z);
+    this.mesh.scale.set(dist, StormWall.H, dist);
+    this.mesh.rotation.y = Math.atan2(-upwind.x, -upwind.y);
+  }
+}
