@@ -4,6 +4,8 @@
 // After changing hero.jpg, also regenerate the share card: node scripts/dev/og-card.mjs
 import { fileURLToPath } from 'node:url';
 import { launch, waitForGame } from './browser.mjs';
+// dev server origin (BB_PORT=5183 for a second server, e.g. from a worktree)
+const ORIGIN = `http://localhost:${process.env.BB_PORT || 5173}`;
 
 const OUT = fileURLToPath(new URL('../../public/media/', import.meta.url));
 const only = new Set(process.argv.slice(2));
@@ -37,9 +39,9 @@ async function session(url, steps) {
   await p.close();
 }
 const world = WORLD.filter(([n]) => want(n));
-if (world.length) await session('http://localhost:5173/play/?webgl&q=ultra&skip=ui&autostart', world);
+if (world.length) await session(ORIGIN + '/play/?webgl&q=ultra&skip=ui&autostart', world);
 if (want('lockpick')) {
-  await session('http://localhost:5173/play/?webgl&q=ultra&autostart', [[
+  await session(ORIGIN + '/play/?webgl&q=ultra&autostart', [[
     'lockpick',
     `(() => { void window.game.ctx.ui.lockpick({ pins: 5, title: 'VAULT LOCK', onBreak: () => true }); setTimeout(() => window.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyD' })), 300); setTimeout(() => window.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyW' })), 600); })()`,
     1300,

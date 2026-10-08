@@ -70,9 +70,7 @@ const BENCH = new URLSearchParams(location.search).has('bench');
 
 /** Only two hand looks exist. Work gloves for the Brute and the Scout, thin ones for the Fixer and the Defector. */
 function handArchetype(id: string) {
-  if (id === 'brute' || id === 'scout') return 'engineer';
-  if (id === 'fixer' || id === 'defector') return 'infiltrator';
-  return id;
+  return HAND_LOOKS[id] ? id : 'infiltrator';
 }
 
 type Mode = 'loading' | 'title' | 'charselect' | 'playing';
