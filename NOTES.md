@@ -968,3 +968,26 @@ The iGPU is GPU-bound in this test (~30 fps) since the graphics pass. The deskto
 - Only Hollis came with a sitting clip; the others borrow Sol's, Ren's and Wick's. Meshy auto-rigs each character separately, so rest poses differ (Mara's Head is 133° from Sol's): `build-glb.mjs` now **retargets** borrowed clips in world space (play on the source skeleton, apply each bone's world change from rest to the target's rest, back to local) and scales the hip motion by hip height. Own-file clips pass through untouched.
 - **Seated fix (owner screenshot: Sol's legs through his log):** the game's seated point is the seat (the procedural figure's hips sit over it, feet 0.44 m ahead), but the model was placed feet-first, so its hips sat 0.33 m behind. Seated actors now put their hips on the point. Fixed Sol, Ren, Wick and the camp. A short person on a high seat sits up with their feet off the ground (Pip).
 - Pipelines unchanged at the camp (206 → 206), 60 fps headless.
+
+## 2026-10-09: QA and UX pass (overnight swarm, QA agent)
+
+Played headlessly end to end through `window.game`: new run, note, cooler, camp (rest, craft, radio, Pip's ledger, wait for night), the Garage (gate, side door, fuse, vault, crates, safe), death and pack recovery, the debrief (Act I → Act II), Dry Creek talks, stashes and wrecks, a squad + wolf fight, save/continue. No console errors. Every visible interactable was reached and focused from a free standing spot (105 checked), plus the hidden ones once their flags are set.
+
+**Fixed:**
+- The EXIT brochure at the jet was unreachable: its interactable applied the site frame twice (`Site.spot` is already world-space) and sat ~390 m north of the jet.
+- Campfire embers drew as hard white squares (no shape mask); now soft round sparks.
+- Escape in Settings or Controls also closed the pause menu under it and dropped you into the game. Only the topmost panel answers keys now; Controls closes on Escape.
+- Two interaction prompts (E + F) ran into the subtitle box. Desktop prompts grow downward from their old spot; on phones the subtitle sits above two prompts.
+- Loot toasted every item twice ("+3 Water" per item, then "3× Water, …"): a cooler made seven toasts. Per-item toasts are held to the end of the task and dropped when a summary toast, banner or intel card names them.
+- Map: the quest goal's label printed on top of Dry Creek's; overlapping labels step down a line.
+- Camp recipes said a skill requirement twice.
+
+**New settings** (persisted; older settings load with defaults, bad values clamped): Field of view (50–90° vertical, shown as the horizontal angle for the window), Head bob (0–1, also scales strafe roll), Invert look (desktop), FPS counter (DOM written twice a second). The viewmodel keeps its authored size at any FOV: `FirstPersonCamera.viewmodelDepth()` scales the hands' camera-space z by tan(32°)/tan(fov/2) (the same projection as at 64°), easing back to 1 while aiming. The run starts at the chosen FOV (no zoom-in on load).
+
+**Checked, fine:** the Meshy townsfolk and the camp four from four sides by day (no clipping found after the seat fix; Mara's feet hang a little on the camp log), Sol/Ren/Wick seats, Nia/Doc/Inez standing. walk-probe (150 lines, `DEV_ORIGIN` now picks the dev server): stalls only at real obstacles and slopes > 45°.
+
+**Not fixed (for a next round):**
+- Phone: the prompt rows overlap the Aim/Swap/Reload buttons when a gun is out (`.arms` sits right of centre at mid height); there's no free lane for a wide prompt at 844×390.
+- Pipeline Camp 3's pipe collider (a 40 m box 0.85 m off the ground) can wedge the player underneath it.
+- Mara's camp radio cites "the Spire blueprint" before you've read it (a dialogue edit means a re-voice).
+- The camp panel always says Day 1,284.
