@@ -151,6 +151,8 @@ export class AudioEngine {
   private voiceBus!: GainNode;
   private voice!: VoicePlayer;
   private voicesOn = true;
+  /** The score's level under speech (VoicePlayer's duck). */
+  private musicDuck = 1;
 
   get ready() {
     return this.started;
@@ -255,9 +257,11 @@ export class AudioEngine {
     this.voiceBus = ctx.createGain();
     this.voiceBus.gain.value = this.volume.sfx;
     this.voiceBus.connect(this.master);
-    this.voice = new VoicePlayer(ctx, this.voiceBus, (pos) => this.panner(pos, 6, 1.1), (on) => {
-      // talk sits on top of the score: duck it while someone speaks
-      this.music.gain.setTargetAtTime(this.volume.music * (on ? 0.45 : 1), ctx.currentTime, on ? 0.15 : 0.6);
+    this.voice = new VoicePlayer(ctx, this.voiceBus, (pos) => this.panner(pos, 6, 1.1), (k) => {
+      // talk sits on top of the score: duck it while someone speaks (a bark only a little)
+      const down = k < this.musicDuck;
+      this.musicDuck = k;
+      this.music.gain.setTargetAtTime(this.volume.music * k, ctx.currentTime, down ? 0.15 : 0.6);
     });
     this.voice.enabled = this.voicesOn;
   }
@@ -358,7 +362,7 @@ export class AudioEngine {
     Object.assign(this.volume, v);
     if (!this.started) return;
     this.master.gain.value = this.volume.master;
-    this.music.gain.value = this.volume.music;
+    this.music.gain.value = this.volume.music * this.musicDuck;
     this.sfx.gain.value = this.volume.sfx;
     this.foley.gain.value = this.volume.sfx;
     this.voiceBus.gain.value = this.volume.sfx;
