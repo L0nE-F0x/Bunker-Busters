@@ -1,6 +1,6 @@
 import type { AudioEngine } from '@/engine/audio';
 import { isTouch } from '@/engine/device';
-import { dirOf } from '@/engine/bindings';
+import { dirOf, padGlyph } from '@/engine/bindings';
 import './hack.css';
 
 /** One payload the player can splice into the box. Ids are the caller's; the UI only shows them. */
@@ -128,9 +128,10 @@ export class HackGame {
         </div>
         <footer>${isTouch ? `
           <span>Tap a code on the lit line. Top row first, then its column, then its row.</span>` : `
-          <span><span class="kbd">WASD</span> / mouse — move on the lit line</span>
-          <span><span class="kbd">Space</span> / click — splice</span>
-          <span><span class="kbd">Esc</span> — jack out</span>`}
+          <span class="kbh"><span class="kbd">WASD</span> / mouse — move on the lit line</span>
+          <span class="kbh"><span class="kbd">Space</span> / click — splice</span>
+          <span class="kbh"><span class="kbd">Esc</span> — jack out</span>
+          <span class="padh">${padGlyph('P14')} ${padGlyph('P15')} move · ${padGlyph('P0')} splice${opts.spikes ? ` · ${padGlyph('P2')} spike` : ''} · ${padGlyph('P1')} jack out</span>`}
           <span class="right">${opts.spikes ? '<button class="btn hk-spike"></button>' : ''}<button class="btn hk-out">Jack out</button></span>
         </footer>
       </div>`;

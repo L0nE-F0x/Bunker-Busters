@@ -253,7 +253,7 @@ export function keyLabel(code: string): string {
 /** Controller family for the glyphs: Xbox letters by default, PlayStation shapes for Sony pads. */
 let padStyle: 'xbox' | 'ps' = 'xbox';
 export function setPadStyle(id: string) {
-  padStyle = /054c|playstation|dualshock|dualsense|wireless controller/i.test(id) ? 'ps' : 'xbox';
+  padStyle = /054c|playstation|dualshock|dualsense/i.test(id) ? 'ps' : 'xbox';
 }
 
 const XBOX = ['A', 'B', 'X', 'Y', 'LB', 'RB', 'LT', 'RT', 'View', 'Menu', 'L3', 'R3', '↑', '↓', '←', '→'];

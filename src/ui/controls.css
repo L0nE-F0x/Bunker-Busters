@@ -66,3 +66,8 @@ html.padplay, html.padplay * { cursor: none !important; }
   .cx-name { font-size: 12px; }
 }
 @media (max-height: 560px) { .pause.cx { padding: 14px 20px; } .pause.cx h3 { font-size: 34px; } .cx-list { max-height: calc(96vh - 200px); } }
+
+/* minigame footers: keyboard hints, or the controller's when one is in use */
+.padh { display: none; }
+html.pad .padh { display: inline-flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+html.pad .kbh { display: none; }

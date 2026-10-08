@@ -1,7 +1,7 @@
 import type { AudioEngine } from '@/engine/audio';
 import type { LockResult } from '@/game/context';
 import { isTouch } from '@/engine/device';
-import { dirOf } from '@/engine/bindings';
+import { dirOf, padGlyph } from '@/engine/bindings';
 
 interface Pin { target: number; lift: number; vel: number; set: boolean; jitter: number; flash: number }
 
@@ -52,9 +52,10 @@ export class LockpickGame {
         <footer>${isTouch ? `
           <span>Press and hold a pin to lift it · let go to set</span>
           <button class="btn back">Back off</button>` : `
-          <span><span class="kbd">A</span> <span class="kbd">D</span> / mouse — choose pin</span>
-          <span><span class="kbd">W</span> / hold <span class="kbd">LMB</span> — lift · release to set</span>
-          <span><span class="kbd">Esc</span> — back off</span>`}
+          <span class="kbh"><span class="kbd">A</span> <span class="kbd">D</span> / mouse — choose pin</span>
+          <span class="kbh"><span class="kbd">W</span> / hold <span class="kbd">LMB</span> — lift · release to set</span>
+          <span class="kbh"><span class="kbd">Esc</span> — back off</span>
+          <span class="padh">${padGlyph('P14')} ${padGlyph('P15')} choose pin · hold ${padGlyph('P0')} lift, release to set · ${padGlyph('P1')} back off</span>`}
           <span class="right">PICKS <b class="picks"></b> · STRAIN <b class="strain"></b></span>
         </footer>
       </div>`;

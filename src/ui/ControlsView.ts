@@ -135,7 +135,11 @@ export function openControls(root: HTMLElement, audio: AudioEngine) {
       e.preventDefault();
       e.stopImmediatePropagation();
       // the click that follows this press must not also press whatever is under the cursor
-      window.addEventListener('click', swallow, { capture: true, once: true });
+      // (only the left button makes a 'click'; drop the guard soon in case none comes)
+      if (e.button === 0) {
+        window.addEventListener('click', swallow, { capture: true, once: true });
+        setTimeout(() => window.removeEventListener('click', swallow, true), 600);
+      }
       const code = `Mouse${e.button}`;
       const msg = binds.bindKey(a, slot, code);
       audio.play('uiConfirm');
