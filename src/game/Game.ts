@@ -1811,7 +1811,9 @@ export class Game {
     tg.visibility = 1 - this.weather.intensity * 0.75;
     // the stealth model: by day everyone's lit; at night it's the fires, the floodlights, the muzzle
     // flashes, and your own torch. Smoothed so a guttering fire doesn't strobe you in and out of sight.
-    const pointLit = 1 - Math.exp(-lightPool.illuminance(tg.chest) / 0.6);
+    // SeedBot's spotlight isn't in the point-light pool: standing in its cone (it sees you) is lit too,
+    // or the pill reads IN SHADOW while the drone is shouting about you
+    const pointLit = this.garage.drone.canSee ? 1 : 1 - Math.exp(-lightPool.illuminance(tg.chest) / 0.6);
     this.pointLit += (pointLit - this.pointLit) * Math.min(1, dt * 4);
     tg.light = tg.torch ? 1 : Math.min(1, 1 - tg.night + tg.night * Math.max(0.08, this.pointLit));
     tg.alive = s.data.health > 0;
