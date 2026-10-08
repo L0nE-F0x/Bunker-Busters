@@ -140,7 +140,6 @@ export class ScorpionSkins {
     this.mesh.frustumCulled = false;
     this.mesh.castShadow = true;
     this.mesh.receiveShadow = true;
-    this.mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
     for (let i = 0; i < count; i++) this.mesh.setMatrixAt(i, HIDE);
   }
 

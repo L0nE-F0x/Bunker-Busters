@@ -1,5 +1,5 @@
 import * as THREE from 'three/webgpu';
-import { vec3, float, uv, length, smoothstep, mix, atan, sin, instancedDynamicBufferAttribute, varying, step } from 'three/tsl';
+import { vec3, float, uv, length, smoothstep, mix, atan, sin, instancedBufferAttribute, varying, step } from 'three/tsl';
 import { noise } from '@/engine/noiseTex';
 import type { ImpactKind } from '@/engine/combatAudio';
 
@@ -23,8 +23,7 @@ export class Marks {
   constructor() {
     const N = this.N;
     this.info = new THREE.InstancedBufferAttribute(new Float32Array(N * 4), 4);
-    this.info.setUsage(THREE.DynamicDrawUsage);
-    const I: N = instancedDynamicBufferAttribute(this.info, 'vec4');
+    const I: N = instancedBufferAttribute(this.info, 'vec4');
     const vI: N = varying(I);
     const mat = new THREE.MeshStandardNodeMaterial({ transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -4 });
     // kind: 0 dirt, 1 rock/concrete, 2 metal, 3 wood
@@ -57,7 +56,6 @@ export class Marks {
     mat.roughnessNode = mix(float(0.9), float(0.3), metal);
     const geo = new THREE.PlaneGeometry(1, 1);
     this.mesh = new THREE.InstancedMesh(geo, mat, N);
-    this.mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
     for (let i = 0; i < N; i++) this.mesh.setMatrixAt(i, HIDDEN);
     this.mesh.frustumCulled = false;
     this.mesh.renderOrder = 2;
@@ -112,8 +110,7 @@ export class Brass {
   constructor(private floorAt: (p: THREE.Vector3) => number) {
     const N = this.N;
     this.kinds = new THREE.InstancedBufferAttribute(new Float32Array(N), 1);
-    this.kinds.setUsage(THREE.DynamicDrawUsage);
-    const K: N = varying(instancedDynamicBufferAttribute(this.kinds, 'float'));
+    const K: N = varying(instancedBufferAttribute(this.kinds, 'float'));
     const mat = new THREE.MeshStandardNodeMaterial();
     // 0 .38 / .30-30 brass, 1 red 12-gauge hull with a brass head
     const hull = step(0.5, K);
@@ -127,7 +124,6 @@ export class Brass {
     mat.emissiveNode = mix(brass.mul(0.08), vec3(0, 0, 0), hull);
     const geo = new THREE.CylinderGeometry(1, 1, 1, 8, 1);
     this.mesh = new THREE.InstancedMesh(geo, mat, N);
-    this.mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
     for (let i = 0; i < N; i++) {
       this.mesh.setMatrixAt(i, HIDDEN);
       this.c.push({ p: new THREE.Vector3(), v: new THREE.Vector3(), q: new THREE.Quaternion(), w: new THREE.Vector3(), floor: 0, age: 0, rest: true, kind: 0, live: false });

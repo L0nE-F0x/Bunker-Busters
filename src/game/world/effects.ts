@@ -2,7 +2,7 @@ import * as THREE from 'three/webgpu';
 import {
   Fn, vec2, vec3, vec4, float, uniform, instanceIndex, hash, time, cameraPosition, fract, uv, length, smoothstep, mix, max,
   pow, dot, normalize, sin, positionLocal, positionWorld, texture, color, clamp,
-  normalWorld, abs, viewportLinearDepth, linearDepth, cameraNear, cameraFar, instancedDynamicBufferAttribute, exp,
+  normalWorld, abs, viewportLinearDepth, linearDepth, cameraNear, cameraFar, exp,
   cameraViewMatrix, atan, renderGroup, step, instancedBufferAttribute, uniformArray, varying,
 } from 'three/tsl';
 import type { Atmosphere } from './Atmosphere';
@@ -301,10 +301,8 @@ export class DustPuffs {
     const N = this.N;
     this.a = new THREE.InstancedBufferAttribute(new Float32Array(N * 4).fill(-1e4), 4);
     this.b = new THREE.InstancedBufferAttribute(new Float32Array(N * 4), 4);
-    this.a.setUsage(THREE.DynamicDrawUsage);
-    this.b.setUsage(THREE.DynamicDrawUsage);
-    const A: N = instancedDynamicBufferAttribute(this.a, 'vec4');
-    const B: N = instancedDynamicBufferAttribute(this.b, 'vec4');
+    const A: N = instancedBufferAttribute(this.a, 'vec4');
+    const B: N = instancedBufferAttribute(this.b, 'vec4');
     const mat = new THREE.SpriteNodeMaterial({ transparent: true, depthWrite: false });
     const life = float(1.8);
     const age = this.uTime.sub(A.w);
@@ -599,10 +597,9 @@ export class Sparks {
     this.a = new THREE.InstancedBufferAttribute(new Float32Array(N * 4).fill(-1e4), 4);
     this.b = new THREE.InstancedBufferAttribute(new Float32Array(N * 4), 4);
     this.c = new THREE.InstancedBufferAttribute(new Float32Array(N * 4).fill(0.5), 4);
-    for (const at of [this.a, this.b, this.c]) at.setUsage(THREE.DynamicDrawUsage);
-    const A: N = instancedDynamicBufferAttribute(this.a, 'vec4');
-    const B: N = instancedDynamicBufferAttribute(this.b, 'vec4');
-    const C: N = instancedDynamicBufferAttribute(this.c, 'vec4');
+    const A: N = instancedBufferAttribute(this.a, 'vec4');
+    const B: N = instancedBufferAttribute(this.b, 'vec4');
+    const C: N = instancedBufferAttribute(this.c, 'vec4');
     const mat = new THREE.SpriteNodeMaterial({ transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, fog: false });
     const age: N = this.uTime.sub(A.w);
     const life: N = C.z;
@@ -761,7 +758,6 @@ export class Shockwave {
     const nV = Shockwave.ARCS * Shockwave.SEG * 6;
     const geo = new THREE.BufferGeometry();
     this.arcPos = new THREE.BufferAttribute(new Float32Array(nV * 3), 3);
-    this.arcPos.setUsage(THREE.DynamicDrawUsage);
     geo.setAttribute('position', this.arcPos);
     const along = new Float32Array(nV * 2);
     for (let i = 0; i < nV; i++) along[i * 2 + 1] = [0, 1, 0, 1, 1, 0][i % 6]; // v = across the ribbon
