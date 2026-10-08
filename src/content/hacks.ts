@@ -25,6 +25,9 @@ export const DAEMONS: Record<string, DaemonDef> = {
   core: { id: 'core', name: 'CORE · RELEASE', blurb: 'The core room door slides open.' },
   solar: { id: 'solar', name: 'SOLAR · REROUTE', blurb: 'Bring the hall lights up from the solar island without walking out to the switchgear.' },
   ups: { id: 'ups', name: 'UPS · EJECT', blurb: 'The UPS cabinet ejects two charged lithium cells.' },
+  // --- Apex Vault (Tier 2 skeleton, content/bunkers/apex.ts: not in the game yet)
+  airlock: { id: 'airlock', name: 'AIRLOCK · CYCLE', blurb: 'The airlock cycles open. It thinks you are a delivery.' },
+  cameras: { id: 'cameras', name: 'CAMERAS · LOOP', blurb: 'The cameras loop yesterday\'s footage. Nobody was here yesterday.' },
 };
 
 /** Kade terminal difficulty by outpost tier. */

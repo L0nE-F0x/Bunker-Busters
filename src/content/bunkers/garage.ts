@@ -191,13 +191,12 @@ export const GARAGE: Bunker = {
       },
     },
     drones: {
-      name: 'SeedBot',
       spotted: 'SeedBot spotted you!',
       zapped: 'SeedBot tased you. You wake up outside the fence, lighter by one lockpick.',
-      sputter: '*bzzt* LOW BATTERY. ENTERING POWER-SAVE. *whirr*',
-      reboot: 'REBOOT COMPLETE. HAVE I MISSED ANY INVESTOR CALLS?',
-      emp: 'ERR_VIBES_NOT_FOUND. SHUTTING DOWN.',
       empReason: 'SeedBot fried',
+      sputter: { speaker: 'SeedBot', text: '*bzzt* LOW BATTERY. ENTERING POWER-SAVE. *whirr*' },
+      reboot: { speaker: 'SeedBot', text: 'REBOOT COMPLETE. HAVE I MISSED ANY INVESTOR CALLS?' },
+      emp: { speaker: 'SeedBot', text: 'ERR_VIBES_NOT_FOUND. SHUTTING DOWN.' },
     },
     loot: {
       behind: 'vault',

@@ -80,7 +80,7 @@ export abstract class Bunker<S extends BunkerShell = BunkerShell> {
       onZap: () => this.zap(drone),
       onSputter: () => {
         ctx.audio.play('droneSputter', { pos: drone.position });
-        if (lines && this.distToPlayer() < 30) ctx.ui.subtitle(lines.name, lines.sputter);
+        if (lines && this.distToPlayer() < 30) ctx.ui.subtitle(lines.sputter.speaker, lines.sputter.text);
       },
       onCrash: (k) => {
         ctx.audio.play('thud', { pos: drone.position, intensity: 0.4 + k * 0.5 });
@@ -408,6 +408,7 @@ export abstract class Bunker<S extends BunkerShell = BunkerShell> {
   taunt(text?: string) {
     const taunts = this.def.owner.taunts;
     const line = text ?? taunts[this.tauntIdx++ % taunts.length];
+    if (!line) return;
     const at = this.b.points[this.sec.voice.point];
     this.ctx.audio.play('megaphone', { pos: at });
     this.ctx.ui.subtitle(this.def.owner.name, line, { pos: at });
@@ -430,7 +431,7 @@ export abstract class Bunker<S extends BunkerShell = BunkerShell> {
     if (s === 'disabled') a.play('emp', { pos: drone.position });
     if (prev === 'disabled' && s === 'patrol') {
       a.play('droneAlert', { pos: drone.position });
-      if (lines && this.distToPlayer() < 35) this.ctx.ui.subtitle(lines.name, lines.reboot);
+      if (lines && this.distToPlayer() < 35) this.ctx.ui.subtitle(lines.reboot.speaker, lines.reboot.text);
     }
   }
 
@@ -455,7 +456,7 @@ export abstract class Bunker<S extends BunkerShell = BunkerShell> {
       drone.emp(dur);
       const lines = this.sec.drones;
       this.s.addXP(XP_REWARDS.droneEmp, lines?.empReason ?? 'Drone fried');
-      if (lines) this.ctx.ui.subtitle(lines.name, lines.emp);
+      if (lines) this.ctx.ui.subtitle(lines.emp.speaker, lines.emp.text);
       hit = true;
     }
     return hit;

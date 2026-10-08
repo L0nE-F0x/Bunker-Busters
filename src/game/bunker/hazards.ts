@@ -240,12 +240,15 @@ export class CameraGrid {
       this.to.copy(chest).sub(c.eye);
       const d = this.to.length();
       this.fwd.set(Math.sin(yaw), 0, Math.cos(yaw));
-      let sees = d < c.range && this.to.normalize().dot(this.fwd) > Math.cos(c.halfAngle);
+      // a horizontal cone (cameras look down at you; a 3D cone would lose you under the lens)
+      const flat = Math.hypot(this.to.x, this.to.z);
+      let sees = d < c.range && flat > 0.3 && (this.to.x * this.fwd.x + this.to.z * this.fwd.z) / flat > Math.cos(c.halfAngle);
+      this.to.normalize();
       if (sees) {
         const hit = this.bunker.ctx.physics.raycast(c.eye, this.to, d, collider as never);
         sees = hit === null || hit > d - 0.4;
       }
-      this.seen[i] = THREE.MathUtils.clamp(this.seen[i] + (sees ? dt * stealth / this.def.detectTime : -dt * 0.5), 0, 1);
+      this.seen[i] = THREE.MathUtils.clamp(this.seen[i] + (sees ? dt * stealth / this.def.detectTime : -dt * 0.15), 0, 1);
       c.lens.value = this.seen[i] > 0.05 ? 2 : 1;
       if (this.seen[i] >= 1 && this.cooldownT <= 0) {
         this.cooldownT = 6;

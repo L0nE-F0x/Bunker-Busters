@@ -3847,7 +3847,7 @@
   "speaker": "SeedBot",
   "words": "ERR_VIBES_NOT_FOUND. SHUTTING DOWN.",
   "tts": "ERR VIBES NOT FOUND. Shutting Down.",
-  "where": "src/game/bunker/Garage.ts"
+  "where": "src/content/bunkers/garage.ts"
  },
  {
   "key": "1fw6ul5",
@@ -3877,7 +3877,7 @@
   "speaker": "SeedBot",
   "words": "LOW BATTERY. ENTERING POWER-SAVE.",
   "tts": "Low Battery. Entering Power-Save.",
-  "where": "src/game/bunker/Garage.ts"
+  "where": "src/content/bunkers/garage.ts"
  },
  {
   "key": "1878y83",
@@ -3887,7 +3887,7 @@
   "speaker": "SeedBot",
   "words": "REBOOT COMPLETE. HAVE I MISSED ANY INVESTOR CALLS?",
   "tts": "Reboot Complete. Have I Missed Any Investor Calls?",
-  "where": "src/game/bunker/Garage.ts"
+  "where": "src/content/bunkers/garage.ts"
  },
  {
   "key": "1tp4l77",

@@ -131,6 +131,9 @@ export interface Bunker {
 // Renaming an id renames its flag, which orphans it in existing saves: don't.
 // ---------------------------------------------------------------------------------------------
 
+/** A voiced line (a clip is rendered for it when `speaker` has a CAST entry in content/voices.ts). */
+export interface SpokenLine { speaker: string; text: string }
+
 /** A way past a lock. `id` is the choice id on a choice card (defaults to `kind`). */
 export type LockMethod =
   /** The lockpick minigame (XP: lockPicked + 5 per pin). */
@@ -229,9 +232,13 @@ export interface BunkerSecurity {
     /** Seconds of a clear look before the alarm. */
     detectTime: number;
   };
+  /**
+   * Patrol drones' lines. Spoken ones are `{ speaker, text }` so the voice extractor
+   * (scripts/voice/extract.mjs) finds them; the rest are toasts.
+   */
   drones?: {
-    name: string;
-    spotted: string; zapped: string; sputter: string; reboot: string; emp: string; empReason: string;
+    spotted: string; zapped: string; empReason: string;
+    sputter: SpokenLine; reboot: SpokenLine; emp: SpokenLine;
   };
   loot: {
     /** Entry that has to be open first. */
