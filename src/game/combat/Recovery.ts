@@ -189,7 +189,7 @@ class Squad {
   }
 }
 
-interface Outpost {
+export interface Outpost {
   def: OutpostDef;
   build: OutpostBuild;
   squad: Squad | null;
@@ -260,6 +260,19 @@ export class Recovery implements HostileProvider {
 
   /** An outpost respawned (machines rebuild). */
   onRespawn: ((id: string) => void) | null = null;
+  /** An outpost's crew spawned (the player came near): re-apply this shift's hacks. */
+  onSpawn: ((id: string) => void) | null = null;
+
+  /** How many times this outpost has been restaffed (marks keyed to it reset with each shift). */
+  respawnCount(id: string) {
+    return this.host.marks[`respawn.${id}`] ?? 0;
+  }
+
+  /** The outpost's crew is shooting at someone right now. */
+  outpostFighting(id: string) {
+    const op = this.outposts.find((o) => o.def.id === id);
+    return !!op?.squad && op.squad.alert === 'combat' && op.squad.alive.length > 0;
+  }
 
   /** A sentry or a drone saw you: the outpost's crew hears about it. */
   alertOutpost(id: string, at: THREE.Vector3) {
@@ -329,6 +342,7 @@ export class Recovery implements HostileProvider {
     op.squad = sq;
     op.state = 'active';
     op.lockerOpen = (this.host.marks[`locker.${op.def.id}`] ?? -1) >= this.respawns(op);
+    this.onSpawn?.(op.def.id);
   }
 
   private respawns(op: Outpost) {
@@ -587,7 +601,7 @@ export class Recovery implements HostileProvider {
       op.build.fire.light.intensity = op.build.fire.group.visible ? 12 : 0;
       if (op.state === 'dormant' && d < 240) {
         const clearedAt = host.marks[`cleared.${op.def.id}`];
-        if (clearedAt != null && host.playTime() - clearedAt < 30 * 60) { op.state = 'cleared'; continue; }
+        if (clearedAt != null && host.playTime() - clearedAt < 30 * 60) { op.state = 'cleared'; this.onSpawn?.(op.def.id); continue; }
         this.spawnOutpost(op);
       } else if (op.state === 'active' && d > 330 && op.squad && op.squad.alert !== 'combat') {
         this.despawnSquad(op.squad);

@@ -31,6 +31,8 @@ export interface OutpostBuild {
   lod: DistanceLod;
   cover: CoverPoint[];
   locker: THREE.Vector3;
+  /** The field terminal's keyboard (hack it: `combat/terminals.ts`). */
+  terminal: THREE.Vector3;
   /** The floodlight and the barrel fire (night). */
   light: VirtualLight;
   fire: Fire;
@@ -208,6 +210,40 @@ export function buildOutpost(def: OutpostDef, physics: Physics, hf: Heightfield)
   locker.y = hf.heightAt(locker.x, locker.z) + 0.25;
   mb.add(kadeRed, place(new THREE.BoxGeometry(0.9, 0.42, 0.5), -1.5, 0.21, -4.2, 0.1));
   mb.add(steel, place(new THREE.BoxGeometry(0.92, 0.05, 0.52), -1.5, 0.4, -4.2, 0.1));
+  // field terminal: a folding table by the generator, a rugged laptop cabled to it, a whip antenna
+  const TX = -5.7, TZ = 1.0, TY = Math.PI / 2 + 0.25;
+  const tp = (g: THREE.BufferGeometry, ox: number, oy: number, oz: number) => {
+    const c = Math.cos(TY), sn = Math.sin(TY);
+    return place(g, TX + ox * c + oz * sn, oy, TZ - ox * sn + oz * c, TY);
+  };
+  const tableTop = plainStandard('#5b5e57', 0.6, 0.3);
+  mb.add(tableTop, tp(new THREE.BoxGeometry(1.1, 0.04, 0.6), 0, 0.74, 0));
+  for (const [x, z] of [[-0.5, -0.25], [0.5, -0.25], [-0.5, 0.25], [0.5, 0.25]]) mb.add(steel, tp(new THREE.CylinderGeometry(0.015, 0.015, 0.72, 5), x, 0.36, z));
+  const rugged = plainStandard('#2a2c2a', 0.55, 0.2);
+  mb.add(rugged, tp(new THREE.BoxGeometry(0.42, 0.035, 0.3), 0.05, 0.778, 0.02)); // base
+  mb.add(kadeRed, tp(new THREE.BoxGeometry(0.44, 0.012, 0.04), 0.05, 0.79, 0.17)); // bumper
+  const lid = new THREE.BoxGeometry(0.42, 0.28, 0.025).translate(0, 0.14, 0).rotateX(-0.28);
+  mb.add(rugged, tp(lid, 0.05, 0.795, -0.13));
+  // the screen: Kade OS mid-session, drawn in glow quads (one batched glow program, no texture)
+  const scrBg = glow('#0b3a24', 1.1).material, scrFg = glow('#5dffb0', 1.7).material, scrRed = glow('#ff4028', 1.8).material;
+  const scr = (m: THREE.Material, w: number, h: number, x: number, y: number, z = 0.0142) =>
+    mb.add(m, tp(new THREE.PlaneGeometry(w, h).translate(x, 0.145 + y, z).rotateX(-0.28), 0.05, 0.795, -0.13));
+  scr(scrBg, 0.36, 0.22, 0, 0, 0.0135);
+  scr(scrRed, 0.34, 0.018, 0, 0.088); // title bar
+  for (let r = 0; r < 4; r++) for (let c = 0; c < 4; c++) if ((r * 7 + c * 3) % 5) scr(scrFg, 0.022, 0.016, -0.14 + c * 0.034, 0.05 - r * 0.03);
+  scr(scrRed, 0.026, 0.02, -0.14 + 2 * 0.034, 0.05 - 0.03); // ICE
+  for (const [w, y] of [[0.13, 0.05], [0.09, 0.025], [0.15, 0], [0.07, -0.025]] as const) scr(scrFg, w, 0.009, 0.01 + w / 2, y);
+  scr(scrFg, 0.3, 0.008, 0, -0.078); // trace bar
+  scr(scrRed, 0.1, 0.008, -0.1, -0.078, 0.0146);
+  mb.add(kadeRed, tp(new THREE.BoxGeometry(0.16, 0.1, 0.22), -0.38, 0.81, 0)); // battery brick
+  mb.add(glow('#ff3020', 5).material, tp(new THREE.BoxGeometry(0.012, 0.012, 0.012), -0.38, 0.865, 0.08));
+  mb.add(steel, tp(new THREE.CylinderGeometry(0.006, 0.01, 2.1, 4), -0.48, 1.8, -0.22)); // whip antenna
+  // the cable to the generator, lying on the ground
+  mb.add(rugged, tp(new THREE.CylinderGeometry(0.012, 0.012, 1.6, 5).rotateZ(Math.PI / 2), -1.2, 0.015, -0.1));
+  solid(TX, 0.4, TZ, 0.55, 0.4, 0.3, TY);
+  const terminal = f.p(TX, 0, TZ);
+  terminal.y = hf.heightAt(terminal.x, terminal.z) + 0.95;
+
   // sign at the entrance
   mb.add(wood('#6b4a2e'), place(new THREE.BoxGeometry(0.08, 1.5, 0.08), -2.6, 0.75, 14, 0), place(new THREE.BoxGeometry(0.08, 1.5, 0.08), 2.6, 0.75, 14, 0));
   mb.add(tin, place(new THREE.BoxGeometry(5.4, 0.7, 0.04), 0, 1.25, 14, 0));
@@ -260,7 +296,7 @@ export function buildOutpost(def: OutpostDef, physics: Physics, hf: Heightfield)
   shadowProxy(near, [], `outpost:${def.id}:shadow`);
   const center = f.p(0, 0, 0).setY(y0);
   const lod = new DistanceLod(center, def.r, near, far, 150, 700);
-  return { def, frame: f, group, lod, cover, locker, light, fire, center };
+  return { def, frame: f, group, lod, cover, locker, terminal, light, fire, center };
 }
 
 const xz = (v: THREE.Vector3): [number, number] => [v.x, v.z];

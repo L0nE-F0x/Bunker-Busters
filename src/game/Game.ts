@@ -45,6 +45,7 @@ import { RECIPES, type Recipe } from '@/content/craft';
 import { SKILLS } from '@/content/skills';
 import { GARAGE } from '@/content/bunkers/garage';
 import { ITEMS, HOTBAR_ITEMS, KEEP_ON_DEATH } from '@/content/items';
+import { KadeTerminals } from './combat/terminals';
 import { OUTPOSTS } from '@/content/recovery';
 import { XP_REWARDS, fallFactor, empRadius } from '@/content/progression';
 import { damp } from '@/engine/noise';
@@ -129,6 +130,8 @@ export class Game {
   recovery!: Recovery;
   /** Sentries, Hornet drones and mines at the outposts. */
   machines!: Machines;
+  /** The Kade field terminals (one per outpost): hack targets. */
+  terminals!: KadeTerminals;
   private wantAds = false;
   /** The dropped pack in the world: a duffel and a beacon. */
   private packMesh!: THREE.Group;
@@ -371,6 +374,39 @@ export class Game {
         }
         return ok;
       },
+      hack: (o) => self.withMinigame('keypad', async () => {
+        const s = self.state!;
+        let difficulty = o.difficulty;
+        if (s.focus('electronics') === 'hotline') difficulty = Math.max(0, difficulty - 1);
+        if (s.capstone('electronics') === 'overclock') difficulty = Math.max(0, difficulty - 1);
+        // a Kade box takes a Kade ID: swipe a lanyard for a bigger buffer and a lazier trace
+        let badge = false;
+        const badges = s.count('kade_badge');
+        if (o.kade && badges > 0) {
+          const pick = await self.ui.choose({
+            speaker: o.title,
+            text: 'The reader under the screen wants a contractor ID. You have a dead man\'s lanyard in your pocket. The photo is smiling.',
+            choices: [
+              { id: 'badge', label: `Swipe a Recovery Lanyard, then splice in (${badges} left)` },
+              { id: 'raw', label: 'Splice in cold' },
+              { id: 'leave', label: 'Leave it' },
+            ],
+          });
+          if (pick !== 'badge' && pick !== 'raw') return { done: [], traced: false, aborted: true };
+          badge = pick === 'badge' && s.removeItem('kade_badge', 1);
+        }
+        const res = await self.ui.hack({
+          title: o.title, host: o.host, difficulty, daemons: o.daemons,
+          bonusBuffer: badge ? 1 : 0, traceMult: badge ? 1.5 : 1,
+          spikes: () => s.count('spike'), useSpike: () => s.removeItem('spike', 1),
+          // taking a hit pulls you off the keyboard
+          interrupt: (bail) => s.events.on('health', (e) => { if (e.delta < 0) bail('You\'re hit. You yank the cable.'); }),
+        });
+        if (res.done.length && s.capstone('electronics') === 'salvage' && s.addItem('battery', 1, true)) {
+          s.events.emit('toast', { text: 'Salvage: you pocket a lithium cell from the box.', kind: 'good' });
+        }
+        return res;
+      }),
       choose: (o) => self.withMinigame('idle', () => self.ui.choose(o)),
       converse: (o) => self.withMinigame('idle', () => self.ui.converse(o)),
       banner: (a, b, k) => self.ui.banner(a, b, k),
@@ -635,6 +671,13 @@ export class Game {
       interactables: this.interactables,
     });
     this.recovery.onRespawn = (id) => this.machines.reset(id);
+    this.terminals = new KadeTerminals({
+      recovery: this.recovery, machines: this.machines, ui: this.ctx.ui, audio: this.audio,
+      state: () => self.state ?? null,
+      toast: (t, k) => self.ui.toast(t, k),
+      subtitle: (a, b, v) => self.ui.subtitle(a, b, v),
+    }, this.interactables);
+    this.recovery.onSpawn = (id) => this.terminals.reapply(id);
     this.recovery.safe = this.fauna.safe;
     // SeedBot can be shot: every hit puts it on full alert; four quick ones knock it out of the sky
     const drone = this.garage.drone;

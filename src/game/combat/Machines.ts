@@ -324,7 +324,7 @@ class Hornet implements Hostile {
   private spin = uniform(1);
   private vel = new THREE.Vector3();
   private ang = Math.random() * 6.28;
-  state: 'patrol' | 'hunt' | 'down' | 'dead' | 'stunned' = 'patrol';
+  state: 'patrol' | 'hunt' | 'down' | 'dead' | 'stunned' | 'parked' = 'patrol';
   private stateT = 0;
   private fireT = 0;
   private burst = 0;
@@ -452,6 +452,19 @@ class Hornet implements Hostile {
       } else if (Math.random() < dt * 1.5) host.combat.debris.emit('smoke', p, 1, _a.set(0, 0.6, 0), 0.2, 0.3, undefined, 0.6);
       this.cone.intensity.value = 0;
       this.eye.intensity.value = 0;
+      this.center.copy(p);
+      return;
+    }
+    if (this.state === 'parked') {
+      // a forged work order: it sets down on the pad, spins down, and waits
+      this.spin.value = Math.max(0, (this.spin.value as number) - dt * 0.6);
+      p.y += (ground + 0.25 - p.y) * Math.min(1, dt * 0.9);
+      this.vel.set(0, 0, 0);
+      this.body.rotation.set(0, this.yaw, 0, 'YXZ');
+      this.cone.intensity.value = 0;
+      this.eye.intensity.value = 0;
+      if (this.spin.value === 0) { this.loop?.stop(); this.loop = null; }
+      else this.loop?.setPosition(p);
       this.center.copy(p);
       return;
     }
@@ -618,6 +631,15 @@ class Minefield {
     this.host.xp(10, 'Mine disarmed');
   }
 
+  /** Hacked safe: the body stays where it is, the LED goes dark. */
+  quiet(m: Mine) {
+    if (m.state !== 'armed') return false;
+    m.state = 'safe';
+    this.led.setMatrixAt(m.i, this._m.makeScale(0, 0, 0));
+    this.led.instanceMatrix.needsUpdate = true;
+    return true;
+  }
+
   private hide(m: Mine) {
     this.body.setMatrixAt(m.i, this._m.makeScale(0, 0, 0));
     this.led.setMatrixAt(m.i, this._m.makeScale(0, 0, 0));
@@ -720,6 +742,21 @@ export class Machines implements HostileProvider {
     for (const s of this.sentries) if (s.alive && s.center.distanceTo(pos) < radius + 0.5) { s.emp(dur); any = true; }
     for (const h of this.hornets) if (h.alive && h.center.distanceTo(pos) < radius + 2) { h.emp(); any = true; }
     return any;
+  }
+
+  /** A hacked work order (`terminals.ts`): this outpost's sentries power down. Returns how many. */
+  standDown(outpost: string) {
+    let n = 0;
+    for (const s of this.sentries) if (s.outpost === outpost && s.alive && s.state !== 'off' && s.state !== 'breaker') { s.state = 'off'; n++; }
+    return n;
+  }
+
+  /** A hacked work order: the mines go dark and the Hornet parks. Returns how many machines. */
+  perimeterSafe(outpost: string) {
+    let n = 0;
+    for (const m of this.mines.mines) if (m.outpost === outpost && this.mines.quiet(m)) n++;
+    for (const h of this.hornets) if (h.outpost === outpost && h.alive && h.state !== 'parked') { h.state = 'parked'; n++; }
+    return n;
   }
 
   /** The outpost respawned: rebuild its machines. */

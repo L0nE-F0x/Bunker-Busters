@@ -14,6 +14,7 @@ import type { AudioEngine } from '@/engine/audio';
 import type { LockResult, TalkChoiceView, UIBridge } from '@/game/context';
 import { LockpickGame } from './Lockpick';
 import { CircuitGame, KeypadGame } from './Circuit';
+import { HackGame, type HackOpts, type HackResult } from './Hack';
 import { Minimap, MapData, drawWorldMap, type MapMarker } from './Minimap';
 import { mountUpdateNotice } from './Updater';
 import { isTouch, isIOS, isStandalone, canFullscreen, isFullscreen, enterFullscreen } from '@/engine/device';
@@ -1040,5 +1041,14 @@ export class UI implements UIBridge {
     const r = await new CircuitGame(this.root, this.audio, { ...opts, skill: this.state?.boardSkill() ?? 0 }).run();
     this.minigameOpen = false;
     return r;
+  }
+
+  async hack(opts: Omit<HackOpts, 'skill'> & { skill?: number }): Promise<HackResult> {
+    this.minigameOpen = true;
+    try {
+      return await new HackGame(this.root, this.audio, { ...opts, skill: opts.skill ?? this.state?.boardSkill() ?? 0 }).run();
+    } finally {
+      this.minigameOpen = false;
+    }
   }
 }

@@ -10,6 +10,21 @@ import type { DustPuffs } from './world/effects';
 
 export type LockResult = 'success' | 'abort' | 'out-of-picks';
 
+/** A hack: the box, its daemons (payloads), and what got through. See `ui/Hack.ts`. */
+export interface HackRequest {
+  title: string;
+  host: string;
+  difficulty: number;
+  daemons: { id: string; name: string; blurb: string }[];
+  /** Offer to swipe a Recovery Lanyard first (a Kade box): +1 buffer, a slower trace. */
+  kade?: boolean;
+}
+export interface HackOutcome {
+  done: string[];
+  traced: boolean;
+  aborted: boolean;
+}
+
 /** What gameplay code is allowed to ask of the UI layer. */
 export interface TalkChoiceView {
   id: string;
@@ -24,6 +39,8 @@ export interface UIBridge {
   lockpick(opts: { pins: number; title: string; onBreak: () => boolean }): Promise<LockResult>;
   keypad(opts: { title: string; code: string; hint: string }): Promise<'ok' | 'wrong' | 'abort'>;
   circuit(opts: { title: string; difficulty: number }): Promise<boolean>;
+  /** SPLICE: pick daemons out of a code matrix before the trace lands. */
+  hack(opts: HackRequest): Promise<HackOutcome>;
   /** One question, then back to the world. */
   choose(opts: { speaker: string; text: string; choices: TalkChoiceView[] }): Promise<string | null>;
   /** A whole conversation. `onChoice` runs before the next line, so flags land in time. */
