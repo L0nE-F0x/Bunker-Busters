@@ -646,8 +646,9 @@ export class Game {
         const t = sphereRay(o, d, drone.position, 0.6);
         return t !== null && t <= max ? { t, zone: 'body' } : null;
       },
-      damage: () => {
+      damage: (d) => {
         const now = this.combat.t;
+        drone.hit(d.point);
         hits = now - lastHit < 10 ? hits + 1 : 1;
         lastHit = now;
         drone.detection = Math.max(drone.detection, 0.95);

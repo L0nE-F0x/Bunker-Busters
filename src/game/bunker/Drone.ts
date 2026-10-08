@@ -1,7 +1,7 @@
 import * as THREE from 'three/webgpu';
 import { Fn, uv, vec3, float, length, smoothstep, atan, time, sin, uniform, sign, positionLocal, mix, step } from 'three/tsl';
 import { rustyMetal, glow, plainStandard } from '../world/materials';
-import { lightCone, GlowSprites, type Sparks, type DustPuffs } from '../world/effects';
+import { lightCone, GlowSprites, ElectricArc, type Sparks, type DustPuffs } from '../world/effects';
 import { canvasTexture, MeshBatch, merge } from '../world/kit';
 import { damp, dampAngle } from '@/engine/noise';
 import type { Physics } from '@/engine/physics';
@@ -76,6 +76,14 @@ export class Drone {
   private uNav = uniform(new THREE.Vector2(1, 0));
   private fxTimer = 0;
   private empFlash = 0;
+  /** Taser arcs: crackle between the prongs while it closes in, the bolt itself, EMP crawl. */
+  private arcs = new ElectricArc(4, 14);
+  private zapT = 0;
+  private readonly zapAt = new THREE.Vector3();
+  /** Bullet damage 0..4: each hit adds one, it decays over ~12 s a point. Smokes and shorts out. */
+  private damage = 0;
+  private washTimer = 0;
+  private smokeTimer = 0;
 
   constructor(
     private physics: Physics,
@@ -103,10 +111,17 @@ export class Drone {
     // eye socket (the glowing eye itself is a separate mesh: its colour follows the state)
     mb.add(dark, P(new THREE.SphereGeometry(0.11, 16, 12), 0, -0.06, 0.42));
     mb.add(orange, P(new THREE.TorusGeometry(0.1, 0.012, 6, 20), 0, -0.06, 0.49));
+    // taser: two prongs under the chin (the arcs jump between their tips)
+    for (const px of [-PRONG_X, PRONG_X]) {
+      mb.add(dark, P(new THREE.CylinderGeometry(0.012, 0.016, 0.16, 6), px, PRONG_Y + 0.02, PRONG_Z - 0.07, 1, 1, 1, Math.PI / 2 - 0.35));
+      mb.add(orange, P(new THREE.SphereGeometry(0.014, 8, 6), px, PRONG_Y, PRONG_Z));
+    }
     this.eye = glow('#3ff2e0', 8);
     const eyeMesh = new THREE.Mesh(new THREE.SphereGeometry(0.075, 16, 12), this.eye.material);
     eyeMesh.position.set(0, -0.06, 0.47);
     this.body.add(eyeMesh);
+    this.body.add(this.arcs.mesh);
+    this.arcs.mesh.visible = false;
     // landing skids
     for (const sx of [-0.22, 0.22]) {
       mb.add(dark, P(new THREE.CylinderGeometry(0.015, 0.015, 0.62, 6), sx, -0.36, 0, 1, 1, 1, Math.PI / 2));
@@ -137,15 +152,26 @@ export class Drone {
     this.body.add(rotors);
     this.rotors.push(rotors);
     // navigation lights: red port, green starboard, white tail strobe (one material, colour by side)
+    // also a thin LED ring under each motor pod in the eye's colour (teal / amber / red), so the
+    // drone's mood reads from any side; the rings are told apart by uv.x = 2 (same draw)
     const navMat = new THREE.MeshBasicNodeMaterial();
     const uNav = this.uNav;
+    const eyeCol = this.eye.color, eyeK = this.eye.intensity;
     navMat.colorNode = Fn(() => {
       const pl = positionLocal;
       const side = mix(vec3(1.0, 0.05, 0.03), vec3(0.1, 1.0, 0.25), step(0, pl.x));
       const tail = step(pl.z, -0.3);
-      return mix(side.mul(uNav.x), vec3(1, 1, 1).mul(uNav.y), tail).mul(6);
+      const nav = mix(side.mul(uNav.x), vec3(1, 1, 1).mul(uNav.y), tail).mul(6);
+      return mix(nav, eyeCol.mul(eyeK).mul(0.22), step(1.5, uv().x));
     })();
-    const navGeo = [P(new THREE.SphereGeometry(0.025, 8, 6), -0.68, 0.05, 0.58), P(new THREE.SphereGeometry(0.025, 8, 6), 0.68, 0.05, 0.58), P(new THREE.SphereGeometry(0.022, 8, 6), 0, 0.1, -0.46)];
+    const ring = (x: number, z: number) => {
+      const g = P(new THREE.TorusGeometry(0.086, 0.005, 4, 24), x, -0.012, z, 1, 1, 1, Math.PI / 2);
+      const u = g.attributes.uv as THREE.BufferAttribute;
+      for (let i = 0; i < u.count; i++) u.setX(i, 2);
+      return g;
+    };
+    const navGeo = [P(new THREE.SphereGeometry(0.025, 8, 6), -0.68, 0.05, 0.58), P(new THREE.SphereGeometry(0.025, 8, 6), 0.68, 0.05, 0.58), P(new THREE.SphereGeometry(0.022, 8, 6), 0, 0.1, -0.46),
+      ...MOTORS.map(([x, z]) => ring(x, z))];
     const nav = new THREE.Mesh(merge(navGeo), navMat);
     this.body.add(nav);
     this.halos.add(new THREE.Vector3(-0.7, 0.05, 0.6), '#ff2010', 0.35, 1, 2.5);
@@ -390,6 +416,9 @@ export class Drone {
         if (this.closeTime > 0.6 && this.zapCooldown <= 0) {
           this.zapCooldown = 4;
           this.closeTime = 0;
+          this.zapT = 0.45;
+          this.zapAt.copy(s.playerChest);
+          this.fx.sparks?.emit(s.playerChest, 26, 3.2, { up: 0.8, electric: true, size: 0.022, life: 0.45, spread: 0.25 });
           this.events.onZap?.();
         }
         // give up if the player is far outside the yard
@@ -457,6 +486,12 @@ export class Drone {
     // sonar rings down the beam: a slow sweep on patrol, insistent once it's looking for you
     this.cone.scan.value = damp(this.cone.scan.value as number, (colorKey === 'calm' ? 0.35 : 1) * (power > 0.1 ? 1 : 0), 4, dt);
     this.rotorSpin.value = damp(this.rotorSpin.value as number, this.state === 'disabled' ? 0.02 : this.state === 'sputter' ? 0.7 : 1, 3, dt);
+    if (this.zapT > 0) {
+      // the discharge washes the yard in blue-white for a beat
+      const k = Math.min(1, this.zapT / 0.3) * (Math.random() < 0.6 ? 1 : 0.4);
+      this.spot.color.lerp(_zapCol, k);
+      this.spot.intensity += 220 * k;
+    }
     (this.screen.material as THREE.MeshStandardNodeMaterial).emissiveIntensity = Math.sin(t * 4) > 0 ? 1 : 0.25;
     // nav lights, strobe and the eye halo
     const navOn = this.state === 'disabled' ? (this.disabledFor < 1 ? power : 0) : power > 0.1 ? 1 : 0.15;
@@ -470,7 +505,58 @@ export class Drone {
     const eyeK = Math.max(0, this.eye.intensity.value as number) / 8;
     for (let i = 0; i < 3; i++) ch[3 + i] = this.eyeW[i] * eyeK;
     this.emitFx(dt);
+    this.updateArcs(dt, t);
     void this.home;
+  }
+
+  /** A round hit it: a burst of sparks off the shell, and one more point of damage (smoke, shorts). */
+  hit(at?: THREE.Vector3) {
+    this.damage = Math.min(4, this.damage + 1);
+    const p = at ?? this.position;
+    this.fx.sparks?.emit(p, 14, 3.4, { up: 1.2, floorY: this.groundY + 0.02, size: 0.022, life: 0.55 });
+    this.fx.sparks?.emit(p, 6, 2, { up: 0.6, electric: true, floorY: this.groundY + 0.02, size: 0.018, life: 0.3 });
+    this.fx.puffs?.emit(p, 2, 0.4, 0.3, 0.35, undefined, true);
+  }
+
+  /** Taser crackle while closing in, the bolt into the target, EMP arcs crawling over the shell. */
+  private updateArcs(dt: number, t: number) {
+    const a = this.arcs;
+    a.begin();
+    this.zapT = Math.max(0, this.zapT - dt);
+    const L = _pl, R = _pr;
+    L.set(-PRONG_X, PRONG_Y, PRONG_Z);
+    R.set(PRONG_X, PRONG_Y, PRONG_Z);
+    if (this.zapT > 0) {
+      // the bolt: prongs to the chest, re-struck every frame, with a forked second strand
+      this.group.updateMatrixWorld();
+      const tgt = this.body.worldToLocal(_pt.copy(this.zapAt));
+      a.bolt(Math.random() < 0.5 ? L : R, tgt, { width: 0.05, jag: 0.16 });
+      _pm.copy(L).lerp(tgt, 0.3 + Math.random() * 0.3).add(_pj.set(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5).multiplyScalar(0.5));
+      a.bolt(R, _pm, { width: 0.025, jag: 0.1 });
+      a.bolt(L, R, { width: 0.03, jag: 0.03 });
+      a.intensity.value = 0.7 + Math.random() * 0.6;
+    } else if (this.state === 'alert' && this.closeTime > 0.05) {
+      // charging: the gap between the prongs crackles harder the longer you stay in reach
+      const k = Math.min(1, this.closeTime / 0.6);
+      if (Math.random() < 0.35 + k * 0.6) a.bolt(L, R, { width: 0.012 + k * 0.02, jag: 0.03 + k * 0.03 });
+      if (k > 0.5 && Math.random() < k - 0.3) a.bolt(L, _pm.copy(R).add(_pj.set(0, -0.05 - Math.random() * 0.12, 0.05 + Math.random() * 0.1)), { width: 0.01, jag: 0.04 });
+      a.intensity.value = 0.4 + k * 0.8;
+    } else if (this.empFlash > 0 || (this.state === 'disabled' && this.disabledFor < 1.2 && Math.random() < 0.2)) {
+      // short circuits crawling across the shell
+      const n = this.empFlash > 0 ? 3 : 1;
+      for (let i = 0; i < n; i++) {
+        shellPoint(_pm, Math.random());
+        shellPoint(_pt, Math.random());
+        a.bolt(_pm, _pt.lerp(_pm, 0.4), { width: 0.02, jag: 0.06 });
+      }
+      a.intensity.value = 0.6 + Math.random() * 0.6;
+    } else if (this.damage > 1.5 && this.state !== 'disabled' && Math.sin(t * 13.7) * Math.sin(t * 5.1) > 0.93) {
+      // a shot-up drone shorts now and then at a motor
+      const m = MOTORS[Math.floor(t * 3) % 4];
+      a.bolt(_pm.set(m[0], 0.05, m[1]), _pt.set(m[0] * 0.6, 0.02, m[1] * 0.6), { width: 0.015, jag: 0.05 });
+      a.intensity.value = 0.8;
+    }
+    a.end();
   }
 
   /** Sparks from a shorting motor during brown-outs, smoke + crackle while knocked out. */
@@ -478,6 +564,24 @@ export class Drone {
     const { sparks, puffs } = this.fx;
     this.fxTimer -= dt;
     this.empFlash = Math.max(0, this.empFlash - dt);
+    this.damage = Math.max(0, this.damage - dt / 12);
+    const spin = this.rotorSpin.value as number;
+    // rotor downwash: low over the yard it scours a ring of dust off the ground beneath it
+    const alt = this.position.y - this.groundY;
+    this.washTimer -= dt;
+    if (puffs && spin > 0.5 && alt < 4.5 && this.washTimer <= 0) {
+      const k = THREE.MathUtils.clamp((4.5 - alt) / 3, 0, 1);
+      this.washTimer = 0.32 - k * 0.15;
+      puffs.emit(_pm.set(this.position.x, this.groundY + 0.05, this.position.z), 2 + Math.round(k * 2), 0.8 + k * 1.4, 0.12, 0.45 + k * 0.3);
+    }
+    // a shot-up drone trails smoke from a motor (thicker the worse it is, and lying on the ground)
+    this.smokeTimer -= dt;
+    if (puffs && this.damage > 0.6 && this.smokeTimer <= 0) {
+      this.smokeTimer = 0.32 - Math.min(0.2, this.damage * 0.05);
+      this.group.updateMatrixWorld();
+      const m = MOTORS[1];
+      puffs.emit(this.body.localToWorld(_pt.set(m[0], 0.1, m[1])), 1, 0.15, 0.6 + this.damage * 0.15, 0.22 + this.damage * 0.06, undefined, true);
+    }
     if (this.fxTimer > 0) return;
     this.group.updateMatrixWorld();
     const motor = () => {
@@ -503,4 +607,15 @@ export class Drone {
 }
 
 const MOTORS = [[0.62, 0.52], [-0.62, 0.52], [0.62, -0.52], [-0.62, -0.52]];
+/** Taser prong tips (body space): under the eye, pointing forward and down. */
+const PRONG_X = 0.06, PRONG_Y = -0.2, PRONG_Z = 0.4;
 const _a = new THREE.Vector3(), _b = new THREE.Vector3(), _up = new THREE.Vector3(0, 1, 0);
+const _pl = new THREE.Vector3(), _pr = new THREE.Vector3(), _pt = new THREE.Vector3(), _pm = new THREE.Vector3(), _pj = new THREE.Vector3();
+const _zapCol = new THREE.Color(0.6, 0.8, 1.0);
+
+/** A point on the shell (body space), for arcs crawling over it. */
+function shellPoint(out: THREE.Vector3, r: number) {
+  const a = r * Math.PI * 2 * 7.13, y = (Math.random() - 0.3) * 0.7;
+  const c = Math.sqrt(Math.max(0, 1 - y * y));
+  return out.set(Math.cos(a) * 0.43 * c, y * 0.18, Math.sin(a) * 0.49 * c);
+}

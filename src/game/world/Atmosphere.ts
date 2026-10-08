@@ -1,7 +1,7 @@
 import * as THREE from 'three/webgpu';
 import {
   uniform, vec3, vec4, float, Fn, positionLocal, positionWorld, cameraPosition, normalize, dot, max, pow, mix,
-  smoothstep, exp, abs, select, length, time, clamp, fog, vec2, atan, renderGroup, fract, sin, step, fwidth, If,
+  smoothstep, exp, abs, select, length, time, clamp, fog, vec2, atan, renderGroup, fract, sin, step, fwidth, If, min,
 } from 'three/tsl';
 import { clamp as clampN, lerp, smoothstep as smoothN } from '@/engine/noise';
 import { noise } from '@/engine/noiseTex';
@@ -103,6 +103,8 @@ export class Atmosphere {
   readonly uFront = uniform(0);
   /** Lightning flash 0..1, lights up the storm dust from inside. */
   readonly uFlash = uniform(0);
+  /** Storm gust 0..1: a surge of wind that thickens the dust for a few seconds (CPU, follows the wind). */
+  readonly uGust = uniform(0);
   readonly uUpwind = uniform(new THREE.Vector2(-1, 0));
   /** Storm dust colour, lit by the current daylight (CPU-side so sky, fog and particles agree). */
   readonly uStormColor = uniform(new THREE.Color('#8a5a32'));
@@ -119,6 +121,8 @@ export class Atmosphere {
   storm = 0;
   stormFront = 0;
   flash = 0;
+  /** Storm gust 0..1 (see uGust). */
+  gust = 0;
   /** Settled dust on surfaces 0..1: a storm piles it on, then it slowly blows off again. */
   dustCover = 0.35;
   private dustTimer = 0;
@@ -132,7 +136,7 @@ export class Atmosphere {
     // e.g. the far city whenever the sun stood still (paused clock, storm fronts in screenshots).
     for (const u of [this.uSunDir, this.uMoonDir, this.uZenith, this.uHorizon, this.uHaze, this.uSunColor, this.uFogDensity,
       this.uFogFalloff, this.uFogBase, this.uNight, this.uDust, this.uWind, this.uStorm, this.uCloudDrift, this.uFront,
-      this.uUpwind, this.uStormColor, this.uSandFlow, this.uFlash] as N[]) u.setGroup(renderGroup);
+      this.uUpwind, this.uStormColor, this.uSandFlow, this.uFlash, this.uGust] as N[]) u.setGroup(renderGroup);
     this.sun = new THREE.DirectionalLight(0xffffff, 4);
     this.sun.castShadow = true;
     const s = this.sun.shadow;
@@ -174,23 +178,29 @@ export class Atmosphere {
     const facing = smoothstep(-0.3, 0.8, dot(flat, this.uUpwind));
     const az = atan(rd.z, rd.x).div(Math.PI * 2);
     // cauliflower skyline: broad swells + tighter billows, slowly boiling
-    const n1 = noise(vec2(az.mul(5), time.mul(0.002))).r;
-    const n2 = noise(vec2(az.mul(11), time.mul(0.005).add(0.5))).g;
-    const top = this.uFront.mul(facing).mul(n1.mul(0.36).add(n2.mul(0.1)).add(0.08)).sub(0.015);
-    return smoothstep(top, top.sub(0.05), rd.y).mul(facing).mul(this.uFront);
+    const n1 = noise(vec2(az.mul(5), time.mul(0.004))).r;
+    const n2 = noise(vec2(az.mul(11), time.mul(0.01).add(0.5))).g;
+    const n3 = noise(vec2(az.mul(37), time.mul(0.03).add(0.25))).r;
+    const top = this.uFront.mul(facing).mul(n1.mul(0.42).add(n2.mul(0.12)).add(n3.mul(0.05)).add(0.06)).sub(0.015);
+    return smoothstep(top, top.sub(0.035), rd.y).mul(facing).mul(this.uFront);
   });
 
   /** Shading inside the dust wall: dark at the base, sun-caught billows near the top. */
   private wallShade = Fn(([rd, w]: [N, N]) => {
     const az = atan(rd.z, rd.x).div(Math.PI * 2);
     const h = clamp(rd.y, 0, 1);
-    const puffs = noise(vec2(az.mul(31), h.mul(9).sub(time.mul(0.012)))).r;
-    const lift = smoothstep(0.0, 0.4, h).mul(0.6).add(puffs.mul(puffs).mul(0.7));
+    // billows boil upward out of a dark, ground-hugging skirt; the cauliflower tops catch the sun
+    const puffs = noise(vec2(az.mul(31), h.mul(9).sub(time.mul(0.05)))).r;
+    const curls = noise(vec2(az.mul(73).add(puffs.mul(0.4)), h.mul(21).sub(time.mul(0.09)))).g;
+    const lift = smoothstep(0.0, 0.4, h).mul(0.55).add(puffs.mul(puffs).mul(0.75)).add(curls.sub(0.5).mul(0.25));
     const mu = max(dot(rd, this.uSunDir), 0);
     const sunVis = smoothstep(-0.1, 0.05, this.uSunDir.y);
-    const base = (this.uStormColor as N).mul(float(0.3).add(lift.mul(0.8)));
-    const rim = this.uSunColor.mul(pow(mu, 3).mul(0.25).add(0.04).mul(sunVis).mul(lift));
-    return base.add(rim).mul(w.mul(0).add(1));
+    const skirt = smoothstep(0.0, 0.07, h).mul(0.45).add(0.55);
+    const base = (this.uStormColor as N).mul(float(0.26).add(lift.mul(0.85))).mul(skirt);
+    // silver lining: the thin edge of the wall glows where the light comes through it
+    const edge = w.mul(float(1).sub(w)).mul(4);
+    const rim = this.uSunColor.mul(pow(mu, 3).mul(0.3).add(0.05).mul(sunVis).mul(lift.add(edge.mul(0.6))));
+    return base.add(rim);
   });
 
   /** Haze colour seen along a view ray (no sun disk). Shared by sky + fog. */
@@ -229,7 +239,8 @@ export class Atmosphere {
     const stormCol = (this.uStormColor as N).add(this.uSunColor.mul(pow(mu, 4).mul(sunVis).mul(0.35)))
       .add(vec3(0.55, 0.52, 0.68).mul(this.uFlash).mul(this.uStorm).mul(float(0.6).add(clamp(rd.y, 0, 1))));
     const w = this.wall(rd);
-    return mix(mix(calm, stormCol, this.uStorm.mul(0.94)), this.wallShade(rd, w), w.mul(0.97));
+    const stormK = this.uStorm.mul(float(2).sub(this.uStorm)); // ease-out: brown early, not a milky half-way
+    return mix(mix(calm, stormCol, stormK.mul(0.94)), this.wallShade(rd, w), w.mul(0.97));
   });
 
   private buildSky() {
@@ -346,6 +357,20 @@ export class Atmosphere {
     return mesh;
   }
 
+  /**
+   * Storm dust density along a view ray, relative to the mean (≈0.45 thin … ≈1.9 thick): two taps of
+   * wind-advected fBm, near and mid-distance, so banks drift past instead of sitting on the ground.
+   * `uSandFlow` wraps every 3584 m, a whole number of 224 m / 112 m tiles, so the drift is seamless.
+   */
+  private bank = Fn(([rd, dist]: [N, N]) => {
+    const flow = this.uSandFlow;
+    const at = (d: N) => cameraPosition.xz.add(rd.xz.mul(min(dist, d))).sub(flow);
+    const n1 = noise(at(14).div(224)).r;
+    const n2 = noise(at(42).div(112).add(vec2(0.37, 0.61))).g;
+    const m = n1.mul(0.55).add(n2.mul(0.45));
+    return mix(float(0.45), float(1.9), smoothstep(0.34, 0.66, m));
+  });
+
   /** iq-style analytic height fog coloured by haze(rd). */
   private buildFog() {
     const factor = Fn(() => {
@@ -355,8 +380,14 @@ export class Atmosphere {
       const b = this.uFogFalloff;
       const tt = dist.mul(rd.y).mul(b);
       const ratio = select(abs(tt).lessThan(1e-4), float(1), float(1).sub(exp(tt.negate())).div(tt));
-      // storm: visibility drops to ~60 m (the storm term doesn't follow the time-of-day density)
-      const density = this.uFogDensity.mul(float(1).add(this.uDust.mul(1.1))).add(this.uStorm.mul(this.uStorm).mul(0.042));
+      // storm: visibility drops to ~60 m (the storm term doesn't follow the time-of-day density).
+      // The dust isn't even: banks roll through on the wind, thick enough to swallow a car at 30 m,
+      // then thin to let the next ridge show, and every gust closes the air in for a few seconds.
+      const stormD = this.uStorm.mul(this.uStorm).mul(0.042).toVar();
+      If(this.uStorm.greaterThan(0.02), () => {
+        stormD.mulAssign(mix(float(1), this.bank(rd, dist), this.uStorm).mul(this.uGust.mul(0.8).add(1)));
+      });
+      const density = this.uFogDensity.mul(float(1).add(this.uDust.mul(1.1))).add(stormD);
       // a clear near zone: the first tens of metres stay crisp (storms excepted), so the air reads as
       // depth instead of a milky veil over everything
       const near = mix(smoothstep(6, 80, dist), float(1), this.uStorm);
@@ -372,7 +403,13 @@ export class Atmosphere {
       const c = this.haze(vec3(rd.x, max(rd.y, 0.0).mul(0.3), rd.z).normalize(), float(0.3));
       // aerial perspective: far ridges take the sky's horizon colour (blue by day, rose at dusk)
       const far = smoothstep(180, 1600, length(delta)).mul(float(1).sub(this.uStorm)).mul(float(1).sub(this.uFront));
-      return c.add((this.uHorizon as N).sub(this.uHaze).mul(far.mul(0.45)));
+      const out = c.add((this.uHorizon as N).sub(this.uHaze).mul(far.mul(0.45))).toVar();
+      // storm banks: thick dust is darker and ruddier (it shades itself), thin air glows
+      If(this.uStorm.greaterThan(0.02), () => {
+        const b = this.bank(rd, length(delta)).sub(1).mul(this.uStorm);
+        out.mulAssign(vec3(1).sub(vec3(0.16, 0.2, 0.24).mul(b)).sub(this.uGust.mul(this.uStorm).mul(0.1)));
+      });
+      return out;
     });
     return fog(color(), factor());
   }
@@ -392,7 +429,11 @@ export class Atmosphere {
     const st = this.storm;
     // storms howl: much stronger wind with hard, irregular gusts
     const gusts = Math.sin(this.dustTimer * 0.9) * 0.6 + Math.sin(this.dustTimer * 2.3 + 1) * 0.35;
-    this.windStrength = 0.45 + this.dustiness * 1.2 + 0.15 * Math.sin(this.dustTimer * 0.3) + st * (2.4 + gusts * 0.6);
+    // the big surges: a slow beat under the gusts, so a few seconds in every ten or so the air shuts
+    const surge = gusts + Math.sin(this.dustTimer * 0.37 + 2) * 0.45;
+    this.gust = st * smoothN(0.45, 1.15, surge);
+    this.uGust.value = this.gust;
+    this.windStrength = 0.45 + this.dustiness * 1.2 + 0.15 * Math.sin(this.dustTimer * 0.3) + st * (2.4 + gusts * 0.6) + this.gust * 1.4;
     const wa = 0.4 + Math.sin(this.dustTimer * 0.004) * 0.5;
     this.windDir.set(Math.cos(wa), Math.sin(wa));
     (this.uUpwind.value as THREE.Vector2).set(-this.windDir.x, -this.windDir.y);
