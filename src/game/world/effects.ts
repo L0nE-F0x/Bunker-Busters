@@ -331,6 +331,8 @@ export class DustPuffs {
     this.sprite.count = N;
     this.sprite.frustumCulled = false;
     this.sprite.renderOrder = 12;
+    // no draw while every puff has faded (the boot warm-up shows it anyway)
+    this.sprite.visible = false;
   }
 
   /** `n` puffs around `p`: `spread` m/s outward, `up` m/s upward, `size` m, optional push `dir`. */
@@ -352,11 +354,15 @@ export class DustPuffs {
     }
     this.a.needsUpdate = true;
     this.b.needsUpdate = true;
+    this.lastEmit = this.now;
+    this.sprite.visible = true;
   }
 
+  private lastEmit = -99;
   update(dt: number) {
     this.now += dt;
     this.uTime.value = this.now;
+    if (this.sprite.visible && this.now - this.lastEmit > 2) this.sprite.visible = false;
     const w = this.atmo.wind;
     (this.uWind.value as THREE.Vector3).set(w.x, 0, w.y);
   }
