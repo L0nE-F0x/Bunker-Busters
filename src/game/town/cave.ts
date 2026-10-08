@@ -1,5 +1,5 @@
 import * as THREE from 'three/webgpu';
-import { attribute, positionWorld, normalWorld, vec2, vec3, float, mix, smoothstep, sin } from 'three/tsl';
+import { attribute, positionWorld, normalWorld, vec2, vec3, float, mix, smoothstep, abs } from 'three/tsl';
 import type { Physics } from '@/engine/physics';
 import { noise } from '@/engine/noiseTex';
 import type { Frame } from '@/game/world/kit';
@@ -221,18 +221,30 @@ let _caveMat: THREE.MeshStandardNodeMaterial | null = null;
 /** Shared rock for the shell and the rubble: strata like the world's rocks, tint + AO per vertex. */
 export function caveMaterial() {
   if (_caveMat) return _caveMat;
-  const m = new THREE.MeshStandardNodeMaterial({ roughness: 0.93, metalness: 0, flatShading: true });
+  // smooth-shaded: the surface-nets facets read as low-poly; the strata and bump carry the detail
+  const m = new THREE.MeshStandardNodeMaterial({ roughness: 0.93, metalness: 0 });
   const c: N = attribute('cCol', 'vec4');
   const p: N = positionWorld;
   const n: N = noise(vec2(p.x.add(p.z).mul(0.12), p.y.mul(0.12).add(p.z.mul(0.05)))).r.sub(0.5).mul(2);
   const fine: N = noise(vec2(p.x.sub(p.z).mul(0.9), p.y.mul(0.9))).g;
-  const strata: N = sin(p.y.mul(3.0).add(n.mul(2))).mul(0.5).add(0.5);
+  // the ridge's own sediment stack (Terrain's rock bands, same world-height layers), so the outcrop
+  // reads as a piece of the cliff it sits on: rust and umber layers, pale bands, varnish streaks
+  const along: N = p.x.add(p.z);
+  const strataN: N = noise(p.xz.div(90)).r.sub(0.5).mul(5);
+  const layer: N = noise(vec2(p.y.div(11).add(strataN.mul(0.12)), along.div(520))).r;
+  const layerFine: N = noise(vec2(p.y.div(2.6).add(strataN.mul(0.3)), along.div(240)).add(0.37)).g;
+  const bands: N = smoothstep(0.3, 0.7, layer);
+  const pale: N = smoothstep(0.6, 0.78, layerFine);
+  const varnish: N = smoothstep(0.5, 0.78, noise(vec2(along.mul(0.22), p.y.mul(0.018)).add(0.53)).r).mul(smoothstep(0.6, 0.2, abs(normalWorld.y)));
+  const strata: N = layerFine;
   const top: N = smoothstep(0.55, 0.9, normalWorld.y);
-  const base: N = mix(vec3(0.42, 0.27, 0.19), vec3(0.62, 0.43, 0.29), strata).mul(float(0.8).add(n.mul(0.25)).add(fine.mul(0.12)));
+  const base: N = mix(mix(vec3(0.3, 0.15, 0.09), vec3(0.58, 0.33, 0.18), bands), vec3(0.72, 0.54, 0.38), pale.mul(0.55))
+    .mul(float(0.8).add(n.mul(0.2)).add(fine.mul(0.14)))
+    .mul(float(1).sub(varnish.mul(0.45)));
   const dusty: N = mix(base, vec3(0.74, 0.56, 0.4), top.mul(0.55));
   m.colorNode = dusty.mul(c.xyz);
   m.aoNode = c.w;
-  m.normalNode = bumpFromHeight(n.add(strata.mul(0.3)).add(fine.mul(0.2)), float(0.05));
+  m.normalNode = bumpFromHeight(n.add(strata.mul(0.45)).add(fine.mul(0.25)), float(0.06));
   _caveMat = m;
   return m;
 }
