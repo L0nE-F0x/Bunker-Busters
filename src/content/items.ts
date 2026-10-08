@@ -122,6 +122,22 @@ const defs: ItemDef[] = [
     description: 'The landlord\'s deed to the Till, signed over to "whoever is still here". Inez wants it. So does the rest of Dry Creek. Give it to one of them.',
     flavor: 'Property law, post-apocalypse edition: a pencil and a guess.',
   },
+  // --- Road favours: Rider 9, Dez's relay, the survey ---
+  {
+    id: 'igniter', name: 'Order #88-1047', category: 'intel', weight: 0, stack: 1, value: 0, icon: 'crate',
+    description: 'A Dropt parcel, taped twice: 1× stove igniter (universal) for N. Pell, Dry Creek Diner. ETA 10 min. Status: running late. Ordered 1,281 days ago.',
+    flavor: 'Ten minutes or it\'s free.',
+  },
+  {
+    id: 'dez_relay', name: 'Dez\'s Relay', category: 'intel', weight: 0, stack: 1, value: 0, icon: 'emp',
+    description: 'A radio relay in a lunchbox, built from three Kade lanyards and a doorbell. Patch it into the generator under the Spire. Red to red.',
+    flavor: 'Hand-labelled: "NOT A BOMB (DEZ)".',
+  },
+  {
+    id: 'survey_book', name: 'Kade Field Book', category: 'intel', weight: 0, stack: 1, value: 0, icon: 'intel',
+    description: 'The Survey Camp\'s field book. Ridge seep: 0.4 L/hr, class DATA ASSET. Resident: one, male, loud. Recommended action: relocation package (tote bag).',
+    flavor: 'Every page is initialled V.K. in a different pen.',
+  },
   // --- Sites: The Exit Strategy, Starlite Drive-In ---
   {
     id: 'exit_pass', name: 'EXIT Platinum Pass', category: 'loot', weight: 0.05, stack: 1, value: 80, icon: 'intel',

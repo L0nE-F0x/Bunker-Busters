@@ -260,6 +260,8 @@ export class Recovery implements HostileProvider {
 
   /** An outpost respawned (machines rebuild). */
   onRespawn: ((id: string) => void) | null = null;
+  /** A road pair just spawned at `at` (Dez calls it on the radio once he's on their channel). */
+  onPatrol: ((at: THREE.Vector3) => void) | null = null;
 
   /** A sentry or a drone saw you: the outpost's crew hears about it. */
   alertOutpost(id: string, at: THREE.Vector3) {
@@ -372,7 +374,10 @@ export class Recovery implements HostileProvider {
       sq.members.push(m);
       this.members.push(m);
     });
-    if (sq.members.length) this.patrol = sq;
+    if (sq.members.length) {
+      this.patrol = sq;
+      this.onPatrol?.(best);
+    }
   }
 
   // ------------------------------------------------------------------ deaths, wounds, loot

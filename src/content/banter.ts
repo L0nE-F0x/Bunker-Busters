@@ -96,6 +96,16 @@ export const BANTER: Banter[] = [
     text: 'Dust storm on our side of the valley. SeedBot is half-blind in this. So are you. Use it anyway.',
   },
   {
+    id: 'rider.order', speaker: 'Mara', priority: 5,
+    when: (v) => v.has('q.rider.log') && !v.has('q.rider.delivered'),
+    text: 'Dropt. I remember Dropt. Ten minutes or free, and they were never once free. Get that box to Nia. Then tell Hollis. In that order.',
+  },
+  {
+    id: 'survey.kept', speaker: 'Mara', priority: 6,
+    when: (v) => v.has('q.wick.kept'),
+    text: 'I read Wick\'s book. Depth, not flow. She doesn\'t want his seep. She wants the aquifer under the ridge, the one the creek used to come from. I\'ll be up all night with this.',
+  },
+  {
     id: 'crew', speaker: 'Mara', priority: 5,
     when: (v) => v.has('debriefed'),
     text: 'Get some sleep. Then go see who in Dry Creek would walk west with you. Nobody walks to Apex alone.',
@@ -161,6 +171,18 @@ export const BANTER: Banter[] = [
     near: { lm: 'datacenter', r: 140 },
     when: (v) => !v.has('seen:datacenter'),
     text: 'You\'re near ColdStorage. Stop and listen. Hear that hum? That building is still breathing.',
+  },
+  {
+    id: 'courier', speaker: 'self',
+    near: { lm: 'courier', r: 110 },
+    when: (v) => !v.has('seen:courier'),
+    text: (v) => (v.night ? 'A red light blinking out on the flats. Two quick flashes, every two seconds. Somebody wanted to be seen.' : 'An orange flag on a whip, out on the flats. Somebody planted that to be found.'),
+  },
+  {
+    id: 'stakes', speaker: 'self',
+    near: { x: 18, z: 311, r: 30 },
+    when: (v) => !v.has('wick.survey') && !v.has('q.wick.stake.b'),
+    text: 'Orange tape on a stake, out here. Somebody is measuring this slope for something.',
   },
   {
     id: 'tube', speaker: 'self',
