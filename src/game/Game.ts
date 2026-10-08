@@ -157,6 +157,8 @@ export class Game {
   private autosaveTimer = 60;
   private titleT = 0;
   private busy = false; // minigame/modal in progress
+  /** Smoothed 0..1 point light (fires, floodlights) on the player: the stealth model's night term. */
+  private pointLit = 0;
   /** Warm these on the next frame's render (see warmShaders), staging anything not yet in the scene. */
   private warmNext: { roots: THREE.Object3D[]; stage?: () => (() => void) | undefined } | null = null;
   private cubeRT: THREE.CubeRenderTarget | null = null;
@@ -1755,6 +1757,11 @@ export class Game {
     tg.hidden = this.garage.playerInside;
     tg.night = this.atmo.isNight ? 1 : Math.max(0, Math.min(1, (0.15 - this.atmo.sunElevation) / 0.25));
     tg.visibility = 1 - this.weather.intensity * 0.75;
+    // the stealth model: by day everyone's lit; at night it's the fires, the floodlights, the muzzle
+    // flashes, and your own torch. Smoothed so a guttering fire doesn't strobe you in and out of sight.
+    const pointLit = 1 - Math.exp(-lightPool.illuminance(tg.chest) / 0.6);
+    this.pointLit += (pointLit - this.pointLit) * Math.min(1, dt * 4);
+    tg.light = tg.torch ? 1 : Math.min(1, 1 - tg.night + tg.night * Math.max(0.08, this.pointLit));
     tg.alive = s.data.health > 0;
     tg.collider = player.collider;
     tg.height = player.height;
@@ -1898,6 +1905,7 @@ export class Game {
       detection: Math.max(this.garage.drone.detection, aw.best),
       threat: aw.hunting > 0 ? 'hunted' : aw.best > 0.3 ? 'watched' : null,
       venom: (s.data.poison ?? 0) > 0,
+      light: this.combat.target.night < 0.5 ? null : this.combat.target.light > 0.55 ? 'lit' : this.combat.target.light < 0.3 ? 'shadow' : null,
       droneState: this.garage.drone.state,
       canSee: this.garage.drone.canSee,
       crouch: player.crouching,

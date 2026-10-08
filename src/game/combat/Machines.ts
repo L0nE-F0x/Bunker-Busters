@@ -208,7 +208,9 @@ class Sentry implements Hostile {
     if (T.hidden || !T.alive) return false;
     const to = _a.subVectors(T.chest, this.pivot);
     const d = to.length();
-    if (d > 34 * (0.4 + 0.6 * T.visibility)) return false;
+    // a camera sees less in the dark too, unless you walk into the floodlight
+    const dark = T.night > 0.5 && !T.torch ? 0.55 + 0.45 * T.light : 1;
+    if (d > 34 * (0.4 + 0.6 * T.visibility) * dark) return false;
     const look = this.state === 'scan' ? 0.62 : 1.2; // half-angle
     const yawTo = Math.atan2(to.x, to.z);
     if (Math.abs(angDiff(this.yaw, yawTo)) > look && d > 2) return false;
@@ -420,7 +422,7 @@ class Hornet implements Hostile {
     if (T.hidden || !T.alive) return false;
     const to = _a.subVectors(T.chest, this.group.position);
     const d = to.length();
-    const range = (this.state === 'hunt' ? 40 : 22) * (0.4 + 0.6 * T.visibility) * (T.night > 0.5 && !T.torch && this.state !== 'hunt' ? 0.8 : 1);
+    const range = (this.state === 'hunt' ? 40 : 22) * (0.4 + 0.6 * T.visibility) * (T.night > 0.5 && !T.torch && this.state !== 'hunt' ? 0.75 + 0.25 * T.light : 1);
     if (d > range) return false;
     // the searchlight cone, roughly
     const fwd = _b.set(Math.sin(this.yaw) * 0.8, -0.6, Math.cos(this.yaw) * 0.8).normalize();

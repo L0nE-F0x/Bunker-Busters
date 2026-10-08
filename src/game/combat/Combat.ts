@@ -77,6 +77,8 @@ export interface PlayerTarget {
   /** 0..1 night darkness, 0..1 air clarity (storms). */
   night: number;
   visibility: number;
+  /** 0..1 how lit you are to a watcher (stealth model): 1 by day, firelight/floodlights/torch at night. */
+  light: number;
   alive: boolean;
   collider: unknown;
   /** Height of the capsule (crouch shrinks it). */
@@ -116,7 +118,7 @@ export class Combat {
   readonly providers: HostileProvider[] = [];
   readonly target: PlayerTarget = {
     feet: new THREE.Vector3(), chest: new THREE.Vector3(), eye: new THREE.Vector3(), velocity: new THREE.Vector3(),
-    crouch: false, noise: 1, torch: false, hidden: false, night: 0, visibility: 1, alive: true, collider: null, height: 1.66,
+    crouch: false, noise: 1, torch: false, hidden: false, night: 0, visibility: 1, light: 1, alive: true, collider: null, height: 1.66,
   };
   difficulty: Difficulty = 'normal';
   /** 0..1 how hot the fight is right now (music, banter). Decays when nobody is shooting. */

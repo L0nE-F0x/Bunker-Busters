@@ -51,6 +51,24 @@ class LightPool {
     for (const s of this.slots) if (s.owner === v) s.owner = null;
   }
 
+  /**
+   * How much point light falls on `p` (fires, floodlights, bulbs, muzzle flashes), with the same
+   * falloff three.js uses (inverse square, windowed to `distance`). No occlusion: a wall between you
+   * and the fire doesn't count. Positions are as of the last `update`. Used by the stealth model.
+   */
+  illuminance(p: THREE.Vector3) {
+    let e = 0;
+    for (const v of this.lights) {
+      if (v.intensity <= 1e-3) continue;
+      const d2 = v.world.distanceToSquared(p);
+      const r2 = v.distance * v.distance;
+      if (d2 >= r2) continue;
+      const w = 1 - (d2 * d2) / (r2 * r2);
+      e += (v.intensity * w * w) / Math.max(d2, 1);
+    }
+    return e;
+  }
+
   /** Real lights currently lent out (debug/bench). */
   get active() {
     return this.slots.filter((s) => s.owner).length;
