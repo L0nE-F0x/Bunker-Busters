@@ -237,7 +237,7 @@ export class Pebbles {
     const ny = this.hf.normalAt(x0, z0).y;
     // desert pavement: the stones the wind left behind, packed and dark with varnish
     const pave = groundPatchAt(x0, z0).pave * Math.min(1, Math.max(0, (ny - 0.9) / 0.06));
-    const n = Math.floor((0.35 + stony * stony * 5 + (1 - ny) * 8 + pave * 7) * (0.6 + r() * 0.8));
+    const n = Math.floor((0.35 + stony * stony * 5 + (1 - ny) * 8 + pave * 3.5) * (0.6 + r() * 0.8));
     if (this.hf.roadDistanceAt(x0, z0) > 4.5 && this.hf.zoneDistance(x0, z0) > -2) {
       for (let k = 0; k < n; k++) {
         const x = x0 + r() * C, z = z0 + r() * C;
@@ -257,23 +257,30 @@ export class Pebbles {
     return out;
   }
 
+  /** Cell offsets within the radius, nearest first: a full pool drops the farthest stones, not a side. */
+  private static ring: [number, number][] | null = null;
+
   update(focus: THREE.Vector3) {
     if (Math.hypot(focus.x - this.center.x, focus.z - this.center.y) < 4) return;
     this.center.set(focus.x, focus.z);
     if (this.cells.size > 40000) this.cells.clear();
     const { CELL: C, R } = Pebbles;
+    if (!Pebbles.ring) {
+      const k = Math.ceil(R / C) + 1, ring: [number, number][] = [];
+      for (let dz = -k; dz <= k; dz++) for (let dx = -k; dx <= k; dx++) if ((dx * dx + dz * dz) * C * C <= (R + C) ** 2) ring.push([dx, dz]);
+      Pebbles.ring = ring.sort((a, b) => a[0] ** 2 + a[1] ** 2 - b[0] ** 2 - b[1] ** 2);
+    }
     let n = 0;
-    const x0 = Math.floor((focus.x - R) / C), x1 = Math.ceil((focus.x + R) / C);
-    const z0 = Math.floor((focus.z - R) / C), z1 = Math.ceil((focus.z + R) / C);
-    for (let iz = z0; iz <= z1 && n < this.capacity; iz++) {
-      for (let ix = x0; ix <= x1 && n < this.capacity; ix++) {
-        const cx = (ix + 0.5) * C - focus.x, cz = (iz + 0.5) * C - focus.z;
-        if (cx * cx + cz * cz > R * R) continue;
-        for (const p of this.cell(ix, iz)) {
-          if (n >= this.capacity) break;
-          this.mesh.setMatrixAt(n, p.m);
-          this.mesh.setColorAt(n++, p.c);
-        }
+    const fx = Math.floor(focus.x / C), fz = Math.floor(focus.z / C);
+    for (const [dx, dz] of Pebbles.ring) {
+      if (n >= this.capacity) break;
+      const ix = fx + dx, iz = fz + dz;
+      const cx = (ix + 0.5) * C - focus.x, cz = (iz + 0.5) * C - focus.z;
+      if (cx * cx + cz * cz > R * R) continue;
+      for (const p of this.cell(ix, iz)) {
+        if (n >= this.capacity) break;
+        this.mesh.setMatrixAt(n, p.m);
+        this.mesh.setColorAt(n++, p.c);
       }
     }
     this.mesh.count = n;
