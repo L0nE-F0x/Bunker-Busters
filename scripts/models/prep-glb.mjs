@@ -4,11 +4,13 @@
 //
 //   node scripts/models/prep-glb.mjs Assets/Meshy_AI_Lone_Wolf_Walking.glb public/models/wolf.glb [--size 2048] [--q 4]
 //
-// Needs ffmpeg. Geometry, skin and animations pass through untouched.
+// Needs ffmpeg. Geometry, skin and animations are then packed smaller by slim-glb.mjs (same look;
+// --no-slim skips it).
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
+import { slimGlb } from './slim-glb.mjs';
 
 const [src, dst, ...rest] = process.argv.slice(2);
 if (!src || !dst) { console.log('usage: prep-glb.mjs <in.glb> <out.glb> [--size N] [--q 2..8]'); process.exit(1); }
@@ -62,5 +64,5 @@ header.writeUInt32LE(0x46546c67, 0); header.writeUInt32LE(2, 4); header.writeUIn
 const jh = Buffer.alloc(8); jh.writeUInt32LE(js.length, 0); jh.writeUInt32LE(0x4e4f534a, 4);
 const bh = Buffer.alloc(8); bh.writeUInt32LE(body.length, 0); bh.writeUInt32LE(0x004e4942, 4);
 fs.mkdirSync(path.dirname(dst), { recursive: true });
-fs.writeFileSync(dst, Buffer.concat([header, jh, js, bh, body]));
+fs.writeFileSync(dst, rest.includes('--no-slim') ? Buffer.concat([header, jh, js, bh, body]) : slimGlb(Buffer.concat([header, jh, js, bh, body])));
 console.log(`${dst}: ${(fs.statSync(src).size / 1e6).toFixed(1)} MB → ${(fs.statSync(dst).size / 1e6).toFixed(1)} MB`);

@@ -17,6 +17,19 @@
   [headers.values]
     Cache-Control = "public, max-age=31536000, immutable"
 
+# Models and voice clips are requested as `x.glb?v=<content hash>` (vite.config.ts), so a changed
+# file gets a new URL: browsers can keep them for a year without asking again.
+[[headers]]
+  for = "/models/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+    Content-Type = "model/gltf-binary"
+
+[[headers]]
+  for = "/voice/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
 [[headers]]
   for = "/media/*"
   [headers.values]

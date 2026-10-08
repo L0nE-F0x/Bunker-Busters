@@ -2,6 +2,7 @@ import './fonts';
 import { createRenderer } from '@/engine/renderer';
 import { isMobile } from '@/engine/device';
 import { Game } from '@/game/Game';
+import { prefetchBootModels } from '@/game/bootModels';
 
 // Uncaught errors → console, so the desktop app (whose console goes to stdout) shows them in a terminal.
 const describe = (e: unknown) => (e instanceof Error ? `${e.message}\n${e.stack ?? ''}` : String(e));
@@ -63,6 +64,8 @@ if (TRACE !== null) {
 }
 
 async function boot() {
+  // the models download while the renderer starts and the world is built (Game.build parses them)
+  prefetchBootModels();
   const canvas = document.getElementById('game') as HTMLCanvasElement;
   const { renderer, isWebGPU, backendLabel } = await createRenderer(canvas);
   console.info(`[BunkerBusters] renderer backend: ${backendLabel}`);

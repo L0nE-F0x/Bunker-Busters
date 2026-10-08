@@ -13,10 +13,12 @@
 //   - `--maps base` (default) keeps only the colour map; `all` keeps normal + metal/rough too.
 //   - strips emissive and material extensions (Meshy wires the colour map into emission on some
 //     exports), re-encodes images to JPEG at `--size`², and repacks only what's still referenced.
+//   - finally slim-glb.mjs: no tangents, quantized weights/UVs/normals/rotations (--no-slim skips it)
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
+import { slimGlb } from './slim-glb.mjs';
 
 const args = process.argv.slice(2);
 const [dst, baseFile] = args;
@@ -288,5 +290,5 @@ header.writeUInt32LE(0x46546c67, 0); header.writeUInt32LE(2, 4); header.writeUIn
 const jh = Buffer.alloc(8); jh.writeUInt32LE(js.length, 0); jh.writeUInt32LE(0x4e4f534a, 4);
 const bh = Buffer.alloc(8); bh.writeUInt32LE(bodyPad.length, 0); bh.writeUInt32LE(0x004e4942, 4);
 fs.mkdirSync(path.dirname(dst), { recursive: true });
-fs.writeFileSync(dst, Buffer.concat([header, jh, js, bh, bodyPad]));
+fs.writeFileSync(dst, args.includes('--no-slim') ? Buffer.concat([header, jh, js, bh, bodyPad]) : slimGlb(Buffer.concat([header, jh, js, bh, bodyPad])));
 console.log(`${dst}: ${(fs.statSync(dst).size / 1e6).toFixed(2)} MB, ${J.animations?.length ?? 0} clips${J.animations ? ' (' + J.animations.map((x) => x.name).join(', ') + ')' : ''}`);

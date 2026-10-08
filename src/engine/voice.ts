@@ -100,7 +100,7 @@ export class VoicePlayer {
   private load(key: string) {
     let p = this.buffers.get(key);
     if (!p) {
-      p = fetch(`${BASE}${key}.mp3`)
+      p = fetch(`${BASE}${key}.mp3?v=${__VOICE_REV__}`)
         .then((r) => (r.ok ? r.arrayBuffer() : Promise.reject(new Error(String(r.status)))))
         .then((a) => this.ctx.decodeAudioData(a))
         .catch((e) => { console.warn('[voice] clip', key, e); this.buffers.delete(key); return null; });
