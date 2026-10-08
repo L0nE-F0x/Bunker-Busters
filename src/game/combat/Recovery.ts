@@ -4,6 +4,7 @@ import type { AudioEngine } from '@/engine/audio';
 import type { Heightfield } from '../world/Heightfield';
 import type { Interactable } from '../context';
 import { HumanCrowd, Ragdoll, BONE, type HumanLook, type HumanWeapon, type Human } from './Humans';
+import type { HumanSkins } from './humanSkin';
 import { buildOutpost, type OutpostBuild, type CoverPoint } from './Outposts';
 import { capsuleRay, sphereRay, type Combat, type Hostile, type HostileProvider, type NoiseKind, type RayHit, type Damage } from './Combat';
 import { OUTPOSTS, BARKS, BODY_LOOT, type OutpostDef, type CrewRole } from '@/content/recovery';
@@ -20,6 +21,8 @@ import { distToPolyline } from '../world/Heightfield';
  */
 
 export interface RecoveryHost {
+  /** The Meshy contractor bodies (null/absent: draw the procedural ones). */
+  skins?: HumanSkins | null;
   physics: Physics;
   hf: Heightfield;
   combat: Combat;
@@ -214,10 +217,11 @@ export class Recovery implements HostileProvider {
   t = 0;
 
   constructor(private host: RecoveryHost) {
-    this.crowd = new HumanCrowd(SLOT_GUNS.map((w, i) => lookFor(i, w)));
+    this.crowd = new HumanCrowd(SLOT_GUNS.map((w, i) => lookFor(i, w)), host.skins ?? null);
     this.free = SLOT_GUNS.map((_, i) => i);
     this.group.name = 'recovery';
     this.group.add(this.crowd.mesh);
+    if (host.skins) this.group.add(host.skins.group);
     for (const def of OUTPOSTS) {
       const build = buildOutpost(def, host.physics, host.hf);
       this.group.add(build.group);
@@ -569,7 +573,7 @@ export class Recovery implements HostileProvider {
     const host = this.host;
     if (!playing) {
       for (const op of this.outposts) op.build.lod.update(cam);
-      this.crowd.update(dt, host.hf);
+      this.crowd.update(dt, host.hf, host.combat.target?.eye);
       return;
     }
     // outposts: wake up near, sleep far, respawn long after a clear
@@ -621,7 +625,7 @@ export class Recovery implements HostileProvider {
     for (const sq of this.squads()) this.squadTick(sq, dt);
     for (const m of [...this.members]) this.tick(m, dt);
     this.updateCharges(dt);
-    this.crowd.update(dt, host.hf);
+    this.crowd.update(dt, host.hf, host.combat.target?.eye);
   }
 
   private squadTick(sq: Squad, dt: number) {

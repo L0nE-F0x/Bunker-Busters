@@ -5,6 +5,7 @@ import {
 } from 'three/tsl';
 import { noise } from '@/engine/noiseTex';
 import { rimColor, rimStrength } from './materials';
+import type { NpcModels, NpcActor } from './npcSkin';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 type N = any;
@@ -71,6 +72,8 @@ export interface NpcDef {
 
 interface Figure {
   def: NpcDef;
+  /** The Meshy model standing in for the procedural figure (world/npcSkin.ts). */
+  actor?: NpcActor;
   neck: THREE.Vector3;
   hipY: number;
   yaw: number;
@@ -410,7 +413,10 @@ function figure(out: Sink, def: NpcDef) {
 
 /** One mesh for a site's people. `update` breathes them and turns heads toward the camera. */
 export class NpcCrowd {
-  readonly mesh: THREE.Mesh;
+  /** Meshy townsfolk, loaded before any crowd is built (null: everyone procedural). */
+  static models: NpcModels | null = null;
+  /** The crowd: the procedural figures' one mesh, plus a model per named person who has one. */
+  readonly mesh = new THREE.Group();
   private figs: Figure[] = [];
   private uA: THREE.Vector4[] = [];
   private uB: THREE.Vector4[] = [];
@@ -421,19 +427,38 @@ export class NpcCrowd {
   constructor(defs: NpcDef[], name = 'npcs') {
     if (defs.length > MAX) throw new Error('too many npcs in one crowd');
     const sink = new Sink();
+    const models = NpcCrowd.models;
+    let procedural = 0;
     for (let i = 0; i < MAX; i++) { this.uA.push(new THREE.Vector4()); this.uB.push(new THREE.Vector4()); }
     defs.forEach((def, i) => {
-      sink.idx = i;
-      const { neck, hipY } = figure(sink, def);
+      const seated = def.pose === 'warm' || def.pose === 'mug';
+      const modelled = models?.has(def.id);
+      // a modelled person still poses the procedural figure (into a scratch sink) for its neck and seat
+      const into = modelled ? new Sink() : sink;
+      into.idx = i;
+      const { neck, hipY } = figure(into, def);
       const phase = (i * 2.399) % (Math.PI * 2);
-      this.figs.push({ def, neck, hipY, yaw: 0, look: 0, nod: 0, idle: phase * 7 });
+      const fig: Figure = { def, neck, hipY, yaw: 0, look: 0, nod: 0, idle: phase * 7 };
+      if (modelled) {
+        const actor = models!.make(def.id, seated, hipY)!;
+        actor.root.position.add(new THREE.Vector3(def.x, def.y, def.z));
+        actor.root.rotation.y = def.yaw;
+        actor.root.name = `${name}-${def.id}`;
+        this.mesh.add(actor.root);
+        fig.actor = actor;
+      } else procedural++;
+      this.figs.push(fig);
       this.uA[i].set(neck.x, neck.y, neck.z, 0);
       this.uB[i].set(hipY, phase, def.yaw, 0);
     });
-    this.mesh = new THREE.Mesh(sink.build(), npcMaterial(this.uA, this.uB));
     this.mesh.name = name;
-    this.mesh.castShadow = true;
-    this.mesh.receiveShadow = true;
+    if (procedural) {
+      const m = new THREE.Mesh(sink.build(), npcMaterial(this.uA, this.uB));
+      m.name = name + '-figures';
+      m.castShadow = true;
+      m.receiveShadow = true;
+      this.mesh.add(m);
+    }
   }
 
   /** Where a figure's neck is (crowd space), for interaction spots. */
@@ -443,7 +468,8 @@ export class NpcCrowd {
 
   update(dt: number, cam: THREE.Vector3) {
     this.t += dt;
-    if (!this.mesh.visible) return;
+    // nothing to do while the town is out of view (its near set hidden by distance)
+    for (let o: THREE.Object3D | null = this.mesh; o; o = o.parent) if (!o.visible) return;
     this.mesh.updateWorldMatrix(true, false);
     this.inv.copy(this.mesh.matrixWorld).invert();
     const c = this.local.copy(cam).applyMatrix4(this.inv);
@@ -468,6 +494,7 @@ export class NpcCrowd {
       f.nod += (nod - f.nod) * k;
       this.uA[i].w = f.look;
       this.uB[i].w = f.nod;
+      f.actor?.update(dt, dist < reach, f.look, f.nod);
     });
   }
 }

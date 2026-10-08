@@ -24,6 +24,9 @@ import { VirtualLight, lightPool } from './world/lights';
 import { updateRim, glow, desertRock } from './world/materials';
 import { buildIntelProp, type IntelProp } from './world/intelProps';
 import { Scavenge } from './world/Scavenge';
+import { NpcModels } from './world/npcSkin';
+import { NpcCrowd } from './world/npc';
+import { HumanSkins } from './combat/humanSkin';
 import { Garage } from './bunker/Garage';
 import { Settlement } from './town/Settlement';
 import { buildSites, type Site } from './sites';
@@ -109,6 +112,7 @@ export class Game {
   garage!: Garage;
   settlement!: Settlement;
   scavenge!: Scavenge;
+  private humanSkins: HumanSkins | null = null;
   sites: Site[] = [];
   map!: MapData;
   player: Player | null = null;
@@ -215,8 +219,7 @@ export class Game {
     this.fauna = new Fauna(this.hf, this.props.perches, this.props.wrecks);
     if (!SKIP.has('fauna')) {
       this.scene.add(this.fauna.mesh);
-      const wolves = await this.fauna.loadModels();
-      if (wolves) this.scene.add(wolves.group);
+      this.scene.add(await this.fauna.loadModels());
     }
     this.pebbles = new Pebbles(this.hf, rockGeometry(5, 0), desertRock(), Math.round(4000 * Math.min(1, this.quality.grassDensity)));
     if (!SKIP.has('scrub')) this.scene.add(this.pebbles.mesh);
@@ -266,8 +269,12 @@ export class Game {
     // wolves won't follow you to the fire or into a town
     this.fauna.safe = [{ p: this.landmarks.campPosition.clone(), r: 30 }];
     for (const lm of LANDMARKS) if (lm.kind === 'town') this.fauna.safe.push({ p: new THREE.Vector3(lm.position[0], 0, lm.position[2]), r: 75 });
+    // the Meshy townsfolk (before the warm-up; ?procnpc keeps the procedural figures)
+    NpcCrowd.models = await NpcModels.load();
     this.settlement = new Settlement(this.ctx, this.landmarks);
     if (!SKIP.has('sites')) this.sites = buildSites(this.ctx, this.landmarks);
+    // the Meshy contractors (before the warm-up; ?prochuman keeps the procedural bodies)
+    this.humanSkins = new URLSearchParams(location.search).has('prochuman') ? null : await HumanSkins.load(10, [0]);
     this.buildRecovery();
     this.buildIntel();
     // stashes and searchable wrecks (not quests: just the desert being generous)
@@ -582,6 +589,7 @@ export class Game {
   private buildRecovery() {
     const self = this;
     this.recovery = new Recovery({
+      skins: this.humanSkins,
       physics: this.physics,
       hf: this.hf,
       combat: this.combat,
@@ -1022,7 +1030,7 @@ export class Game {
     const inside = (o: THREE.Object3D) => this.garage.houseBox.containsPoint(o.getWorldPosition(new THREE.Vector3()));
     this._exterior = [
       this.atmo.sky, this.terrain.mesh, this.terrain.far, this.props.group, this.landmarks.group, this.garage.b.group,
-      this.scrub.mesh, this.shrubs.group, this.pebbles.mesh, this.fauna.mesh, this.fauna.skins?.group, this.recovery.group, this.machines.group,
+      this.scrub.mesh, this.shrubs.group, this.pebbles.mesh, this.fauna.mesh, this.fauna.models, this.recovery.group, this.machines.group,
       this.haze.sprite, this.streaks.sprite, this.devils.sprite, this.scavenge?.group,
       ...[...this.intelMeshes.values()].filter((g) => !inside(g)),
     ].filter((o): o is THREE.Object3D => !!o);

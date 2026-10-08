@@ -4,6 +4,7 @@ import { noise } from '@/engine/noiseTex';
 import { rimColor, rimStrength } from '../world/materials';
 import type { Physics } from '@/engine/physics';
 import type { Heightfield } from '../world/Heightfield';
+import type { HumanSkins } from './humanSkin';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 type N = any;
@@ -83,9 +84,11 @@ const lathe = (pts: [number, number][], seg = 14) => new THREE.LatheGeometry(pts
 const dark = (c: string, k: number) => '#' + new THREE.Color(c).multiplyScalar(k).getHexString();
 
 /** Kinds (mat.z): 0 fabric, 1 hi-vis vest, 2 hard plastic, 3 metal, 4 reflective tape, 5 skin, 6 rubber/leather. */
-function buildPerson(out: Sink, L: HumanLook, base: number) {
+function buildPerson(out: Sink, L: HumanLook, base: number, gunOnly = false) {
   const w = L.build;
   const at = (b: number) => { out.bone = base + b; };
+  // with the Meshy bodies (humanSkin.ts) this mesh draws only the guns
+  if (gunOnly) { at(BONE.weapon); buildWeapon(out, L.weapon); return; }
   // --- hips: pelvis, belt, pouches, holster
   at(BONE.hips);
   out.add(lathe([[0.001, -0.15], [0.12, -0.14], [0.175, -0.06], [0.178, 0.03], [0.16, 0.1], [0.001, 0.1]]), S(1.12 * w, 1, 0.82), L.pants, 0.95);
@@ -466,11 +469,14 @@ const _h1 = new THREE.Vector3(), _h2 = new THREE.Vector3();
 export class HumanCrowd {
   readonly mesh: THREE.SkinnedMesh;
   readonly people: Human[] = [];
-  constructor(looks: HumanLook[]) {
+  /** The Meshy bodies fitted onto these skeletons (null: the procedural bodies are drawn). */
+  readonly skins: HumanSkins | null;
+  constructor(looks: HumanLook[], skins: HumanSkins | null = null) {
+    this.skins = skins;
     const sink = new Sink();
     const bones: THREE.Bone[] = [];
     looks.forEach((L, i) => {
-      buildPerson(sink, L, i * NB);
+      buildPerson(sink, L, i * NB, !!skins);
       const bs: THREE.Bone[] = [];
       for (let b = 0; b < NB; b++) {
         const bone = new THREE.Bone();
@@ -501,9 +507,15 @@ export class HumanCrowd {
     for (const p of this.people) p.hide();
   }
 
-  update(dt: number, hf: Heightfield) {
+  update(dt: number, hf: Heightfield, eye?: THREE.Vector3) {
     let any = false;
-    for (const p of this.people) { if (p.active) { p.update(dt, hf); any = true; } }
+    for (const p of this.people) {
+      if (p.active) {
+        p.update(dt, hf);
+        any = true;
+        this.skins?.pose(p.slot, p, !eye || p.pos.distanceToSquared(eye) < 40 * 40);
+      } else this.skins?.hide(p.slot);
+    }
     this.mesh.visible = any;
   }
 
@@ -516,6 +528,7 @@ export class HumanCrowd {
       p.aimYaw = Math.PI;
       p.pose = i % 3 === 0 ? 'aim' : i % 3 === 1 ? 'ready' : 'relaxed';
       for (let k = 0; k < 30; k++) p.update(1 / 30, hf);
+      this.skins?.pose(p.slot, p, true);
     });
     this.mesh.visible = true;
   }

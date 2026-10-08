@@ -1,5 +1,6 @@
 import * as THREE from 'three/webgpu';
 import { WolfSkins } from './wolfSkin';
+import { SnakeSkins, ScorpionSkins } from './creatureSkins';
 import { Plant, FUR, LEAF } from './flora';
 import { floraMaterial } from './materials';
 import type { Heightfield } from './Heightfield';
@@ -247,8 +248,24 @@ class Body {
     Body._e.set(pitch, yaw, roll);
     this.root.compose(pos, Body._q.setFromEuler(Body._e), V(scale, scale, scale));
   }
+  /** A Meshy model draws this creature (creatureSkins.ts): solve the part matrices, draw nothing. */
+  ghost = false;
+  private collapsed = false;
+  /** World matrices of every part (as `write` computes them), without touching the vertices. */
+  solve() {
+    const parts = this.rig.parts;
+    for (let k = 0; k < parts.length; k++) this.world[k].multiplyMatrices(parts[k].parent < 0 ? this.root : this.world[parts[k].parent], this.local[k]);
+  }
   /** Write the posed vertices. Returns false when nothing needed writing. */
   write(P: Float32Array, N: Float32Array) {
+    if (this.ghost) {
+      if (this.visible) this.solve();
+      if (this.collapsed) return false;
+      this.collapsed = true;
+      let v = this.v0;
+      for (const part of this.rig.parts) for (let i = 0; i < part.pos.length; i += 3, v++) { P[v * 3] = 0; P[v * 3 + 1] = -5000; P[v * 3 + 2] = 0; }
+      return true;
+    }
     if (!this.visible) {
       if (!this.wasVisible) return false;
       this.wasVisible = false;
@@ -1488,11 +1505,22 @@ export class Fauna {
   skins: WolfSkins | null = null;
   /** Load the wolf model and hand each pack member its slot. Before the boot shader warm-up. */
   async loadModels() {
-    if (new URLSearchParams(location.search).has('procwolf')) return null; // A/B against the old wolf
+    if (new URLSearchParams(location.search).has('procwolf')) return this.models; // A/B against the old wolf
     this.skins = await WolfSkins.load(this.pack.wolves.length);
-    if (this.skins) this.pack.wolves.forEach((w, i) => { w.skin = this.skins; w.slot = i; });
-    return this.skins;
+    if (this.skins) {
+      this.pack.wolves.forEach((w, i) => { w.skin = this.skins; w.slot = i; });
+      this.models.add(this.skins.group);
+    }
+    if (new URLSearchParams(location.search).has('procfauna')) return this.models;
+    const [snakes, scorps] = await Promise.all([SnakeSkins.load(this.snakes.length), ScorpionSkins.load(this.scorpions.length)]);
+    if (snakes) { this.snakeSkins = snakes; this.models.add(snakes.mesh); for (const x of this.snakes) x.b.ghost = true; }
+    if (scorps) { this.scorpSkins = scorps; this.models.add(scorps.mesh); for (const x of this.scorpions) x.b.ghost = true; }
+    return this.models;
   }
+  /** Every Meshy creature's mesh (wolves, snakes, scorpions): added to the scene by the game. */
+  readonly models = new THREE.Group();
+  private snakeSkins: SnakeSkins | null = null;
+  private scorpSkins: ScorpionSkins | null = null;
 
   private ctx(player: THREE.Vector3, hour: number, dt: number, sprinting: boolean, audio?: AudioEngine): Ctx {
     return { hf: this.hf, player, hour, dt, t: this.t, audio, sprinting, combat: this.combat, safe: this.safe, camFwd: this.camFwd };
@@ -1513,6 +1541,9 @@ export class Fauna {
     for (const x of this.scorpions) x.update(c);
     let any = false;
     for (const b of this.bodies) any = b.write(this.P, this.N) || any;
+    // the Meshy snakes and scorpions follow their (ghost) procedural bodies
+    if (this.snakeSkins) this.snakes.forEach((x, i) => this.snakeSkins!.set(i, x.b.visible ? x.rig.segs.map((k) => x.b.world[k]) : null, x.b.visible ? x.b.world[x.rig.head] : null));
+    if (this.scorpSkins) this.scorpions.forEach((x, i) => this.scorpSkins!.set(i, x.b.visible ? x.b.root : null));
     if (any) {
       this.mesh.geometry.attributes.position.needsUpdate = true;
       this.mesh.geometry.attributes.normal.needsUpdate = true;

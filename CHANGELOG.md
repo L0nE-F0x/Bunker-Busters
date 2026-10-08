@@ -3,6 +3,12 @@
 Each `## vX.Y.Z` section becomes the GitHub release notes and the "what's new" list in the in-app
 update notice (the first few bullets). `scripts/release.sh` refuses to release a version without one.
 
+## v0.5.5
+- **Kade's crews are real people now.** Hi-vis vests, hard hats with the KADE badge (the squad leader's is orange), respirators, the works. They still take cover, aim, reload and go down in a heap when you drop them
+- **Dry Creek has faces.** Nia, Doc, Inez, Sol, Ren and Wick are fully modelled: Nia works her counter, Inez rings up the Till, Sol and Ren sit by the fire (Ren nursing a drink), and Wick dozes in the Cut. Walk up and they turn to look at you and talk with their hands
+- **Rattlesnakes and scorpions** got the same treatment: a banded rattler that still coils, strikes and slithers, and a desert scorpion with its tail up, caught in your torch at night
+- **Wolves die properly.** No more flailing legs: a shot wolf buckles, collapses onto its side and goes still. One shot mid-run skids before it drops
+
 ## v0.5.4
 - **Real wolves.** The packs are now proper animals: a lean, scarred desert wolf with a real coat and a natural walk, in place of the old blocky one. They still stalk low, track you with their heads, snap when they bite, howl at night and fall onto their side when they die
 
