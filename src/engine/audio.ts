@@ -5,6 +5,7 @@ import { footstep, landing, type StepOpts } from './foley';
 import { HARDNESS, type Room, type Surface } from './surface';
 import { CombatAudio } from './combatAudio';
 import { VoicePlayer } from './voice';
+import { Wildlife } from './wildlife';
 
 /**
  * Positional ambience loops (Landmarks/sites push `{ kind, pos }` into `landmarks.audioSpots`).
@@ -120,6 +121,8 @@ export class AudioEngine {
   private cicadaT = 12;
   private coyoteT = 80;
   private hawkT = 60;
+  /** Doves, quail and wrens by morning; poorwills, owls and coyote yips by night. */
+  wildlife: Wildlife | null = null;
   private crickets = [
     { f: 4450, period: 0.82, pan: -0.55, on: false, t: 2, next: 0 },
     { f: 4980, period: 1.07, pan: 0.6, on: false, t: 6, next: 0 },
@@ -242,6 +245,7 @@ export class AudioEngine {
     this.crackleBuf = crackleBuffer(ctx);
     this.spots = new SpotManager(this.voiceEnv(ctx), this.foley, this.roomBus);
     this.startWind();
+    this.wildlife = new Wildlife({ ctx, out: this.amb, reverb: this.reverbSend, noise: this.noiseBuf });
     this.score = new Music(ctx, this.music, this.reverbSend, this.noiseBuf);
     this.combat = new CombatAudio({
       ctx, noise: this.noiseBuf, sfx: this.sfx, reverb: this.reverbSend, room: this.roomBus, listener: () => this.listenerPos,
@@ -879,6 +883,7 @@ export class AudioEngine {
       this.chorusIdle = chorusTime ? 0 : this.chorusIdle + dt;
       if (this.chorusIdle > 12) { c.stop(t + 0.1); this.chorus = null; this.chorusIdle = 0; }
     }
+    this.wildlife?.update(dt, h, scene.mood === 'play' && outdoorsLife);
     if (scene.mood === 'play' && outdoorsLife) {
       this.cicadaT -= dt;
       if (this.cicadaT <= 0) {
