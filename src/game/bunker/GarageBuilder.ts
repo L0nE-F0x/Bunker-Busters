@@ -498,6 +498,8 @@ export class GarageBuilder {
     const conc = concrete('#8e877c', { stains: 0.5 });
     // concrete apron in front of the house
     b.add(conc, box(18, 0.12, 9, 0, 0.02, 4.5));
+    // and something solid for it: brass, bullet marks and footsteps land on the slab, not under it
+    this.col(0, 0.02, 4.5, 9, 0.06, 4.5);
     // solar array (west)
     const panelMat = new THREE.MeshStandardNodeMaterial({ roughness: 0.15, metalness: 0.6 });
     const grid = smoothstep(0.94, 0.97, abs(sin(uv().x.mul(Math.PI * 6)))).max(smoothstep(0.94, 0.97, abs(sin(uv().y.mul(Math.PI * 10)))));

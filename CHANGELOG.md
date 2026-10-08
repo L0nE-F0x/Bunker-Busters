@@ -3,6 +3,12 @@
 Each `## vX.Y.Z` section becomes the GitHub release notes and the "what's new" list in the in-app
 update notice (the first few bullets). `scripts/release.sh` refuses to release a version without one.
 
+## v0.5.3
+- **Scavenging.** Survivors mark their stashes with a red rag on a stick: 18 of them are hidden around the map (ammo cans, footlockers, travellers' packs, Kade crates, roadside coolers), and they get topped up again after a while. Every wreck on the highway can be searched too. Ammo you find favours the guns you carry
+- **Wolves respect walls.** Packs no longer walk through buildings in town, and Kade's contractors don't either
+- **Bullets leave marks.** Shots chip stone, punch bright holes in steel, splinter wood and kick divots into the sand, and the marks stay
+- **Brass.** The lever rifle flips out its casings, the shotgun throws red hulls on every pump, and the revolver dumps its empties when you reload. They bounce and lie where they land
+
 ## v0.5.2
 - **Real voices.** Every spoken line in the game is now voiced: Mara on the camp radio, Nia and the rest of Dry Creek in person, Tanner through his megaphone, Hunter Vale over the drive-in speakers, the AIs, and every Kade contractor (each one keeps their own voice, and you hear where they're shouting from). Music dips while people talk. Settings → Voices turns it off if you'd rather read
 - **No more mumbling.** The campfire and the camp radio no longer fake a conversation. The fire sounds like people sitting round it (cups, creaking crates, a log knocked in), and the radio drifts between static, a Morse beacon and a scratchy song

@@ -8,6 +8,7 @@ import type { Atmosphere } from '../world/Atmosphere';
 import type { DustPuffs, Sparks } from '../world/effects';
 import { VirtualLight } from '../world/lights';
 import { Tracers, Debris, Flames } from './fx';
+import { Marks, Brass } from './marks';
 import type { WeaponId } from '@/content/weapons';
 import { DIFFICULTY, type Difficulty } from '@/content/weapons';
 
@@ -97,6 +98,7 @@ type Collider = ReturnType<Physics['world']['createCollider']>;
 
 const _d = new THREE.Vector3(), _o = new THREE.Vector3(), _p = new THREE.Vector3(), _q = new THREE.Vector3(), _n = new THREE.Vector3();
 const _a = new THREE.Vector3(), _b = new THREE.Vector3();
+const _down = new THREE.Vector3(0, -1, 0);
 
 export const SURFACE_IMPACT: Record<Surface, ImpactKind> = {
   sand: 'dirt', gravel: 'dirt', asphalt: 'rock', rock: 'rock', concrete: 'rock', wood: 'wood', metal: 'metal',
@@ -106,6 +108,10 @@ export class Combat {
   readonly tracers = new Tracers();
   readonly debris: Debris;
   readonly flames = new Flames();
+  /** Bullet holes and chips on fixed world geometry. */
+  readonly marks = new Marks();
+  /** Spent brass and hulls. */
+  readonly brass: Brass;
   readonly group = new THREE.Group();
   readonly providers: HostileProvider[] = [];
   readonly target: PlayerTarget = {
@@ -132,7 +138,11 @@ export class Combat {
   constructor(private physics: Physics, private hf: Heightfield, readonly atmo: Atmosphere, private audio: AudioEngine) {
     this.debris = new Debris(atmo);
     this.group.name = 'combat';
-    this.group.add(this.tracers.mesh, this.debris.sprite, this.flames.sprite);
+    this.brass = new Brass((p) => {
+      const h = this.worldRay(p, _down, 4, this.target.collider);
+      return h ? p.y - h.t : this.hf.heightAt(p.x, p.z);
+    });
+    this.group.add(this.tracers.mesh, this.debris.sprite, this.flames.sprite, this.marks.mesh, this.brass.mesh);
     this.muzzle.priority = 6;
     for (const l of this.enemyMuzzle) l.priority = 5;
     this.blast.priority = 12;
@@ -288,6 +298,13 @@ export class Combat {
     if (near < 160) this.audio.combat?.impact(kind as ImpactKind, p, Math.max(0.3, Math.min(1.2, 1.3 - near / 120)));
   }
 
+  /** A lasting mark where a round hit fixed geometry (nothing that moves or gets removed). */
+  private mark(kind: ImpactKind, p: THREE.Vector3, n: THREE.Vector3, c: Collider, dir: THREE.Vector3) {
+    const body = c.parent();
+    if (body && !body.isFixed()) return;
+    this.marks.add(kind, p, n, dir);
+  }
+
   private _tint = new THREE.Color();
   private groundTint(p: THREE.Vector3) {
     // the desert's own dust, darker in the wash
@@ -330,7 +347,11 @@ export class Combat {
       this.impactFx(host.h.surface, point, _n.copy(dir).negate(), dir, host.zone === 'head' ? 1.5 : 1);
       return { h: host.h, zone: host.zone, killed, point };
     }
-    if (world) this.impactFx(this.surfaceAt(world.collider, end), end.clone(), world.normal, dir);
+    if (world) {
+      const kind = this.surfaceAt(world.collider, end);
+      this.impactFx(kind, end.clone(), world.normal, dir);
+      this.mark(kind, end, world.normal, world.collider, dir);
+    }
     return null;
   }
 
@@ -369,7 +390,11 @@ export class Combat {
       const close = _p.copy(muzzle).addScaledVector(dir, along);
       const miss = close.distanceTo(t.eye);
       if (miss < 3.2 && i === 0) this.audio.combat?.whizz(close, miss);
-      if (world) this.impactFx(this.surfaceAt(world.collider, end), end, world.normal, dir, 0.8);
+      if (world) {
+        const kind = this.surfaceAt(world.collider, end);
+        this.impactFx(kind, end, world.normal, dir, 0.8);
+        this.mark(kind, end, world.normal, world.collider, dir);
+      }
     }
     this.lastThreat = this.t;
     this.heat = Math.min(1, this.heat + 0.25);
@@ -441,6 +466,7 @@ export class Combat {
     this.tracers.update(dt);
     this.debris.update(dt);
     this.flames.update(dt);
+    this.brass.update(dt);
     this.muzzle.intensity *= Math.exp(-dt * 38);
     for (const l of this.enemyMuzzle) l.intensity *= Math.exp(-dt * 34);
     this.blast.intensity *= Math.exp(-dt * 5.5);

@@ -31,6 +31,8 @@ export interface ArmsHud {
 }
 
 const _fwd = new THREE.Vector3(), _dir = new THREE.Vector3(), _ax = new THREE.Vector3(), _ay = new THREE.Vector3();
+const _ej = new THREE.Vector3(), _ejR = new THREE.Vector3(), _ejV = new THREE.Vector3(), _ejP = new THREE.Vector3(), _ejU = new THREE.Vector3();
+const _UP = new THREE.Vector3(0, 1, 0);
 
 export class PlayerArms {
   equipped: WeaponId | null = null;
@@ -250,8 +252,8 @@ export class PlayerArms {
     this.combat.playerFlash(muzzle, w.id === 'shotgun' ? 1.4 : 1);
     this.combat.debris.emit('smoke', muzzle, 2, _fwd.clone().multiplyScalar(1.5), 0.3, 0.1, undefined, 0.5);
     this.audio.combat?.gunshot(id as 'revolver' | 'shotgun' | 'rifle');
-    if (id === 'shotgun') setTimeout(() => { this.audio.combat?.foley('pumpBack'); setTimeout(() => this.audio.combat?.foley('pumpFwd'), 170); }, 230);
-    if (id === 'rifle') setTimeout(() => { this.audio.combat?.foley('leverOpen'); setTimeout(() => this.audio.combat?.foley('leverClose'), 210); }, 190);
+    if (id === 'shotgun') setTimeout(() => { this.audio.combat?.foley('pumpBack'); this.eject(1); setTimeout(() => this.audio.combat?.foley('pumpFwd'), 170); }, 230);
+    if (id === 'rifle') setTimeout(() => { this.audio.combat?.foley('leverOpen'); this.eject(0); setTimeout(() => this.audio.combat?.foley('leverClose'), 210); }, 190);
     if (id !== 'revolver') this.audio.combat?.foley('casing', 0.8);
     this.combat.noise(this.player.position, w.noise, 'gunshot');
     if (this.mag(id) === 0 && this.reserve(id) > 0) this.autoReloadT = w.interval + 0.15;
@@ -340,6 +342,23 @@ export class PlayerArms {
     return best;
   }
 
+  /** Spent brass (0) or a hull (1) out of the action, to the right; `dump` drops it out of a cylinder. */
+  private eject(kind: number, dump = false) {
+    if (!this.w || this.w.kind !== 'gun') return;
+    const eye = this.camera.getWorldPosition(_ej);
+    this.camera.getWorldDirection(_fwd);
+    const right = _ejR.crossVectors(_fwd, _UP).normalize();
+    const v = _ejV.copy(this.player.velocity).setY(this.player.velocity.y * 0.3);
+    if (dump) {
+      _ejP.copy(eye).addScaledVector(_fwd, 0.32).addScaledVector(right, 0.05).add(_ejU.set(0, -0.22, 0));
+      v.addScaledVector(_fwd, 0.4).add(_ejU.set((Math.random() - 0.5) * 0.6, -0.4 - Math.random() * 0.5, (Math.random() - 0.5) * 0.6));
+    } else {
+      _ejP.copy(eye).addScaledVector(_fwd, 0.34).addScaledVector(right, 0.14).add(_ejU.set(0, -0.1, 0));
+      v.addScaledVector(right, 1.8 + Math.random() * 0.9).add(_ejU.set(0, 1.7 + Math.random() * 0.8, 0)).addScaledVector(_fwd, -0.4 + Math.random() * 0.5);
+    }
+    this.combat.brass.eject(_ejP, v, kind);
+  }
+
   // ------------------------------------------------------------------ reloading
 
   private reloadSpeed() {
@@ -360,6 +379,9 @@ export class PlayerArms {
     }
     this.autoReloadT = -1;
     const k = this.reloadSpeed();
+    // the revolver's empties drop out of the open cylinder
+    const spent = w.id === 'revolver' ? w.mag - this.mag(w.id) : 0;
+    if (spent > 0) setTimeout(() => { for (let i = 0; i < spent; i++) this.eject(0, true); this.audio.combat?.foley('casing', 0.7); }, w.reload.open * k * 700);
     this.reload = { phase: 'open', t: 0, dur: w.reload.open * k, stop: false };
     this.hands.arms.reloadOpen(w.reload.open * k);
     this.audio.combat?.foley(w.id === 'revolver' ? 'cylOpen' : w.id === 'rifle' ? 'gate' : 'shell', 0.6);
