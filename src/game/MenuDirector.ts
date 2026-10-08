@@ -21,7 +21,9 @@ const SHOTS: Shot[] = [
 ];
 
 /** Where you kneel at the fire for character select (open south-west side, facing the four). */
-const SEAT: Pose = { eye: [-11.5, 1.05, 1.0], at: [-6.8, 0.7, 4.7], fov: 64 };
+const SEAT = { eye: [-12.4, 1.05, -0.1] as [number, number, number], fov: 64 };
+/** What character select frames: the fire, a touch toward the four (centred in the screen's free part). */
+const SUBJECT: [number, number, number] = [-7.9, 0.8, 5.1];
 
 const DIP_OUT = 0.6, DIP_IN = 0.9, GLIDE = 2.8;
 const ease = (k: number) => 0.5 - 0.5 * Math.cos(Math.PI * Math.min(1, Math.max(0, k)));
@@ -33,6 +35,10 @@ export class MenuDirector {
   fade = 1;
   /** Character select's clock (the glide down eases the sky toward it; the run starts at it, too). */
   selectHour = 17.65;
+  /** The select panel (it covers the left of the screen; the fire is framed in what's left). */
+  panelEl: HTMLElement | null = null;
+  private panel = 0.41;
+  private panelT = 0;
   private shot = 0;
   private t = 0;
   private glideT = -1;
@@ -106,8 +112,19 @@ export class MenuDirector {
     this.selT += dt;
     this.pickT += dt;
     const t = this.selT;
+    // how much of the width the panel covers (re-measured now and then: a resize, a phone turned)
+    if ((this.panelT -= dt) <= 0 && this.panelEl?.isConnected) {
+      this.panelT = 0.5;
+      this.panel = Math.min(0.75, Math.max(0, this.panelEl.getBoundingClientRect().right / Math.max(1, innerWidth)));
+    }
     const eye = this.cp(SEAT.eye, this.v1);
-    const at = this.cp(SEAT.at, this.v2);
+    const at = this.cp(SUBJECT, this.v2);
+    // turn left until the subject sits mid-way across the free part of the screen (NDC x = panel)
+    const dx = at.x - eye.x, dz = at.z - eye.z, dist = Math.hypot(dx, dz);
+    const hx = Math.tan(THREE.MathUtils.degToRad(SEAT.fov / 2)) * this.camera.aspect;
+    const a = Math.atan(this.panel * hx);
+    const fx = dx / dist, fz = dz / dist, ca = Math.cos(a), sa = Math.sin(a);
+    at.set(eye.x + (fx * ca + fz * sa) * dist, at.y, eye.z + (fz * ca - fx * sa) * dist);
     // breath and a slow drift of the gaze across the four
     eye.y += Math.sin(t * 0.9) * 0.012;
     const side = this.v3.subVectors(at, eye).setY(0).normalize();
