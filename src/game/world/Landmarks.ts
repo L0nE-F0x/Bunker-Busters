@@ -1,4 +1,8 @@
 import * as THREE from 'three/webgpu';
+import { NpcCrowd, type NpcDef, type NpcLook } from './npc';
+
+/** Placeholder look for the camp people (their procedural figure is only posed, never drawn). */
+const CAMP_LOOK: NpcLook = { skin: '#a87a5c', hair: '#2a1a12', hairStyle: 'short', shirt: '#6a5a46', pants: '#3c362e' };
 import type { AmbientKind } from '@/engine/audio';
 import type { Heightfield } from './Heightfield';
 import type { Physics } from '@/engine/physics';
@@ -180,6 +184,7 @@ export class Landmarks {
     shadowProxy(near);
     root.add(sign, neonGrp, near);
     this.addLod(root, f, 20, near, far);
+    this.campNear = near;
 
     const fire = new Fire(1, 40);
     fire.group.position.set(campX + 1, 0.15, campZ + 1);
@@ -283,7 +288,37 @@ export class Landmarks {
     this.lods.push(new DistanceLod(new THREE.Vector3(f.x, f.y, f.z), radius, near, far));
   }
 
+  /** The camp's near set (the people round the fire join it, so they hide with it at range). */
+  private campNear: THREE.Object3D | null = null;
+  private campCrowd: NpcCrowd | null = null;
+
+  /**
+   * Mara, Hollis, Pip and Dez round the campfire, on the two log benches (Meshy models; no procedural
+   * figures exist for them, so without the models the camp stays as it was). Built after the
+   * townsfolk models load, before the shader warm-up.
+   */
+  addCampPeople() {
+    if (!this.campNear || !NpcCrowd.models) return;
+    // camp space (the gas station's frame): fire at (−8, 5); log A along x at z 6.4 (north of the
+    // fire), log B along z at x −6.8 (east). Each point is where the hips sit, on top of the log.
+    const fire = new THREE.Vector3(-8, 0, 5);
+    const seat = (id: string, x: number, z: number, notice = 5): NpcDef => {
+      const yaw = Math.atan2(fire.x - x, fire.z - z);
+      return { id, look: CAMP_LOOK, pose: 'warm', x, y: 0, z, yaw, seat: 0.62, notice };
+    };
+    const defs = [
+      seat('mara', -9.5, 6.5, 6),
+      seat('pip', -8.3, 6.25),
+      seat('hollis', -6.8, 4.65),
+      seat('dez', -6.8, 3.45),
+    ].filter((d) => NpcCrowd.models!.has(d.id));
+    if (!defs.length) return;
+    this.campCrowd = new NpcCrowd(defs, 'camp-people');
+    this.campNear.add(this.campCrowd.mesh);
+  }
+
   update(dt: number, t: number, cam?: THREE.Vector3) {
+    if (cam) this.campCrowd?.update(dt, cam);
     if (cam) for (const l of this.lods) l.update(cam);
     for (const fire of this.fires) fire.update(dt, cam);
     for (const fl of this.flickers) {

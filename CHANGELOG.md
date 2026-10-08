@@ -3,6 +3,10 @@
 Each `## vX.Y.Z` section becomes the GitHub release notes and the "what's new" list in the in-app
 update notice (the first few bullets). `scripts/release.sh` refuses to release a version without one.
 
+## v0.5.6
+- **Company at the fire.** Mara, Hollis, Pip and Dez now sit round the camp's fire on the log benches, talking with their hands when you come close. Hollis has his trucker cap, Dez his radio headset
+- **No more sitting inside logs.** Sol, Ren and Wick sit on their seats properly instead of through them
+
 ## v0.5.5
 - **Kade's crews are real people now.** Hi-vis vests, hard hats with the KADE badge (the squad leader's is orange), respirators, the works. They still take cover, aim, reload and go down in a heap when you drop them
 - **Dry Creek has faces.** Nia, Doc, Inez, Sol, Ren and Wick are fully modelled: Nia works her counter, Inez rings up the Till, Sol and Ren sit by the fire (Ren nursing a drink), and Wick dozes in the Cut. Walk up and they turn to look at you and talk with their hands

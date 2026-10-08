@@ -271,6 +271,7 @@ export class Game {
     for (const lm of LANDMARKS) if (lm.kind === 'town') this.fauna.safe.push({ p: new THREE.Vector3(lm.position[0], 0, lm.position[2]), r: 75 });
     // the Meshy townsfolk (before the warm-up; ?procnpc keeps the procedural figures)
     NpcCrowd.models = await NpcModels.load();
+    this.landmarks.addCampPeople();
     this.settlement = new Settlement(this.ctx, this.landmarks);
     if (!SKIP.has('sites')) this.sites = buildSites(this.ctx, this.landmarks);
     // the Meshy contractors (before the warm-up; ?prochuman keeps the procedural bodies)

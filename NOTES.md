@@ -961,3 +961,10 @@ The iGPU is GPU-bound in this test (~30 fps) since the graphics pass. The deskto
 - **Snake/scorpion** (`creatureSkins.ts`): snake skinned at load onto the procedural spine (coiled, slither, dead belly-up checked); scorpion rigid on the body root (alive and dead checked at night).
 - **Desktop** fight bench (dev build): 46 → 42 fps, render 7.2 → 8.5 ms.
 - Not done: camp four (no 3D camp figures exist; owner's call), contractor mocap clips (unused; the procedural gait drives them), the known asset misses Grok listed (Dez headset, Nia's scarf colour, etc.).
+
+## 2026-10-09: the camp four round the fire
+
+- Mara, Pip, Hollis and Dez sit on the camp's two logs (`Landmarks.addCampPeople`, an NpcCrowd in the gas station's near set), with Hollis's trucker cap and Dez's headset (Grok's known pinched headset, as is) on the Head bone.
+- Only Hollis came with a sitting clip; the others borrow Sol's, Ren's and Wick's. Meshy auto-rigs each character separately, so rest poses differ (Mara's Head is 133° from Sol's): `build-glb.mjs` now **retargets** borrowed clips in world space (play on the source skeleton, apply each bone's world change from rest to the target's rest, back to local) and scales the hip motion by hip height. Own-file clips pass through untouched.
+- **Seated fix (owner screenshot: Sol's legs through his log):** the game's seated point is the seat (the procedural figure's hips sit over it, feet 0.44 m ahead), but the model was placed feet-first, so its hips sat 0.33 m behind. Seated actors now put their hips on the point. Fixed Sol, Ren, Wick and the camp. A short person on a high seat sits up with their feet off the ground (Pip).
+- Pipelines unchanged at the camp (206 → 206), 60 fps headless.

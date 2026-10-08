@@ -14,12 +14,17 @@ import { clone as cloneSkinned } from 'three/addons/utils/SkeletonUtils.js';
  */
 
 const BASE = `${import.meta.env.BASE_URL}models/`;
-/** Characters that have a model. */
-export const NPC_MODELS = ['nia', 'doc', 'inez', 'sol', 'ren', 'wick'] as const;
+/** Characters that have a model: Dry Creek's six and the camp's four. */
+export const NPC_MODELS = ['nia', 'doc', 'inez', 'sol', 'ren', 'wick', 'mara', 'hollis', 'pip', 'dez'] as const;
+/** Head props, in Head-bone space (1 unit = 1 cm there; fits from Assets/MESHY_ASSETS.md §5). */
+const PROPS: Record<string, { file: string; pos: [number, number, number]; rot: [number, number, number]; scale: number }> = {
+  hollis: { file: 'truckercap', pos: [-1.7, 20.3, 2.6], rot: [-7.5, 3.2, 3.6], scale: 16 },
+  dez: { file: 'headset', pos: [-1.0, 10.3, -14.2], rot: [-20.9, 2.3, 3.3], scale: 13.5 },
+};
 
 interface Track { bone: string; rot?: THREE.Interpolant; pos?: THREE.Interpolant }
 interface Clip { name: string; dur: number; tracks: Track[]; hips: THREE.Vector3 }
-interface Template { scene: THREE.Object3D; clips: Map<string, Clip>; bind: Map<string, { q: THREE.Quaternion; p: THREE.Vector3 }> }
+interface Template { scene: THREE.Object3D; clips: Map<string, Clip>; bind: Map<string, { q: THREE.Quaternion; p: THREE.Vector3 }>; prop?: THREE.Object3D }
 
 const _q = new THREE.Quaternion(), _q2 = new THREE.Quaternion(), _pq = new THREE.Quaternion();
 const _v = new THREE.Vector3(), _v2 = new THREE.Vector3(), _m = new THREE.Matrix4();
@@ -35,7 +40,26 @@ export class NpcModels {
     await Promise.all(NPC_MODELS.map(async (id) => {
       try {
         const g = await L.loadAsync(`${BASE}${id}.glb`);
-        out.t.set(id, template(g.scene, g.animations));
+        const T = template(g.scene, g.animations);
+        const P = PROPS[id];
+        if (P) {
+          const pg = await L.loadAsync(`${BASE}${P.file}.glb`);
+          let mat: THREE.MeshStandardNodeMaterial | null = null;
+          pg.scene.traverse((o) => {
+            const m = o as THREE.Mesh;
+            if (!m.isMesh) return;
+            mat ??= new THREE.MeshStandardNodeMaterial({ map: (m.material as THREE.MeshStandardMaterial).map, roughness: 0.7, metalness: 0 });
+            m.material = mat;
+            m.castShadow = false;
+            m.frustumCulled = false;
+          });
+          const d = Math.PI / 180;
+          pg.scene.position.set(...P.pos);
+          pg.scene.rotation.set(P.rot[0] * d, P.rot[1] * d, P.rot[2] * d);
+          pg.scene.scale.setScalar(P.scale);
+          T.prop = pg.scene;
+        }
+        out.t.set(id, T);
       } catch (e) {
         console.warn(`[npc] ${id} model failed to load; keeping the procedural figure`, e);
       }
@@ -120,10 +144,15 @@ export class NpcActor {
     this.model = cloneSkinned(T.scene);
     this.root.add(this.model);
     this.model.traverse((o) => { if ((o as THREE.Bone).isBone) this.B[o.name] = o as THREE.Bone; });
+    if (T.prop && this.B.Head) this.B.Head.add(T.prop.clone(true));
     this.cur = T.clips.get('idle') ?? [...T.clips.values()][0];
     // hips stay where the idle clip puts them; seated people sink onto the game's seat
     this.anchor = this.cur.hips.clone();
-    if (seated) this.root.position.y = THREE.MathUtils.clamp(hipY - this.anchor.y, -0.16, 0.06);
+    // seated, the game's point is the seat (the procedural figure's hips sit straight over it, feet
+    // ~0.44 m in front): put the model's hips there, not its feet, or it sits behind its log
+    if (seated) { this.anchor.x = 0; this.anchor.z = 0; }
+    // (a short person on a high seat sits up on it with their feet off the ground, like Pip on the log)
+    if (seated) this.root.position.y = THREE.MathUtils.clamp(hipY - this.anchor.y, -0.16, 0.32);
   }
 
   private play(name: string) {
