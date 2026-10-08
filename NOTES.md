@@ -934,5 +934,5 @@ The iGPU is GPU-bound in this test (~30 fps) since the graphics pass. The deskto
 - `scripts/voice/extract.mjs` finds lines in the source (rolldown's oxc parser; the project's TypeScript 7 has no JS API): `{speaker, text}` objects, `subtitle()` calls, `taunts`, BARKS, SENTRY_LINES. Template text keeps its literal pieces' complete sentences. The game splits displayed text the same way and plays the longest runs it has clips for.
 - Music ducks under speech. Settings → Voices (on by default, migrated once via `voiceOn052`). Contractor barks are positional; Tanner's taunts come from the megaphone.
 - Not voiced: the player (silent protagonist), notes/signs, and the jet's CVR/ExitPilot transcript pages (narration mixed with two speakers).
-- Unverified: playback inside the Linux desktop app (WebKitGTK decodes via GStreamer; `mpg123audiodec` is present). `?trace` logs `[voice] …` per line.
+- Confirmed by the owner: voices play in the Linux desktop app (WebKitGTK decodes the mp3s via GStreamer). `?trace` logs `[voice] …` per line.
 
