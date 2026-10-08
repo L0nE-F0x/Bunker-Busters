@@ -4,8 +4,11 @@ import { noise } from '@/engine/noiseTex';
 import type { Heightfield } from './Heightfield';
 import { Simplex2 } from '@/engine/noise';
 import { norm, merge } from './kit';
+import { groundPatchAt } from './Terrain';
 
 const CELL = 1.5; // scatter grid (m)
+
+interface Tuft { x: number; z: number; m: THREE.Matrix4; v: [number, number, number, number] }
 
 /**
  * One tuft holds every part any tuft might show; each instance hides what it doesn't have (uv.x tags
@@ -93,7 +96,7 @@ export class Scrub {
     const dry = mix(color('#6b5434'), color('#b89a5e'), tint);
     const green = mix(color('#4b5a2a'), color('#8a9450'), tint);
     const base = mix(dry, green, v.x);
-    let col = mix(base.mul(0.45), base.mul(1.15), smoothstep(0.0, 0.6, hgt));
+    let col = mix(base.mul(0.55), base.mul(1.15), smoothstep(0.0, 0.6, hgt));
     // stalks are paler straw, their seed heads a warm brown
     col = mix(col, mix(color('#c2a670'), color('#8a6a40'), smoothstep(0.55, 0.7, hgt)), step(0.5, part).mul(step(part, 1.5)));
     const petal = mix(mix(color('#f0c43a'), color('#9a5ad0'), smoothstep(0.3, 0.6, v.w)), color('#f2eee0'), smoothstep(0.7, 0.9, v.w));
@@ -111,9 +114,9 @@ export class Scrub {
     this.mesh.frustumCulled = false;
   }
 
-  private cells = new Map<number, { x: number; z: number; m: THREE.Matrix4; v: [number, number, number, number] } | null>();
+  private cells = new Map<number, Tuft[]>();
 
-  /** The tuft for grid cell (ix, iz), or null if the cell stays empty. Deterministic. */
+  /** The tufts for grid cell (ix, iz) (often none). Deterministic. */
   private cell(ix: number, iz: number) {
     const key = (ix + 32768) * 65536 + (iz + 32768);
     const hit = this.cells.get(key);
@@ -122,26 +125,43 @@ export class Scrub {
     const hsh = Math.abs(Math.sin(ix * 127.1 + iz * 311.7) * 43758.5453) % 1;
     const hsh2 = Math.abs(Math.sin(ix * 269.5 + iz * 183.3) * 12543.123) % 1;
     const x = (ix + hsh) * CELL, z = (iz + hsh2) * CELL;
-    let out: { x: number; z: number; m: THREE.Matrix4; v: [number, number, number, number] } | null = null;
+    const out: Tuft[] = [];
     const dens = this.noise.fbm(x * 0.02, z * 0.02, 2) * 0.5 + 0.5;
-    if (!(hsh * hsh2 > dens * 0.55) && !(this.hf.roadDistanceAt(x, z) < 5) && !(this.hf.zoneDistance(x, z) < -6) && !(this.hf.normalAt(x, z).y < 0.82)) {
-      const y = this.hf.heightAt(x, z);
+    // bunchgrass grows in clumps around the few spots that hold water, with bare sand between (an
+    // even field read as planted rows): clump hearts hold bunches of tufts, the gaps a few strays.
+    // Desert pavement grows almost nothing, silt a little.
+    const clump = this.noise.fbm(x * 0.085 + 31, z * 0.085 - 7, 2) * 0.5 + 0.5;
+    const core = Math.min(1, Math.max(0, (clump - 0.45) / 0.2));
+    const gp = groundPatchAt(x, z);
+    const p = (0.08 + core * 0.9) * (0.6 + dens * 0.6) * (1 - gp.pave * 0.85) * (1 - gp.silt * 0.4);
+    const h0 = (hsh * 3.71 + hsh2 * 1.93) % 1;
+    if (h0 < p && !(this.hf.roadDistanceAt(x, z) < 5) && !(this.hf.zoneDistance(x, z) < -6) && !(this.hf.normalAt(x, z).y < 0.82)) {
       // low ground holds the last moisture: greener, taller, and that's where the flowers are
-      const moist = Math.min(1, Math.max(0, (-1.5 - y) / 4));
+      const y0 = this.hf.heightAt(x, z);
+      const moist = Math.min(1, Math.max(0, (-1.5 - y0) / 4));
       const patch = this.noise.fbm(x * 0.05 + 17, z * 0.05 - 9, 2) * 0.5 + 0.5;
-      const h3 = (hsh * 7.31 + hsh2 * 3.7) % 1;
-      const green = Math.min(1, moist * 0.9 + Math.max(0, patch - 0.6) * 1.2) * (0.6 + h3 * 0.4);
-      const seeds = h3 < 0.25 + patch * 0.3 ? 1 : 0;
-      const flowers = h3 > 1 - (0.03 + moist * 0.25 + Math.max(0, patch - 0.7) * 0.4) ? 1 : 0;
-      const sc = (0.6 + hsh2 * 0.9) * (1 + moist * 0.3);
-      // some tufts low and spreading, some tall and narrow
-      const shape = 0.75 + ((hsh * 13.7) % 1) * 0.6;
-      const m = new THREE.Matrix4().compose(
-        new THREE.Vector3(x, y - 0.03, z),
-        new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), hsh * 6.283),
-        new THREE.Vector3(sc * shape, sc * (0.8 + hsh * 0.5) / shape, sc * shape),
-      );
-      out = { x, z, m, v: [green, seeds, flowers, (hsh2 * 9.17) % 1] };
+      const bunch = 1 + Math.floor(core * core * 2.6 * (((hsh * 5.3) % 1) + 0.3) * (1 - gp.pave));
+      for (let k = 0; k < bunch; k++) {
+        const r1 = k === 0 ? 0 : Math.abs(Math.sin(ix * 41.7 + iz * 77.1 + k * 13.3) * 9137.1) % 1;
+        const r2 = Math.abs(Math.sin(ix * 93.1 + iz * 17.9 + k * 5.7) * 3721.7) % 1;
+        const off = k === 0 ? 0 : 0.22 + r1 * 0.45;
+        const tx = x + Math.cos(r2 * 6.283) * off, tz = z + Math.sin(r2 * 6.283) * off;
+        const y = k ? this.hf.heightAt(tx, tz) : y0;
+        const h3 = (hsh * 7.31 + hsh2 * 3.7 + r2 * 0.61 * k) % 1;
+        const green = Math.min(1, moist * 0.9 + Math.max(0, patch - 0.6) * 1.2) * (0.6 + h3 * 0.4);
+        const seeds = h3 < 0.25 + patch * 0.3 ? 1 : 0;
+        const flowers = h3 > 1 - (0.03 + moist * 0.25 + Math.max(0, patch - 0.7) * 0.4) ? 1 : 0;
+        // clump hearts grow the big old tufts; strays and a bunch's outliers stay small
+        const sc = (0.45 + ((hsh2 + r1 * 0.37) % 1) * 0.75) * (0.75 + core * 0.55) * (1 + moist * 0.3) * (k ? 0.75 : 1);
+        // some tufts low and spreading, some tall and narrow
+        const shape = 0.75 + ((hsh * 13.7 + r2) % 1) * 0.6;
+        const m = new THREE.Matrix4().compose(
+          new THREE.Vector3(tx, y - 0.03, tz),
+          new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), (hsh + r2) * 6.283),
+          new THREE.Vector3(sc * shape, sc * (0.8 + hsh * 0.5) / shape, sc * shape),
+        );
+        out.push({ x: tx, z: tz, m, v: [green, seeds, flowers, (hsh2 * 9.17 + r1) % 1] });
+      }
     }
     this.cells.set(key, out);
     return out;
@@ -169,10 +189,11 @@ export class Scrub {
     if (this.cells.size > 60000) this.cells.clear();
     for (let iz = z0; iz <= z1 && n < this.capacity; iz++) {
       for (let ix = x0; ix <= x1 && n < this.capacity; ix++) {
-        const c = this.cell(ix, iz);
-        if (!c || (c.x - focus.x) ** 2 + (c.z - focus.z) ** 2 > R * R) continue;
-        this.vars.setXYZW(n, c.v[0], c.v[1], c.v[2], c.v[3]);
-        this.mesh.setMatrixAt(n++, c.m);
+        for (const c of this.cell(ix, iz)) {
+          if (n >= this.capacity || (c.x - focus.x) ** 2 + (c.z - focus.z) ** 2 > R * R) continue;
+          this.vars.setXYZW(n, c.v[0], c.v[1], c.v[2], c.v[3]);
+          this.mesh.setMatrixAt(n++, c.m);
+        }
       }
     }
     this.mesh.count = n;
@@ -214,7 +235,9 @@ export class Pebbles {
     const x0 = ix * C, z0 = iz * C;
     const stony = this.noise.fbm(x0 * 0.04, z0 * 0.04, 2) * 0.5 + 0.5;
     const ny = this.hf.normalAt(x0, z0).y;
-    const n = Math.floor((0.35 + stony * stony * 5 + (1 - ny) * 8) * (0.6 + r() * 0.8));
+    // desert pavement: the stones the wind left behind, packed and dark with varnish
+    const pave = groundPatchAt(x0, z0).pave * Math.min(1, Math.max(0, (ny - 0.9) / 0.06));
+    const n = Math.floor((0.35 + stony * stony * 5 + (1 - ny) * 8 + pave * 7) * (0.6 + r() * 0.8));
     if (this.hf.roadDistanceAt(x0, z0) > 4.5 && this.hf.zoneDistance(x0, z0) > -2) {
       for (let k = 0; k < n; k++) {
         const x = x0 + r() * C, z = z0 + r() * C;
@@ -225,7 +248,9 @@ export class Pebbles {
           new THREE.Vector3(sz * (0.8 + r() * 0.6), sz * (0.5 + r() * 0.4), sz * (0.8 + r() * 0.6)),
         );
         const t = r();
-        out.push({ m, c: new THREE.Color().setRGB(0.42 + t * 0.5, 0.38 + t * 0.48, 0.36 + t * 0.46) });
+        const c = new THREE.Color().setRGB(0.42 + t * 0.5, 0.38 + t * 0.48, 0.36 + t * 0.46);
+        if (r() < pave * 0.8) c.multiply(new THREE.Color(0.62 + t * 0.2, 0.46 + t * 0.14, 0.36 + t * 0.1));
+        out.push({ m, c });
       }
     }
     this.cells.set(key, out);
