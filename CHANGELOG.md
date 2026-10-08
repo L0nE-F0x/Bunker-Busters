@@ -3,6 +3,13 @@
 Each `## vX.Y.Z` section becomes the GitHub release notes and the "what's new" list in the in-app
 update notice (the first few bullets). `scripts/release.sh` refuses to release a version without one.
 
+## v0.5.1
+- **No more robot voices.** Kade's contractors speak in subtitles now, over the click and hiss of their radios, and go down with a thud instead of a synthesised groan. Tanner's text-to-speech megaphone is off by default (Settings can turn it back on)
+- **Intel looks like intel.** The pink light pillars are gone: the note is pinned under a rock on the pump island, the blueprint is weighed down on a crate, Greg's voicemail is on a roadside call box with its light blinking, and so on. A small glint still catches your eye
+- **Two hands on the revolver.** The support hand now cups the gun hand properly instead of crumpling beside it
+- **No more car parts in the sky.** A piece of every wreck had been floating above it since v0.4 (one 107 m up). Fixed everywhere
+- **Billboards stand on the ground.** On slopes, both posts now reach the dirt
+
 ## v0.5.0
 - **You can fight back now.** A crowbar, Hollis's six-shooter, a pump shotgun and a lever-action rifle, each with its own model, sound and handling. Aim down the sights (right mouse), feel the kick, reload a round at a time, swap with Q or the wheel. Rounds come off the dead, or the camp reloads brass from scrap
 - **The road has teeth.** Kade Holdings' Recovery crews hold four outposts and walk the highway. They spot you from a distance (less at night, in a dust storm or when you crouch), shout to each other, take cover, peek and fire, flank when you go to ground, and lob "compliance charges" if you dig in. Lose a few and the rest run
