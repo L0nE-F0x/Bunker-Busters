@@ -1,5 +1,5 @@
 import * as THREE from 'three/webgpu';
-import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { loadGLB } from '@/engine/models';
 import { clone as cloneSkinned } from 'three/addons/utils/SkeletonUtils.js';
 import { boundSkinned } from './kit';
 
@@ -38,7 +38,6 @@ export interface WolfPose {
   leap?: number;
 }
 
-const URL = `${import.meta.env.BASE_URL}models/wolf.glb`;
 /** Ear-tip height of the model in metres (a big desert wolf: ~0.8 m at the shoulder). */
 const HEIGHT = 1.02;
 
@@ -69,7 +68,7 @@ export class WolfSkins {
 
   static async load(count: number): Promise<WolfSkins | null> {
     try {
-      const gltf = await new GLTFLoader().loadAsync(URL);
+      const gltf = await loadGLB('wolf');
       return new WolfSkins(gltf, count);
     } catch (e) {
       console.warn('[wolf] model failed to load; keeping the procedural wolf', e);

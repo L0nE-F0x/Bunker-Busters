@@ -6,6 +6,7 @@ import { isTouch } from '@/engine/device';
 import { TouchControls } from '@/ui/TouchControls';
 import { PostFX } from '@/engine/postfx';
 import { Physics } from '@/engine/physics';
+import { modelProgress } from '@/engine/models';
 import { Input } from '@/engine/input';
 import { AudioEngine, type LoopHandle } from '@/engine/audio';
 import { Acoustics, isSoft } from '@/engine/surface';
@@ -210,6 +211,16 @@ export class Game {
       this.ui.progress(p, msg);
       await new Promise((r) => setTimeout(r, 16));
     };
+    // waiting on model downloads (prefetched since boot, see bootModels): the bar runs p0 → p1 with the bytes
+    const models = async <T>(task: Promise<T>, p0: number, p1: number, msg: string, names?: readonly string[]) => {
+      const tick = () => {
+        const m = modelProgress(names), all = modelProgress();
+        if (m.fraction < 1) this.ui.progress(p0 + (p1 - p0) * m.fraction, `${msg} · ${(all.loaded / 1e6).toFixed(1)} / ${(all.total / 1e6).toFixed(1)} MB`);
+      };
+      tick();
+      const id = setInterval(tick, 100);
+      try { return await task; } finally { clearInterval(id); }
+    };
     await step(0.05, 'Warming up the apocalypse');
     await Promise.race([document.fonts.ready, new Promise((r) => setTimeout(r, 2500))]);
     await Promise.all(['900 64px "Big Shoulders Stencil Display"', '700 40px "Chakra Petch"', '600 20px "JetBrains Mono"'].map((f) => document.fonts.load(f).catch(() => null)));
@@ -235,7 +246,7 @@ export class Game {
     this.fauna = new Fauna(this.hf, this.props.perches, this.props.wrecks);
     if (!SKIP.has('fauna')) {
       this.scene.add(this.fauna.mesh);
-      this.scene.add(await this.fauna.loadModels());
+      this.scene.add(await models(this.fauna.loadModels(), 0.4, 0.5, 'Scattering debris of a failed civilisation', ['wolf', 'rattlesnake', 'scorpion']));
     }
     this.pebbles = new Pebbles(this.hf, rockGeometry(5, 0), desertRock(), Math.round(4000 * Math.min(1, this.quality.grassDensity)));
     if (!SKIP.has('scrub')) this.scene.add(this.pebbles.mesh);
@@ -289,12 +300,13 @@ export class Game {
     this.fauna.safe = [{ p: this.landmarks.campPosition.clone(), r: 30 }];
     for (const lm of LANDMARKS) if (lm.kind === 'town') this.fauna.safe.push({ p: new THREE.Vector3(lm.position[0], 0, lm.position[2]), r: 75 });
     // the Meshy townsfolk (before the warm-up; ?procnpc keeps the procedural figures)
-    NpcCrowd.models = await NpcModels.load();
+    const bunkerMsg = 'Building a doomsday bunker (pre-revenue)';
+    NpcCrowd.models = await models(NpcModels.load(), 0.7, 0.78, bunkerMsg);
     this.landmarks.addCampPeople();
     this.settlement = new Settlement(this.ctx, this.landmarks);
     if (!SKIP.has('sites')) this.sites = buildSites(this.ctx, this.landmarks);
     // the Meshy contractors (before the warm-up; ?prochuman keeps the procedural bodies)
-    this.humanSkins = new URLSearchParams(location.search).has('prochuman') ? null : await HumanSkins.load(10, [0]);
+    this.humanSkins = new URLSearchParams(location.search).has('prochuman') ? null : await models(HumanSkins.load(10, [0]), 0.7, 0.78, bunkerMsg);
     this.buildRecovery();
     this.buildIntel();
     // stashes and searchable wrecks (not quests: just the desert being generous)

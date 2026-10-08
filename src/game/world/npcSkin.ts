@@ -1,5 +1,5 @@
 import * as THREE from 'three/webgpu';
-import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { loadGLB } from '@/engine/models';
 import { clone as cloneSkinned } from 'three/addons/utils/SkeletonUtils.js';
 import { boundSkinned } from './kit';
 
@@ -14,11 +14,10 @@ import { boundSkinned } from './kit';
  * the hips stay put on the seat, and the body is lowered onto the game's seat height.
  */
 
-const BASE = `${import.meta.env.BASE_URL}models/`;
 /** Characters that have a model: Dry Creek's six and the camp's four. */
 export const NPC_MODELS = ['nia', 'doc', 'inez', 'sol', 'ren', 'wick', 'mara', 'hollis', 'pip', 'dez'] as const;
 /** Head props, in Head-bone space (1 unit = 1 cm there; fits from Assets/MESHY_ASSETS.md §5). */
-const PROPS: Record<string, { file: string; pos: [number, number, number]; rot: [number, number, number]; scale: number }> = {
+export const NPC_PROPS: Record<string, { file: string; pos: [number, number, number]; rot: [number, number, number]; scale: number }> = {
   hollis: { file: 'truckercap', pos: [-1.7, 20.3, 2.6], rot: [-7.5, 3.2, 3.6], scale: 16 },
   dez: { file: 'headset', pos: [-1.0, 10.3, -14.2], rot: [-20.9, 2.3, 3.3], scale: 13.5 },
 };
@@ -37,14 +36,13 @@ export class NpcModels {
   static async load(): Promise<NpcModels | null> {
     if (new URLSearchParams(location.search).has('procnpc')) return null;
     const out = new NpcModels();
-    const L = new GLTFLoader();
     await Promise.all(NPC_MODELS.map(async (id) => {
       try {
-        const g = await L.loadAsync(`${BASE}${id}.glb`);
+        const g = await loadGLB(id);
         const T = template(g.scene, g.animations);
-        const P = PROPS[id];
+        const P = NPC_PROPS[id];
         if (P) {
-          const pg = await L.loadAsync(`${BASE}${P.file}.glb`);
+          const pg = await loadGLB(P.file);
           let mat: THREE.MeshStandardNodeMaterial | null = null;
           pg.scene.traverse((o) => {
             const m = o as THREE.Mesh;

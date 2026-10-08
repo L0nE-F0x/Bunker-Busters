@@ -1,5 +1,5 @@
 import * as THREE from 'three/webgpu';
-import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { loadGLB } from '@/engine/models';
 
 /**
  * The rattlesnake and the scorpion as Meshy models (static meshes, scripts/models/build-glb.mjs),
@@ -14,7 +14,6 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
  *    One InstancedMesh, one draw.
  */
 
-const BASE = `${import.meta.env.BASE_URL}models/`;
 const HIDE = new THREE.Matrix4().makeScale(0, 0, 0).setPosition(0, -9999, 0);
 
 /** Procedural snake: 10 segments of 0.11 m down −Z from the head (Fauna.ts snakeRig). */
@@ -25,7 +24,7 @@ const SNAKE_K = 0.605, SNAKE_Z = -0.48, SNAKE_Y = 0.01;
 const SCORP_K = 0.36 / (1.8 * 1.9);
 
 async function loadMesh(name: string) {
-  const g = await new GLTFLoader().loadAsync(`${BASE}${name}.glb`);
+  const g = await loadGLB(name);
   let mesh: THREE.Mesh | null = null;
   g.scene.updateMatrixWorld(true);
   g.scene.traverse((o) => { if (!mesh && (o as THREE.Mesh).isMesh) mesh = o as THREE.Mesh; });

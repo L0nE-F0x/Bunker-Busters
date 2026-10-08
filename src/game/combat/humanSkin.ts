@@ -1,7 +1,7 @@
 import * as THREE from 'three/webgpu';
 import { texture, uniform, mix, smoothstep, max, min, vec3, float, attribute } from 'three/tsl';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
-import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { loadGLB } from '@/engine/models';
 import { clone as cloneSkinned } from 'three/addons/utils/SkeletonUtils.js';
 import { BONE, type Human } from './Humans';
 import { boundSkinned } from '../world/kit';
@@ -23,7 +23,6 @@ type N = any;
  * Bone axes never matter: everything is solved as world rotations relative to the bind pose.
  */
 
-const BASE = `${import.meta.env.BASE_URL}models/`;
 /** Meshy contractor height (m) at bind; procedural `look.height` 1 = 1.78 m. */
 const MODEL_H = 1.78;
 const UP = new THREE.Vector3(0, 1, 0);
@@ -82,8 +81,7 @@ export class HumanSkins {
 
   static async load(count: number, leader: number[]): Promise<HumanSkins | null> {
     try {
-      const L = new GLTFLoader();
-      const [body, hat, mask] = await Promise.all(['contractor', 'hardhat', 'respirator'].map((n) => L.loadAsync(`${BASE}${n}.glb`)));
+      const [body, hat, mask] = await Promise.all(['contractor', 'hardhat', 'respirator'].map((n) => loadGLB(n)));
       return new HumanSkins(body.scene, hat.scene, mask.scene, count, leader);
     } catch (e) {
       console.warn('[contractor] model failed to load; keeping the procedural bodies', e);
@@ -176,8 +174,17 @@ export class HumanSkins {
       g.setAttribute('gear', new THREE.Float32BufferAttribute(new Float32Array(g.attributes.position.count).fill(v), 1));
       return g;
     };
+    // (the models are quantized: slim-glb.mjs packs normals, UVs and weights as normalized integers.
+    // Plain floats here, so the parts merge whatever each file's encoding.)
     const keep = (g: THREE.BufferGeometry, names: string[]) => {
       for (const k of Object.keys(g.attributes)) if (!names.includes(k)) g.deleteAttribute(k);
+      for (const k of ['normal', 'uv', 'skinWeight']) {
+        const a = g.getAttribute(k);
+        if (!a || a.array instanceof Float32Array) continue;
+        const f = new Float32Array(a.count * a.itemSize);
+        for (let i = 0; i < a.count; i++) for (let c = 0; c < a.itemSize; c++) f[i * a.itemSize + c] = a.getComponent(i, c);
+        g.setAttribute(k, new THREE.BufferAttribute(f, a.itemSize));
+      }
       return g;
     };
     const bodyGeo = keep(B.geometry.clone(), ['position', 'normal', 'uv', 'skinIndex', 'skinWeight']);

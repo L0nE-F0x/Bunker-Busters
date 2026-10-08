@@ -1,6 +1,6 @@
 // Contact sheet of the prop lab (debug/props.ts; needs the dev server). Iterate on world props with this.
 //   node scripts/dev/props-lab.mjs sheet.png "what=car&kind=sedan" "what=car&kind=pickup&yaw=2.4" ...
-// Each query renders one 960x600 tile; tiles go two per row.
+// Each query renders one 960x600 tile; tiles go two per row. DEV_ORIGIN=http://localhost:5185 picks another dev server.
 import { launch } from './browser.mjs';
 
 const [out = 'props.png', ...qs] = process.argv.slice(2);
@@ -11,7 +11,7 @@ p.on('pageerror', (e) => console.log('[pageerror]', e.message));
 p.on('console', (m) => { if (m.type() === 'error' && !/GL Driver/.test(m.text())) console.log('[console.error]', m.text().slice(0, 300)); });
 const shots = [];
 for (const q of qs) {
-  await p.goto('http://localhost:5173/debug/props.html?' + q);
+  await p.goto((process.env.DEV_ORIGIN ?? 'http://localhost:5173') + '/debug/props.html?' + q);
   await p.waitForFunction(() => window.__done, null, { timeout: 60000 });
   await p.waitForTimeout(300);
   shots.push(await p.screenshot());
