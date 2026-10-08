@@ -3,6 +3,11 @@
 Each `## vX.Y.Z` section becomes the GitHub release notes and the "what's new" list in the in-app
 update notice (the first few bullets). `scripts/release.sh` refuses to release a version without one.
 
+## v0.5.2
+- **Real voices.** Every spoken line in the game is now voiced: Mara on the camp radio, Nia and the rest of Dry Creek in person, Tanner through his megaphone, Hunter Vale over the drive-in speakers, the AIs, and every Kade contractor (each one keeps their own voice, and you hear where they're shouting from). Music dips while people talk. Settings → Voices turns it off if you'd rather read
+- **No more mumbling.** The campfire and the camp radio no longer fake a conversation. The fire sounds like people sitting round it (cups, creaking crates, a log knocked in), and the radio drifts between static, a Morse beacon and a scratchy song
+- **Settings menu fixed.** The controls no longer spill past the edge of the panel
+
 ## v0.5.1
 - **No more robot voices.** Kade's contractors speak in subtitles now, over the click and hiss of their radios, and go down with a thud instead of a synthesised groan. Tanner's text-to-speech megaphone is off by default (Settings can turn it back on)
 - **Intel looks like intel.** The pink light pillars are gone: the note is pinned under a rock on the pump island, the blueprint is weighed down on a crate, Greg's voicemail is on a roadside call box with its light blinking, and so on. A small glint still catches your eye
