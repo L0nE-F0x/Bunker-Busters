@@ -968,3 +968,31 @@ The iGPU is GPU-bound in this test (~30 fps) since the graphics pass. The deskto
 - Only Hollis came with a sitting clip; the others borrow Sol's, Ren's and Wick's. Meshy auto-rigs each character separately, so rest poses differ (Mara's Head is 133° from Sol's): `build-glb.mjs` now **retargets** borrowed clips in world space (play on the source skeleton, apply each bone's world change from rest to the target's rest, back to local) and scales the hip motion by hip height. Own-file clips pass through untouched.
 - **Seated fix (owner screenshot: Sol's legs through his log):** the game's seated point is the seat (the procedural figure's hips sit over it, feet 0.44 m ahead), but the model was placed feet-first, so its hips sat 0.33 m behind. Seated actors now put their hips on the point. Fixed Sol, Ren, Wick and the camp. A short person on a high seat sits up with their feet off the ground (Pip).
 - Pipelines unchanged at the camp (206 → 206), 60 fps headless.
+
+## 2026-10-09: perf pass after the Meshy models (overnight swarm, perf agent)
+
+The fight bench had dropped 46 → 42 fps with the Meshy models in. Measured first (headless Chrome at 480×270 so the CPU is the limit, a per-draw hook, a GL-call counter, CDP profiles), then cut what the numbers pointed at. No shader or look changed; pipelines 206 → 203 (fewer, none lazy).
+
+**What changed:**
+- **Uniform uploads (WebGL2, the big one).** Every program's render-group UBO (camera, sun, fog, time: ~80 uniforms, ~30 changing) went up as ~30 separate `bufferSubData` calls, for the shadow pass and again for the scene pass: ~1,350 GL calls a frame in a firefight. `renderer.ts coalesceUniformUploads` makes the backend upload the span from the first changed slot to the last in one call (same bytes; the CPU copy holds every value).
+- **`DynamicDrawUsage` re-uploads.** Three re-uploads a dynamic attribute on *every draw*, changed or not. Tracers, debris, flames, puffs, sparks, arcs, marks, brass, tumbleweeds, jet shafts, scorpions and the fauna mesh all used it (~270 KB a frame, twice). All static now; they already set `needsUpdate` on emit. The fauna mesh uploads only the bodies it rewrote (update ranges). Rule: **never `setUsage(DynamicDrawUsage)` or `instancedDynamicBufferAttribute`**; set `needsUpdate` when you write.
+- **Skinned models are culled.** The Meshy clones had `frustumCulled = false`, so all of them were drawn and cast shadows everywhere (a patrol 140 m away, the camp behind you). `kit.boundSkinned` gives each a world sphere per pose (pelvis / hips / body centre); both passes cull them. Their head props (rigid) cull by their own bounds.
+- **One matrix pass a frame, visible only.** Three walked all ~1,600 objects (600 bones, more than half hidden) on each scene render (shadow + scene). `scene.matrixWorldAutoUpdate = false`; `kit.updateShownMatrices` runs once before rendering and skips hidden subtrees. A hidden object's matrixWorld refreshes the frame it's shown; code that needs one while hidden uses `getWorldPosition`/`updateWorldMatrix` (all current readers checked).
+- **Contractors are one draw.** Hard hat + respirator are skinned into the body on the Head bone, one material picking body/mask/hat maps by a `gear` tag (crew/leader tint kept). 3 draws each → 1; the gear casts its shadow now. Checked close up by day and night, leader and crew.
+- **Skin posing** (`humanSkin`, `npcSkin`, `wolfSkin`): no ancestor walk per bone, no per-frame allocations. Bone output bit-identical to before (compared across builds). `kit.viewCull` (camera frustum + the sun's box): a contractor or townsperson in neither isn't posed and is hidden (contractor AI and hit tests still run). Audited over full camera spins: 0 frames with one in view hidden; nothing inside the shadow box (~70 m) is ever skipped.
+- **Fewer draws:** sentries and Hornets cast through shadow proxies (lasers, LEDs and the eye no longer cast); stashes through one proxy; halo sprites culled by a sphere round their halos (5 → 2 at spawn by night); marks, brass, puffs, snakes and scorpions draw nothing while there are none.
+
+**Numbers (headless, 480×270, base → this branch, interleaved):**
+
+| spot | frame CPU p25 ms | draws (shadow) | GL calls/frame |
+|---|---|---|---|
+| fight (`?fight`) | 6.1 → 4.7 | 150 (30) → 126 (21) | 3,180 → 1,710 |
+| spawn camp | 6.1 → 4.6 | 130 (26) → 113 (17) | 2,860 → 1,550 |
+| Dry Creek | 7.4 → 4.8 | 182 (46) → 151 (23) | 3,750 → 1,995 |
+
+- **Desktop app** (debug shell vs the dev server, fight, High, 936×1138 window; the machine was shared with 5 other agents' headless GPUs, so treat fps as rough): render ms 9–10 → 6.5. One run loaded both builds in turn in an iframe: base ~29 fps, this branch 45–50 fps (39–43 late in the fight). Base alone at top level earlier: ~39–41 fps. The owner should re-run `scripts/dev/bench-desktop.sh high` (with `BB_FLAGS=fight`) on a quiet machine.
+
+**Next:**
+- Per-draw cost is now mostly three's own JS (bindings, node updates); fewer draws is still the lever. The viewmodel is 8 draws (hands per material kind + gun parts), rocks are 5 map-wide instanced draws, the gas station near set 7.
+- GPU time couldn't be measured (other agents had the 4050 at 90%+). Worth a timer-query pass at 1080p on a quiet machine: scrub 457k tris, shrubs 520k, terrain 360k in two passes.
+- Camp/town head props (Hollis's cap, Dez's headset) are still separate draws; the contractor `gear` merge would fold them in too.
