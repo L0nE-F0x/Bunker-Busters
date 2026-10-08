@@ -4,6 +4,7 @@ import { SpotManager, VOICES, crackleBuffer, type AmbientKind, type SpotHandle, 
 import { footstep, landing, type StepOpts } from './foley';
 import { HARDNESS, type Room, type Surface } from './surface';
 import { CombatAudio } from './combatAudio';
+import { VoicePlayer } from './voice';
 
 /**
  * Positional ambience loops (Landmarks/sites push `{ kind, pos }` into `landmarks.audioSpots`).
@@ -134,6 +135,9 @@ export class AudioEngine {
   /** Gunfire, impacts, creatures, explosions (null until start()). */
   combat: CombatAudio | null = null;
   private listenerPos = new THREE.Vector3();
+  private voiceBus!: GainNode;
+  private voice!: VoicePlayer;
+  private voicesOn = true;
 
   get ready() {
     return this.started;
@@ -223,6 +227,35 @@ export class AudioEngine {
     this.startWind();
     this.score = new Music(ctx, this.music, this.reverbSend, this.noiseBuf);
     this.combat = new CombatAudio({ ctx, noise: this.noiseBuf, sfx: this.sfx, reverb: this.reverbSend, room: this.roomBus, listener: () => this.listenerPos });
+    this.voiceBus = ctx.createGain();
+    this.voiceBus.gain.value = this.volume.sfx;
+    this.voiceBus.connect(this.master);
+    this.voice = new VoicePlayer(ctx, this.voiceBus, (pos) => this.panner(pos, 6, 1.1), (on) => {
+      // talk sits on top of the score: duck it while someone speaks
+      this.music.gain.setTargetAtTime(this.volume.music * (on ? 0.45 : 1), ctx.currentTime, on ? 0.15 : 0.6);
+    });
+    this.voice.enabled = this.voicesOn;
+  }
+
+  /** Speak a line (see ./voice.ts). Resolves to its spoken length in seconds, 0 if nothing was voiced. */
+  speak(speaker: string, text: string, opts?: { pos?: THREE.Vector3; variant?: number }): Promise<number> {
+    return this.started ? this.voice.say(speaker, text, opts) : Promise.resolve(0);
+  }
+
+  /** Whether `speak` would voice this line (Recovery skips its own squelch: the clip has one). */
+  speaks(speaker: string, text: string, variant = 0) {
+    return this.started && this.voice.covers(speaker, text, variant);
+  }
+
+  /** Cut the conversation voice off (a card closed). */
+  hush() {
+    if (this.started) this.voice.hush();
+  }
+
+  /** Voices on or off (Settings); off leaves subtitles only. */
+  setVoices(on: boolean) {
+    this.voicesOn = on;
+    if (this.started) { this.voice.enabled = on; if (!on) this.voice.hush(); }
   }
 
   private voiceEnv(ctx: BaseAudioContext, cache = this.buffers): VoiceEnv {
@@ -252,6 +285,7 @@ export class AudioEngine {
     this.music.gain.value = this.volume.music;
     this.sfx.gain.value = this.volume.sfx;
     this.foley.gain.value = this.volume.sfx;
+    this.voiceBus.gain.value = this.volume.sfx;
   }
 
   private makeNoise(seconds: number) {
@@ -1166,21 +1200,6 @@ export class AudioEngine {
       osc.stop(t + 0.8);
       lfo.stop(t + 0.8);
       this.alarm = null;
-    }
-  }
-
-  /** Megaphone taunt via speech synthesis when available (fails silently otherwise). */
-  say(text: string) {
-    try {
-      if (!('speechSynthesis' in window)) return;
-      const u = new SpeechSynthesisUtterance(text);
-      u.rate = 1.08;
-      u.pitch = 0.7;
-      u.volume = 0.55 * this.volume.master;
-      speechSynthesis.cancel();
-      speechSynthesis.speak(u);
-    } catch {
-      /* no voices */
     }
   }
 }

@@ -553,11 +553,8 @@ export class Garage {
   private taunt(text?: string) {
     const line = text ?? GARAGE.owner.taunts[this.tauntIdx++ % GARAGE.owner.taunts.length];
     this.ctx.audio.play('megaphone', { pos: this.b.points.megaphone });
-    this.ctx.ui.subtitle(GARAGE.owner.name, line);
-    if (this.ctx.audio.ready && this.voiceEnabled) this.ctx.audio.say(line);
+    this.ctx.ui.subtitle(GARAGE.owner.name, line, { pos: this.b.points.megaphone });
   }
-
-  voiceEnabled = true;
 
   private onDroneState(s: DroneState, prev: DroneState) {
     const a = this.ctx.audio;

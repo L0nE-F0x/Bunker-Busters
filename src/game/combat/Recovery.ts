@@ -24,8 +24,8 @@ export interface RecoveryHost {
   hf: Heightfield;
   combat: Combat;
   audio: AudioEngine;
-  /** A shouted line (subtitles near enough to hear). */
-  bark(text: string, from: THREE.Vector3): void;
+  /** A shouted line (subtitles near enough to hear); `who` picks the crew voice. */
+  bark(text: string, from: THREE.Vector3, who: number): void;
   /** Hand the player items; returns the lines to show. */
   give(items: { id: string; qty: number }[]): string[];
   toast(text: string, kind?: 'info' | 'good' | 'bad'): void;
@@ -544,8 +544,10 @@ export class Recovery implements HostileProvider {
     const lines = BARKS[kind];
     if (!lines) return;
     this.barkT = kind === 'idle' ? 12 : 3;
-    this.host.audio.combat?.voice('squelch', m.h.headPos, m.voice, kind === 'idle' ? 0.5 : 1);
-    this.host.bark(pick(lines), m.h.headPos);
+    const line = pick(lines);
+    // a voiced clip carries its own key-up; only a silent line gets the bare squelch
+    if (!this.host.audio.speaks('Kade Recovery', line, m.h.slot)) this.host.audio.combat?.voice('squelch', m.h.headPos, m.voice, kind === 'idle' ? 0.5 : 1);
+    this.host.bark(line, m.h.headPos, m.h.slot);
   }
 
   // ------------------------------------------------------------------ the frame

@@ -501,20 +501,23 @@ export interface Settings {
   music: number;
   sfx: number;
   sensitivity: number;
+  /** Spoken lines (pre-rendered voices, src/engine/voice.ts). Off = subtitles only. */
   voice: boolean;
-  /** v0.5.1: speech-synthesis taunts went off by default (it never sounded like a person). */
+  /** v0.5.1: the old speech-synthesis taunts went off by default. */
   voiceOff051?: boolean;
+  /** v0.5.2: `voice` now means real recorded-style voices, on for everyone once. */
+  voiceOn052?: boolean;
 }
 
 // phones start on Low: a phone GPU at native resolution under the full post stack crawls
-export const DEFAULT_SETTINGS: Settings = { quality: isMobile ? 'low' : 'high', difficulty: 'normal', master: 0.8, music: 0.5, sfx: 0.9, sensitivity: 1, voice: false, voiceOff051: true };
+export const DEFAULT_SETTINGS: Settings = { quality: isMobile ? 'low' : 'high', difficulty: 'normal', master: 0.8, music: 0.5, sfx: 0.9, sensitivity: 1, voice: true, voiceOff051: true, voiceOn052: true };
 
 export function loadSettings(): Settings {
   try {
     const raw = localStorage.getItem(SETTINGS_KEY);
     const s: Settings = raw ? { ...DEFAULT_SETTINGS, ...JSON.parse(raw) } : { ...DEFAULT_SETTINGS };
-    // once: robot speech off for everyone who had the old default (it can still be turned back on)
-    if (!s.voiceOff051) { s.voice = false; s.voiceOff051 = true; }
+    // once: the setting used to switch robot speech; now it switches the new voices, which start on
+    if (!s.voiceOn052) { s.voice = true; s.voiceOff051 = true; s.voiceOn052 = true; }
     return s;
   } catch {
     return { ...DEFAULT_SETTINGS };

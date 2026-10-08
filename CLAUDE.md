@@ -215,6 +215,10 @@ The webview's `console.log` goes to stdout.
   - The viewmodel gun is posed first and the hands follow (`Arms` → `Hands`). Don't move the hands independently while a gun is up, or they detach from it.
   - In the Linux app, mouse buttons and the wheel come from `raw_mouse_delta` while captured (the native grab keeps clicks from WebKit). Any new mouse input must read `Input.mouseDown` / `mousePressed` / `wheel`, not DOM events.
   - Iterate visuals with the hands lab (`&arm=…&ads&act=…`) and the prop lab (`what=human&pose=aim&walk=3.8`).
+- **Voices** (v0.5.2): spoken lines are pre-rendered neural TTS clips (Kokoro, offline), never live synthesis (the owner rejected formant babble and browser TTS as uncanny).
+  - Cast and text rules: `src/content/voices.ts` (speaker → Kokoro voice + fx: room/radio/megaphone/pa/bot). Player: `src/engine/voice.ts`, called from `UI.subtitle`, `pages` and the choice cards.
+  - **After editing any dialogue, re-voice:** `node scripts/voice/extract.mjs && ~/.local/share/bb-tts/venv/bin/python scripts/voice/generate.py`. It only renders new or changed lines and deletes stale clips. Kokoro (venv + model) lives in `~/.local/share/bb-tts`, outside the repo.
+  - Lines are matched by sentence, so runtime text (names, counts) is just skipped. New speakers need a `CAST` entry or they stay silent (notes, signs and the player are silent on purpose).
 - Fonts are self-hosted via `@fontsource` (`src/fonts.ts`). Import paths have **no `.css` suffix** (the packages' export maps add it).
 - In bash with `set -o pipefail`, don't use `grep -q` on a producer's output (SIGPIPE → false failure).
 - Node scripts: use `fileURLToPath(new URL(…))`, not `.pathname`. The repo path contains a space.

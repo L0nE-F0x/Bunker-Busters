@@ -33,7 +33,7 @@ export interface UIBridge {
     onChoice: (nodeId: string, choiceId: string) => void;
   }): Promise<void>;
   banner(title: string, sub: string, kind?: 'good' | 'bad' | 'info'): void;
-  subtitle(speaker: string, text: string): void;
+  subtitle(speaker: string, text: string, voice?: { pos?: THREE.Vector3; variant?: number }): void;
 }
 
 export interface Action {

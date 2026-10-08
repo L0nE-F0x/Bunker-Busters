@@ -350,7 +350,7 @@ export class Game {
       choose: (o) => self.withMinigame('idle', () => self.ui.choose(o)),
       converse: (o) => self.withMinigame('idle', () => self.ui.converse(o)),
       banner: (a, b, k) => self.ui.banner(a, b, k),
-      subtitle: (a, b) => self.ui.subtitle(a, b),
+      subtitle: (a, b, v) => self.ui.subtitle(a, b, v),
     };
     return {
       get state() { return self.state!; },
@@ -570,8 +570,8 @@ export class Game {
       hf: this.hf,
       combat: this.combat,
       audio: this.audio,
-      bark: (text, from) => {
-        if (self.player && from.distanceTo(self.player.position) < 48) self.ui.subtitle('Kade Recovery', text);
+      bark: (text, from, who) => {
+        if (self.player && from.distanceTo(self.player.position) < 48) self.ui.subtitle('Kade Recovery', text, { pos: from.clone(), variant: who });
       },
       give: (items) => {
         const s = self.state;
@@ -922,7 +922,6 @@ export class Game {
       const m = this.intelMeshes.get(it.id);
       if (m) m.visible = !state.has(`intel:${it.id}`);
     }
-    this.garage.voiceEnabled = this.settings.voice;
     this.ui.mountHUD(state, this.map);
     this.story?.dispose();
     this.story = new Story(state, this.ui, this.audio);
@@ -1145,7 +1144,6 @@ export class Game {
     saveSettings(s);
     this.applyAudioSettings();
     this.input.sensitivity = s.sensitivity;
-    if (this.garage) this.garage.voiceEnabled = s.voice;
     if (this.combat) this.combat.difficulty = s.difficulty ?? 'normal';
     if (s.quality !== this.quality.level && this.post) {
       this.quality = makeQuality(s.quality);
@@ -1160,6 +1158,7 @@ export class Game {
 
   private applyAudioSettings() {
     this.audio.setVolumes({ master: this.settings.master, music: this.settings.music, sfx: this.settings.sfx });
+    this.audio.setVoices(this.settings.voice !== false);
     this.input.sensitivity = this.settings.sensitivity;
   }
 

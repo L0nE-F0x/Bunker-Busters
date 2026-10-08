@@ -926,3 +926,13 @@ The iGPU is GPU-bound in this test (~30 fps) since the graphics pass. The deskto
 - Real-click check of the new raw-button path in the Linux app.
 - Balance from the owner's play: TTK, patrol frequency, wolf day-hunting odds.
 - Ideas: enemy weapon pickups on the ground, decals, wolves vs contractors, a rival crew.
+
+## 2026-10-08: voices (v0.5.2 batch)
+
+- The owner rejected every synthesised voice (formant barks, the campfire/radio babble, browser TTS taunts). Removed the `Babbler`; the camp radio now plays static, Morse and a fingerpicked song, and campfires are heard through cups, creaks, logs and boots.
+- Then real voices: 348 lines pre-rendered with Kokoro-82M (kokoro-onnx, Apache-2.0) into `public/voice/*.mp3` (11 MB, 48 kbps mono). 20 speakers, each with a voice and a chain baked in by ffmpeg: Mara and the camp on radio, Tanner through his megaphone, Hunter Vale and the AIs on a PA, Dry Creek in a small room, Kade crews on radio (4 voices, one per slot, squelch baked in).
+- `scripts/voice/extract.mjs` finds lines in the source (rolldown's oxc parser; the project's TypeScript 7 has no JS API): `{speaker, text}` objects, `subtitle()` calls, `taunts`, BARKS, SENTRY_LINES. Template text keeps its literal pieces' complete sentences. The game splits displayed text the same way and plays the longest runs it has clips for.
+- Music ducks under speech. Settings → Voices (on by default, migrated once via `voiceOn052`). Contractor barks are positional; Tanner's taunts come from the megaphone.
+- Not voiced: the player (silent protagonist), notes/signs, and the jet's CVR/ExitPilot transcript pages (narration mixed with two speakers).
+- Unverified: playback inside the Linux desktop app (WebKitGTK decodes via GStreamer; `mpg123audiodec` is present). `?trace` logs `[voice] …` per line.
+

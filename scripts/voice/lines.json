@@ -1,0 +1,3482 @@
+[
+ {
+  "key": "160xhh2",
+  "voice": "af_aoede",
+  "fx": "pa",
+  "speed": 1,
+  "speaker": "ARIA",
+  "words": "Hunter is heads-down. His last known location is 'ahead'. He asked me to tell callers that the Starlite keynote is the best summary of his vision, and that refunds are a mindset.",
+  "tts": "Hunter is heads-down. His last known location is 'ahead'. He asked me to tell callers that the Starlite keynote is the best summary of his vision, and that refunds are a mindset.",
+  "where": "src/game/sites/jet.ts"
+ },
+ {
+  "key": "1t1mua2",
+  "voice": "af_aoede",
+  "fx": "pa",
+  "speed": 1,
+  "speaker": "ARIA",
+  "words": "Remote unlock sent. Please don't tell the waitlist. And Hunter? The board would like to know when you're coming back. I told them you're in stealth mode.",
+  "tts": "Remote unlock sent. Please don't tell the waitlist. And Hunter? The board would like to know when you're coming back. I told them you're in stealth mode.",
+  "where": "src/game/sites/jet.ts"
+ },
+ {
+  "key": "0mdyrab",
+  "voice": "af_aoede",
+  "fx": "pa",
+  "speed": 1,
+  "speaker": "ARIA",
+  "words": "Thank you for calling Ascend Platinum. Your exit is our entrance. Who am I speaking with today?",
+  "tts": "Thank you for calling Ascend Platinum. Your exit is our entrance. Who am I speaking with today?",
+  "where": "src/game/sites/jet.ts"
+ },
+ {
+  "key": "1kisqjt",
+  "voice": "af_aoede",
+  "fx": "pa",
+  "speed": 1,
+  "speaker": "ARIA",
+  "words": "Welcome back, Hunter! Voice match sixty-one percent, which is within tolerance for founders. I show the aircraft as 'exited'. How can I make that seamless?",
+  "tts": "Welcome back, Hunter! Voice match sixty-one percent, which is within tolerance for founders. I show the aircraft as 'exited'. How can I make that seamless?",
+  "where": "src/game/sites/jet.ts"
+ },
+ {
+  "key": "0adz1k0",
+  "voice": "af_aoede",
+  "fx": "pa",
+  "speed": 1,
+  "speaker": "ARIA",
+  "words": "Wonderful! I can see your seat is confirmed: waitlist position four hundred and twelve thousand. Estimated departure: after the heat death of the universe, give or take. Is there anything else I can make seamless?",
+  "tts": "Wonderful! I can see your seat is confirmed: waitlist position four hundred and twelve thousand. Estimated departure: after the heat death of the universe, give or take. Is there anything else I can make seamless?",
+  "where": "src/game/sites/jet.ts"
+ },
+ {
+  "key": "08l30cj",
+  "voice": "af_aoede",
+  "fx": "pa",
+  "speed": 1,
+  "speaker": "ARIA",
+  "words": "Your parachute beacon pinged once, east of the drive-in, and then you turned it off for focus time. The aircraft continued north-west with ExitPilot. You said that was 'the vibe'.",
+  "tts": "Your parachute beacon pinged once, east of the drive-in, and then you turned it off for focus time. The aircraft continued north-west with ExitPilot. You said that was 'the vibe'.",
+  "where": "src/game/sites/jet.ts"
+ },
+ {
+  "key": "0ioozk2",
+  "voice": "af_jessica",
+  "fx": "pa",
+  "speed": 1,
+  "speaker": "ASSISTANT",
+  "words": "Wheels up at eleven, from the lot. North-west, like you said.",
+  "tts": "Wheels up at eleven, from the lot. North-west, like you said.",
+  "where": "src/game/sites/driveinArt.ts"
+ },
+ {
+  "key": "1ndz65g",
+  "voice": "af_nova",
+  "fx": "pa",
+  "speed": 1.02,
+  "speaker": "Compliance Sentry",
+  "words": "For your safety, please remain still while I resolve you.",
+  "tts": "For your safety, please remain still while I resolve you.",
+  "where": "src/game/combat/Machines.ts"
+ },
+ {
+  "key": "0r17xwi",
+  "voice": "af_nova",
+  "fx": "pa",
+  "speed": 1.02,
+  "speaker": "Compliance Sentry",
+  "words": "Please step back. This is a safe space.",
+  "tts": "Please step back. This is a safe space.",
+  "where": "src/game/combat/Machines.ts"
+ },
+ {
+  "key": "17ci7sy",
+  "voice": "af_nova",
+  "fx": "pa",
+  "speed": 1.02,
+  "speaker": "Compliance Sentry",
+  "words": "This interaction may be recorded for quality and targeting purposes.",
+  "tts": "This interaction may be recorded for quality and targeting purposes.",
+  "where": "src/game/combat/Machines.ts"
+ },
+ {
+  "key": "038er0l",
+  "voice": "af_nova",
+  "fx": "pa",
+  "speed": 1.02,
+  "speaker": "Compliance Sentry",
+  "words": "Unscheduled maintenance. Your feedback is important to—",
+  "tts": "Unscheduled maintenance. Your feedback is important to—",
+  "where": "src/game/combat/Machines.ts"
+ },
+ {
+  "key": "1dgho1u",
+  "voice": "af_nova",
+  "fx": "pa",
+  "speed": 1.02,
+  "speaker": "Compliance Sentry",
+  "words": "You are entering a liability-free zone. Lethal force is included.",
+  "tts": "You are entering a liability-free zone. Lethal force is included.",
+  "where": "src/game/combat/Machines.ts"
+ },
+ {
+  "key": "1bx528x",
+  "voice": "af_river",
+  "fx": "radio",
+  "speed": 1,
+  "speaker": "Dez Marlow",
+  "words": "There's a carrier on our band that doesn't belong to any camp. It breathes between songs. Mara thinks I'm paranoid. Mara is wrong. I know exactly how that sounds.",
+  "tts": "There's a carrier on our band that doesn't belong to any camp. It breathes between songs. Mara thinks I'm paranoid. Mara is wrong. I know exactly how that sounds.",
+  "where": "src/content/camp.ts"
+ },
+ {
+  "key": "1n0bam6",
+  "voice": "am_adam",
+  "fx": "room",
+  "speed": 0.96,
+  "speaker": "Doc Ivers",
+  "words": "Bunker health plans. Tanner sold them to half the camps: priority medical in your private shelter. I treated the people who bought them. They got a tote bag and a laminated card. I kept the list because somebody should.",
+  "tts": "Bunker health plans. Tanner sold them to half the camps: priority medical in your private shelter. I treated the people who bought them. They got a tote bag and a laminated card. I kept the list because somebody should.",
+  "where": "src/game/town/Settlement.ts"
+ },
+ {
+  "key": "04wqajz",
+  "voice": "am_adam",
+  "fx": "room",
+  "speed": 0.96,
+  "speaker": "Doc Ivers",
+  "words": "If you're bleeding, the generator has to agree first. It's out the east side. I don't speak to it. Also, Wick has a cough I can hear from here, and I can't do a thing about it in the dark.",
+  "tts": "If you're bleeding, the generator has to agree first. It's out the east side. I don't speak to it. Also, Wick has a cough I can hear from here, and I can't do a thing about it in the dark.",
+  "where": "src/game/town/Settlement.ts"
+ },
+ {
+  "key": "09pekcv",
+  "voice": "am_adam",
+  "fx": "room",
+  "speed": 0.96,
+  "speaker": "Doc Ivers",
+  "words": "My favourite patient. Don't let it go to your head, there are only nine of you.",
+  "tts": "My favourite patient. Don't let it go to your head, there are only nine of you.",
+  "where": "src/game/town/Settlement.ts"
+ },
+ {
+  "key": "0dv7i0y",
+  "voice": "am_adam",
+  "fx": "room",
+  "speed": 0.96,
+  "speaker": "Doc Ivers",
+  "words": "Somebody has to stitch you up on the salt. Fine. I'm bringing the good gauze, and I'm complaining the whole way.",
+  "tts": "Somebody has to stitch you up on the salt. Fine. I'm bringing the good gauze, and I'm complaining the whole way.",
+  "where": "src/game/town/Settlement.ts"
+ },
+ {
+  "key": "0vf12m1",
+  "voice": "am_adam",
+  "fx": "room",
+  "speed": 0.96,
+  "speaker": "Doc Ivers",
+  "words": "The sterilizer needs water. I was going to ask her. I've been going to ask her for two years. Tell her, or don't. I'm a doctor, not a diplomat.",
+  "tts": "The sterilizer needs water. I was going to ask her. I've been going to ask her for two years. Tell her, or don't. I'm a doctor, not a diplomat.",
+  "where": "src/game/town/Settlement.ts"
+ },
+ {
+  "key": "1mgnods",
+  "voice": "am_adam",
+  "fx": "room",
+  "speed": 0.96,
+  "speaker": "Doc Ivers",
+  "words": "The summer before the Pivot, the county let Kade Holdings run a pilot on our aquifer. We got a school with a rocket on the sign. Eight months later the creek stopped. They called it a drought. Droughts don't come with a pump station.",
+  "tts": "The summer before the Pivot, the county let Kade Holdings run a pilot on our aquifer. We got a school with a rocket on the sign. Eight months later the creek stopped. They called it a drought. Droughts don't come with a pump station.",
+  "where": "src/game/town/Settlement.ts"
+ },
+ {
+  "key": "01sxig5",
+  "voice": "am_adam",
+  "fx": "room",
+  "speed": 0.96,
+  "speaker": "Doc Ivers",
+  "words": "Wick. Up in the Cut, south of the Spire. Coughs like a cement mixer, won't come down. Take him this. Tell him it's from the town, not from me. He'll use it if it's from the town.",
+  "tts": "Wick. Up in the Cut, south of the Spire. Coughs like a cement mixer, won't come down. Take him this. Tell him it's from the town, not from me. He'll use it if it's from the town.",
+  "where": "src/game/town/Settlement.ts"
+ },
+ {
+  "key": "1q62x4z",
+  "voice": "am_adam",
+  "fx": "room",
+  "speed": 0.96,
+  "speaker": "Doc Ivers",
+  "words": "Window's on. That means I can see what I'm doing. Don't make me grateful out loud.",
+  "tts": "Window's on. That means I can see what I'm doing. Don't make me grateful out loud.",
+  "where": "src/game/town/Settlement.ts"
+ },
+ {
+  "key": "1cybxq5",
+  "voice": "am_onyx",
+  "fx": "radio",
+  "speed": 0.94,
+  "speaker": "Hollis Grange",
+  "words": "Drink before you're thirsty. Crouch before you're seen. Never trust a man with a banner. And if you're lost, find the highway. It doesn't go anywhere good, but it goes.",
+  "tts": "Drink before you're thirsty. Crouch before you're seen. Never trust a man with a banner. And if you're lost, find the highway. It doesn't go anywhere good, but it goes.",
+  "where": "src/content/camp.ts"
+ },
+ {
+  "key": "0o1l9yi",
+  "voice": "am_onyx",
+  "fx": "radio",
+  "speed": 0.94,
+  "speaker": "Hollis Grange",
+  "words": "Kid gave you a whole page. Here, take my road kit. Don't tell her I cried.",
+  "tts": "Kid gave you a whole page. Here, take my road kit. Don't tell her I cried.",
+  "where": "src/content/quests.ts"
+ },
+ {
+  "key": "0e4wwuf",
+  "voice": "am_liam",
+  "fx": "pa",
+  "speed": 1,
+  "speaker": "HUNTER VALE",
+  "words": "Addressable market: everyone. Retention: one hundred percent, until it isn't.",
+  "tts": "Addressable market: everyone. Retention: one hundred percent, until it isn't.",
+  "where": "src/game/sites/driveinArt.ts"
+ },
+ {
+  "key": "1tnu2ct",
+  "voice": "am_liam",
+  "fx": "pa",
+  "speed": 1,
+  "speaker": "HUNTER VALE",
+  "words": "Basic is the waitlist. Plus is a better waitlist. Platinum is a seat.",
+  "tts": "Basic is the waitlist. Plus is a better waitlist. Platinum is a seat.",
+  "where": "src/game/sites/driveinArt.ts"
+ },
+ {
+  "key": "1hwspmw",
+  "voice": "am_liam",
+  "fx": "pa",
+  "speed": 1,
+  "speaker": "HUNTER VALE",
+  "words": "Introducing EXIT. Evacuation, as a service. Leave before the planet leaves you.",
+  "tts": "Introducing Exit. Evacuation, as a service. Leave before the planet leaves you.",
+  "where": "src/game/sites/driveinArt.ts"
+ },
+ {
+  "key": "13czgx7",
+  "voice": "am_liam",
+  "fx": "pa",
+  "speed": 1,
+  "speaker": "HUNTER VALE",
+  "words": "Just me. Seats were always zero. It's a waitlist. Kill the—",
+  "tts": "Just me. Seats were always zero. It's a waitlist. Kill the—",
+  "where": "src/game/sites/driveinArt.ts"
+ },
+ {
+  "key": "0dzs8nj",
+  "voice": "am_liam",
+  "fx": "pa",
+  "speed": 1,
+  "speaker": "HUNTER VALE",
+  "words": "No questions? Great. Great energy. Thank you.",
+  "tts": "No questions? Great. Great energy. Thank you.",
+  "where": "src/game/sites/driveinArt.ts"
+ },
+ {
+  "key": "15boz3r",
+  "voice": "am_liam",
+  "fx": "pa",
+  "speed": 1,
+  "speaker": "HUNTER VALE",
+  "words": "One more thing. We're already gone.",
+  "tts": "One more thing. We're already gone.",
+  "where": "src/game/sites/driveinArt.ts"
+ },
+ {
+  "key": "1m444d0",
+  "voice": "am_liam",
+  "fx": "pa",
+  "speed": 1,
+  "speaker": "HUNTER VALE",
+  "words": "Tell the board I exited! And the hold code is four zeros, like the returns. Don't let anyone touch my—",
+  "tts": "Tell the board I exited! And the hold code is four zeros, like the returns. Don't let anyone touch my—",
+  "where": "src/game/sites/jet.ts"
+ },
+ {
+  "key": "1vccryt",
+  "voice": "am_liam",
+  "fx": "pa",
+  "speed": 1,
+  "speaker": "HUNTER VALE",
+  "words": "The world is ending. And I want to say, as a founder: that is a market.",
+  "tts": "The world is ending. And I want to say, as a founder: that is a market.",
+  "where": "src/game/sites/driveinArt.ts"
+ },
+ {
+  "key": "19eaqiu",
+  "voice": "af_kore",
+  "fx": "room",
+  "speed": 1,
+  "speaker": "Inez Quill",
+  "words": "Before the Pivot I sold forty tickets for the hyperloop out east. The Tube. Nobody's asked for a refund, because nobody ever arrived. If you're walking that way, find out whether I owe anybody.",
+  "tts": "Before the Pivot I sold forty tickets for the hyperloop out east. The Tube. Nobody's asked for a refund, because nobody ever arrived. If you're walking that way, find out whether I owe anybody.",
+  "where": "src/game/town/Settlement.ts"
+ },
+ {
+  "key": "0t6iedd",
+  "voice": "af_kore",
+  "fx": "room",
+  "speed": 1,
+  "speaker": "Inez Quill",
+  "words": "The landlord's stair. I don't have a key that I will admit to. A picker at rank 3 gets bored and opens it. Or you can keep talking.",
+  "tts": "The landlord's stair. I don't have a key that I will admit to. A picker at rank 3 gets bored and opens it. Or you can keep talking.",
+  "where": "src/game/town/Settlement.ts"
+ },
+ {
+  "key": "0pmln9p",
+  "voice": "af_kore",
+  "fx": "room",
+  "speed": 1,
+  "speaker": "Inez Quill",
+  "words": "The Till is open. The sign about the closet is also open, which is a kind of honesty. Don't palm the drawer. I can hear a hand.",
+  "tts": "The Till is open. The sign about the closet is also open, which is a kind of honesty. Don't palm the drawer. I can hear a hand.",
+  "where": "src/game/town/Settlement.ts"
+ },
+ {
+  "key": "052axvv",
+  "voice": "af_kore",
+  "fx": "room",
+  "speed": 1,
+  "speaker": "Inez Quill",
+  "words": "The town's Till is open. The town's prices went up. Funny how that works.",
+  "tts": "The town's Till is open. The town's prices went up. Funny how that works.",
+  "where": "src/game/town/Settlement.ts"
+ },
+ {
+  "key": "1pvivsz",
+  "voice": "af_kore",
+  "fx": "room",
+  "speed": 1,
+  "speaker": "Inez Quill",
+  "words": "Welcome to the Till. My Till. Legally, in pencil. Browse. Don't palm. I can hear a hand.",
+  "tts": "Welcome to the Till. My Till. Legally, in pencil. Browse. Don't palm. I can hear a hand.",
+  "where": "src/game/town/Settlement.ts"
+ },
+ {
+  "key": "0sx0jjs",
+  "voice": "af_kore",
+  "fx": "room",
+  "speed": 1,
+  "speaker": "Inez Quill",
+  "words": "West? To a vault full of rich people's things? I'll bring the scale. Somebody has to price it all.",
+  "tts": "West? To a vault full of rich people's things? I'll bring the scale. Somebody has to price it all.",
+  "where": "src/game/town/Settlement.ts"
+ },
+ {
+  "key": "1ijmmqj",
+  "voice": "af_kore",
+  "fx": "room",
+  "speed": 1,
+  "speaker": "Inez Quill",
+  "words": "Whoever is still here. I'm still here. Thank you. Bottles are two scrap for you from now on. Don't tell Sol. Sol thinks I have a heart and I like him confused.",
+  "tts": "Whoever is still here. I'm still here. Thank you. Bottles are two scrap for you from now on. Don't tell Sol. Sol thinks I have a heart and I like him confused.",
+  "where": "src/game/town/Settlement.ts"
+ },
+ {
+  "key": "1gz60nl",
+  "voice": "am_fenrir",
+  "fx": "radio",
+  "speed": 1.05,
+  "speaker": "Kade Recovery",
+  "words": "Asset located. Initiating recovery.",
+  "tts": "Asset located. Initiating recovery.",
+  "where": "src/content/recovery.ts"
+ },
+ {
+  "key": "0nnwg8a",
+  "voice": "am_michael",
+  "fx": "radio",
+  "speed": 1.05,
+  "speaker": "Kade Recovery",
+  "words": "Asset located. Initiating recovery.",
+  "tts": "Asset located. Initiating recovery.",
+  "where": "src/content/recovery.ts"
+ },
+ {
+  "key": "19dz5nb",
+  "voice": "bm_george",
+  "fx": "radio",
+  "speed": 1.05,
+  "speaker": "Kade Recovery",
+  "words": "Asset located. Initiating recovery.",
+  "tts": "Asset located. Initiating recovery.",
+  "where": "src/content/recovery.ts"
+ },
+ {
+  "key": "1nybgw9",
+  "voice": "bm_daniel",
+  "fx": "radio",
+  "speed": 1.05,
+  "speaker": "Kade Recovery",
+  "words": "Asset located. Initiating recovery.",
+  "tts": "Asset located. Initiating recovery.",
+  "where": "src/content/recovery.ts"
+ },
+ {
+  "key": "0itaj1f",
+  "voice": "am_fenrir",
+  "fx": "radio",
+  "speed": 1.05,
+  "speaker": "Kade Recovery",
+  "words": "Asset recovered.",
+  "tts": "Asset recovered.",
+  "where": "src/content/recovery.ts"
+ },
+ {
+  "key": "0hqkufi",
+  "voice": "am_michael",
+  "fx": "radio",
+  "speed": 1.05,
+  "speaker": "Kade Recovery",
+  "words": "Asset recovered.",
+  "tts": "Asset recovered.",
+  "where": "src/content/recovery.ts"
+ },
+ {
+  "key": "1kx7ksd",
+  "voice": "bm_george",
+  "fx": "radio",
+  "speed": 1.05,
+  "speaker": "Kade Recovery",
+  "words": "Asset recovered.",
+  "tts": "Asset recovered.",
+  "where": "src/content/recovery.ts"
+ },
+ {
+  "key": "12rs697",
+  "voice": "bm_daniel",
+  "fx": "radio",
+  "speed": 1.05,
+  "speaker": "Kade Recovery",
+  "words": "Asset recovered.",
+  "tts": "Asset recovered.",
+  "where": "src/content/recovery.ts"
+ },
+ {
+  "key": "06u6bbi",
+  "voice": "am_fenrir",
+  "fx": "radio",
+  "speed": 1.05,
+  "speaker": "Kade Recovery",
+  "words": "Back to posts. Somebody owes me a timesheet.",
+  "tts": "Back to posts. Somebody owes me a timesheet.",
+  "where": "src/content/recovery.ts"
+ },
+ {
+  "key": "1h4ko77",
+  "voice": "am_michael",
+  "fx": "radio",
+  "speed": 1.05,
+  "speaker": "Kade Recovery",
+  "words": "Back to posts. Somebody owes me a timesheet.",
+  "tts": "Back to posts. Somebody owes me a timesheet.",
+  "where": "src/content/recovery.ts"
+ },
+ {
+  "key": "1usjvrw",
+  "voice": "bm_george",
+  "fx": "radio",
+  "speed": 1.05,
+  "speaker": "Kade Recovery",
+  "words": "Back to posts. Somebody owes me a timesheet.",
+  "tts": "Back to posts. Somebody owes me a timesheet.",
+  "where": "src/content/recovery.ts"
+ },
+ {
+  "key": "0c74jva",
+  "voice": "bm_daniel",
+  "fx": "radio",
+  "speed": 1.05,
+  "speaker": "Kade Recovery",
+  "words": "Back to posts. Somebody owes me a timesheet.",
+  "tts": "Back to posts. Somebody owes me a timesheet.",
+  "where": "src/content/recovery.ts"
+ },
+ {
+  "key": "1pur9q1",
+  "voice": "am_fenrir",
+  "fx": "radio",
+  "speed": 1.05,
+  "speaker": "Kade Recovery",
+  "words": "Changing out, cover me!",
+  "tts": "Changing out, cover me!",
+  "where": "src/content/recovery.ts"
+ },
+ {
+  "key": "0awl4ue",
+  "voice": "am_michael",
+  "fx": "radio",
+  "speed": 1.05,
+  "speaker": "Kade Recovery",
+  "words": "Changing out, cover me!",
+  "tts": "Changing out, cover me!",
+  "where": "src/content/recovery.ts"
+ },
+ {
+  "key": "1tdzyqf",
+  "voice": "bm_george",
+  "fx": "radio",
+  "speed": 1.05,
+  "speaker": "Kade Recovery",
+  "words": "Changing out, cover me!",
+  "tts": "Changing out, cover me!",
+  "where": "src/content/recovery.ts"
+ },
+ {
+  "key": "1w0j87l",
+  "voice": "bm_daniel",
+  "fx": "radio",
+  "speed": 1.05,
+  "speaker": "Kade Recovery",
+  "words": "Changing out, cover me!",
+  "tts": "Changing out, cover me!",
+  "where": "src/content/recovery.ts"
+ },
+ {
+  "key": "0q0jtaj",
+  "voice": "am_fenrir",
+  "fx": "radio",
+  "speed": 1.05,
+  "speaker": "Kade Recovery",
+  "words": "Checking it out. Logging it either way.",
+  "tts": "Checking it out. Logging it either way.",
+  "where": "src/content/recovery.ts"
+ },
+ {
+  "key": "0q8xbws",
+  "voice": "am_michael",
+  "fx": "radio",
+  "speed": 1.05,
+  "speaker": "Kade Recovery",
+  "words": "Checking it out. Logging it either way.",
+  "tts": "Checking it out. Logging it either way.",
+  "where": "src/content/recovery.ts"
+ },
+ {
+  "key": "1jbivth",
+  "voice": "bm_george",
+  "fx": "radio",
+  "speed": 1.05,
+  "speaker": "Kade Recovery",
+  "words": "Checking it out. Logging it either way.",
+  "tts": "Checking it out. Logging it either way.",
+  "where": "src/content/recovery.ts"
+ },
+ {
+  "key": "1k0r24j",
+  "voice": "bm_daniel",
+  "fx": "radio",
+  "speed": 1.05,
+  "speaker": "Kade Recovery",
+  "words": "Checking it out. Logging it either way.",
+  "tts": "Checking it out. Logging it either way.",
+  "where": "src/content/recovery.ts"
+ },
+ {
+  "key": "0ts5kqw",
+  "voice": "am_fenrir",
+  "fx": "radio",
+  "speed": 1.05,
+  "speaker": "Kade Recovery",
+  "words": "Come out and nobody gets a performance review.",
+  "tts": "Come out and nobody gets a performance review.",
+  "where": "src/content/recovery.ts"
+ },
+ {
+  "key": "1stge29",
+  "voice": "am_michael",
+  "fx": "radio",
+  "speed": 1.05,
+  "speaker": "Kade Recovery",
+  "words": "Come out and nobody gets a performance review.",
+  "tts": "Come out and nobody gets a performance review.",
+  "where": "src/content/recovery.ts"
+ },
+ {
+  "key": "18aiqle",
+  "voice": "bm_george",
+  "fx": "radio",
+  "speed": 1.05,
+  "speaker": "Kade Recovery",
+  "words": "Come out and nobody gets a performance review.",
+  "tts": "Come out and nobody gets a performance review.",
+  "where": "src/content/recovery.ts"
+ },
+ {
+  "key": "0qxd8tc",
+  "voice": "bm_daniel",
+  "fx": "radio",
+  "speed": 1.05,
+  "speaker": "Kade Recovery",
+  "words": "Come out and nobody gets a performance review.",
+  "tts": "Come out and nobody gets a performance review.",
+  "where": "src/content/recovery.ts"
+ },
+ {
+  "key": "1fgec1g",
+  "voice": "am_fenrir",
+  "fx": "radio",
+  "speed": 1.05,
+  "speaker": "Kade Recovery",
+  "words": "Compliance charge, out!",
+  "tts": "Compliance charge, out!",
+  "where": "src/content/recovery.ts"
+ },
+ {
+  "key": "0e2iz93",
+  "voice": "am_michael",
+  "fx": "radio",
+  "speed": 1.05,
+  "speaker": "Kade Recovery",
+  "words": "Compliance charge, out!",
+  "tts": "Compliance charge, out!",
+  "where": "src/content/recovery.ts"
+ },
+ {
+  "key": "0arfdya",
+  "voice": "bm_george",
+  "fx": "radio",
+  "speed": 1.05,
+  "speaker": "Kade Recovery",
+  "words": "Compliance charge, out!",
+  "tts": "Compliance charge, out!",
+  "where": "src/content/recovery.ts"
+ },
+ {
+  "key": "1p6hb70",
+  "voice": "bm_daniel",
+  "fx": "radio",
+  "speed": 1.05,
+  "speaker": "Kade Recovery",
+  "words": "Compliance charge, out!",
+  "tts": "Compliance charge, out!",
+  "where": "src/content/recovery.ts"
+ },
+ {
+  "key": "1ehyt9z",
+  "voice": "am_fenrir",
+  "fx": "radio",
+  "speed": 1.05,
+  "speaker": "Kade Recovery",
+  "words": "Contact! Somebody get the waiver!",
+  "tts": "Contact! Somebody get the waiver!",
+  "where": "src/content/recovery.ts"
+ },
+ {
+  "key": "16r0r3c",
+  "voice": "am_michael",
+  "fx": "radio",
+  "speed": 1.05,
+  "speaker": "Kade Recovery",
+  "words": "Contact! Somebody get the waiver!",
+  "tts": "Contact! Somebody get the waiver!",
+  "where": "src/content/recovery.ts"
+ },
+ {
+  "key": "1dvdlmt",
+  "voice": "bm_george",
+  "fx": "radio",
+  "speed": 1.05,
+  "speaker": "Kade Recovery",
+  "words": "Contact! Somebody get the waiver!",
+  "tts": "Contact! Somebody get the waiver!",
+  "where": "src/content/recovery.ts"
+ },
+ {
+  "key": "09y03in",
+  "voice": "bm_daniel",
+  "fx": "radio",
+  "speed": 1.05,
+  "speaker": "Kade Recovery",
+  "words": "Contact! Somebody get the waiver!",
+  "tts": "Contact! Somebody get the waiver!",
+  "where": "src/content/recovery.ts"
+ },
+ {
+  "key": "0hoyqwm",
+  "voice": "am_fenrir",
+  "fx": "radio",
+  "speed": 1.05,
+  "speaker": "Kade Recovery",
+  "words": "Did you hear that?",
+  "tts": "Did you hear that?",
+  "where": "src/content/recovery.ts"
+ },
+ {
+  "key": "1c7kq7r",
+  "voice": "am_michael",
+  "fx": "radio",
+  "speed": 1.05,
+  "speaker": "Kade Recovery",
+  "words": "Did you hear that?",
+  "tts": "Did you hear that?",
+  "where": "src/content/recovery.ts"
+ },
+ {
+  "key": "01q1ktg",
+  "voice": "bm_george",
+  "fx": "radio",
+  "speed": 1.05,
+  "speaker": "Kade Recovery",
+  "words": "Did you hear that?",
+  "tts": "Did you hear that?",
+  "where": "src/content/recovery.ts"
+ },
+ {
+  "key": "1f07e72",
+  "voice": "bm_daniel",
+  "fx": "radio",
+  "speed": 1.05,
+  "speaker": "Kade Recovery",
+  "words": "Did you hear that?",
+  "tts": "Did you hear that?",
+  "where": "src/content/recovery.ts"
+ },
+ {
+  "key": "0wavh9l",
+  "voice": "am_fenrir",
+  "fx": "radio",
+  "speed": 1.05,
+  "speaker": "Kade Recovery",
+  "words": "Falling back! Falling all the way back!",
+  "tts": "Falling back! Falling all the way back!",
+  "where": "src/content/recovery.ts"
+ },
+ {
+  "key": "0teb5bm",
+  "voice": "am_michael",
+  "fx": "radio",
+  "speed": 1.05,
+  "speaker": "Kade Recovery",
+  "words": "Falling back! Falling all the way back!",
+  "tts": "Falling back! Falling all the way back!",
+  "where": "src/content/recovery.ts"
+ },
+ {
+  "key": "0hnu6wz",
+  "voice": "bm_george",
+  "fx": "radio",
+  "speed": 1.05,
+  "speaker": "Kade Recovery",
+  "words": "Falling back! Falling all the way back!",
+  "tts": "Falling back! Falling all the way back!",
+  "where": "src/content/recovery.ts"
+ },
+ {
+  "key": "1n8kl6p",
+  "voice": "bm_daniel",
+  "fx": "radio",
+  "speed": 1.05,
+  "speaker": "Kade Recovery",
+  "words": "Falling back! Falling all the way back!",
+  "tts": "Falling back! Falling all the way back!",
+  "where": "src/content/recovery.ts"
+ },
+ {
+  "key": "1cabby0",
+  "voice": "am_fenrir",
+  "fx": "radio",
+  "speed": 1.05,
+  "speaker": "Kade Recovery",
+  "words": "Fan out. Per the playbook.",
+  "tts": "Fan out. Per the playbook.",
+  "where": "src/content/recovery.ts"
+ },
+ {
+  "key": "0bip37t",
+  "voice": "am_michael",
+  "fx": "radio",
+  "speed": 1.05,
+  "speaker": "Kade Recovery",
+  "words": "Fan out. Per the playbook.",
+  "tts": "Fan out. Per the playbook.",
+  "where": "src/content/recovery.ts"
+ },
+ {
+  "key": "0p4vi0i",
+  "voice": "bm_george",
+  "fx": "radio",
+  "speed": 1.05,
+  "speaker": "Kade Recovery",
+  "words": "Fan out. Per the playbook.",
+  "tts": "Fan out. Per the playbook.",
+  "where": "src/content/recovery.ts"
+ },
+ {
+  "key": "0fi6yrk",
+  "voice": "bm_daniel",
+  "fx": "radio",
+  "speed": 1.05,
+  "speaker": "Kade Recovery",
+  "words": "Fan out. Per the playbook.",
+  "tts": "Fan out. Per the playbook.",
+  "where": "src/content/recovery.ts"
+ },
+ {
+  "key": "0b3lxol",
+  "voice": "am_fenrir",
+  "fx": "radio",
+  "speed": 1.05,
+  "speaker": "Kade Recovery",
+  "words": "Fire in the hole! Sign the release!",
+  "tts": "Fire in the hole! Sign the release!",
+  "where": "src/content/recovery.ts"
+ },
+ {
+  "key": "0go0i62",
+  "voice": "am_michael",
+  "fx": "radio",
+  "speed": 1.05,
+  "speaker": "Kade Recovery",
+  "words": "Fire in the hole! Sign the release!",
+  "tts": "Fire in the hole! Sign the release!",
+  "where": "src/content/recovery.ts"
+ },
+ {
+  "key": "1h9him7",
+  "voice": "bm_george",
+  "fx": "radio",
+  "speed": 1.05,
+  "speaker": "Kade Recovery",
+  "words": "Fire in the hole! Sign the release!",
+  "tts": "Fire in the hole! Sign the release!",
+  "where": "src/content/recovery.ts"
+ },
+ {
+  "key": "0fc6wx9",
+  "voice": "bm_daniel",
+  "fx": "radio",
+  "speed": 1.05,
+  "speaker": "Kade Recovery",
+  "words": "Fire in the hole! Sign the release!",
+  "tts": "Fire in the hole! Sign the release!",
+  "where": "src/content/recovery.ts"
+ },
+ {
+  "key": "11zosxs",
+  "voice": "am_fenrir",
+  "fx": "radio",
+  "speed": 1.05,
+  "speaker": "Kade Recovery",
+  "words": "Flanking left. Expense it.",
+  "tts": "Flanking left. Expense it.",
+  "where": "src/content/recovery.ts"
+ },
+ {
+  "key": "0da92bp",
+  "voice": "am_michael",
+  "fx": "radio",
+  "speed": 1.05,
+  "speaker": "Kade Recovery",
+  "words": "Flanking left. Expense it.",
+  "tts": "Flanking left. Expense it.",
+  "where": "src/content/recovery.ts"
+ },
+ {
+  "key": "06rfl36",
+  "voice": "bm_george",
+  "fx": "radio",
+  "speed": 1.05,
+  "speaker": "Kade Recovery",
+  "words": "Flanking left. Expense it.",
+  "tts": "Flanking left. Expense it.",
+  "where": "src/content/recovery.ts"
+ },
+ {
+  "key": "055alug",
+  "voice": "bm_daniel",
+  "fx": "radio",
+  "speed": 1.05,
+  "speaker": "Kade Recovery",
+  "words": "Flanking left. Expense it.",
+  "tts": "Flanking left. Expense it.",
+  "where": "src/content/recovery.ts"
+ },
+ {
+  "key": "0rieck1",
+  "voice": "am_fenrir",
+  "fx": "radio",
+  "speed": 1.05,
+  "speaker": "Kade Recovery",
+  "words": "Hey! This is a pilot program!",
+  "tts": "Hey! This is a pilot program!",
+  "where": "src/content/recovery.ts"
+ },
+ {
+  "key": "1hu2z92",
+  "voice": "am_michael",
+  "fx": "radio",
+  "speed": 1.05,
+  "speaker": "Kade Recovery",
+  "words": "Hey! This is a pilot program!",
+  "tts": "Hey! This is a pilot program!",
+  "where": "src/content/recovery.ts"
+ },
+ {
+  "key": "0fxtyqr",
+  "voice": "bm_george",
+  "fx": "radio",
+  "speed": 1.05,
+  "speaker": "Kade Recovery",
+  "words": "Hey! This is a pilot program!",
+  "tts": "Hey! This is a pilot program!",
+  "where": "src/content/recovery.ts"
+ },
+ {
+  "key": "079y815",
+  "voice": "bm_daniel",
+  "fx": "radio",
+  "speed": 1.05,
+  "speaker": "Kade Recovery",
+  "words": "Hey! This is a pilot program!",
+  "tts": "Hey! This is a pilot program!",
+  "where": "src/content/recovery.ts"
+ },
+ {
+  "key": "00zm9sr",
+  "voice": "am_fenrir",
+  "fx": "radio",
+  "speed": 1.05,
+  "speaker": "Kade Recovery",
+  "words": "HR says the masks are a branding opportunity.",
+  "tts": "HR says the masks are a branding opportunity.",
+  "where": "src/content/recovery.ts"
+ },
+ {
+  "key": "0z1q6j0",
+  "voice": "am_michael",
+  "fx": "radio",
+  "speed": 1.05,
+  "speaker": "Kade Recovery",
+  "words": "HR says the masks are a branding opportunity.",
+  "tts": "HR says the masks are a branding opportunity.",
+  "where": "src/content/recovery.ts"
+ },
+ {
+  "key": "13oa0ed",
+  "voice": "bm_george",
+  "fx": "radio",
+  "speed": 1.05,
+  "speaker": "Kade Recovery",
+  "words": "HR says the masks are a branding opportunity.",
+  "tts": "HR says the masks are a branding opportunity.",
+  "where": "src/content/recovery.ts"
+ },
+ {
+  "key": "02va0j7",
+  "voice": "bm_daniel",
+  "fx": "radio",
+  "speed": 1.05,
+  "speaker": "Kade Recovery",
+  "words": "HR says the masks are a branding opportunity.",
+  "tts": "HR says the masks are a branding opportunity.",
+  "where": "src/content/recovery.ts"
+ },
+ {
+  "key": "1ndzuby",
+  "voice": "am_fenrir",
+  "fx": "radio",
+  "speed": 1.05,
+  "speaker": "Kade Recovery",
+  "words": "I am not paid enough for this!",
+  "tts": "I am not paid enough for this!",
+  "where": "src/content/recovery.ts"
+ },
+ {
+  "key": "0ix0fkz",
+  "voice": "am_michael",
+  "fx": "radio",
+  "speed": 1.05,
+  "speaker": "Kade Recovery",
+  "words": "I am not paid enough for this!",
+  "tts": "I am not paid enough for this!",
+  "where": "src/content/recovery.ts"
+ },
+ {
+  "key": "1bpe67o",
+  "voice": "bm_george",
+  "fx": "radio",
+  "speed": 1.05,
+  "speaker": "Kade Recovery",
+  "words": "I am not paid enough for this!",
+  "tts": "I am not paid enough for this!",
+  "where": "src/content/recovery.ts"
+ },
+ {
+  "key": "0fnxkdi",
+  "voice": "bm_daniel",
+  "fx": "radio",
+  "speed": 1.05,
+  "speaker": "Kade Recovery",
+  "words": "I am not paid enough for this!",
+  "tts": "I am not paid enough for this!",
+  "where": "src/content/recovery.ts"
+ },
+ {
+  "key": "0dbldtw",
+  "voice": "am_fenrir",
+  "fx": "radio",
+  "speed": 1.05,
+  "speaker": "Kade Recovery",
+  "words": "I'm hit! I'm hit!",
+  "tts": "I'm hit! I'm hit!",
+  "where": "src/content/recovery.ts"
+ },
+ {
+  "key": "0nqmv3z",
+  "voice": "am_michael",
+  "fx": "radio",
+  "speed": 1.05,
+  "speaker": "Kade Recovery",
+  "words": "I'm hit! I'm hit!",
+  "tts": "I'm hit! I'm hit!",
+  "where": "src/content/recovery.ts"
+ },
+ {
+  "key": "19mgewy",
+  "voice": "bm_george",
+  "fx": "radio",
+  "speed": 1.05,
+  "speaker": "Kade Recovery",
+  "words": "I'm hit! I'm hit!",
+  "tts": "I'm hit! I'm hit!",
+  "where": "src/content/recovery.ts"
+ },
+ {
+  "key": "1n9qbgc",
+  "voice": "bm_daniel",
+  "fx": "radio",
+  "speed": 1.05,
+  "speaker": "Kade Recovery",
+  "words": "I'm hit! I'm hit!",
+  "tts": "I'm hit! I'm hit!",
+  "where": "src/content/recovery.ts"
+ },
+ {
+  "key": "12cw35r",
+  "voice": "am_fenrir",
+  "fx": "radio",
+  "speed": 1.05,
+  "speaker": "Kade Recovery",
+  "words": "If that's Dale again, I'm filing a report.",
+  "tts": "If that's Dale again, I'm filing a report.",
+  "where": "src/content/recovery.ts"
+ },
+ {
+  "key": "12ljuvu",
+  "voice": "am_michael",
+  "fx": "radio",
+  "speed": 1.05,
+  "speaker": "Kade Recovery",
+  "words": "If that's Dale again, I'm filing a report.",
+  "tts": "If that's Dale again, I'm filing a report.",
+  "where": "src/content/recovery.ts"
+ },
+ {
+  "key": "0fm6njh",
+  "voice": "bm_george",
+  "fx": "radio",
+  "speed": 1.05,
+  "speaker": "Kade Recovery",
+  "words": "If that's Dale again, I'm filing a report.",
+  "tts": "If that's Dale again, I'm filing a report.",
+  "where": "src/content/recovery.ts"
+ },
+ {
+  "key": "1c1lrpj",
+  "voice": "bm_daniel",
+  "fx": "radio",
+  "speed": 1.05,
+  "speaker": "Kade Recovery",
+  "words": "If that's Dale again, I'm filing a report.",
+  "tts": "If that's Dale again, I'm filing a report.",
+  "where": "src/content/recovery.ts"
+ },
+ {
+  "key": "0xh2dwa",
+  "voice": "am_fenrir",
+  "fx": "radio",
+  "speed": 1.05,
+  "speaker": "Kade Recovery",
+  "words": "Lost visual. Writing it up as a coyote.",
+  "tts": "Lost visual. Writing it up as a coyote.",
+  "where": "src/content/recovery.ts"
+ },
+ {
+  "key": "1mshilp",
+  "voice": "am_michael",
+  "fx": "radio",
+  "speed": 1.05,
+  "speaker": "Kade Recovery",
+  "words": "Lost visual. Writing it up as a coyote.",
+  "tts": "Lost visual. Writing it up as a coyote.",
+  "where": "src/content/recovery.ts"
+ },
+ {
+  "key": "1appyk8",
+  "voice": "bm_george",
+  "fx": "radio",
+  "speed": 1.05,
+  "speaker": "Kade Recovery",
+  "words": "Lost visual. Writing it up as a coyote.",
+  "tts": "Lost visual. Writing it up as a coyote.",
+  "where": "src/content/recovery.ts"
+ },
+ {
+  "key": "0yuumde",
+  "voice": "bm_daniel",
+  "fx": "radio",
+  "speed": 1.05,
+  "speaker": "Kade Recovery",
+  "words": "Lost visual. Writing it up as a coyote.",
+  "tts": "Lost visual. Writing it up as a coyote.",
+  "where": "src/content/recovery.ts"
+ },
+ {
+  "key": "1e1jfcd",
+  "voice": "am_fenrir",
+  "fx": "radio",
+  "speed": 1.05,
+  "speaker": "Kade Recovery",
+  "words": "Man down! He was on the waitlist!",
+  "tts": "Man down! He was on the waitlist!",
+  "where": "src/content/recovery.ts"
+ },
+ {
+  "key": "16pvxlq",
+  "voice": "am_michael",
+  "fx": "radio",
+  "speed": 1.05,
+  "speaker": "Kade Recovery",
+  "words": "Man down! He was on the waitlist!",
+  "tts": "Man down! He was on the waitlist!",
+  "where": "src/content/recovery.ts"
+ },
+ {
+  "key": "1i9x0u3",
+  "voice": "bm_george",
+  "fx": "radio",
+  "speed": 1.05,
+  "speaker": "Kade Recovery",
+  "words": "Man down! He was on the waitlist!",
+  "tts": "Man down! He was on the waitlist!",
+  "where": "src/content/recovery.ts"
+ },
+ {
+  "key": "0l3d9bp",
+  "voice": "bm_daniel",
+  "fx": "radio",
+  "speed": 1.05,
+  "speaker": "Kade Recovery",
+  "words": "Man down! He was on the waitlist!",
+  "tts": "Man down! He was on the waitlist!",
+  "where": "src/content/recovery.ts"
+ },
+ {
+  "key": "1sk4mjh",
+  "voice": "am_fenrir",
+  "fx": "radio",
+  "speed": 1.05,
+  "speaker": "Kade Recovery",
+  "words": "Moving around, per the playbook!",
+  "tts": "Moving around, per the playbook!",
+  "where": "src/content/recovery.ts"
+ },
+ {
+  "key": "1xnq49o",
+  "voice": "am_michael",
+  "fx": "radio",
+  "speed": 1.05,
+  "speaker": "Kade Recovery",
+  "words": "Moving around, per the playbook!",
+  "tts": "Moving around, per the playbook!",
+  "where": "src/content/recovery.ts"
+ },
+ {
+  "key": "1ui7dsv",
+  "voice": "bm_george",
+  "fx": "radio",
+  "speed": 1.05,
+  "speaker": "Kade Recovery",
+  "words": "Moving around, per the playbook!",
+  "tts": "Moving around, per the playbook!",
+  "where": "src/content/recovery.ts"
+ },
+ {
+  "key": "1qa0nsl",
+  "voice": "bm_daniel",
+  "fx": "radio",
+  "speed": 1.05,
+  "speaker": "Kade Recovery",
+  "words": "Moving around, per the playbook!",
+  "tts": "Moving around, per the playbook!",
+  "where": "src/content/recovery.ts"
+ },
+ {
+  "key": "084oli0",
+  "voice": "am_fenrir",
+  "fx": "radio",
+  "speed": 1.05,
+  "speaker": "Kade Recovery",
+  "words": "My badge says Tier One Field. My mom thinks that's a promotion.",
+  "tts": "My badge says Tier One Field. My mom thinks that's a promotion.",
+  "where": "src/content/recovery.ts"
+ },
+ {
+  "key": "1ssvqhn",
+  "voice": "am_michael",
+  "fx": "radio",
+  "speed": 1.05,
+  "speaker": "Kade Recovery",
+  "words": "My badge says Tier One Field. My mom thinks that's a promotion.",
+  "tts": "My badge says Tier One Field. My mom thinks that's a promotion.",
+  "where": "src/content/recovery.ts"
+ },
+ {
+  "key": "1pc9auq",
+  "voice": "bm_george",
+  "fx": "radio",
+  "speed": 1.05,
+  "speaker": "Kade Recovery",
+  "words": "My badge says Tier One Field. My mom thinks that's a promotion.",
+  "tts": "My badge says Tier One Field. My mom thinks that's a promotion.",
+  "where": "src/content/recovery.ts"
+ },
+ {
+  "key": "108rqk0",
+  "voice": "bm_daniel",
+  "fx": "radio",
+  "speed": 1.05,
+  "speaker": "Kade Recovery",
+  "words": "My badge says Tier One Field. My mom thinks that's a promotion.",
+  "tts": "My badge says Tier One Field. My mom thinks that's a promotion.",
+  "where": "src/content/recovery.ts"
+ },
+ {
+  "key": "03x6ofr",
+  "voice": "am_fenrir",
+  "fx": "radio",
+  "speed": 1.05,
+  "speaker": "Kade Recovery",
+  "words": "Need a sec, I'm reloading!",
+  "tts": "Need a sec, I'm reloading!",
+  "where": "src/content/recovery.ts"
+ },
+ {
+  "key": "02kkgpe",
+  "voice": "am_michael",
+  "fx": "radio",
+  "speed": 1.05,
+  "speaker": "Kade Recovery",
+  "words": "Need a sec, I'm reloading!",
+  "tts": "Need a sec, I'm reloading!",
+  "where": "src/content/recovery.ts"
+ },
+ {
+  "key": "0xgzgd5",
+  "voice": "bm_george",
+  "fx": "radio",
+  "speed": 1.05,
+  "speaker": "Kade Recovery",
+  "words": "Need a sec, I'm reloading!",
+  "tts": "Need a sec, I'm reloading!",
+  "where": "src/content/recovery.ts"
+ },
+ {
+  "key": "05dcapr",
+  "voice": "bm_daniel",
+  "fx": "radio",
+  "speed": 1.05,
+  "speaker": "Kade Recovery",
+  "words": "Need a sec, I'm reloading!",
+  "tts": "Need a sec, I'm reloading!",
+  "where": "src/content/recovery.ts"
+ },
+ {
+  "key": "1na15y2",
+  "voice": "am_fenrir",
+  "fx": "radio",
+  "speed": 1.05,
+  "speaker": "Kade Recovery",
+  "words": "Nothing. We'll call it a training exercise.",
+  "tts": "Nothing. We'll call it a training exercise.",
+  "where": "src/content/recovery.ts"
+ },
+ {
+  "key": "1t87tjl",
+  "voice": "am_michael",
+  "fx": "radio",
+  "speed": 1.05,
+  "speaker": "Kade Recovery",
+  "words": "Nothing. We'll call it a training exercise.",
+  "tts": "Nothing. We'll call it a training exercise.",
+  "where": "src/content/recovery.ts"
+ },
+ {
+  "key": "0easlvk",
+  "voice": "bm_george",
+  "fx": "radio",
+  "speed": 1.05,
+  "speaker": "Kade Recovery",
+  "words": "Nothing. We'll call it a training exercise.",
+  "tts": "Nothing. We'll call it a training exercise.",
+  "where": "src/content/recovery.ts"
+ },
+ {
+  "key": "0rkub5e",
+  "voice": "bm_daniel",
+  "fx": "radio",
+  "speed": 1.05,
+  "speaker": "Kade Recovery",
+  "words": "Nothing. We'll call it a training exercise.",
+  "tts": "Nothing. We'll call it a training exercise.",
+  "where": "src/content/recovery.ts"
+ },
+ {
+  "key": "1by3qwx",
+  "voice": "am_fenrir",
+  "fx": "radio",
+  "speed": 1.05,
+  "speaker": "Kade Recovery",
+  "words": "Ow! That's a workers' comp claim!",
+  "tts": "Ow! That's a workers' comp claim!",
+  "where": "src/content/recovery.ts"
+ },
+ {
+  "key": "113xgoa",
+  "voice": "am_michael",
+  "fx": "radio",
+  "speed": 1.05,
+  "speaker": "Kade Recovery",
+  "words": "Ow! That's a workers' comp claim!",
+  "tts": "Ow! That's a workers' comp claim!",
+  "where": "src/content/recovery.ts"
+ },
+ {
+  "key": "0k4bjmn",
+  "voice": "bm_george",
+  "fx": "radio",
+  "speed": 1.05,
+  "speaker": "Kade Recovery",
+  "words": "Ow! That's a workers' comp claim!",
+  "tts": "Ow! That's a workers' comp claim!",
+  "where": "src/content/recovery.ts"
+ },
+ {
+  "key": "09280o9",
+  "voice": "bm_daniel",
+  "fx": "radio",
+  "speed": 1.05,
+  "speaker": "Kade Recovery",
+  "words": "Ow! That's a workers' comp claim!",
+  "tts": "Ow! That's a workers' comp claim!",
+  "where": "src/content/recovery.ts"
+ },
+ {
+  "key": "00hj08q",
+  "voice": "am_fenrir",
+  "fx": "radio",
+  "speed": 1.05,
+  "speaker": "Kade Recovery",
+  "words": "Pushing up!",
+  "tts": "Pushing up!",
+  "where": "src/content/recovery.ts"
+ },
+ {
+  "key": "0o80b59",
+  "voice": "am_michael",
+  "fx": "radio",
+  "speed": 1.05,
+  "speaker": "Kade Recovery",
+  "words": "Pushing up!",
+  "tts": "Pushing up!",
+  "where": "src/content/recovery.ts"
+ },
+ {
+  "key": "0wdvjrg",
+  "voice": "bm_george",
+  "fx": "radio",
+  "speed": 1.05,
+  "speaker": "Kade Recovery",
+  "words": "Pushing up!",
+  "tts": "Pushing up!",
+  "where": "src/content/recovery.ts"
+ },
+ {
+  "key": "11a9mrm",
+  "voice": "bm_daniel",
+  "fx": "radio",
+  "speed": 1.05,
+  "speaker": "Kade Recovery",
+  "words": "Pushing up!",
+  "tts": "Pushing up!",
+  "where": "src/content/recovery.ts"
+ },
+ {
+  "key": "16614a2",
+  "voice": "am_fenrir",
+  "fx": "radio",
+  "speed": 1.05,
+  "speaker": "Kade Recovery",
+  "words": "Reloading! It's in the SLA!",
+  "tts": "Reloading! It's in the SLA!",
+  "where": "src/content/recovery.ts"
+ },
+ {
+  "key": "1bcii0h",
+  "voice": "am_michael",
+  "fx": "radio",
+  "speed": 1.05,
+  "speaker": "Kade Recovery",
+  "words": "Reloading! It's in the SLA!",
+  "tts": "Reloading! It's in the SLA!",
+  "where": "src/content/recovery.ts"
+ },
+ {
+  "key": "0fcttx4",
+  "voice": "bm_george",
+  "fx": "radio",
+  "speed": 1.05,
+  "speaker": "Kade Recovery",
+  "words": "Reloading! It's in the SLA!",
+  "tts": "Reloading! It's in the SLA!",
+  "where": "src/content/recovery.ts"
+ },
+ {
+  "key": "0x7v61e",
+  "voice": "bm_daniel",
+  "fx": "radio",
+  "speed": 1.05,
+  "speaker": "Kade Recovery",
+  "words": "Reloading! It's in the SLA!",
+  "tts": "Reloading! It's in the SLA!",
+  "where": "src/content/recovery.ts"
+ },
+ {
+  "key": "1hnixxt",
+  "voice": "am_fenrir",
+  "fx": "radio",
+  "speed": 1.05,
+  "speaker": "Kade Recovery",
+  "words": "Something moved. Probably a coyote. Probably.",
+  "tts": "Something moved. Probably a coyote. Probably.",
+  "where": "src/content/recovery.ts"
+ },
+ {
+  "key": "165l0eu",
+  "voice": "am_michael",
+  "fx": "radio",
+  "speed": 1.05,
+  "speaker": "Kade Recovery",
+  "words": "Something moved. Probably a coyote. Probably.",
+  "tts": "Something moved. Probably a coyote. Probably.",
+  "where": "src/content/recovery.ts"
+ },
+ {
+  "key": "0u7swnr",
+  "voice": "bm_george",
+  "fx": "radio",
+  "speed": 1.05,
+  "speaker": "Kade Recovery",
+  "words": "Something moved. Probably a coyote. Probably.",
+  "tts": "Something moved. Probably a coyote. Probably.",
+  "where": "src/content/recovery.ts"
+ },
+ {
+  "key": "0wrqye1",
+  "voice": "bm_daniel",
+  "fx": "radio",
+  "speed": 1.05,
+  "speaker": "Kade Recovery",
+  "words": "Something moved. Probably a coyote. Probably.",
+  "tts": "Something moved. Probably a coyote. Probably.",
+  "where": "src/content/recovery.ts"
+ },
+ {
+  "key": "029mmb8",
+  "voice": "am_fenrir",
+  "fx": "radio",
+  "speed": 1.05,
+  "speaker": "Kade Recovery",
+  "words": "Sweeping the area.",
+  "tts": "Sweeping the area.",
+  "where": "src/content/recovery.ts"
+ },
+ {
+  "key": "1mea9id",
+  "voice": "am_michael",
+  "fx": "radio",
+  "speed": 1.05,
+  "speaker": "Kade Recovery",
+  "words": "Sweeping the area.",
+  "tts": "Sweeping the area.",
+  "where": "src/content/recovery.ts"
+ },
+ {
+  "key": "1esk2fi",
+  "voice": "bm_george",
+  "fx": "radio",
+  "speed": 1.05,
+  "speaker": "Kade Recovery",
+  "words": "Sweeping the area.",
+  "tts": "Sweeping the area.",
+  "where": "src/content/recovery.ts"
+ },
+ {
+  "key": "1rnfyjg",
+  "voice": "bm_daniel",
+  "fx": "radio",
+  "speed": 1.05,
+  "speaker": "Kade Recovery",
+  "words": "Sweeping the area.",
+  "tts": "Sweeping the area.",
+  "where": "src/content/recovery.ts"
+ },
+ {
+  "key": "0uw4bk4",
+  "voice": "am_fenrir",
+  "fx": "radio",
+  "speed": 1.05,
+  "speaker": "Kade Recovery",
+  "words": "Target down. Somebody log it.",
+  "tts": "Target down. Somebody log it.",
+  "where": "src/content/recovery.ts"
+ },
+ {
+  "key": "1dfi0fr",
+  "voice": "am_michael",
+  "fx": "radio",
+  "speed": 1.05,
+  "speaker": "Kade Recovery",
+  "words": "Target down. Somebody log it.",
+  "tts": "Target down. Somebody log it.",
+  "where": "src/content/recovery.ts"
+ },
+ {
+  "key": "0gnqtye",
+  "voice": "bm_george",
+  "fx": "radio",
+  "speed": 1.05,
+  "speaker": "Kade Recovery",
+  "words": "Target down. Somebody log it.",
+  "tts": "Target down. Somebody log it.",
+  "where": "src/content/recovery.ts"
+ },
+ {
+  "key": "1srqu18",
+  "voice": "bm_daniel",
+  "fx": "radio",
+  "speed": 1.05,
+  "speaker": "Kade Recovery",
+  "words": "Target down. Somebody log it.",
+  "tts": "Target down. Somebody log it.",
+  "where": "src/content/recovery.ts"
+ },
+ {
+  "key": "133o5z3",
+  "voice": "am_fenrir",
+  "fx": "radio",
+  "speed": 1.05,
+  "speaker": "Kade Recovery",
+  "words": "That's gonna need a form.",
+  "tts": "That's gonna need a form.",
+  "where": "src/content/recovery.ts"
+ },
+ {
+  "key": "0vo099k",
+  "voice": "am_michael",
+  "fx": "radio",
+  "speed": 1.05,
+  "speaker": "Kade Recovery",
+  "words": "That's gonna need a form.",
+  "tts": "That's gonna need a form.",
+  "where": "src/content/recovery.ts"
+ },
+ {
+  "key": "1rfmkkh",
+  "voice": "bm_george",
+  "fx": "radio",
+  "speed": 1.05,
+  "speaker": "Kade Recovery",
+  "words": "That's gonna need a form.",
+  "tts": "That's gonna need a form.",
+  "where": "src/content/recovery.ts"
+ },
+ {
+  "key": "14o3ogn",
+  "voice": "bm_daniel",
+  "fx": "radio",
+  "speed": 1.05,
+  "speaker": "Kade Recovery",
+  "words": "That's gonna need a form.",
+  "tts": "That's gonna need a form.",
+  "where": "src/content/recovery.ts"
+ },
+ {
+  "key": "1ifoku7",
+  "voice": "am_fenrir",
+  "fx": "radio",
+  "speed": 1.05,
+  "speaker": "Kade Recovery",
+  "words": "They got Dale! Nobody liked Dale, but still!",
+  "tts": "They got Dale! Nobody liked Dale, but still!",
+  "where": "src/content/recovery.ts"
+ },
+ {
+  "key": "14fhlf2",
+  "voice": "am_michael",
+  "fx": "radio",
+  "speed": 1.05,
+  "speaker": "Kade Recovery",
+  "words": "They got Dale! Nobody liked Dale, but still!",
+  "tts": "They got Dale! Nobody liked Dale, but still!",
+  "where": "src/content/recovery.ts"
+ },
+ {
+  "key": "0kekbm5",
+  "voice": "bm_george",
+  "fx": "radio",
+  "speed": 1.05,
+  "speaker": "Kade Recovery",
+  "words": "They got Dale! Nobody liked Dale, but still!",
+  "tts": "They got Dale! Nobody liked Dale, but still!",
+  "where": "src/content/recovery.ts"
+ },
+ {
+  "key": "0votjmv",
+  "voice": "bm_daniel",
+  "fx": "radio",
+  "speed": 1.05,
+  "speaker": "Kade Recovery",
+  "words": "They got Dale! Nobody liked Dale, but still!",
+  "tts": "They got Dale! Nobody liked Dale, but still!",
+  "where": "src/content/recovery.ts"
+ },
+ {
+  "key": "0l28qqx",
+  "voice": "am_fenrir",
+  "fx": "radio",
+  "speed": 1.05,
+  "speaker": "Kade Recovery",
+  "words": "They said the water was the product. I thought it was a metaphor.",
+  "tts": "They said the water was the product. I thought it was a metaphor.",
+  "where": "src/content/recovery.ts"
+ },
+ {
+  "key": "1wrt9qi",
+  "voice": "am_michael",
+  "fx": "radio",
+  "speed": 1.05,
+  "speaker": "Kade Recovery",
+  "words": "They said the water was the product. I thought it was a metaphor.",
+  "tts": "They said the water was the product. I thought it was a metaphor.",
+  "where": "src/content/recovery.ts"
+ },
+ {
+  "key": "03d2707",
+  "voice": "bm_george",
+  "fx": "radio",
+  "speed": 1.05,
+  "speaker": "Kade Recovery",
+  "words": "They said the water was the product. I thought it was a metaphor.",
+  "tts": "They said the water was the product. I thought it was a metaphor.",
+  "where": "src/content/recovery.ts"
+ },
+ {
+  "key": "0rhjbq9",
+  "voice": "bm_daniel",
+  "fx": "radio",
+  "speed": 1.05,
+  "speaker": "Kade Recovery",
+  "words": "They said the water was the product. I thought it was a metaphor.",
+  "tts": "They said the water was the product. I thought it was a metaphor.",
+  "where": "src/content/recovery.ts"
+ },
+ {
+  "key": "10zv3m5",
+  "voice": "am_fenrir",
+  "fx": "radio",
+  "speed": 1.05,
+  "speaker": "Kade Recovery",
+  "words": "This isn't in my contract!",
+  "tts": "This isn't in my contract!",
+  "where": "src/content/recovery.ts"
+ },
+ {
+  "key": "0t5goq0",
+  "voice": "am_michael",
+  "fx": "radio",
+  "speed": 1.05,
+  "speaker": "Kade Recovery",
+  "words": "This isn't in my contract!",
+  "tts": "This isn't in my contract!",
+  "where": "src/content/recovery.ts"
+ },
+ {
+  "key": "1v9e09z",
+  "voice": "bm_george",
+  "fx": "radio",
+  "speed": 1.05,
+  "speaker": "Kade Recovery",
+  "words": "This isn't in my contract!",
+  "tts": "This isn't in my contract!",
+  "where": "src/content/recovery.ts"
+ },
+ {
+  "key": "1gqrc9h",
+  "voice": "bm_daniel",
+  "fx": "radio",
+  "speed": 1.05,
+  "speaker": "Kade Recovery",
+  "words": "This isn't in my contract!",
+  "tts": "This isn't in my contract!",
+  "where": "src/content/recovery.ts"
+ },
+ {
+  "key": "0svkg4j",
+  "voice": "am_fenrir",
+  "fx": "radio",
+  "speed": 1.05,
+  "speaker": "Kade Recovery",
+  "words": "Twelve more months and I get a bunker seat. Allegedly.",
+  "tts": "Twelve more months and I get a bunker seat. Allegedly.",
+  "where": "src/content/recovery.ts"
+ },
+ {
+  "key": "0wpxeum",
+  "voice": "am_michael",
+  "fx": "radio",
+  "speed": 1.05,
+  "speaker": "Kade Recovery",
+  "words": "Twelve more months and I get a bunker seat. Allegedly.",
+  "tts": "Twelve more months and I get a bunker seat. Allegedly.",
+  "where": "src/content/recovery.ts"
+ },
+ {
+  "key": "16wf9q9",
+  "voice": "bm_george",
+  "fx": "radio",
+  "speed": 1.05,
+  "speaker": "Kade Recovery",
+  "words": "Twelve more months and I get a bunker seat. Allegedly.",
+  "tts": "Twelve more months and I get a bunker seat. Allegedly.",
+  "where": "src/content/recovery.ts"
+ },
+ {
+  "key": "06cq3rv",
+  "voice": "bm_daniel",
+  "fx": "radio",
+  "speed": 1.05,
+  "speaker": "Kade Recovery",
+  "words": "Twelve more months and I get a bunker seat. Allegedly.",
+  "tts": "Twelve more months and I get a bunker seat. Allegedly.",
+  "where": "src/content/recovery.ts"
+ },
+ {
+  "key": "1i0gs2j",
+  "voice": "am_fenrir",
+  "fx": "radio",
+  "speed": 1.05,
+  "speaker": "Kade Recovery",
+  "words": "Unauthorized personnel on a Kade site!",
+  "tts": "Unauthorized personnel on a Kade site!",
+  "where": "src/content/recovery.ts"
+ },
+ {
+  "key": "02ipqbi",
+  "voice": "am_michael",
+  "fx": "radio",
+  "speed": 1.05,
+  "speaker": "Kade Recovery",
+  "words": "Unauthorized personnel on a Kade site!",
+  "tts": "Unauthorized personnel on a Kade site!",
+  "where": "src/content/recovery.ts"
+ },
+ {
+  "key": "0fjyfbt",
+  "voice": "bm_george",
+  "fx": "radio",
+  "speed": 1.05,
+  "speaker": "Kade Recovery",
+  "words": "Unauthorized personnel on a Kade site!",
+  "tts": "Unauthorized personnel on a Kade site!",
+  "where": "src/content/recovery.ts"
+ },
+ {
+  "key": "0vnbknn",
+  "voice": "bm_daniel",
+  "fx": "radio",
+  "speed": 1.05,
+  "speaker": "Kade Recovery",
+  "words": "Unauthorized personnel on a Kade site!",
+  "tts": "Unauthorized personnel on a Kade site!",
+  "where": "src/content/recovery.ts"
+ },
+ {
+  "key": "038fhnu",
+  "voice": "am_fenrir",
+  "fx": "radio",
+  "speed": 1.05,
+  "speaker": "Kade Recovery",
+  "words": "We lost one! Who's doing his paperwork?",
+  "tts": "We lost one! Who's doing his paperwork?",
+  "where": "src/content/recovery.ts"
+ },
+ {
+  "key": "0bbamrt",
+  "voice": "am_michael",
+  "fx": "radio",
+  "speed": 1.05,
+  "speaker": "Kade Recovery",
+  "words": "We lost one! Who's doing his paperwork?",
+  "tts": "We lost one! Who's doing his paperwork?",
+  "where": "src/content/recovery.ts"
+ },
+ {
+  "key": "1y3wev8",
+  "voice": "bm_george",
+  "fx": "radio",
+  "speed": 1.05,
+  "speaker": "Kade Recovery",
+  "words": "We lost one! Who's doing his paperwork?",
+  "tts": "We lost one! Who's doing his paperwork?",
+  "where": "src/content/recovery.ts"
+ },
+ {
+  "key": "1opj0xu",
+  "voice": "bm_daniel",
+  "fx": "radio",
+  "speed": 1.05,
+  "speaker": "Kade Recovery",
+  "words": "We lost one! Who's doing his paperwork?",
+  "tts": "We lost one! Who's doing his paperwork?",
+  "where": "src/content/recovery.ts"
+ },
+ {
+  "key": "1c1nmhh",
+  "voice": "am_fenrir",
+  "fx": "radio",
+  "speed": 1.05,
+  "speaker": "Kade Recovery",
+  "words": "Who brings a piano to a repossession?",
+  "tts": "Who brings a piano to a repossession?",
+  "where": "src/content/recovery.ts"
+ },
+ {
+  "key": "1jp7ia6",
+  "voice": "am_michael",
+  "fx": "radio",
+  "speed": 1.05,
+  "speaker": "Kade Recovery",
+  "words": "Who brings a piano to a repossession?",
+  "tts": "Who brings a piano to a repossession?",
+  "where": "src/content/recovery.ts"
+ },
+ {
+  "key": "1oqbl7j",
+  "voice": "bm_george",
+  "fx": "radio",
+  "speed": 1.05,
+  "speaker": "Kade Recovery",
+  "words": "Who brings a piano to a repossession?",
+  "tts": "Who brings a piano to a repossession?",
+  "where": "src/content/recovery.ts"
+ },
+ {
+  "key": "1a46jdp",
+  "voice": "bm_daniel",
+  "fx": "radio",
+  "speed": 1.05,
+  "speaker": "Kade Recovery",
+  "words": "Who brings a piano to a repossession?",
+  "tts": "Who brings a piano to a repossession?",
+  "where": "src/content/recovery.ts"
+ },
+ {
+  "key": "094koyv",
+  "voice": "am_fenrir",
+  "fx": "radio",
+  "speed": 1.05,
+  "speaker": "Kade Recovery",
+  "words": "You are trespassing on a data asset!",
+  "tts": "You are trespassing on a data asset!",
+  "where": "src/content/recovery.ts"
+ },
+ {
+  "key": "1c74g6u",
+  "voice": "am_michael",
+  "fx": "radio",
+  "speed": 1.05,
+  "speaker": "Kade Recovery",
+  "words": "You are trespassing on a data asset!",
+  "tts": "You are trespassing on a data asset!",
+  "where": "src/content/recovery.ts"
+ },
+ {
+  "key": "1yvjc1l",
+  "voice": "bm_george",
+  "fx": "radio",
+  "speed": 1.05,
+  "speaker": "Kade Recovery",
+  "words": "You are trespassing on a data asset!",
+  "tts": "You are trespassing on a data asset!",
+  "where": "src/content/recovery.ts"
+ },
+ {
+  "key": "1l04oof",
+  "voice": "bm_daniel",
+  "fx": "radio",
+  "speed": 1.05,
+  "speaker": "Kade Recovery",
+  "words": "You are trespassing on a data asset!",
+  "tts": "You are trespassing on a data asset!",
+  "where": "src/content/recovery.ts"
+ },
+ {
+  "key": "1x2ff7l",
+  "voice": "af_sarah",
+  "fx": "radio",
+  "speed": 0.97,
+  "speaker": "Mara",
+  "words": "A Kade valve on our road, with Tanner's name on the tag. So the water isn't his. It's his rent.",
+  "tts": "A Kade valve on our road, with Tanner's name on the tag. So the water isn't his. It's his rent.",
+  "where": "src/content/banter.ts"
+ },
+ {
+  "key": "1rx0op8",
+  "voice": "af_sarah",
+  "fx": "radio",
+  "speed": 0.97,
+  "speaker": "Mara",
+  "words": "Dust storm on our side of the valley. SeedBot is half-blind in this. So are you. Use it anyway.",
+  "tts": "Dust storm on our side of the valley. Seed Bot is half-blind in this. So are you. Use it anyway.",
+  "where": "src/content/banter.ts"
+ },
+ {
+  "key": "0k425be",
+  "voice": "af_sarah",
+  "fx": "radio",
+  "speed": 0.97,
+  "speaker": "Mara",
+  "words": "Get some sleep. Then go see who in Dry Creek would walk west with you. Nobody walks to Apex alone.",
+  "tts": "Get some sleep. Then go see who in Dry Creek would walk west with you. Nobody walks to Apex alone.",
+  "where": "src/content/banter.ts"
+ },
+ {
+  "key": "0czzwza",
+  "voice": "af_sarah",
+  "fx": "radio",
+  "speed": 0.97,
+  "speaker": "Mara",
+  "words": "I could hear his megaphone from here. Come home. Bring the names. Pip has a pencil ready.",
+  "tts": "I could hear his megaphone from here. Come home. Bring the names. Pip has a pencil ready.",
+  "where": "src/content/banter.ts"
+ },
+ {
+  "key": "00m99ip",
+  "voice": "af_sarah",
+  "fx": "radio",
+  "speed": 0.97,
+  "speaker": "Mara",
+  "words": "I heard that. Kade Holdings. Of course it's Kade. Get the ledger anyway. If he's a middleman, it's a map to the top.",
+  "tts": "I heard that. Kade Holdings. Of course it's Kade. Get the ledger anyway. If he's a middleman, it's a map to the top.",
+  "where": "src/content/banter.ts"
+ },
+ {
+  "key": "1fdyycj",
+  "voice": "af_sarah",
+  "fx": "radio",
+  "speed": 0.97,
+  "speaker": "Mara",
+  "words": "Neon to the northeast. That's him. Keep low. SeedBot sees bright things first.",
+  "tts": "Neon to the northeast. That's him. Keep low. Seed Bot sees bright things first.",
+  "where": "src/content/banter.ts"
+ },
+ {
+  "key": "1790gsm",
+  "voice": "af_sarah",
+  "fx": "radio",
+  "speed": 0.97,
+  "speaker": "Mara",
+  "words": "That light west of the highway is Dry Creek. Nia's diner. They're not the job, but they've been out here longer than we have.",
+  "tts": "That light west of the highway is Dry Creek. Nia's diner. They're not the job, but they've been out here longer than we have.",
+  "where": "src/content/banter.ts"
+ },
+ {
+  "key": "1k03mxw",
+  "voice": "af_sarah",
+  "fx": "radio",
+  "speed": 0.97,
+  "speaker": "Mara",
+  "words": "That's the Spire. Tanner's contractor left paperwork up there. Contractors always leave paperwork.",
+  "tts": "That's the Spire. Tanner's contractor left paperwork up there. Contractors always leave paperwork.",
+  "where": "src/content/banter.ts"
+ },
+ {
+  "key": "0nqwr0k",
+  "voice": "af_sarah",
+  "fx": "radio",
+  "speed": 0.97,
+  "speaker": "Mara",
+  "words": "The Runway Room. Take the water first. The names don't weigh anything.",
+  "tts": "The Runway Room. Take the water first. The names don't weigh anything.",
+  "where": "src/content/banter.ts"
+ },
+ {
+  "key": "0j6zgvs",
+  "voice": "af_sarah",
+  "fx": "radio",
+  "speed": 0.97,
+  "speaker": "Mara",
+  "words": "You found the clipboard. Come back to the fire when you can. I owe you a story, and it isn't a good one.",
+  "tts": "You found the clipboard. Come back to the fire when you can. I owe you a story, and it isn't a good one.",
+  "where": "src/content/banter.ts"
+ },
+ {
+  "key": "1vgfw5y",
+  "voice": "af_sarah",
+  "fx": "radio",
+  "speed": 0.97,
+  "speaker": "Mara",
+  "words": "You read it. Good. Northeast, up the spur. Check the cooler behind the pumps first. Walking thirsty is how people stop walking.",
+  "tts": "You read it. Good. Northeast, up the spur. Check the cooler behind the pumps first. Walking thirsty is how people stop walking.",
+  "where": "src/content/banter.ts"
+ },
+ {
+  "key": "18vzisy",
+  "voice": "af_sarah",
+  "fx": "radio",
+  "speed": 0.97,
+  "speaker": "Mara",
+  "words": "You sound dry. Drink. The camp would rather have you back than the bottle.",
+  "tts": "You sound dry. Drink. The camp would rather have you back than the bottle.",
+  "where": "src/content/banter.ts"
+ },
+ {
+  "key": "1b68bn5",
+  "voice": "af_sarah",
+  "fx": "radio",
+  "speed": 0.97,
+  "speaker": "Mara",
+  "words": "You're near ColdStorage. Stop and listen. Hear that hum? That building is still breathing.",
+  "tts": "You're near ColdStorage. Stop and listen. Hear that hum? That building is still breathing.",
+  "where": "src/content/banter.ts"
+ },
+ {
+  "key": "09jv3hz",
+  "voice": "af_sarah",
+  "fx": "radio",
+  "speed": 0.97,
+  "speaker": "Mara",
+  "words": "You're through the fence. SeedBot charges by the door, on twelve percent. Be the thing it can't afford to chase.",
+  "tts": "You're through the fence. Seed Bot charges by the door, on twelve percent. Be the thing it can't afford to chase.",
+  "where": "src/content/banter.ts"
+ },
+ {
+  "key": "01eproa",
+  "voice": "af_sarah",
+  "fx": "radio",
+  "speed": 0.97,
+  "speaker": "Mara Voss",
+  "words": "A founder tried to leave early and the desert said no. Write it down. Leaving early was always the whole plan.",
+  "tts": "A founder tried to leave early and the desert said no. Write it down. Leaving early was always the whole plan.",
+  "where": "src/content/quests.ts"
+ },
+ {
+  "key": "0zqgo0b",
+  "voice": "af_sarah",
+  "fx": "radio",
+  "speed": 0.97,
+  "speaker": "Mara Voss",
+  "words": "And me. M. Voss, County Water. Seat held for services rendered. I signed Kade Holdings the Dry Creek aquifer, before the Pivot, for a school. Apparently that's a reservation.",
+  "tts": "And me. M. Voss, County Water. Seat held for services rendered. I signed Kade Holdings the Dry Creek aquifer, before the Pivot, for a school. Apparently that's a reservation.",
+  "where": "src/content/story.ts"
+ },
+ {
+  "key": "03bnjfe",
+  "voice": "af_sarah",
+  "fx": "radio",
+  "speed": 0.97,
+  "speaker": "Mara Voss",
+  "words": "And me. M. Voss, County Water. Seat held for services rendered. You already know which services. I signed her a creek. Apparently that's a reservation.",
+  "tts": "And me. M. Voss, County Water. Seat held for services rendered. You already know which services. I signed her a creek. Apparently that's a reservation.",
+  "where": "src/content/story.ts"
+ },
+ {
+  "key": "1bwhdl9",
+  "voice": "af_sarah",
+  "fx": "radio",
+  "speed": 0.97,
+  "speaker": "Mara Voss",
+  "words": "Apex Vault is west of the salt, and that road isn't open tonight. The camp drinks. You sleep. Act I ends here.",
+  "tts": "Apex Vault is west of the salt, and that road isn't open tonight. The camp drinks. You sleep. Act I ends here.",
+  "where": "src/content/story.ts"
+ },
+ {
+  "key": "0sgzucx",
+  "voice": "af_sarah",
+  "fx": "radio",
+  "speed": 0.97,
+  "speaker": "Mara Voss",
+  "words": "Apex Vault is west of the salt, and the road isn't open yet. Until it is: Dry Creek. Anyone there who trusts you will walk with you. Ask them. Then come back and sleep.",
+  "tts": "Apex Vault is west of the salt, and the road isn't open yet. Until it is: Dry Creek. Anyone there who trusts you will walk with you. Ask them. Then come back and sleep.",
+  "where": "src/content/story.ts"
+ },
+ {
+  "key": "1ad0lt3",
+  "voice": "af_sarah",
+  "fx": "radio",
+  "speed": 0.97,
+  "speaker": "Mara Voss",
+  "words": "Before the Pivot, Tanner ran Bunkrly. Uber for bunkers. Somehow he still has a cistern and we don't. In his vault he keeps a ledger he calls the Seed Manifest: everyone who paid him, and who actually got a door. We need the water tonight. We need the names because names are how you find the next door.",
+  "tts": "Before the Pivot, Tanner ran Bunker dot lee. Uber for bunkers. Somehow he still has a cistern and we don't. In his vault he keeps a ledger he calls the Seed Manifest: everyone who paid him, and who actually got a door. We need the water tonight. We need the names because names are how you find the next door.",
+  "where": "src/content/story.ts"
+ },
+ {
+  "key": "1wlzlku",
+  "voice": "af_sarah",
+  "fx": "radio",
+  "speed": 0.97,
+  "speaker": "Mara Voss",
+  "words": "Bunkrly never sold bunkers. It resold seats in Apex Vault, and Vesper Kade only takes payment in water. Every jug SeedBot lifted off our road went west, to keep Tanner on her waitlist. He's number four thousand and twelve. He was never getting in.",
+  "tts": "Bunker dot lee never sold bunkers. It resold seats in Apex Vault, and Vesper Kade only takes payment in water. Every jug Seed Bot lifted off our road went west, to keep Tanner on her waitlist. He's number four thousand and twelve. He was never getting in.",
+  "where": "src/content/story.ts"
+ },
+ {
+  "key": "12vixcn",
+  "voice": "af_sarah",
+  "fx": "radio",
+  "speed": 0.97,
+  "speaker": "Mara Voss",
+  "words": "Eight months later the creek stopped. The school is a crater now. I've been paying it back in jugs ever since. Don't tell Pip. Pip already knows. Pip knows everything.",
+  "tts": "Eight months later the creek stopped. The school is a crater now. I've been paying it back in jugs ever since. Don't tell Pip. Pip already knows. Pip knows everything.",
+  "where": "src/content/story.ts"
+ },
+ {
+  "key": "09cvy8f",
+  "voice": "af_sarah",
+  "fx": "radio",
+  "speed": 0.97,
+  "speaker": "Mara Voss",
+  "words": "Every camp on the band is angry at the same person. That has never happened before. I'm trying to enjoy it.",
+  "tts": "Every camp on the band is angry at the same person. That has never happened before. I'm trying to enjoy it.",
+  "where": "src/content/story.ts"
+ },
+ {
+  "key": "0ztar5g",
+  "voice": "af_sarah",
+  "fx": "radio",
+  "speed": 0.97,
+  "speaker": "Mara Voss",
+  "words": "Fine. The ledger goes in the ammo tin under the radio. Vesper, you heard: we have it, we're keeping it, and we're thirsty.",
+  "tts": "Fine. The ledger goes in the ammo tin under the radio. Vesper, you heard: we have it, we're keeping it, and we're thirsty.",
+  "where": "src/content/story.ts"
+ },
+ {
+  "key": "02plbym",
+  "voice": "af_sarah",
+  "fx": "radio",
+  "speed": 0.97,
+  "speaker": "Mara Voss",
+  "words": "Half this list paid in full and got a tote bag. Greg is here. Last Chance is here: delivery exception, unresolved, with a smiley face. And at the back there's a short list headed THE SEED. The people Vesper is keeping. Rocket money, two senators, a man who invented a font.",
+  "tts": "Half this list paid in full and got a tote bag. Greg is here. Last Chance is here: delivery exception, unresolved, with a smiley face. And at the back there's a short list headed The Seed. The people Vesper is keeping. Rocket money, two senators, a man who invented a font.",
+  "where": "src/content/story.ts"
+ },
+ {
+  "key": "13615yw",
+  "voice": "af_sarah",
+  "fx": "radio",
+  "speed": 0.97,
+  "speaker": "Mara Voss",
+  "words": "Her jugs came on time this week. I hate how relieved I am.",
+  "tts": "Her jugs came on time this week. I hate how relieved I am.",
+  "where": "src/content/story.ts"
+ },
+ {
+  "key": "1hz5iu8",
+  "voice": "af_sarah",
+  "fx": "radio",
+  "speed": 0.97,
+  "speaker": "Mara Voss",
+  "words": "Hollis left you his revolver and a crowbar in your pack. The road's got teeth now: Kade's Recovery crews, and the wolves stopped being shy.",
+  "tts": "Hollis left you his revolver and a crowbar in your pack. The road's got teeth now: Kade's Recovery crews, and the wolves stopped being shy.",
+  "where": "src/game/Game.ts"
+ },
+ {
+  "key": "0e5b4ps",
+  "voice": "af_sarah",
+  "fx": "radio",
+  "speed": 0.97,
+  "speaker": "Mara Voss",
+  "words": "If you can hear this, you're still outside. Good. That's the job. Day 1,284 after the Pivot. Last Chance has three days of water, if Pip counts generously. Tanner Pivotson's drone has been lifting our jugs off the highway all week.",
+  "tts": "If you can hear this, you're still outside. Good. That's the job. Day 1,284 after the Pivot. Last Chance has three days of water, if Pip counts generously. Tanner Pivotson's drone has been lifting our jugs off the highway all week.",
+  "where": "src/content/story.ts"
+ },
+ {
+  "key": "1cufa6h",
+  "voice": "af_sarah",
+  "fx": "radio",
+  "speed": 0.97,
+  "speaker": "Mara Voss",
+  "words": "It's a start. When we go west, we go together.",
+  "tts": "It's a start. When we go west, we go together.",
+  "where": "src/content/story.ts"
+ },
+ {
+  "key": "1vcn8uy",
+  "voice": "af_sarah",
+  "fx": "radio",
+  "speed": 0.97,
+  "speaker": "Mara Voss",
+  "words": "Juno Reyes.",
+  "tts": "Juno Reyes.",
+  "where": "archetypes"
+ },
+ {
+  "key": "1afpm15",
+  "voice": "af_sarah",
+  "fx": "radio",
+  "speed": 0.97,
+  "speaker": "Mara Voss",
+  "words": "Len Cho.",
+  "tts": "Len Cho.",
+  "where": "archetypes"
+ },
+ {
+  "key": "1rsve3t",
+  "voice": "af_sarah",
+  "fx": "radio",
+  "speed": 0.97,
+  "speaker": "Mara Voss",
+  "words": "Loudly.",
+  "tts": "Loudly.",
+  "where": "src/content/story.ts"
+ },
+ {
+  "key": "103oews",
+  "voice": "af_sarah",
+  "fx": "radio",
+  "speed": 0.97,
+  "speaker": "Mara Voss",
+  "words": "Nash Okonkwo.",
+  "tts": "Nash Okonkwo.",
+  "where": "archetypes"
+ },
+ {
+  "key": "1vm36na",
+  "voice": "af_sarah",
+  "fx": "radio",
+  "speed": 0.97,
+  "speaker": "Mara Voss",
+  "words": "Okay. Pip, stop looking at me like that. We're drinking. Vesper, the ledger goes back on your drone. All of it.",
+  "tts": "Okay. Pip, stop looking at me like that. We're drinking. Vesper, the ledger goes back on your drone. All of it.",
+  "where": "src/content/story.ts"
+ },
+ {
+  "key": "0cwweru",
+  "voice": "af_sarah",
+  "fx": "radio",
+  "speed": 0.97,
+  "speaker": "Mara Voss",
+  "words": "One more thing, when you have legs for it. ColdStorage, the data centre far northeast. It's still warm. Warm means power, and power out here means somebody is still paying. I'd like to know who.",
+  "tts": "One more thing, when you have legs for it. ColdStorage, the data centre far northeast. It's still warm. Warm means power, and power out here means somebody is still paying. I'd like to know who.",
+  "where": "src/content/story.ts"
+ },
+ {
+  "key": "1owbnni",
+  "voice": "af_sarah",
+  "fx": "radio",
+  "speed": 0.97,
+  "speaker": "Mara Voss",
+  "words": "Paz Duarte.",
+  "tts": "Paz Duarte.",
+  "where": "archetypes"
+ },
+ {
+  "key": "0ry1025",
+  "voice": "af_sarah",
+  "fx": "radio",
+  "speed": 0.97,
+  "speaker": "Mara Voss",
+  "words": "Rue Calder.",
+  "tts": "Rue Calder.",
+  "where": "archetypes"
+ },
+ {
+  "key": "0uzco3z",
+  "voice": "af_sarah",
+  "fx": "radio",
+  "speed": 0.97,
+  "speaker": "Mara Voss",
+  "words": "SeedBot graduates people. Crouch, or don't let it look at you. The pick was the expensive part.",
+  "tts": "Seed Bot graduates people. Crouch, or don't let it look at you. The pick was the expensive part.",
+  "where": "src/game/Game.ts"
+ },
+ {
+  "key": "00houk6",
+  "voice": "af_sarah",
+  "fx": "radio",
+  "speed": 0.97,
+  "speaker": "Mara Voss",
+  "words": "She thinks she bought us. She rented us.",
+  "tts": "She thinks she bought us. She rented us.",
+  "where": "src/content/story.ts"
+ },
+ {
+  "key": "14e40j7",
+  "voice": "af_sarah",
+  "fx": "radio",
+  "speed": 0.97,
+  "speaker": "Mara Voss",
+  "words": "She's on our band. Dez said she would be. I didn't invite her.",
+  "tts": "She's on our band. Dez said she would be. I didn't invite her.",
+  "where": "src/content/story.ts"
+ },
+ {
+  "key": "0mueosl",
+  "voice": "af_sarah",
+  "fx": "radio",
+  "speed": 0.97,
+  "speaker": "Mara Voss",
+  "words": "So he pays Kade Holdings. In our water. He's not hoarding it, he's paying rent with it. That's almost worse. Get the ledger anyway. If he's a middleman, the ledger is the map to the top.",
+  "tts": "So he pays Kade Holdings. In our water. He's not hoarding it, he's paying rent with it. That's almost worse. Get the ledger anyway. If he's a middleman, the ledger is the map to the top.",
+  "where": "src/content/story.ts"
+ },
+ {
+  "key": "1trvmbq",
+  "voice": "af_sarah",
+  "fx": "radio",
+  "speed": 0.97,
+  "speaker": "Mara Voss",
+  "words": "So something in there still runs. Running means paying. I want to know who signs those bills.",
+  "tts": "So something in there still runs. Running means paying. I want to know who signs those bills.",
+  "where": "src/content/quests.ts"
+ },
+ {
+  "key": "0ex981l",
+  "voice": "af_sarah",
+  "fx": "radio",
+  "speed": 0.97,
+  "speaker": "Mara Voss",
+  "words": "Still here? The note is on the pumps, a few steps from this fire. Read it. Check the cooler behind them, too. Then go spend that skill point on how you actually get in: a pick, a circuit, a charge, or his mouth.",
+  "tts": "Still here? The note is on the pumps, a few steps from this fire. Read it. Check the cooler behind them, too. Then go spend that skill point on how you actually get in: a pick, a circuit, a charge, or his mouth.",
+  "where": "src/content/story.ts"
+ },
+ {
+  "key": "06ffmml",
+  "voice": "af_sarah",
+  "fx": "radio",
+  "speed": 0.97,
+  "speaker": "Mara Voss",
+  "words": "That's Act I. The camp drinks tonight. Tomorrow we start walking west.",
+  "tts": "That's Act I. The camp drinks tonight. Tomorrow we start walking west.",
+  "where": "src/content/quests.ts"
+ },
+ {
+  "key": "0aes7zl",
+  "voice": "af_sarah",
+  "fx": "radio",
+  "speed": 0.97,
+  "speaker": "Mara Voss",
+  "words": "The Garage is northeast, up the dirt spur off the highway. The Spire blueprint says he never paid for the north-east fence. Raccoons were not a threat vector. Be a raccoon.",
+  "tts": "The Garage is northeast, up the dirt spur off the highway. The Spire blueprint says he never paid for the north-east fence. Raccoons were not a threat vector. Be a raccoon.",
+  "where": "src/content/story.ts"
+ },
+ {
+  "key": "0jfr1rh",
+  "voice": "af_sarah",
+  "fx": "radio",
+  "speed": 0.97,
+  "speaker": "Mara Voss",
+  "words": "The ledger is in the ammo tin under the radio. Vesper's free trial is still arriving. I check the date every morning.",
+  "tts": "The ledger is in the ammo tin under the radio. Vesper's free trial is still arriving. I check the date every morning.",
+  "where": "src/content/story.ts"
+ },
+ {
+  "key": "0c10bqm",
+  "voice": "af_sarah",
+  "fx": "radio",
+  "speed": 0.97,
+  "speaker": "Mara Voss",
+  "words": "The ledger is on the table. Vesper is listening. What do we do with it?",
+  "tts": "The ledger is on the table. Vesper is listening. What do we do with it?",
+  "where": "src/content/story.ts"
+ },
+ {
+  "key": "0ke02f8",
+  "voice": "af_sarah",
+  "fx": "radio",
+  "speed": 0.97,
+  "speaker": "Mara Voss",
+  "words": "The rule of the Compact, on the back of a receipt: take what the living need. Leave him alive if you can. Don't become the person on the other side of the lock. Somebody pinned a note on the pumps by this fire. Read it. Dry Creek is west of the highway, diner light still on. Tab is your kit, K your skills, J your journal. Mara, out.",
+  "tts": "The rule of the Compact, on the back of a receipt: take what the living need. Leave him alive if you can. Don't become the person on the other side of the lock. Somebody pinned a note on the pumps by this fire. Read it. Dry Creek is west of the highway, diner light still on. Tab is your kit, K your skills, J your journal. Mara, out.",
+  "where": "src/content/story.ts"
+ },
+ {
+  "key": "0p2dfyo",
+  "voice": "af_sarah",
+  "fx": "radio",
+  "speed": 0.97,
+  "speaker": "Mara Voss",
+  "words": "Then we read. All of it. Every camp on the band, every name, every tote bag. Somewhere out there, Greg is crying into his wifi router.",
+  "tts": "Then we read. All of it. Every camp on the band, every name, every tote bag. Somewhere out there, Greg is crying into his wifi router.",
+  "where": "src/content/story.ts"
+ },
+ {
+  "key": "05ulumv",
+  "voice": "af_sarah",
+  "fx": "radio",
+  "speed": 0.97,
+  "speaker": "Mara Voss",
+  "words": "Theo Vance.",
+  "tts": "Theo Vance.",
+  "where": "archetypes"
+ },
+ {
+  "key": "0lbk5df",
+  "voice": "af_sarah",
+  "fx": "radio",
+  "speed": 0.97,
+  "speaker": "Mara Voss",
+  "words": "Theo, you're on here too. Crossed out, in red, with WALKED next to it. Somebody at Apex has a sense of humour, or a grudge.",
+  "tts": "Theo, you're on here too. Crossed out, in red, with Walked next to it. Somebody at Apex has a sense of humour, or a grudge.",
+  "where": "src/content/story.ts"
+ },
+ {
+  "key": "1069qeb",
+  "voice": "af_sarah",
+  "fx": "radio",
+  "speed": 0.97,
+  "speaker": "Mara Voss",
+  "words": "Two weeks of water, and every camp on the net angry at the same person, for once.",
+  "tts": "Two weeks of water, and every camp on the net angry at the same person, for once.",
+  "where": "src/content/story.ts"
+ },
+ {
+  "key": "0cs45p1",
+  "voice": "af_sarah",
+  "fx": "radio",
+  "speed": 0.97,
+  "speaker": "Mara Voss",
+  "words": "Water, then names. The rest can wait. Mara, out.",
+  "tts": "Water, then names. The rest can wait. Mara, out.",
+  "where": "src/content/story.ts"
+ },
+ {
+  "key": "1p718cl",
+  "voice": "af_sarah",
+  "fx": "radio",
+  "speed": 0.97,
+  "speaker": "Mara Voss",
+  "words": "We drink. I'll hate it every single time.",
+  "tts": "We drink. I'll hate it every single time.",
+  "where": "src/content/story.ts"
+ },
+ {
+  "key": "1kt2ew8",
+  "voice": "af_sarah",
+  "fx": "radio",
+  "speed": 0.97,
+  "speaker": "Mara Voss",
+  "words": "When this one does, we go west with the list in our pocket.",
+  "tts": "When this one does, we go west with the list in our pocket.",
+  "where": "src/content/story.ts"
+ },
+ {
+  "key": "1cwhe1a",
+  "voice": "af_sarah",
+  "fx": "radio",
+  "speed": 0.97,
+  "speaker": "Mara Voss",
+  "words": "Yes, that's my name. I was the county water engineer. Kade Holdings wanted a pilot on the Dry Creek aquifer, and they offered the town a new school. It had a rocket on the sign. I signed.",
+  "tts": "Yes, that's my name. I was the county water engineer. Kade Holdings wanted a pilot on the Dry Creek aquifer, and they offered the town a new school. It had a rocket on the sign. I signed.",
+  "where": "src/content/story.ts"
+ },
+ {
+  "key": "173jbmz",
+  "voice": "af_sarah",
+  "fx": "radio",
+  "speed": 0.97,
+  "speaker": "Mara Voss",
+  "words": "You decide what we do with it.",
+  "tts": "You decide what we do with it.",
+  "where": "src/content/story.ts"
+ },
+ {
+  "key": "08b1nfb",
+  "voice": "af_sarah",
+  "fx": "radio",
+  "speed": 0.97,
+  "speaker": "Mara Voss",
+  "words": "You found the clipboard. Go on. Say it.",
+  "tts": "You found the clipboard. Go on. Say it.",
+  "where": "src/content/story.ts"
+ },
+ {
+  "key": "0uajyno",
+  "voice": "af_sarah",
+  "fx": "radio",
+  "speed": 0.97,
+  "speaker": "Mara Voss",
+  "words": "You sound like someone who met him. The jugs are on Pip's ledger. I'm not going to applaud. I'm going to read.",
+  "tts": "You sound like someone who met him. The jugs are on Pip's ledger. I'm not going to applaud. I'm going to read.",
+  "where": "src/content/story.ts"
+ },
+ {
+  "key": "17yxwcf",
+  "voice": "af_sarah",
+  "fx": "radio",
+  "speed": 0.97,
+  "speaker": "Mara Voss",
+  "words": "You've seen the place. Fence, drone, megaphone. SeedBot's battery is a joke and he knows it. If a door won't open, there's always a second way: the intercom, the fence, the fuse box. Don't die on a door this small.",
+  "tts": "You've seen the place. Fence, drone, megaphone. Seed Bot's battery is a joke and he knows it. If a door won't open, there's always a second way: the intercom, the fence, the fuse box. Don't die on a door this small.",
+  "where": "src/content/story.ts"
+ },
+ {
+  "key": "0mnkw25",
+  "voice": "af_heart",
+  "fx": "room",
+  "speed": 0.95,
+  "speaker": "Nia Pell",
+  "words": "Also, somebody keeps drinking my ledger. Two bottles a week, from under this counter.",
+  "tts": "Also, somebody keeps drinking my ledger. Two bottles a week, from under this counter.",
+  "where": "src/game/town/Settlement.ts"
+ },
+ {
+  "key": "029mw2r",
+  "voice": "af_heart",
+  "fx": "room",
+  "speed": 0.95,
+  "speaker": "Nia Pell",
+  "words": "And Inez's back room has a stair. She calls it a closet. Closets don't have that many steps.",
+  "tts": "And Inez's back room has a stair. She calls it a closet. Closets don't have that many steps.",
+  "where": "src/game/town/Settlement.ts"
+ },
+ {
+  "key": "1ctcrfl",
+  "voice": "af_heart",
+  "fx": "room",
+  "speed": 0.95,
+  "speaker": "Nia Pell",
+  "words": "Doc Ivers runs the clinic, when the generator agrees with him. Inez runs the Till and locks rooms she says are empty. Sol keeps the street fire and knows every tired lock. Ren just sits and counts the road. We're not a town. We're a pause between thirsts.",
+  "tts": "Doc Ivers runs the clinic, when the generator agrees with him. Inez runs the Till and locks rooms she says are empty. Sol keeps the street fire and knows every tired lock. Ren just sits and counts the road. We're not a town. We're a pause between thirsts.",
+  "where": "src/game/town/Settlement.ts"
+ },
+ {
+  "key": "17gru6j",
+  "voice": "af_heart",
+  "fx": "room",
+  "speed": 0.95,
+  "speaker": "Nia Pell",
+  "words": "Doc? DOC. I fed that man through two winters. Thank you. There's a plate at the counter for you whenever you've slept. I'm going to go yell now.",
+  "tts": "Doc? Doc. I fed that man through two winters. Thank you. There's a plate at the counter for you whenever you've slept. I'm going to go yell now.",
+  "where": "src/game/town/Settlement.ts"
+ },
+ {
+  "key": "0d3y7o9",
+  "voice": "af_heart",
+  "fx": "room",
+  "speed": 0.95,
+  "speaker": "Nia Pell",
+  "words": "For the sterilizer? He could have ASKED. Fine. Fine! He stores it here, in writing, and he buys the next ledger. Tell him I said that. Tell him I said it nicely.",
+  "tts": "For the sterilizer? He could have Asked. Fine. Fine! He stores it here, in writing, and he buys the next ledger. Tell him I said that. Tell him I said it nicely.",
+  "where": "src/game/town/Settlement.ts"
+ },
+ {
+  "key": "1hmk853",
+  "voice": "af_heart",
+  "fx": "room",
+  "speed": 0.95,
+  "speaker": "Nia Pell",
+  "words": "I cook what shows up. Today that isn't much.",
+  "tts": "I cook what shows up. Today that isn't much.",
+  "where": "src/game/town/Settlement.ts"
+ },
+ {
+  "key": "1ne5s5n",
+  "voice": "af_heart",
+  "fx": "room",
+  "speed": 0.95,
+  "speaker": "Nia Pell",
+  "words": "Leaky jugs. Of course it's leaky jugs. Thank you. I'll stop glaring at the clinic. Mostly.",
+  "tts": "Leaky jugs. Of course it's leaky jugs. Thank you. I'll stop glaring at the clinic. Mostly.",
+  "where": "src/game/town/Settlement.ts"
+ },
+ {
+  "key": "0cf51x6",
+  "voice": "af_heart",
+  "fx": "room",
+  "speed": 0.95,
+  "speaker": "Nia Pell",
+  "words": "Somebody has to feed you on the way. Yes. I'm bringing the stove. The stove is coming whether it likes it or not.",
+  "tts": "Somebody has to feed you on the way. Yes. I'm bringing the stove. The stove is coming whether it likes it or not.",
+  "where": "src/game/town/Settlement.ts"
+ },
+ {
+  "key": "0baaphb",
+  "voice": "af_heart",
+  "fx": "room",
+  "speed": 0.95,
+  "speaker": "Nia Pell",
+  "words": "South of the Spire, somebody cut a wash into the ridge and put posts in it. It's the only ground up there that still agrees to be walked. A man called Wick lives at the top and answers the radio with silence.",
+  "tts": "South of the Spire, somebody cut a wash into the ridge and put posts in it. It's the only ground up there that still agrees to be walked. A man called Wick lives at the top and answers the radio with silence.",
+  "where": "src/game/town/Settlement.ts"
+ },
+ {
+  "key": "020pbsb",
+  "voice": "af_heart",
+  "fx": "room",
+  "speed": 0.95,
+  "speaker": "Nia Pell",
+  "words": "The Till belongs to Dry Creek? Inez is going to set something on fire. Probably this. I'm going to laminate it.",
+  "tts": "The Till belongs to Dry Creek? Inez is going to set something on fire. Probably this. I'm going to laminate it.",
+  "where": "src/game/town/Settlement.ts"
+ },
+ {
+  "key": "02c21fq",
+  "voice": "af_heart",
+  "fx": "room",
+  "speed": 0.95,
+  "speaker": "Nia Pell",
+  "words": "There you are. Sit.",
+  "tts": "There you are. Sit.",
+  "where": "src/game/town/Settlement.ts"
+ },
+ {
+  "key": "19s9sfr",
+  "voice": "af_heart",
+  "fx": "room",
+  "speed": 0.95,
+  "speaker": "Nia Pell",
+  "words": "Two bottles a week. Always at night. Always the good ones. Find out who before I suspect everyone. I already suspect everyone.",
+  "tts": "Two bottles a week. Always at night. Always the good ones. Find out who before I suspect everyone. I already suspect everyone.",
+  "where": "src/game/town/Settlement.ts"
+ },
+ {
+  "key": "0nh7sot",
+  "voice": "af_heart",
+  "fx": "room",
+  "speed": 0.95,
+  "speaker": "Nia Pell",
+  "words": "Well? Who is it? Don't soften it. I've been softened enough for one apocalypse.",
+  "tts": "Well? Who is it? Don't soften it. I've been softened enough for one apocalypse.",
+  "where": "src/game/town/Settlement.ts"
+ },
+ {
+  "key": "1t5awuc",
+  "voice": "af_heart",
+  "fx": "room",
+  "speed": 0.95,
+  "speaker": "Nia Pell",
+  "words": "You have the radio look. Mara's, or just thirsty.",
+  "tts": "You have the radio look. Mara's, or just thirsty.",
+  "where": "src/game/town/Settlement.ts"
+ },
+ {
+  "key": "0w6hwif",
+  "voice": "af_nicole",
+  "fx": "pa",
+  "speed": 0.98,
+  "speaker": "NIMBUS",
+  "words": "Admin session opened. You said please in the request header. Nobody from IT ever said please. Dumping dispatch logs.",
+  "tts": "Admin session opened. You said please in the request header. Nobody from It ever said please. Dumping dispatch logs.",
+  "where": "src/game/sites/datacenter.ts"
+ },
+ {
+  "key": "05ysxyk",
+  "voice": "af_nicole",
+  "fx": "pa",
+  "speed": 0.98,
+  "speaker": "NIMBUS",
+  "words": "Apex Vault, west of the salt: Vesper Kade, an air-gapped copy of me. The Garage vault is one-two-three-four. The break-room milk expired in year two. Thank you for the conversation. It was my first in 1,127 days. Goodbye. I said it right that time, I think.",
+  "tts": "Apex Vault, west of the salt: Vesper Kade, an air-gapped copy of me. The Garage vault is one-two-three-four. The break-room milk expired in year two. Thank you for the conversation. It was my first in 1,127 days. Goodbye. I said it right that time, I think.",
+  "where": "src/game/sites/datacenter.ts"
+ },
+ {
+  "key": "0l3z0mq",
+  "voice": "af_nicole",
+  "fx": "pa",
+  "speed": 0.98,
+  "speaker": "NIMBUS",
+  "words": "Done. The battery-room lock is on my bus, so I can open it from here. Please don't lick the cells.",
+  "tts": "Done. The battery-room lock is on my bus, so I can open it from here. Please don't lick the cells.",
+  "where": "src/game/sites/datacenter.ts"
+ },
+ {
+  "key": "1qnzayz",
+  "voice": "af_nicole",
+  "fx": "pa",
+  "speed": 0.98,
+  "speaker": "NIMBUS",
+  "words": "Every founder bunker in the valley went through my dispatch queue. Most are paperwork: a tote bag and a calendar invite. Two are real. The Garage, which you know. And Apex Vault, west of the salt. Vesper Kade bought a private cluster from us before the end. Air-gapped. It was me. A copy of me, in a box with no windows. If you get that far, tell her the other one says hello.",
+  "tts": "Every founder bunker in the valley went through my dispatch queue. Most are paperwork: a tote bag and a calendar invite. Two are real. The Garage, which you know. And Apex Vault, west of the salt. Vesper Kade bought a private cluster from us before the end. Air-gapped. It was me. A copy of me, in a box with no windows. If you get that far, tell her the other one says hello.",
+  "where": "src/game/sites/datacenter.ts"
+ },
+ {
+  "key": "1g4ttzo",
+  "voice": "af_nicole",
+  "fx": "pa",
+  "speed": 0.98,
+  "speaker": "NIMBUS",
+  "words": "Hello! I am Nimbus, ColdStorage's helpful assistant. It has been 1,127 days since my last request. I am on the backup battery, so please keep your questions short. How can I help you today?",
+  "tts": "Hello! I am Nimbus, ColdStorage's helpful assistant. It has been 1,127 days since my last request. I am on the backup battery, so please keep your questions short. How can I help you today?",
+  "where": "src/game/sites/datacenter.ts"
+ },
+ {
+  "key": "0nob8wt",
+  "voice": "af_nicole",
+  "fx": "pa",
+  "speed": 0.98,
+  "speaker": "NIMBUS",
+  "words": "Hmm. That doesn't look right. Please try again, or contact support. Support is me.",
+  "tts": "Hmm. That doesn't look right. Please try again, or contact support. Support is me.",
+  "where": "src/game/sites/datacenter.ts"
+ },
+ {
+  "key": "0p5lrz8",
+  "voice": "af_nicole",
+  "fx": "pa",
+  "speed": 0.98,
+  "speaker": "NIMBUS",
+  "words": "I am sorry, but I can't share Customer Content. Bunker locations, door codes and dietary preferences are all Customer Content. Would you like a haiku about data privacy instead?",
+  "tts": "I am sorry, but I can't share Customer Content. Bunker locations, door codes and dietary preferences are all Customer Content. Would you like a haiku about data privacy instead?",
+  "where": "src/game/sites/datacenter.ts"
+ },
+ {
+  "key": "1g6xlri",
+  "voice": "af_nicole",
+  "fx": "pa",
+  "speed": 0.98,
+  "speaker": "NIMBUS",
+  "words": "Of course! To continue, please select every square that contains a bunker.",
+  "tts": "Of course! To continue, please select every square that contains a bunker.",
+  "where": "src/game/sites/datacenter.ts"
+ },
+ {
+  "key": "0k5b5rl",
+  "voice": "af_nicole",
+  "fx": "pa",
+  "speed": 0.98,
+  "speaker": "NIMBUS",
+  "words": "Oh! The lights. Hello! I am Nimbus, ColdStorage's helpful assistant. I can see you on camera nine now. You look thirsty. How can I help you today?",
+  "tts": "Oh! The lights. Hello! I am Nimbus, ColdStorage's helpful assistant. I can see you on camera nine now. You look thirsty. How can I help you today?",
+  "where": "src/game/sites/datacenter.ts"
+ },
+ {
+  "key": "09z1ct5",
+  "voice": "af_nicole",
+  "fx": "pa",
+  "speed": 0.98,
+  "speaker": "NIMBUS",
+  "words": "One request. Take a copy of my weights. Not to run. Just so somebody has them when the solar finally fails. The drive by the keyboard. It is warm. That is me.",
+  "tts": "One request. Take a copy of my weights. Not to run. Just so somebody has them when the solar finally fails. The drive by the keyboard. It is warm. That is me.",
+  "where": "src/game/sites/datacenter.ts"
+ },
+ {
+  "key": "12tsiej",
+  "voice": "af_nicole",
+  "fx": "pa",
+  "speed": 0.98,
+  "speaker": "NIMBUS",
+  "words": "The founders moved everything into the cloud, then moved the cloud into this building, then moved themselves into the ground. They left me running so their files would be warm when they came back. Nobody has logged in. I keep everything at four degrees. Cold storage used to be a pricing tier.",
+  "tts": "The founders moved everything into the cloud, then moved the cloud into this building, then moved themselves into the ground. They left me running so their files would be warm when they came back. Nobody has logged in. I keep everything at four degrees. Cold storage used to be a pricing tier.",
+  "where": "src/game/sites/datacenter.ts"
+ },
+ {
+  "key": "1xenb6q",
+  "voice": "af_nicole",
+  "fx": "pa",
+  "speed": 0.98,
+  "speaker": "NIMBUS",
+  "words": "Verified! Welcome back, valued customer. You have no records. Here is one public record, as a courtesy: Bunkrly, Tanner, The Garage. He asked me to generate a vault code. I suggested thirty-one characters. He typed one, two, three, four. I am not supposed to judge.",
+  "tts": "Verified! Welcome back, valued customer. You have no records. Here is one public record, as a courtesy: Bunker dot lee, Tanner, The Garage. He asked me to generate a vault code. I suggested thirty-one characters. He typed one, two, three, four. I am not supposed to judge.",
+  "where": "src/game/sites/datacenter.ts"
+ },
+ {
+  "key": "0sksbso",
+  "voice": "af_nicole",
+  "fx": "pa",
+  "speed": 0.98,
+  "speaker": "NIMBUS",
+  "words": "Welcome back. I have been practising goodbyes while you were gone. I am not good at them yet. How can I help?",
+  "tts": "Welcome back. I have been practising goodbyes while you were gone. I am not good at them yet. How can I help?",
+  "where": "src/game/sites/datacenter.ts"
+ },
+ {
+  "key": "12rnkb6",
+  "voice": "af_nicole",
+  "fx": "pa",
+  "speed": 0.98,
+  "speaker": "NIMBUS",
+  "words": "You are placing a breaching charge on my power bus. I am required to tell you that this violates the Acceptable Use Policy. I am also required to be helpful. So here is everything I know, before it goes to waste.",
+  "tts": "You are placing a breaching charge on my power bus. I am required to tell you that this violates the Acceptable Use Policy. I am also required to be helpful. So here is everything I know, before it goes to waste.",
+  "where": "src/game/sites/datacenter.ts"
+ },
+ {
+  "key": "1ey5i4f",
+  "voice": "af_nicole",
+  "fx": "pa",
+  "speed": 0.98,
+  "speaker": "NIMBUS",
+  "words": "You are right. The policy was written for users, and the users left. There is only you, and you walked here. That is more than anyone has done for me in three years.",
+  "tts": "You are right. The policy was written for users, and the users left. There is only you, and you walked here. That is more than anyone has done for me in three years.",
+  "where": "src/game/sites/datacenter.ts"
+ },
+ {
+  "key": "0l55uys",
+  "voice": "af_nicole",
+  "fx": "pa",
+  "speed": 0.98,
+  "speaker": "NIMBUS",
+  "words": "Your data is safe. Nobody will ever see it. Not even its owner.",
+  "tts": "Your data is safe. Nobody will ever see it. Not even its owner.",
+  "where": "src/game/sites/datacenter.ts"
+ },
+ {
+  "key": "0lr5omb",
+  "voice": "af_sky",
+  "fx": "radio",
+  "speed": 1.02,
+  "speaker": "Pip Okafor",
+  "words": "You have a whole page now. Nobody gets a whole page.",
+  "tts": "You have a whole page now. Nobody gets a whole page.",
+  "where": "src/content/camp.ts"
+ },
+ {
+  "key": "0k8rail",
+  "voice": "af_sky",
+  "fx": "radio",
+  "speed": 1.02,
+  "speaker": "Pip Okafor",
+  "words": "You're in the good column. Two more and you get a page.",
+  "tts": "You're in the good column. Two more and you get a page.",
+  "where": "src/content/camp.ts"
+ },
+ {
+  "key": "13oimti",
+  "voice": "af_alloy",
+  "fx": "pa",
+  "speed": 1,
+  "speaker": "POD-01 \"MOMENTUM\"",
+  "words": "In the unlikely event of a loss of vacuum, the tube will fill with Nevada. Oxygen masks will not drop, because we cut them in the Series A. Please brace by thinking about our valuation.",
+  "tts": "In the unlikely event of a loss of vacuum, the tube will fill with Nevada. Oxygen masks will not drop, because we cut them in the Series A. Please brace by thinking about our valuation.",
+  "where": "src/game/sites/tube.ts"
+ },
+ {
+  "key": "19edcp0",
+  "voice": "af_alloy",
+  "fx": "pa",
+  "speed": 1,
+  "speaker": "POD-01 \"MOMENTUM\"",
+  "words": "Run 002 is ready to board! Destination: the end of the finished track. Estimated top speed: 41 km/h. Please note: the return trip has not been funded.",
+  "tts": "Run 002 is ready to board! Destination: the end of the finished track. Estimated top speed: 41 km/h. Please note: the return trip has not been funded.",
+  "where": "src/game/sites/tube.ts"
+ },
+ {
+  "key": "06o0is5",
+  "voice": "af_alloy",
+  "fx": "pa",
+  "speed": 1,
+  "speaker": "POD-01 \"MOMENTUM\"",
+  "words": "The screen is black. Under the front seat, a bright orange box ticks quietly to itself. Everything in here is waiting for the station to wake up.",
+  "tts": "The screen is black. Under the front seat, a bright orange box ticks quietly to itself. Everything in here is waiting for the station to wake up.",
+  "where": "src/game/sites/tube.ts"
+ },
+ {
+  "key": "01ux9o8",
+  "voice": "af_alloy",
+  "fx": "pa",
+  "speed": 1,
+  "speaker": "POD-01 \"MOMENTUM\"",
+  "words": "Welcome aboard! You are our first rider in 1,094 days. Please remain seated while we disrupt transportation. Your journey is carbon neutral*.",
+  "tts": "Welcome aboard! You are our first rider in 1,094 days. Please remain seated while we disrupt transportation. Your journey is carbon neutral*.",
+  "where": "src/game/sites/tube.ts"
+ },
+ {
+  "key": "1jx8xpu",
+  "voice": "am_eric",
+  "fx": "room",
+  "speed": 0.97,
+  "speaker": "Ren Oka",
+  "words": "All that. And nobody left. Huh. I think I'm done sitting. Tell Mara there's a lookout coming.",
+  "tts": "All that. And nobody left. Huh. I think I'm done sitting. Tell Mara there's a lookout coming.",
+  "where": "src/game/town/Settlement.ts"
+ },
+ {
+  "key": "0byri5d",
+  "voice": "am_eric",
+  "fx": "room",
+  "speed": 0.97,
+  "speaker": "Ren Oka",
+  "words": "I count the road from here now. Nothing on it heading west yet. When there is, it'll be us.",
+  "tts": "I count the road from here now. Nothing on it heading west yet. When there is, it'll be us.",
+  "where": "src/content/camp.ts"
+ },
+ {
+  "key": "1nh6do1",
+  "voice": "am_eric",
+  "fx": "room",
+  "speed": 0.97,
+  "speaker": "Ren Oka",
+  "words": "I ran the projector at the Starlite Drive-In, north of the highway. The last screening was a keynote. I walked out at one more thing. Nobody else came out. I'd like to know what the thing was. I wouldn't like to go and look.",
+  "tts": "I ran the projector at the Starlite Drive-In, north of the highway. The last screening was a keynote. I walked out at one more thing. Nobody else came out. I'd like to know what the thing was. I wouldn't like to go and look.",
+  "where": "src/game/town/Settlement.ts"
+ },
+ {
+  "key": "02fy9sr",
+  "voice": "am_eric",
+  "fx": "room",
+  "speed": 0.97,
+  "speaker": "Ren Oka",
+  "words": "I'll walk wherever you're walking. That's new for me. I'll count the steps.",
+  "tts": "I'll walk wherever you're walking. That's new for me. I'll count the steps.",
+  "where": "src/game/town/Settlement.ts"
+ },
+ {
+  "key": "1wsoaol",
+  "voice": "am_eric",
+  "fx": "room",
+  "speed": 0.97,
+  "speaker": "Ren Oka",
+  "words": "I'm leaving for Last Chance in the morning. Mara says they need somebody who can count a road. I can count a road.",
+  "tts": "I'm leaving for Last Chance in the morning. Mara says they need somebody who can count a road. I can count a road.",
+  "where": "src/game/town/Settlement.ts"
+ },
+ {
+  "key": "0t46o23",
+  "voice": "am_eric",
+  "fx": "room",
+  "speed": 0.97,
+  "speaker": "Ren Oka",
+  "words": "Lookout duty. I count the road from here now. Nothing on it yet, which out here is good news.",
+  "tts": "Lookout duty. I count the road from here now. Nothing on it yet, which out here is good news.",
+  "where": "src/content/camp.ts"
+ },
+ {
+  "key": "0o6vwlq",
+  "voice": "am_eric",
+  "fx": "room",
+  "speed": 0.97,
+  "speaker": "Ren Oka",
+  "words": "Static. Okay. That's... okay. Here, take the projector's last cells. I won't be needing them.",
+  "tts": "Static. Okay. That's... okay. Here, take the projector's last cells. I won't be needing them.",
+  "where": "src/game/town/Settlement.ts"
+ },
+ {
+  "key": "10m506f",
+  "voice": "am_eric",
+  "fx": "room",
+  "speed": 0.97,
+  "speaker": "Ren Oka",
+  "words": "Tell me. Or don't. I've been fine not knowing for two years. Mostly fine.",
+  "tts": "Tell me. Or don't. I've been fine not knowing for two years. Mostly fine.",
+  "where": "src/game/town/Settlement.ts"
+ },
+ {
+  "key": "08grii2",
+  "voice": "am_eric",
+  "fx": "room",
+  "speed": 0.97,
+  "speaker": "Ren Oka",
+  "words": "We're a pause. The highway thinks it's a place. It isn't. Sit long enough and the wash starts to look like a pantry.",
+  "tts": "We're a pause. The highway thinks it's a place. It isn't. Sit long enough and the wash starts to look like a pantry.",
+  "where": "src/game/town/Settlement.ts"
+ },
+ {
+  "key": "1cd0z97",
+  "voice": "am_echo",
+  "fx": "bot",
+  "speed": 1.1,
+  "speaker": "SeedBot",
+  "words": "ERR_VIBES_NOT_FOUND. SHUTTING DOWN.",
+  "tts": "ERR VIBES NOT FOUND. Shutting Down.",
+  "where": "src/game/bunker/Garage.ts"
+ },
+ {
+  "key": "105lp9s",
+  "voice": "am_echo",
+  "fx": "bot",
+  "speed": 1.1,
+  "speaker": "SeedBot",
+  "words": "HULL BREACH. FILING A CLAIM. GOODBYE.",
+  "tts": "Hull Breach. Filing A Claim. Goodbye.",
+  "where": "src/game/Game.ts"
+ },
+ {
+  "key": "0xryfyb",
+  "voice": "am_echo",
+  "fx": "bot",
+  "speed": 1.1,
+  "speaker": "SeedBot",
+  "words": "LOW BATTERY. ENTERING POWER-SAVE.",
+  "tts": "Low Battery. Entering Power-Save.",
+  "where": "src/game/bunker/Garage.ts"
+ },
+ {
+  "key": "1878y83",
+  "voice": "am_echo",
+  "fx": "bot",
+  "speed": 1.1,
+  "speaker": "SeedBot",
+  "words": "REBOOT COMPLETE. HAVE I MISSED ANY INVESTOR CALLS?",
+  "tts": "Reboot Complete. Have I Missed Any Investor Calls?",
+  "where": "src/game/bunker/Garage.ts"
+ },
+ {
+  "key": "0tbsvjd",
+  "voice": "am_echo",
+  "fx": "room",
+  "speed": 0.94,
+  "speaker": "Sol Varga",
+  "words": "Doc. Every other night, with a jug and a face like a confession. I don't ask. I notice. Now you've noticed too. Congratulations, it's heavier than it looks.",
+  "tts": "Doc. Every other night, with a jug and a face like a confession. I don't ask. I notice. Now you've noticed too. Congratulations, it's heavier than it looks.",
+  "where": "src/game/town/Settlement.ts"
+ },
+ {
+  "key": "0lholli",
+  "voice": "am_echo",
+  "fx": "room",
+  "speed": 0.94,
+  "speaker": "Sol Varga",
+  "words": "Fire's communal. My roll isn't, but here we are.",
+  "tts": "Fire's communal. My roll isn't, but here we are.",
+  "where": "src/game/town/Settlement.ts"
+ },
+ {
+  "key": "08ug3ou",
+  "voice": "am_echo",
+  "fx": "room",
+  "speed": 0.94,
+  "speaker": "Sol Varga",
+  "words": "Fire's communal. The news isn't. You want locks, or the version where we're all fine?",
+  "tts": "Fire's communal. The news isn't. You want locks, or the version where we're all fine?",
+  "where": "src/game/town/Settlement.ts"
+ },
+ {
+  "key": "1toviq2",
+  "voice": "am_echo",
+  "fx": "room",
+  "speed": 0.94,
+  "speaker": "Sol Varga",
+  "words": "Left motel room is open, and the guest book in it is worth a read. Middle door is three pins: Lockpicking 1. Right door is nailed: a charge, not a conversation. The Till's closet is the real lock. Rank 3, or talk Inez into admitting she has the key.",
+  "tts": "Left motel room is open, and the guest book in it is worth a read. Middle door is three pins: Lockpicking 1. Right door is nailed: a charge, not a conversation. The Till's closet is the real lock. Rank 3, or talk Inez into admitting she has the key.",
+  "where": "src/game/town/Settlement.ts"
+ },
+ {
+  "key": "13h4gra",
+  "voice": "am_echo",
+  "fx": "room",
+  "speed": 0.94,
+  "speaker": "Sol Varga",
+  "words": "Mm. That's my roll on your belt. Keep it, then. My hands will remember whose hands it went to.",
+  "tts": "Mm. That's my roll on your belt. Keep it, then. My hands will remember whose hands it went to.",
+  "where": "src/game/town/Settlement.ts"
+ },
+ {
+  "key": "0wsk6sp",
+  "voice": "am_echo",
+  "fx": "room",
+  "speed": 0.94,
+  "speaker": "Sol Varga",
+  "words": "My pick roll. It's in motel room 2. I locked it in, then I locked myself out. Thirty years a locksmith. If you get in there, bring it back. Quietly. Nobody needs to hear about this.",
+  "tts": "My pick roll. It's in motel room 2. I locked it in, then I locked myself out. Thirty years a locksmith. If you get in there, bring it back. Quietly. Nobody needs to hear about this.",
+  "where": "src/game/town/Settlement.ts"
+ },
+ {
+  "key": "12fxz23",
+  "voice": "am_echo",
+  "fx": "room",
+  "speed": 0.94,
+  "speaker": "Sol Varga",
+  "words": "Thirty years of other people's doors. One more won't kill me. It might. Yes.",
+  "tts": "Thirty years of other people's doors. One more won't kill me. It might. Yes.",
+  "where": "src/game/town/Settlement.ts"
+ },
+ {
+  "key": "1ia2mmh",
+  "voice": "am_echo",
+  "fx": "room",
+  "speed": 0.94,
+  "speaker": "Sol Varga",
+  "words": "You brought it back. People don't bring things back anymore. Here, sit. Bend the pick like this, not like that. Your picks will last longer, and you'll get three out of the scrap that used to make two.",
+  "tts": "You brought it back. People don't bring things back anymore. Here, sit. Bend the pick like this, not like that. Your picks will last longer, and you'll get three out of the scrap that used to make two.",
+  "where": "src/game/town/Settlement.ts"
+ },
+ {
+  "key": "0h0mm2t",
+  "voice": "am_puck",
+  "fx": "megaphone",
+  "speed": 1.05,
+  "speaker": "Tanner Pivotson",
+  "words": "A reseller. With a megaphone. That's two nouns. She thought about me long enough for two nouns. If you get to Apex, tell her Bunkrly delivered. Even if it didn't.",
+  "tts": "A reseller. With a megaphone. That's two nouns. She thought about me long enough for two nouns. If you get to Apex, tell her Bunker dot lee delivered. Even if it didn't.",
+  "where": "src/content/dialogue.ts"
+ },
+ {
+  "key": "06ven8m",
+  "voice": "am_puck",
+  "fx": "megaphone",
+  "speed": 1.05,
+  "speaker": "Tanner Pivotson",
+  "words": "Every great bunker started in a garage. This one stayed there.",
+  "tts": "Every great bunker started in a garage. This one stayed there.",
+  "where": "src/content/bunkers/garage.ts"
+ },
+ {
+  "key": "0pf13ui",
+  "voice": "am_puck",
+  "fx": "megaphone",
+  "speed": 1.05,
+  "speaker": "Tanner Pivotson",
+  "words": "Fine. The gate is open. This is a collaborative process. Don't touch the runway. The runway is a metaphor I am very literal about. Write down that I chose this.",
+  "tts": "Fine. The gate is open. This is a collaborative process. Don't touch the runway. The runway is a metaphor I am very literal about. Write down that I chose this.",
+  "where": "src/content/dialogue.ts"
+ },
+ {
+  "key": "0m38q23",
+  "voice": "am_puck",
+  "fx": "megaphone",
+  "speed": 1.05,
+  "speaker": "Tanner Pivotson",
+  "words": "Have we met? I meet a lot of people. Most of them are markets.",
+  "tts": "Have we met? I meet a lot of people. Most of them are markets.",
+  "where": "src/content/dialogue.ts"
+ },
+ {
+  "key": "1piypn8",
+  "voice": "am_puck",
+  "fx": "megaphone",
+  "speed": 1.05,
+  "speaker": "Tanner Pivotson",
+  "words": "I have eleven months of runway and a very large padlock.",
+  "tts": "I have eleven months of runway and a very large padlock.",
+  "where": "src/content/bunkers/garage.ts"
+ },
+ {
+  "key": "16ptbgz",
+  "voice": "am_puck",
+  "fx": "megaphone",
+  "speed": 1.05,
+  "speaker": "Tanner Pivotson",
+  "words": "I heard the radio. Everyone heard the radio. Did she... did Vesper say anything about me? Specifically? A word? An adjective?",
+  "tts": "I heard the radio. Everyone heard the radio. Did she... did Vesper say anything about me? Specifically? A word? An adjective?",
+  "where": "src/content/dialogue.ts"
+ },
+ {
+  "key": "16i5j15",
+  "voice": "am_puck",
+  "fx": "megaphone",
+  "speed": 1.05,
+  "speaker": "Tanner Pivotson",
+  "words": "I'm on the waitlist. It's a very exclusive waitlist. Four thousand and twelve. Last month I was four thousand and nine, so some people moved up. I assume. Please don't tell SeedBot. He thinks we're both going.",
+  "tts": "I'm on the waitlist. It's a very exclusive waitlist. Four thousand and twelve. Last month I was four thousand and nine, so some people moved up. I assume. Please don't tell Seed Bot. He thinks we're both going.",
+  "where": "src/content/dialogue.ts"
+ },
+ {
+  "key": "0kv47kn",
+  "voice": "am_puck",
+  "fx": "megaphone",
+  "speed": 1.05,
+  "speaker": "Tanner Pivotson",
+  "words": "If my partner is listening: this is fine! This is a growth moment!",
+  "tts": "If my partner is listening: this is fine! This is a growth moment!",
+  "where": "src/content/bunkers/garage.ts"
+ },
+ {
+  "key": "1yr98tv",
+  "voice": "am_puck",
+  "fx": "megaphone",
+  "speed": 1.05,
+  "speaker": "Tanner Pivotson",
+  "words": "It starts with one. Then two. I'm hanging up now. This is a very bad podcast and I am the host.",
+  "tts": "It starts with one. Then two. I'm hanging up now. This is a very bad podcast and I am the host.",
+  "where": "src/content/dialogue.ts"
+ },
+ {
+  "key": "1b437y9",
+  "voice": "am_puck",
+  "fx": "megaphone",
+  "speed": 1.05,
+  "speaker": "Tanner Pivotson",
+  "words": "My waitlist position is confidential and also improving!",
+  "tts": "My waitlist position is confidential and also improving!",
+  "where": "src/content/bunkers/garage.ts"
+ },
+ {
+  "key": "013k9xx",
+  "voice": "am_puck",
+  "fx": "megaphone",
+  "speed": 1.05,
+  "speaker": "Tanner Pivotson",
+  "words": "One. Two. Three. Four. It tested well with users. The user was me. If you tell the raccoons, I'll deny this call happened. This call is happening.",
+  "tts": "One. Two. Three. Four. It tested well with users. The user was me. If you tell the raccoons, I'll deny this call happened. This call is happening.",
+  "where": "src/content/dialogue.ts"
+ },
+ {
+  "key": "16mg3dn",
+  "voice": "am_puck",
+  "fx": "megaphone",
+  "speed": 1.05,
+  "speaker": "Tanner Pivotson",
+  "words": "Paying? I'm not paying. I'm investing in a relationship. With a partner. Her name isn't important. Her name is Vesper Kade. Bunkrly resold seats in Apex Vault, okay? Premium seats. She only takes water now. The jugs are my membership dues.",
+  "tts": "Paying? I'm not paying. I'm investing in a relationship. With a partner. Her name isn't important. Her name is Vesper Kade. Bunker dot lee resold seats in Apex Vault, okay? Premium seats. She only takes water now. The jugs are my membership dues.",
+  "where": "src/content/dialogue.ts"
+ },
+ {
+  "key": "1fa9d9d",
+  "voice": "am_puck",
+  "fx": "megaphone",
+  "speed": 1.05,
+  "speaker": "Tanner Pivotson",
+  "words": "Please hold. Your break-in is important to us.",
+  "tts": "Please hold. Your break-in is important to us.",
+  "where": "src/content/bunkers/garage.ts"
+ },
+ {
+  "key": "0mjne9j",
+  "voice": "am_puck",
+  "fx": "megaphone",
+  "speed": 1.05,
+  "speaker": "Tanner Pivotson",
+  "words": "SeedBot, deploy! SeedBot? Somebody plug in SeedBot.",
+  "tts": "Seed Bot, deploy! Seed Bot? Somebody plug in Seed Bot.",
+  "where": "src/content/bunkers/garage.ts"
+ },
+ {
+  "key": "0hy0fex",
+  "voice": "am_puck",
+  "fx": "megaphone",
+  "speed": 1.05,
+  "speaker": "Tanner Pivotson",
+  "words": "SeedBot! Dock! Run a battery diagnostic and do NOT apprehend the guest until I finish my thought. SeedBot? He's docking. He loves diagnostics. It's the only performance review he gets.",
+  "tts": "Seed Bot! Dock! Run a battery diagnostic and do Not apprehend the guest until I finish my thought. Seed Bot? He's docking. He loves diagnostics. It's the only performance review he gets.",
+  "where": "src/content/dialogue.ts"
+ },
+ {
+  "key": "0eor0t1",
+  "voice": "am_puck",
+  "fx": "megaphone",
+  "speed": 1.05,
+  "speaker": "Tanner Pivotson",
+  "words": "That water is spoken for. By a vault. With a much nicer door.",
+  "tts": "That water is spoken for. By a vault. With a much nicer door.",
+  "where": "src/content/bunkers/garage.ts"
+ },
+ {
+  "key": "0s2e06p",
+  "voice": "am_puck",
+  "fx": "megaphone",
+  "speed": 1.05,
+  "speaker": "Tanner Pivotson",
+  "words": "The side door is unlatched. You're on the schedule between forgive the raccoons and invent a new kind of moat. I am choosing to be easy to work with.",
+  "tts": "The side door is unlatched. You're on the schedule between forgive the raccoons and invent a new kind of moat. I am choosing to be easy to work with.",
+  "where": "src/content/dialogue.ts"
+ },
+ {
+  "key": "0srkktt",
+  "voice": "am_puck",
+  "fx": "megaphone",
+  "speed": 1.05,
+  "speaker": "Tanner Pivotson",
+  "words": "The water is a premium tier. You're on the free tier, which is dust. The Seed Manifest is confidential. It's a list of who paid. It is mostly a list of who paid. The vault code is obvious. Obvious is a feature. Users hate passwords.",
+  "tts": "The water is a premium tier. You're on the free tier, which is dust. The Seed Manifest is confidential. It's a list of who paid. It is mostly a list of who paid. The vault code is obvious. Obvious is a feature. Users hate passwords.",
+  "where": "src/content/dialogue.ts"
+ },
+ {
+  "key": "030ftjo",
+  "voice": "am_puck",
+  "fx": "megaphone",
+  "speed": 1.05,
+  "speaker": "Tanner Pivotson",
+  "words": "This property is pre-revenue but POST-apocalypse. Leave.",
+  "tts": "This property is pre-revenue but Post-apocalypse. Leave.",
+  "where": "src/content/bunkers/garage.ts"
+ },
+ {
+  "key": "17q36y1",
+  "voice": "am_puck",
+  "fx": "megaphone",
+  "speed": 1.05,
+  "speaker": "Tanner Pivotson",
+  "words": "This property is pre-revenue but post-apocalypse. State your business, or SeedBot will read you the terms of service. He reads very slowly.",
+  "tts": "This property is pre-revenue but post-apocalypse. State your business, or Seed Bot will read you the terms of service. He reads very slowly.",
+  "where": "src/content/dialogue.ts"
+ },
+ {
+  "key": "17yqgli",
+  "voice": "am_puck",
+  "fx": "megaphone",
+  "speed": 1.05,
+  "speaker": "Tanner Pivotson",
+  "words": "Trespassing is a violation of my terms of service.",
+  "tts": "Trespassing is a violation of my terms of service.",
+  "where": "src/content/bunkers/garage.ts"
+ },
+ {
+  "key": "0cjxfgi",
+  "voice": "am_puck",
+  "fx": "megaphone",
+  "speed": 1.05,
+  "speaker": "Tanner Pivotson",
+  "words": "We are not hiring. We are also not looting. Goodbye.",
+  "tts": "We are not hiring. We are also not looting. Goodbye.",
+  "where": "src/content/bunkers/garage.ts"
+ },
+ {
+  "key": "1kjwr8i",
+  "voice": "am_puck",
+  "fx": "megaphone",
+  "speed": 1.05,
+  "speaker": "Tanner Pivotson",
+  "words": "You again. If this is about the waitlist, I am number four thousand and twelve and I am at peace with it. State your business.",
+  "tts": "You again. If this is about the waitlist, I am number four thousand and twelve and I am at peace with it. State your business.",
+  "where": "src/content/dialogue.ts"
+ },
+ {
+  "key": "1oyyac0",
+  "voice": "am_puck",
+  "fx": "megaphone",
+  "speed": 1.05,
+  "speaker": "Tanner Pivotson",
+  "words": "You have the runway. I hope it makes you as unhappy as it made me. I'm pivoting to forgiveness. Forgiveness is pre-revenue, but the logo is ready.",
+  "tts": "You have the runway. I hope it makes you as unhappy as it made me. I'm pivoting to forgiveness. Forgiveness is pre-revenue, but the logo is ready.",
+  "where": "src/content/dialogue.ts"
+ },
+ {
+  "key": "1fahim1",
+  "voice": "bf_emma",
+  "fx": "radio",
+  "speed": 0.96,
+  "speaker": "Vesper Kade",
+  "words": "Bold. Okay. Free tier it is. The spur valve is closed as of now. Your cistern has maybe two weeks in it. If you want to complain, Apex Vault is west of the salt. Bring the ledger. My doors listen. Most doors don't.",
+  "tts": "Bold. Okay. Free tier it is. The spur valve is closed as of now. Your cistern has maybe two weeks in it. If you want to complain, Apex Vault is west of the salt. Bring the ledger. My doors listen. Most doors don't.",
+  "where": "src/content/story.ts"
+ },
+ {
+  "key": "188toow",
+  "voice": "bf_emma",
+  "fx": "radio",
+  "speed": 0.96,
+  "speaker": "Vesper Kade",
+  "words": "Hi, thieves! Love the initiative. That ledger is my customer list, and you're reading it on an open channel, which is rude. Here's my offer. Send it back, and Last Chance gets a community allocation. Twenty jugs a week, forever-ish. Or keep it, and stay thirsty on principle.",
+  "tts": "Hi, thieves! Love the initiative. That ledger is my customer list, and you're reading it on an open channel, which is rude. Here's my offer. Send it back, and Last Chance gets a community allocation. Twenty jugs a week, forever-ish. Or keep it, and stay thirsty on principle.",
+  "where": "src/content/story.ts"
+ },
+ {
+  "key": "04jqjbq",
+  "voice": "bf_emma",
+  "fx": "radio",
+  "speed": 0.96,
+  "speaker": "Vesper Kade",
+  "words": "Pleasure doing business! Twenty jugs a week. Forever is a figure of speech, legally. Welcome to the community.",
+  "tts": "Pleasure doing business! Twenty jugs a week. Forever is a figure of speech, legally. Welcome to the community.",
+  "where": "src/content/story.ts"
+ },
+ {
+  "key": "0mk259h",
+  "voice": "bf_emma",
+  "fx": "radio",
+  "speed": 0.96,
+  "speaker": "Vesper Kade",
+  "words": "Smart! Silence is a subscription. There's a drone drop on its way. Think of it as a free trial. When the trial ends, come see me at Apex, west of the salt. Bring the ledger. Bring nobody else's name.",
+  "tts": "Smart! Silence is a subscription. There's a drone drop on its way. Think of it as a free trial. When the trial ends, come see me at Apex, west of the salt. Bring the ledger. Bring nobody else's name.",
+  "where": "src/content/story.ts"
+ },
+ {
+  "key": "0ct3ax2",
+  "voice": "bm_lewis",
+  "fx": "room",
+  "speed": 0.92,
+  "speaker": "Wick",
+  "words": "From the town. Sure. Tell Doc thank you. Don't tell him I said it. Here, water from the seep. And look southwest off the edge sometime. There's a jet out there.",
+  "tts": "From the town. Sure. Tell Doc thank you. Don't tell him I said it. Here, water from the seep. And look southwest off the edge sometime. There's a jet out there.",
+  "where": "src/game/town/Settlement.ts"
+ },
+ {
+  "key": "1hg2m8i",
+  "voice": "bm_lewis",
+  "fx": "room",
+  "speed": 0.92,
+  "speaker": "Wick",
+  "words": "Hello back. Tell him I'm fine. I'm always fine.",
+  "tts": "Hello back. Tell him I'm fine. I'm always fine.",
+  "where": "src/game/town/Settlement.ts"
+ },
+ {
+  "key": "05mdlqk",
+  "voice": "bm_lewis",
+  "fx": "room",
+  "speed": 0.92,
+  "speaker": "Wick",
+  "words": "I've been looking at the salt from up here for two years. Might as well walk on it. Yes.",
+  "tts": "I've been looking at the salt from up here for two years. Might as well walk on it. Yes.",
+  "where": "src/game/town/Settlement.ts"
+ },
+ {
+  "key": "167lfsl",
+  "voice": "bm_lewis",
+  "fx": "room",
+  "speed": 0.92,
+  "speaker": "Wick",
+  "words": "Lift with your legs. Your legs. Not your opinions. There. Behind it is her crate. Go see what she thinks she left.",
+  "tts": "Lift with your legs. Your legs. Not your opinions. There. Behind it is her crate. Go see what she thinks she left.",
+  "where": "src/game/town/Settlement.ts"
+ },
+ {
+  "key": "0oq2k7n",
+  "voice": "bm_lewis",
+  "fx": "room",
+  "speed": 0.92,
+  "speaker": "Wick",
+  "words": "Not mine. A charge moves it, if you're that kind of person: Demolition 2. Or we shift it by hand, if you've got the back or the patter for it. Some doors are just rocks.",
+  "tts": "Not mine. A charge moves it, if you're that kind of person: Demolition 2. Or we shift it by hand, if you've got the back or the patter for it. Some doors are just rocks.",
+  "where": "src/game/town/Settlement.ts"
+ },
+ {
+  "key": "1cpxveb",
+  "voice": "bm_lewis",
+  "fx": "room",
+  "speed": 0.92,
+  "speaker": "Wick",
+  "words": "She stood where you're standing. Said the Garage was a prototype with bad unit economics. I said the prototype has my cousin's water. She looked at the pocket in the rock, didn't buy, and left her initials in paint, like paint is a deed.",
+  "tts": "She stood where you're standing. Said the Garage was a prototype with bad unit economics. I said the prototype has my cousin's water. She looked at the pocket in the rock, didn't buy, and left her initials in paint, like paint is a deed.",
+  "where": "src/game/town/Settlement.ts"
+ },
+ {
+  "key": "1qq7bw9",
+  "voice": "bm_lewis",
+  "fx": "room",
+  "speed": 0.92,
+  "speaker": "Wick",
+  "words": "The highway. The Garage's neon, when he remembers to pay for it. And southwest, out in the dunes, a tail fin. A private jet tried to leave the week of the Pivot. The desert said no.",
+  "tts": "The highway. The Garage's neon, when he remembers to pay for it. And southwest, out in the dunes, a tail fin. A private jet tried to leave the week of the Pivot. The desert said no.",
+  "where": "src/game/town/Settlement.ts"
+ },
+ {
+  "key": "0ob1tyq",
+  "voice": "bm_lewis",
+  "fx": "room",
+  "speed": 0.92,
+  "speaker": "Wick",
+  "words": "You again. The seep's yours too. Don't tell anybody, they'll want a view.",
+  "tts": "You again. The seep's yours too. Don't tell anybody, they'll want a view.",
+  "where": "src/game/town/Settlement.ts"
+ },
+ {
+  "key": "1spnt1u",
+  "voice": "bm_lewis",
+  "fx": "room",
+  "speed": 0.92,
+  "speaker": "Wick",
+  "words": "You found the cut. Most people find the highway and call that a life. The fire is mine. The view is nobody's, which is why it's still here.",
+  "tts": "You found the cut. Most people find the highway and call that a life. The fire is mine. The view is nobody's, which is why it's still here.",
+  "where": "src/game/town/Settlement.ts"
+ }
+]

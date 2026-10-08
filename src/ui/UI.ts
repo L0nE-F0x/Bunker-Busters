@@ -1,5 +1,6 @@
 import './styles.css';
 import { ICONS, EYE_ICON } from './icons';
+import type { Vector3 } from 'three/webgpu';
 import { ITEMS, HOTBAR_ITEMS } from '@/content/items';
 import { SKILLS, SKILL_ORDER, focusesFor, capstonesFor } from '@/content/skills';
 import { ARCHETYPES } from '@/content/archetypes';
@@ -63,6 +64,7 @@ export class UI implements UIBridge {
   modalOpen = false;
   minigameOpen = false;
   private subtitleTimer = 0;
+  private subtitleId = 0;
   private lastClock = '';
   private lastNeed = '';
   private detCache: { show: boolean | null; color: string; width: string; text: string } = { show: null, color: '', width: '', text: '' };
@@ -393,7 +395,7 @@ export class UI implements UIBridge {
     setTimeout(() => { el.remove(); this.nextBanner(); }, 5100);
   }
 
-  subtitle(speaker: string, text: string) {
+  subtitle(speaker: string, text: string, voice?: { pos?: Vector3; variant?: number }) {
     const el = this.els.subtitle;
     if (!el) return;
     const who = el.querySelector('.who')!;
@@ -402,6 +404,11 @@ export class UI implements UIBridge {
     el.querySelector('.line')!.textContent = `“${text}”`;
     el.style.opacity = '1';
     this.subtitleTimer = 3 + text.length * 0.05;
+    const id = ++this.subtitleId;
+    // keep the line up for as long as it's being said
+    void this.audio.speak(speaker, text, voice).then((secs) => {
+      if (secs && id === this.subtitleId) this.subtitleTimer = Math.max(this.subtitleTimer, secs + 0.8);
+    });
   }
 
   /** True while a subtitle is on screen. Banter waits for it. */
@@ -760,7 +767,7 @@ export class UI implements UIBridge {
           <span>Music</span><input type="range" min="0" max="1" step="0.05" data-k="music" value="${settings.music}">
           <span>Effects</span><input type="range" min="0" max="1" step="0.05" data-k="sfx" value="${settings.sfx}">
           <span>${isTouch ? 'Look sensitivity' : 'Mouse sensitivity'}</span><input type="range" min="0.3" max="2.5" step="0.05" data-k="sensitivity" value="${settings.sensitivity}">
-          <span>Voiced taunts</span><select data-k="voice"><option value="0" ${settings.voice ? '' : 'selected'}>OFF (subtitles only)</option><option value="1" ${settings.voice ? 'selected' : ''}>ON (robotic speech synthesis)</option></select>
+          <span>Voices</span><select data-k="voice"><option value="1" ${settings.voice ? 'selected' : ''}>ON</option><option value="0" ${settings.voice ? '' : 'selected'}>OFF (subtitles only)</option></select>
         </div>
         <button class="btn primary">Done</button>
       </div>`;
@@ -821,10 +828,12 @@ export class UI implements UIBridge {
         window.removeEventListener('keydown', onKey, true);
         ov.remove();
         this.modalOpen = false;
+        this.audio.hush();
         resolve();
       };
       const paint = () => {
         const page = pages[i];
+        void this.audio.speak(page.speaker, page.text);
         const last = i >= pages.length - 1;
         panel.classList.toggle('intrude', page.speaker.startsWith('Vesper'));
         panel.innerHTML = `<div class="scan"></div>
@@ -859,6 +868,7 @@ export class UI implements UIBridge {
     const panel = h('div', 'panel talk interactive');
     const enabled = choices.filter((c) => !c.disabled);
     const paint = () => {
+      void this.audio.speak(speaker, text);
       panel.classList.toggle('intrude', speaker.startsWith('Vesper'));
       panel.innerHTML = `<div class="scan"></div>
         ${this.speakerHead(speaker)}
@@ -874,6 +884,7 @@ export class UI implements UIBridge {
     const finish = (id: string | null) => {
       window.removeEventListener('keydown', onKey, true);
       ov.remove();
+      this.audio.hush();
       resolve(id);
     };
     const onKey = (e: KeyboardEvent) => {
