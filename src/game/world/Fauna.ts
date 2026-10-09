@@ -1392,6 +1392,23 @@ class Pack implements HostileProvider {
       }
       if (this.state === 'watch') lead.yaw += angDiff(lead.yaw, Math.atan2(c.player.x - lead.pos.x, c.player.z - lead.pos.z)) * c.dt * 1.5;
     }
+    // fire: no wolf crosses burning ground (it's pushed back to the edge like a wall); near it a wolf
+    // won't lunge, and a fresh one scatters the ring
+    const fires = c.combat?.fires;
+    if (fires?.length) for (const w of live) for (const f of fires) {
+      const dx = w.pos.x - f.p.x, dz = w.pos.z - f.p.z, d = Math.hypot(dx, dz);
+      const keep = f.r + 0.9;
+      if (d < keep) {
+        const k = d > 0.01 ? keep / d : 1;
+        w.pos.x = f.p.x + (d > 0.01 ? dx : 1) * k;
+        w.pos.z = f.p.z + (d > 0.01 ? dz : 0) * k;
+      }
+      if (d < f.r + 6) {
+        w.fear = Math.min(1.5, w.fear + c.dt * 3);
+        if (w.role === 'lunge') { w.role = 'retreat'; w.roleT = 0; }
+      }
+      if (f.t < 1.5 && d < f.r + 9 && w.role !== 'retreat') { w.role = 'retreat'; w.roleT = 0; }
+    }
 
     // gone for good once far enough (or everyone's down and you've walked off)
     const far = live.every((w) => Math.hypot(w.pos.x - c.player.x, w.pos.z - c.player.z) > (this.state === 'flee' ? 130 : 200));
@@ -1635,7 +1652,7 @@ class Coyotes implements HostileProvider {
     }
     this.stateT += c.dt;
     const dP = Math.hypot(lead.pos.x - c.player.x, lead.pos.z - c.player.z);
-    if (this.state !== 'flee' && (dP < (c.sprinting ? 40 : 28) || c.combat && c.combat.heat > 0.4)) this.flee();
+    if (this.state !== 'flee' && (dP < (c.sprinting ? 40 : 28) || c.combat && c.combat.heat > 0.4 || c.combat?.inFire(lead.pos, 25))) this.flee();
     if (dP > 175 || (!this.night(c.hour) && this.state !== 'flee') || (this.state === 'flee' && dP > 150)) {
       this.state = 'gone';
       this.wait = rnd(90, 240);
@@ -1689,6 +1706,12 @@ class Coyotes implements HostileProvider {
       k.speed = lerp(k.speed, sp, Math.min(1, c.dt * 4));
       k.pos.x += Math.sin(k.yaw) * k.speed * c.dt;
       k.pos.z += Math.cos(k.yaw) * k.speed * c.dt;
+      const burn = c.combat?.fires.length ? c.combat.inFire(k.pos, 0.9) : null;
+      if (burn) {
+        const dx = k.pos.x - burn.p.x, dz = k.pos.z - burn.p.z, d = Math.max(0.01, Math.hypot(dx, dz));
+        k.pos.x = burn.p.x + (dx / d) * (burn.r + 0.9);
+        k.pos.z = burn.p.z + (dz / d) * (burn.r + 0.9);
+      }
       const g = c.hf.heightAt(k.pos.x, k.pos.z);
       k.pos.y = g;
       // the gait: a quicker step than the wolf's (a smaller animal)
