@@ -2,8 +2,7 @@ import * as THREE from 'three/webgpu';
 import type { GameContext } from '../context';
 import type { Landmarks } from '../world/Landmarks';
 import { norm } from '../world/kit';
-import { corrugated, desertRock, glow, plainStandard, rustyMetal, wood } from '../world/materials';
-import { rockGeometry } from '../world/Props';
+import { corrugated, glow, plainStandard, rustyMetal, wood } from '../world/materials';
 import { VirtualLight } from '../world/lights';
 import { ITEMS } from '@/content/items';
 import { XP_REWARDS } from '@/content/progression';
@@ -92,12 +91,15 @@ export class SolarSite extends Site {
 
     const { near, far } = this.kit.build(root, ctx.scene, 'solar');
     this.near = near;
+    // the drifts behind the rows are ankle-deep: not worth a shadow draw
+    const sand = near.getObjectByName('solar-sand');
+    if (sand) sand.castShadow = false;
     const prints = this.prints.build('solar-prints', true);
     prints.traverse((o) => { o.renderOrder = 2; });
     const glows = this.glows.build('solar-glows', false);
     glows.traverse((o) => { o.renderOrder = 3; });
     near.add(prints, glows, this.bots.body, this.bots.brush, this.bots.lamp, this.breaker);
-    this.lod(near, far, 34, 130);
+    this.lod(near, far, 34, 110);
 
     this.buildInteractables();
     this.landmarks.audioSpots.push({ kind: 'hum', pos: this.frame.p(32, 1.2, -1) });
@@ -151,11 +153,6 @@ export class SolarSite extends Site {
       // sand banked against the back of the row, deeper toward the east
       k.drift((X0 + X1) / 2, rz + 2.1, X1 - X0, 1.8, 0, (u, v) => Math.max(0, Math.sin(v * Math.PI) * (0.15 + u * 0.45) * (0.7 + 0.3 * Math.sin(u * 23 + ri)) - 0.04), 0.9, false);
     });
-    // rocks round the edge of the field, for the composition
-    for (const [x, z, s] of [[-31, -19, 1.6], [-33, 8, 1.2], [29, 20, 1.4], [-29, 21, 1.1], [24, -22, 1.0]] as [number, number, number][]) {
-      k.b.add(M.rock, xf(rockGeometry(700 + x, 2), mat4(x, k.ground(x, z) + s * 0.3, z, r(), r() * 6, 0, s * 1.2, s * 0.7, s)));
-      k.col(x, k.ground(x, z) + s * 0.35, z, s * 0.9, s * 0.5, s * 0.8, 0);
-    }
   }
 
   // ================================================================ the inverter hut and the dock
@@ -468,7 +465,7 @@ function mats() {
     post: rustyMetal({ base: '#8c8f92', rust: 0.35, metalness: 0.75, roughness: 0.45 }),
     rail: rustyMetal({ base: '#a0a3a6', rust: 0.25, metalness: 0.8, roughness: 0.4 }),
     box: corrugated('#3f6a7a', 0.45, 'y'),
-    boxEnd: corrugated('#3f6a7a', 0.5, 'x'),
+    boxEnd: corrugated('#3f6a7a', 0.5, 'y'),
     boxRoof: rustyMetal({ base: '#395e6c', rust: 0.55, metalness: 0.6, roughness: 0.55 }),
     sleeper: wood('#4f3e2c'),
     cabinet: plainStandard('#9aa0a6', 0.5, 0.4),
@@ -482,7 +479,6 @@ function mats() {
     brush: plainStandard('#d6b23a', 0.85),
     marker: plainStandard('#e8641e', 0.6),
     conduit: plainStandard('#3a3530', 0.9),
-    rock: desertRock(),
   };
 }
 

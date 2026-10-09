@@ -296,6 +296,13 @@ export function journalEntries(v: StoryView): JournalEntry[] {
   add('seen:wellhead', 'Where the creek went', 'South-west of Dry Creek, the aquifer comes up through a Kade wellhead into a tank with her name on it, then west down the pipe. The creek didn\'t dry up. It was moved. Juno was right, and the proof is guarded by five rifles, two sentries and a minefield.');
   add('outpost.wellhead.cleared', 'Opened the tap', 'You took the wellhead. The tank is still Kade\'s, and Kade will send more people; Kade always sends more people. But for a while the water under Dry Creek was nobody\'s, which is the closest thing to everybody\'s it has been in years.');
   add('cave.wick.vesper', 'She stood where you stood', 'Wick says Vesper Kade called the Garage a prototype with bad unit economics. He told her the prototype had his cousin\'s water. She painted her initials in a pocket of the rock and left.');
+  // the 2026-10-10 sites (src/game/sites/booster.ts, waitlist.ts, solar.ts)
+  add('seen:booster', 'The Longshot', 'A Kade booster on its side in the south basin, KADE three metres tall down the tank. Flight-proven, once. Kade taped it off and never came back for it.');
+  add('site.booster.done', 'Pad B', 'The flight recorder kept her voice: "Land it at the pad." It didn\'t. The pod was for Vesper Kade: glacier water, flown in from Iceland. "No Kade water on board. I know where it\'s been." Pad B is west of the salt.');
+  add('seen:waitlist', 'Waitlist City', 'A bunker called Everafter, set into the mountain at the head of the north-east basin, and four thousand people who queued for it. NOW SERVING 0001. Somebody still feeds the fire.');
+  add('site.waitlist.done', 'Twelve residents', 'The service door opens on the grand-opening date. Behind it, Kade jugs: forty a week, by drone, for twelve people inside. The line outside was never going to move.');
+  add('seen:solar', 'Photon Park', 'A solar farm in the north-west basin that still powers Everafter. Its cleaning robots never stopped. Nobody has paid the bill since the Pivot.');
+  add('site.solar.cut', 'Pulled the plug', 'You threw Photon Park\'s main breaker. Everafter is on its backup cell, and its locks fail open. The robots kept cleaning.');
   return out.reverse();
 }
 
