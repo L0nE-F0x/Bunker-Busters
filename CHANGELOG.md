@@ -3,6 +3,11 @@
 Each `## vX.Y.Z` section becomes the GitHub release notes and the "what's new" list in the in-app
 update notice (the first few bullets). `scripts/release.sh` refuses to release a version without one.
 
+## v0.5.7
+- **People move like people.** Dry Creek's townsfolk and the camp's four no longer move in lockstep: everyone keeps their own tempo, drifts between several idles, chats with the others now and then, and turns to look at you one by one. Hollis and Dez stopped mirroring each other on their log
+- **Hands that face the right way.** No more wrists wrung like candy wrappers, borrowed animations put hands where they belong, Ren and Pip finally have mugs to drink from and Doc carries his clipboard. Inez rings up the till now and then instead of all the time
+- **Kade's crews hold their guns properly.** Hands stay on the grip and under the forend wherever they aim, and a squad standing around breathes and shifts its weight instead of freezing
+
 ## v0.5.6
 - **Company at the fire.** Mara, Hollis, Pip and Dez sit round the camp's fire, and the title screen and character select now open on them at dusk. New runs start right there at the fire
 - **Fights hit harder.** Kade's crews react to where you hit them, stumble and die on their feet, get pinned down by near misses, lay down covering fire and flank. Wolves warn you with a crouch and a growl, then leap. Getting hit knocks your view; near death your heartbeat takes over the screen
