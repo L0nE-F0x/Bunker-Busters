@@ -1,8 +1,8 @@
 import * as THREE from 'three/webgpu';
 import { Fn, vec4, vec3, uv, length, smoothstep, time, sin, float, color } from 'three/tsl';
 import type { QualitySettings } from '@/engine/renderer';
-import { makeQuality, fitCanvas } from '@/engine/renderer';
-import { isTouch } from '@/engine/device';
+import { makeQuality, fitCanvas, compileInParallel, canCompileInParallel } from '@/engine/renderer';
+import { isTouch, isWebKit } from '@/engine/device';
 import { TouchControls } from '@/ui/TouchControls';
 import { PostFX } from '@/engine/postfx';
 import { Physics } from '@/engine/physics';
@@ -206,6 +206,9 @@ export class Game {
   private benchUpd = 0;
   private benchPhys = 0;
   private benchRen = 0;
+  /** ?bench: frame intervals (rAF to rAF) of the current window, for the p50/p90 the log prints */
+  private benchInt = new Float32Array(1024);
+  private frameGap = 0;
   backendLabel = 'WebGL2';
 
   constructor(private renderer: THREE.WebGPURenderer, public isWebGPU: boolean, private canvas: HTMLCanvasElement) {
@@ -388,12 +391,32 @@ export class Game {
     this.scene.traverse((o) => { if ((o as THREE.Mesh).isMesh || (o as THREE.Sprite).isSprite || (o as THREE.Points).isPoints || (o as THREE.Line).isLine) drawn.push(o); });
     const batches = 10, per = Math.ceil(drawn.length / batches);
     let warmMs = 0;
+    const tWarm = performance.now();
+    // First pass (WebGL with KHR_parallel_shader_compile): each batch builds its node graphs and
+    // starts its links in the background, so the driver links one batch while the next one builds;
+    // nothing waits on a link status until they're all in. Chromium links in parallel for real
+    // (headless: 10.1 -> 6.7 s); WebKitGTK doesn't, and the second pass only cost it (13-20 s ->
+    // 15-33 s in the desktop app), so it keeps the single pass. ?serialwarm / ?parallelwarm A/B it.
+    const qw = new URLSearchParams(location.search);
+    const parallel = canCompileInParallel(this.renderer) && !qw.has('serialwarm') && (!isWebKit || qw.has('parallelwarm'));
+    if (parallel) {
+      const linking: Promise<void>[] = [];
+      for (let i = 0; i < batches; i++) {
+        linking.push(compileInParallel(this.renderer, () => { warmMs += this.warmShaders(...drawn.slice(i * per, (i + 1) * per)); }));
+        this.ui.progress(0.8 + (0.1 * (i + 1)) / batches, 'Compiling shaders');
+        for (let f = 0; f < 2; f++) await new Promise((r) => requestAnimationFrame(r)); // a fresh frame for the scene pass
+      }
+      await Promise.all(linking);
+    }
+    // the real frames: everything drawn once through the post stack (anything the first pass didn't
+    // cover compiles here, as before)
+    const p0 = parallel ? 0.9 : 0.8;
     for (let i = 0; i < batches; i++) {
       warmMs += this.warmShaders(...drawn.slice(i * per, (i + 1) * per));
-      this.ui.progress(0.8 + (0.15 * (i + 1)) / batches, 'Compiling shaders');
+      this.ui.progress(p0 + ((0.95 - p0) * (i + 1)) / batches, 'Compiling shaders');
       for (let f = 0; f < 2; f++) await new Promise((r) => requestAnimationFrame(r)); // a fresh frame for the scene pass
     }
-    console.log(`[BunkerBusters] shader warm-up: ${drawn.length} objects in ${batches} frames, ${warmMs.toFixed(0)} ms`);
+    console.log(`[BunkerBusters] shader warm-up: ${drawn.length} objects in ${batches} frames, ${warmMs.toFixed(0)} ms (${(performance.now() - tWarm).toFixed(0)} ms wall${parallel ? ', parallel links' : ''})`);
     unstageMenuHands();
     menuHands.dispose();
     await step(0.95, 'Polishing neon');
@@ -1706,11 +1729,17 @@ export class Game {
   }
 
   private bench(now: number) {
+    if (this.benchFrames < this.benchInt.length) this.benchInt[this.benchFrames] = this.frameGap;
     this.benchFrames++;
     if (!this.benchT) this.benchT = now;
     if (now - this.benchT >= 2000) {
       const info = this.renderer.info.render;
-      console.log(`[BENCH] mode=${this.mode} backend=${this.backendLabel} fps=${((this.benchFrames * 1000) / (now - this.benchT)).toFixed(1)} buffer=${this.renderer.domElement.width}x${this.renderer.domElement.height} q=${this.quality.level} tris=${info.triangles} ms[update=${(this.benchUpd / this.benchFrames).toFixed(1)} physics=${(this.benchPhys / this.benchFrames).toFixed(1)} render=${(this.benchRen / this.benchFrames).toFixed(1)}]`);
+      // frame intervals vs the frame's own JS: the gap is what the webview spends outside our code
+      // (style/paint of the HUD, compositing, the swap and its wait for the display)
+      const iv = Array.from(this.benchInt.subarray(0, Math.min(this.benchFrames, this.benchInt.length))).sort((a, b) => a - b);
+      const q = (k: number) => iv[Math.min(iv.length - 1, Math.floor(iv.length * k))].toFixed(1);
+      const js = (this.benchUpd + this.benchPhys + this.benchRen) / this.benchFrames;
+      console.log(`[BENCH] mode=${this.mode} backend=${this.backendLabel} fps=${((this.benchFrames * 1000) / (now - this.benchT)).toFixed(1)} buffer=${this.renderer.domElement.width}x${this.renderer.domElement.height} q=${this.quality.level} tris=${info.triangles} ms[update=${(this.benchUpd / this.benchFrames).toFixed(1)} physics=${(this.benchPhys / this.benchFrames).toFixed(1)} render=${(this.benchRen / this.benchFrames).toFixed(1)}] js=${js.toFixed(1)} interval[p10=${q(0.1)} p50=${q(0.5)} p90=${q(0.9)}]`);
       this.benchUpd = this.benchPhys = this.benchRen = 0;
       this.benchT = now;
       this.benchFrames = 0;
@@ -1726,7 +1755,8 @@ export class Game {
     // Re-fit the canvas whenever the window size changes. The 'resize' event alone isn't enough: the
     // desktop app's window gets tiled/resized while we're still loading, before the listener exists.
     if (innerWidth !== this.fitW || innerHeight !== this.fitH) this.resize();
-    const dt = Math.min(1 / 20, (now - this.last) / 1000);
+    this.frameGap = now - this.last;
+    const dt = Math.min(1 / 20, this.frameGap / 1000);
     this.last = now;
     this.t += dt;
     this.frames++;

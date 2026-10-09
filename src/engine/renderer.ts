@@ -1,4 +1,5 @@
 import * as THREE from 'three/webgpu';
+import { int, textureSize } from 'three/tsl';
 import { isMobile } from './device';
 
 export type QualityLevel = 'low' | 'medium' | 'high' | 'ultra';
@@ -22,6 +23,7 @@ export const QUALITY_PRESETS: Record<QualityLevel, Omit<QualitySettings, 'level'
   ultra: { pixelRatio: 1.5, shadowMapSize: 4096, ao: true, godrays: true, bloom: true, smaa: true, dustCount: 6000, grassDensity: 1.3 },
 };
 
+const RES = (() => { const m = /^(\d+)x(\d+)$/.exec(new URLSearchParams(location.search).get('res') ?? ''); return m ? [+m[1], +m[2]] : null; })();
 /** Debug: ?pr=1.25 caps the device pixel ratio the canvas renders at. */
 const PR_CAP = Number(new URLSearchParams(location.search).get('pr')) || Infinity;
 
@@ -71,7 +73,9 @@ function demote(from: BackendChoice, reason: string) {
  * "Requested allocation size … is smaller than the image requires". Aligned sizes work everywhere.
  */
 export function fitCanvas(renderer: THREE.WebGPURenderer, canvas: HTMLCanvasElement, pixelRatio: number, align: boolean) {
-  const vw = window.innerWidth, vh = window.innerHeight;
+  // debug: ?res=1890x1138 renders that buffer whatever the window (GPU load of a big window in a
+  // small one: separates the GPU's share of a frame from the webview's compositing)
+  const vw = RES ? RES[0] : window.innerWidth, vh = RES ? RES[1] : window.innerHeight;
   let w = Math.max(64, Math.round(vw * pixelRatio));
   let h = Math.max(64, Math.round(vh * pixelRatio));
   if (align) {
@@ -148,6 +152,120 @@ function coalesceUniformUploads(renderer: THREE.WebGPURenderer) {
 }
 
 /**
+ * WebGL2: no per-draw flip-Y uniform where the answer is settled. On WebGL three gives every
+ * texture sample a `flipY` uniform (true for render targets, depth textures and flipped
+ * ImageBitmaps) and a per-object update that refreshes it, and the texture's UV matrix, on every
+ * draw: ~2,700 calls and as many uniform compares a frame at Dry Creek (the shadow map's PCF taps
+ * and the PMREM's in every lit material, mostly), plus a select in the shader. A render target or
+ * depth texture is always flipped and a plain image, canvas or data array never is, which is known
+ * when the material is built (models and canvases load before the warm-up): those samples are built
+ * with the flip baked in, the node never updates and its object uniforms shrink. Anything else
+ * (flipped ImageBitmaps, a plain texture without an image yet) keeps three's path.
+ * Also: a node that doesn't use the UV matrix no longer recomputes it (sin/cos) on every draw.
+ */
+function settleTextureFlips() {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const TN = (THREE as any).TextureNode?.prototype;
+  if (!TN || typeof TN.setupUV !== 'function' || typeof TN.update !== 'function') return;
+  const setupUV = TN.setupUV;
+  const hasBitmap = typeof ImageBitmap !== 'undefined';
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  TN.setupUV = function (builder: any, uvNode: any) {
+    if (this._flipYUniform !== null || !builder.isFlipY?.()) return setupUV.call(this, builder, uvNode);
+    const t = this.value as (THREE.Texture & { isRenderTargetTexture?: boolean; isFramebufferTexture?: boolean; isDepthTexture?: boolean }) | null;
+    if (!t || !t.isTexture || (t as unknown as THREE.CubeTexture).isCubeTexture) return setupUV.call(this, builder, uvNode);
+    const img = t.image as unknown;
+    // render targets and depth (the post stack, the shadow map, the PMREM): always flipped. Their
+    // nodes only ever swap one target for another (PMREM's placeholder is marked a target too).
+    if (t.isRenderTargetTexture || t.isFramebufferTexture || t.isDepthTexture) {
+      const v = uvNode.toVar();
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      return this.sampler ? v.flipY() : v.setY(int((textureSize(this, this.levelNode) as any).y).sub(v.y).sub(1));
+    }
+    // plain images, canvases and data: never flipped (an unflipped ImageBitmap included)
+    if (img != null && !(hasBitmap && img instanceof ImageBitmap && t.flipY === true)) return uvNode;
+    return setupUV.call(this, builder, uvNode);
+  };
+  // the UV matrix only changes with offset/repeat/rotation/center, and almost none ever move: skip
+  // the sin/cos rebuild while they're unchanged
+  const TX = THREE.Texture.prototype as THREE.Texture & { updateMatrix(): void };
+  const updateMatrix = TX.updateMatrix;
+  TX.updateMatrix = function (this: THREE.Texture & { _uvKey?: Float64Array }) {
+    const o = this.offset, r = this.repeat, c = this.center;
+    let k = this._uvKey;
+    if (k && k[0] === o.x && k[1] === o.y && k[2] === r.x && k[3] === r.y && k[4] === this.rotation && k[5] === c.x && k[6] === c.y) return;
+    k ??= this._uvKey = new Float64Array(7);
+    k[0] = o.x; k[1] = o.y; k[2] = r.x; k[3] = r.y; k[4] = this.rotation; k[5] = c.x; k[6] = c.y;
+    updateMatrix.call(this);
+  };
+  TN.update = function () {
+    const texture = this.value;
+    const matrixUniform = this._matrixUniform;
+    if (matrixUniform !== null) {
+      matrixUniform.value = texture.matrix;
+      if (texture.matrixAutoUpdate === true) texture.updateMatrix();
+    }
+    const flipYUniform = this._flipYUniform;
+    if (flipYUniform !== null) {
+      flipYUniform.value = ((hasBitmap && texture.image instanceof ImageBitmap && texture.flipY === true) || texture.isRenderTargetTexture === true || texture.isFramebufferTexture === true || texture.isDepthTexture === true);
+    }
+  };
+}
+
+/**
+ * The scene's environment cache key (lights, shadows, environment map, fog) once per frame, not
+ * once per render call. Every render object checks it each pass to see whether its program is still
+ * valid, and three recomputes it on every render call by walking the whole lights and fog node
+ * graphs (~40 KB of garbage a frame here). The light set and the fog graph never change within a
+ * frame (VirtualLight's pool is fixed), and a change between frames is still seen the next frame.
+ */
+function frameCacheKeys(renderer: THREE.WebGPURenderer) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const nodes = (renderer as any)._nodes;
+  if (!nodes || typeof nodes.getCacheKey !== 'function' || !nodes.nodeFrame) return;
+  const own = nodes.getCacheKey;
+  const memo = new WeakMap<object, WeakMap<object, { f: number; k: number }>>();
+  nodes.getCacheKey = function (scene: object, lightsNode: object) {
+    const f = this.nodeFrame.frameId as number;
+    let m = memo.get(scene);
+    if (!m) { m = new WeakMap(); memo.set(scene, m); }
+    const e = m.get(lightsNode);
+    if (e && e.f === f) return e.k;
+    const k = own.call(this, scene, lightsNode) as number;
+    if (e) { e.f = f; e.k = k; } else m.set(lightsNode, { f, k });
+    return k;
+  };
+}
+
+/**
+ * Runs `fn` (a warm-up render) with every new WebGL program linking in the background
+ * (KHR_parallel_shader_compile) instead of three's synchronous path, where the link status query
+ * right after each link stalls the page until the driver is done (~3 s of the boot headless, most of
+ * a cold-cache boot in the desktop app). The render builds every node graph and starts every link,
+ * and objects whose program isn't linked yet just aren't drawn that frame; the promise settles when
+ * all of them are ready. Without the extension (or on WebGPU) `fn` runs as usual and it resolves at once.
+ */
+export function compileInParallel(renderer: THREE.WebGPURenderer, fn: () => void): Promise<void> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const be = (renderer as any).backend;
+  if (!be?.isWebGLBackend || !be.parallel || typeof be.createRenderPipeline !== 'function') { fn(); return Promise.resolve(); }
+  const own = be.createRenderPipeline;
+  const linking: Promise<void>[] = [];
+  be.createRenderPipeline = function (renderObject: unknown, promises: Promise<void>[] | null) {
+    return own.call(this, renderObject, promises ?? linking);
+  };
+  try { fn(); } finally { be.createRenderPipeline = own; }
+  return Promise.all(linking).then(() => undefined);
+}
+
+/** True when WebGL programs can link in the background (see compileInParallel). */
+export function canCompileInParallel(renderer: THREE.WebGPURenderer) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const be = (renderer as any).backend;
+  return !!(be?.isWebGLBackend && be.parallel);
+}
+
+/**
  * WebGPU first, WebGL2 fallback. Some driver stacks (e.g. Chrome + Vulkan on hybrid-GPU Linux)
  * expose WebGPU but fail at the canvas swapchain; if the device reports errors right after start
  * we remember that and reload on the WebGL2 backend.
@@ -176,6 +294,8 @@ export async function createRenderer(canvas: HTMLCanvasElement) {
   await renderer.init();
   quietShadowAlphaTest(renderer);
   coalesceUniformUploads(renderer);
+  if (!qs.has('noflipfix')) settleTextureFlips(); // (?noflipfix: A/B)
+  if (!qs.has('nokeymemo')) frameCacheKeys(renderer); // (?nokeymemo: A/B)
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFShadowMap;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
