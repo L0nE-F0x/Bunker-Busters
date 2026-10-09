@@ -417,7 +417,12 @@ class Vulture {
       this.b.pose(ri, 0, 0, -0.25 - flare); this.b.pose(ro, 0, 0, -0.15 - flare * 0.5);
       this.b.pose(this.rig.head, 0.3, 0, 0);
       this.b.pose(this.rig.legs, 1.4 - u * 1.4, 0, 0);
-      if (u >= 1 && this.pos.distanceTo(t) < 0.4) { this.state = 'feed'; this.stateT = 0; }
+      if (u >= 1 && this.pos.distanceTo(t) < 0.4) {
+        this.state = 'feed';
+        this.stateT = 0;
+        // touchdown: wings beat the dust up
+        if (near(this.pos) < 120) c.combat?.puffs?.emit(this.pos, 5, 0.9, 0.35, 0.45);
+      }
       return;
     }
     if (this.state === 'feed') {
@@ -602,6 +607,8 @@ class Rabbit {
       if (this.hopU >= 1) {
         this.pos.copy(this.to);
         if (this.state === 'flee') {
+          // each bound kicks up a little dust
+          if (d < 60) c.combat?.puffs?.emit(this.pos, 2, 0.35, 0.25, 0.22);
           const away = Math.atan2(this.pos.x - c.player.x, this.pos.z - c.player.z);
           // zig-zag
           this.startHop(c, away + (this.hops++ % 2 ? 0.45 : -0.45) * Math.random(), rnd(1.6, 2.4), 10);
@@ -1683,7 +1690,10 @@ class Coyotes implements HostileProvider {
       const g = c.hf.heightAt(k.pos.x, k.pos.z);
       k.pos.y = g;
       // the gait: a quicker step than the wolf's (a smaller animal)
+      const step = Math.floor(k.phase / Math.PI);
       k.phase += c.dt * (k.speed > 6 ? 11 : 3.6 + k.speed * 1.9);
+      // flat out, every other stride throws dust back off the paws
+      if (k.speed > 6 && Math.floor(k.phase / Math.PI) !== step && step % 2 === 0) c.combat?.puffs?.emit(k.pos, 1, 0.35, 0.3, 0.35);
       const tgt = lookAt ?? (this.state === 'feed' ? this.goal : null);
       const lookYaw = tgt ? clamp(angDiff(k.yaw, Math.atan2(tgt.x - k.pos.x, tgt.z - k.pos.z)), -1.1, 1.1) : 0;
       k.look = lerp(k.look, lookYaw, Math.min(1, c.dt * 3));
