@@ -189,6 +189,34 @@ function settleTextureFlips() {
 }
 
 /**
+ * Runs `fn` (a warm-up render) with every new WebGL program linking in the background
+ * (KHR_parallel_shader_compile) instead of three's synchronous path, where the link status query
+ * right after each link stalls the page until the driver is done (~3 s of the boot headless, most of
+ * a cold-cache boot in the desktop app). The render builds every node graph and starts every link,
+ * and objects whose program isn't linked yet just aren't drawn that frame; the promise settles when
+ * all of them are ready. Without the extension (or on WebGPU) `fn` runs as usual and it resolves at once.
+ */
+export function compileInParallel(renderer: THREE.WebGPURenderer, fn: () => void): Promise<void> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const be = (renderer as any).backend;
+  if (!be?.isWebGLBackend || !be.parallel || typeof be.createRenderPipeline !== 'function') { fn(); return Promise.resolve(); }
+  const own = be.createRenderPipeline;
+  const linking: Promise<void>[] = [];
+  be.createRenderPipeline = function (renderObject: unknown, promises: Promise<void>[] | null) {
+    return own.call(this, renderObject, promises ?? linking);
+  };
+  try { fn(); } finally { be.createRenderPipeline = own; }
+  return Promise.all(linking).then(() => undefined);
+}
+
+/** True when WebGL programs can link in the background (see compileInParallel). */
+export function canCompileInParallel(renderer: THREE.WebGPURenderer) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const be = (renderer as any).backend;
+  return !!(be?.isWebGLBackend && be.parallel);
+}
+
+/**
  * WebGPU first, WebGL2 fallback. Some driver stacks (e.g. Chrome + Vulkan on hybrid-GPU Linux)
  * expose WebGPU but fail at the canvas swapchain; if the device reports errors right after start
  * we remember that and reload on the WebGL2 backend.

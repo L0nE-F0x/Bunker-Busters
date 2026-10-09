@@ -1,7 +1,7 @@
 import * as THREE from 'three/webgpu';
 import { Fn, vec4, vec3, uv, length, smoothstep, time, sin, float, color } from 'three/tsl';
 import type { QualitySettings } from '@/engine/renderer';
-import { makeQuality, fitCanvas } from '@/engine/renderer';
+import { makeQuality, fitCanvas, compileInParallel, canCompileInParallel } from '@/engine/renderer';
 import { isTouch } from '@/engine/device';
 import { TouchControls } from '@/ui/TouchControls';
 import { PostFX } from '@/engine/postfx';
@@ -372,12 +372,29 @@ export class Game {
     this.scene.traverse((o) => { if ((o as THREE.Mesh).isMesh || (o as THREE.Sprite).isSprite || (o as THREE.Points).isPoints || (o as THREE.Line).isLine) drawn.push(o); });
     const batches = 10, per = Math.ceil(drawn.length / batches);
     let warmMs = 0;
+    const tWarm = performance.now();
+    // First pass (WebGL with KHR_parallel_shader_compile): each batch builds its node graphs and
+    // starts its links in the background, so the driver links one batch while the next one builds;
+    // nothing waits on a link status until they're all in. ?serialwarm A/Bs the old single pass.
+    const parallel = canCompileInParallel(this.renderer) && !new URLSearchParams(location.search).has('serialwarm');
+    if (parallel) {
+      const linking: Promise<void>[] = [];
+      for (let i = 0; i < batches; i++) {
+        linking.push(compileInParallel(this.renderer, () => { warmMs += this.warmShaders(...drawn.slice(i * per, (i + 1) * per)); }));
+        this.ui.progress(0.8 + (0.1 * (i + 1)) / batches, 'Compiling shaders');
+        for (let f = 0; f < 2; f++) await new Promise((r) => requestAnimationFrame(r)); // a fresh frame for the scene pass
+      }
+      await Promise.all(linking);
+    }
+    // the real frames: everything drawn once through the post stack (anything the first pass didn't
+    // cover compiles here, as before)
+    const p0 = parallel ? 0.9 : 0.8;
     for (let i = 0; i < batches; i++) {
       warmMs += this.warmShaders(...drawn.slice(i * per, (i + 1) * per));
-      this.ui.progress(0.8 + (0.15 * (i + 1)) / batches, 'Compiling shaders');
+      this.ui.progress(p0 + ((0.95 - p0) * (i + 1)) / batches, 'Compiling shaders');
       for (let f = 0; f < 2; f++) await new Promise((r) => requestAnimationFrame(r)); // a fresh frame for the scene pass
     }
-    console.log(`[BunkerBusters] shader warm-up: ${drawn.length} objects in ${batches} frames, ${warmMs.toFixed(0)} ms`);
+    console.log(`[BunkerBusters] shader warm-up: ${drawn.length} objects in ${batches} frames, ${warmMs.toFixed(0)} ms (${(performance.now() - tWarm).toFixed(0)} ms wall${parallel ? ', parallel links' : ''})`);
     unstageMenuHands();
     menuHands.dispose();
     await step(0.95, 'Polishing neon');
