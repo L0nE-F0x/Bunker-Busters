@@ -93,7 +93,7 @@ export const OUTPOSTS: OutpostDef[] = [
   },
   {
     // Act II: Vesper's road to Apex Vault. Her alarm calls this crew to the apron (Game wires it).
-    id: 'apexgate', name: 'Apex Gatehouse', tier: 2, x: -332, z: -70, rot: 2.6, r: 16,
+    id: 'apexgate', name: 'Apex Gatehouse', tier: 2, x: -332, z: -70, rot: 0.25, r: 16,
     blurb: 'Kade guards Vesper\'s road. The sign says WELCOME, SEED MEMBERS. The guns say the rest.',
     crew: [
       { weapon: 'rifle', role: 'leader', at: [0, 5], yaw: 0 },
