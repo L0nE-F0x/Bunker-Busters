@@ -424,6 +424,7 @@ export class Settlement {
     const pick = (...xs: [boolean, string][]) => xs.find(([ok]) => ok)?.[1] ?? '';
     switch (who) {
       case 'nia': return pick(
+        [s.has('apex.complete'), ' The tap behind the diner coughed last night, ran brown, then clear. I cried into the soup. Don\'t tell anyone. Everyone saw.'],
         [s.has('q.chat.air'), ' Heard Dez read that founders\' chat on the band. "Water is the new water." I had to sit down. I\'m still sitting down.'],
         [s.has('q.song.band'), ' Somebody played Rosa\'s song on the radio at sunset. The whole street stopped. Sol pretended he had smoke in his eye.'],
         [ending === 'broadcast', ' I heard every name on the radio. My cousin\'s on page four. Paid in full. Got the tote bag.'],
@@ -436,6 +437,8 @@ export class Settlement {
         [this.slot('doc') === 'doc.cut', ' (He keeps his voice down. Wick is asleep, or pretending to be.) Night call. His lungs are better. His manners aren\'t.'],
         [this.slot('doc') === 'doc.fire', ' Evenings I come out to Sol\'s fire. It\'s cheaper than a waiting room and the patients are already sitting down.'],
         [this.slot('doc') === 'doc.diner', ' Breakfast. Nia insists. In writing.'],
+        [s.has('apex.complete'), ' Water from Apex. I tested it twice. It\'s just water. That\'s the best news I\'ve had in three years.'],
+        [s.has('q.ada.told'), ' The coast. Of course she went to the coast. She always wanted to be seen.'],
         [ending === 'broadcast', ' Half the names you read on the radio were my patients. I crossed them off, then I crossed them back on. They\'re alive. That should count.'],
         [ending === 'leverage', ' A ledger in an ammo tin. That\'s a prescription I understand.'],
         [ending === 'deal', ' Twenty jugs a week. Tell Mara to boil them. I don\'t trust water with a logo.'],
@@ -443,6 +446,8 @@ export class Settlement {
         [night, ' (He\'s in a cardigan. It\'s a doctor cardigan.)'],
       );
       case 'inez': return pick(
+        [s.has('apex.complete'), ' Water prices crashed overnight. I\'m ruined. I\'m delighted. Don\'t quote me on either.'],
+        [s.has('site.waitlist.done'), ' Everafter. I sold three people folding chairs for that line. Premium folding. I\'d like to stop thinking about it.'],
         [s.has('lore.lifeboat') && !s.has('q.chat.air'), ' Somebody\'s selling founder phones on the east band. I\'m not saying it was me. It wasn\'t. I wish it was.'],
         [ending === 'broadcast', ' Free advertising for every name on that list. Shame it was all bad press.'],
         [ending === 'leverage', ' Leverage. Finally, somebody at Last Chance understands commerce.'],
@@ -450,6 +455,7 @@ export class Settlement {
         [night, ' We\'re closed. Unless you\'re buying.'],
       );
       case 'sol': return pick(
+        [s.has('apex.complete'), ' The creek bed made a sound last night. Not water yet. The sound before water.'],
         [s.has('q.song.quiet'), ' (He\'s humming. He stops when he sees you, then starts again.)'],
         [s.has('q.song.band'), ' Heard it on the band at sunset, with the whole street. Thank you for that. I\'ll say it once.'],
         [ending === 'broadcast', ' Every name on the radio. Took you an hour. Took them three years to earn it.'],
@@ -457,6 +463,8 @@ export class Settlement {
         [night, ' Night\'s for listening.'],
       );
       case 'ren': return pick(
+        [s.has('apex.complete'), ' Count today: one Kade truck going west, empty. One cistern coming east, full. Best count I\'ve ever had.'],
+        [s.has('site.booster.done'), ' I watched that rocket come down, back then. Counted the pieces. Two. Kade said one.'],
         [ending === 'deal', ' Kade drone went over on Tuesday, toward Last Chance. Twenty jugs, they said. I counted nineteen. It\'s always nineteen.'],
         [ending === 'broadcast', ' I counted the names when Mara read them. Four hundred and six. I lost count at the senators.'],
         [ending === 'leverage', ' Watched the free-trial drone go over. It came with a survey. "How likely are you to recommend thirst?"'],
@@ -464,6 +472,7 @@ export class Settlement {
         [night, ' Night shift. The road\'s even emptier in the dark.'],
       );
       case 'wick': return pick(
+        [s.has('apex.complete'), ' The salt doesn\'t glow as much tonight. Maybe that was you. Don\'t let it go to your head.'],
         [s.has('lore.panopticon'), ' Something with a blue light flew over the ridge last night, slow, from the north. Like it was reading.'],
         [ending === 'broadcast', ' Heard you on the radio, reading names. Didn\'t hear mine. Good.'],
         [!!ending, ' Whatever you did with that ledger, the salt still glows at night. Do better next time.'],
@@ -500,6 +509,13 @@ export class Settlement {
         else this.away.add(id);
       }
     }
+  }
+
+  /** The clock jumped (fast travel, waiting): put everyone in their slot now, not in half a second. */
+  reroute() {
+    for (const c of this.crowds) c.reschedule();
+    this.routineT = 0;
+    this.followRoutines(0);
   }
 
   /** The routine slot someone is in right now ('' if none, or no slots). */
@@ -888,6 +904,11 @@ export class Settlement {
         }
         if (choice === 'creek' && s.set('creek.doc.permit')) s.addXP(XP_REWARDS.talk, 'Why the creek is dry');
         if (choice === 'crew') this.joinCrew('doc');
+        if (choice === 'everafter') s.set('doc.ada');
+        if ((choice === 'ada.told' || choice === 'ada.kind') && s.has('q.ada.found') && !s.has('q.ada.told') && !s.has('q.ada.kind')) {
+          if (choice === 'ada.told') s.removeItem('ada_letter', 1);
+          s.set(`q.${choice}`);
+        }
       },
     });
   }
@@ -912,6 +933,8 @@ export class Settlement {
           ...(s.has('q:nia.short') && !s.has('q.nia.who') ? [{ id: 'admit', label: 'Nia\'s missing water, Doc.', disabled: soc >= 2 ? undefined : this.needSocial(2, 'He won\'t confess to a stranger.'), next: 'admit' }] : []),
           { id: 'list', label: 'You knew Tanner\'s customers.', disabled: soc >= 2 ? (s.has('creek.doc.list') ? 'You have the list.' : undefined) : this.needSocial(2, 'He doesn\'t share patients with strangers.'), next: 'list' },
           { id: 'creek', label: 'What happened to the creek?', next: 'creek' },
+          ...(s.has('seen:waitlist') && !s.has('doc.ada') && !s.has('q.ada.found') ? [{ id: 'everafter', label: 'Ever hear of a place called Everafter?', next: 'everafter' }] : []),
+          ...(s.has('q.ada.found') && !s.has('q.ada.told') && !s.has('q.ada.kind') ? [{ id: 'ada', label: 'I found chair 2,212.', next: 'ada' }] : []),
           { id: 'pivot', label: 'Where were you, the afternoon of the Pivot?', next: 'pivot' },
           ...this.crewChoice('doc'),
           { id: 'bye', label: 'Take care, Doc.' },
@@ -920,6 +943,37 @@ export class Settlement {
     }
     if (id === 'pivot') {
       return this.pivotNode('Doc Ivers', 'Setting a broken wrist. The lights went, then the X-ray, then the patient\'s phone in the middle of a sentence. I set it by feel. He paid me in a chicken. The chicken is still the most reliable investor Dry Creek ever had.');
+    }
+    if (id === 'everafter') {
+      return {
+        speaker: 'Doc Ivers',
+        text: 'Everafter. My sister Ada queued for it. Number two thousand two hundred and twelve. She wrote every month for a year, from her camp chair, about the weather and the people either side of her. Then she stopped. If her chair\'s still in that line, I\'d like to know. If it isn\'t, I\'d like to know that more.',
+        choices: [{ id: 'ok', label: 'I\'ll find her chair.', next: 'hello' }],
+      };
+    }
+    if (id === 'ada') {
+      return {
+        speaker: 'Doc Ivers',
+        text: 'You found it. Her chair. (He doesn\'t take his eyes off your hands.) Was she in it?',
+        choices: [
+          { id: 'ada.told', label: 'She left the line, Doc. She wrote to you. Here.', next: 'adatold' },
+          { id: 'ada.kind', label: 'She got a seat inside. Everafter took her.', next: 'adakind' },
+        ],
+      };
+    }
+    if (id === 'adatold') {
+      return {
+        speaker: 'Doc Ivers',
+        text: '(He reads it standing up. Then again, sitting down.) The coast. A man with a tablet told her she\'d never have to wait again, and she believed him, because she\'d been waiting thirteen months. "Don\'t send the chicken." She remembered the chicken. Thank you. Go away for a bit.',
+        choices: [{ id: 'ok', label: 'I\'ll go away for a bit.' }],
+      };
+    }
+    if (id === 'adakind') {
+      return {
+        speaker: 'Doc Ivers',
+        text: 'Inside. Good. Good. Climate-stable suites, the posters said. She always ran cold. (He writes 2,212 on the wall behind the desk, and SEATED under it.) Thank you. That\'s a weight.',
+        choices: [{ id: 'ok', label: 'It is.' }],
+      };
     }
     if (id === 'kit') {
       return {

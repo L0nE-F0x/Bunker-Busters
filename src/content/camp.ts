@@ -25,6 +25,27 @@ export interface CampView {
  */
 export interface Rumour { id: string; text: string; intel?: string; op?: string; when?: (v: CampView) => boolean }
 export const RUMOURS: Rumour[] = [
+  // ---- the new road: the Longshot, Waitlist City, Photon Park, Apex, and what's past it
+  {
+    id: 'longshot', when: (v) => !v.has('site.booster.done'),
+    text: 'Kade\'s reusable rocket came down out past the drive-in, north-east, in two pieces, which I\'m told is one more piece than it was built in. Something in the crew pod still has a recorder running. Kids say you can hear it count down if you put your ear to the hull.',
+  },
+  {
+    id: 'waitlist', when: (v) => !v.has('site.waitlist.done'),
+    text: 'Waitlist City, in the basin south-east past the Tube. Four thousand people queued for a bunker called Everafter. The sign over the door still says now serving number one. Somebody up there still keeps a fire, and the line still moves. Backwards.',
+  },
+  {
+    id: 'solar', when: (v) => !v.has('site.solar.cut'),
+    text: 'Photon Park, south of here, east of the jet. Seven rows of glass and four robots wiping them for a customer who stopped paying. The robots don\'t know. Somebody on the east band says that farm is what keeps Everafter\'s door shut. Cut one, the other lets go.',
+  },
+  {
+    id: 'apex', when: (v) => v.has('debriefed') && !v.has('apex.complete'),
+    text: 'Camps on the salt road say Apex has a hangar door you could fly a city through, and an airlock that changes its code on a schedule. Vesper reads the schedule out on her feed, because she thinks nobody listens to her feed. I listen to her feed.',
+  },
+  {
+    id: 'panopticon', when: (v) => v.has('q:act2:done') || v.has('apex.complete'),
+    text: 'The band\'s gone strange since the cistern turned. There\'s a carrier from the old coast, north of the salt, that reads out camp names, all of ours, in order, before anybody says them. Mara wants to know who\'s keeping the list. I think we know who keeps lists.',
+  },
   // ---- the places themselves (a Kade outpost goes on the map when the band names it)
   {
     id: 'rp7', op: 'rp7', when: (v) => !v.has('seen:rp7'),
@@ -217,7 +238,9 @@ export const CAMP: CampMember[] = [
         start: 'Name\'s Hollis. I keep the sign lit. Thirty years of driving, and the only thing I ever owned outright is that neon. Off you go. The road doesn\'t get shorter by looking at it.',
         job: 'The Garage is up the spur. I drove past it once, before. He had a banner out front: DISRUPTING DOOMSDAY. He spelled "doomsday" wrong.',
         back: 'You\'ve got the walk of somebody carrying water. Best walk there is. Go tell Mara before Pip counts it twice.',
-        after: v.has('act1.broadcast')
+        after: v.has('apex.complete')
+          ? 'Water coming east from Apex. First time in three years that sign\'s been lighting the way to something worth finding.'
+          : v.has('act1.broadcast')
           ? 'Two weeks of water and every camp on the band angry at the same woman. I\'ve driven on worse fuel. The sign stays on.'
           : v.has('act1.leverage')
             ? 'Mara checks the ammo tin every morning like it\'s an engine. The sign stays on. Free trial or not.'
@@ -309,7 +332,9 @@ export const CAMP: CampMember[] = [
         start: 'I\'m Pip. I do the ledger. Three days of water, two if Hollis keeps washing his face. Bring some back and I\'ll write you in the good column.',
         job: 'Did you find his water yet? I left a line in the ledger for it. It\'s empty. It looks at me.',
         back: 'Is that the cistern water? Is it clean? How many? Don\'t answer, I\'m counting.',
-        after: v.has('act1.deal')
+        after: v.has('apex.complete')
+          ? 'The ledger has a new column. It\'s called ENOUGH. It has one line in it so far. I\'m being careful with it.'
+          : v.has('act1.deal')
           ? 'Her jugs came on time. I wrote them in pencil. Mara says pencil is for things you don\'t trust.'
           : v.has('act1.leverage')
             ? 'The ledger\'s in the ammo tin now, under the radio. I made a copy. Mara doesn\'t know. Now you know. Don\'t tell her.'
@@ -502,7 +527,9 @@ export const CAMP: CampMember[] = [
         start: 'Dez. Radio. Don\'t touch the karaoke machine, it\'s load-bearing. And don\'t say anything on the band you wouldn\'t say to Vesper Kade\'s face.',
         job: 'SeedBot\'s firmware pings every ninety seconds like it\'s asking to be loved. Bring me its battery and I\'ll make you something mean.',
         back: 'Somebody is going to hear about this on the band. I\'d bet a cell it\'s someone we didn\'t invite.',
-        after: v.has('q.chat.air')
+        after: v.has('apex.complete')
+          ? 'Vesper\'s feed says she\'s pivoting. I recorded it. All of it. I\'m going to play it back to her at the trial. That was Pip\'s idea, and it\'s the best one anyone\'s had.'
+          : v.has('q.chat.air')
           ? 'Vesper hasn\'t said a word on the band since I read the chat. I can hear her not saying it. It\'s my favourite song.'
           : 'Told you she listens. Nobody ever believes the radio guy until the radio guy is right.',
       };

@@ -479,6 +479,11 @@ export class Landmarks {
     this.campNear.add(this.campCrowd.mesh);
   }
 
+  /** The clock jumped (fast travel): the camp's routine seats follow at once. */
+  reroute() {
+    this.campCrowd?.reschedule();
+  }
+
   /** A camp-space point in world space, `y` metres above the ground there (menu cameras). */
   campPoint(x: number, y: number, z: number, out = new THREE.Vector3()) {
     const f = this.campFrame;
