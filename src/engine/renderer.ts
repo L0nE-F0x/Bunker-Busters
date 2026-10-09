@@ -1,4 +1,5 @@
 import * as THREE from 'three/webgpu';
+import { int, textureSize } from 'three/tsl';
 import { isMobile } from './device';
 
 export type QualityLevel = 'low' | 'medium' | 'high' | 'ultra';
@@ -148,14 +149,15 @@ function coalesceUniformUploads(renderer: THREE.WebGPURenderer) {
 }
 
 /**
- * WebGL2: no per-draw flip-Y uniform for textures that can never be flipped. On WebGL three gives
- * every texture sample a `flipY` uniform (true only for render targets, depth textures and flipped
+ * WebGL2: no per-draw flip-Y uniform where the answer is settled. On WebGL three gives every
+ * texture sample a `flipY` uniform (true for render targets, depth textures and flipped
  * ImageBitmaps) and a per-object update that refreshes it, and the texture's UV matrix, on every
- * draw: ~2,800 calls and as many uniform compares a frame here, all of them `false`, plus a
- * select in the shader. A texture sampled from a plain image, canvas or data array is settled when
- * its material is built (models and canvases load before the warm-up), so its sample is built
- * without the select, the node never updates, and its object uniforms shrink. Anything else
- * (render targets, depth, flipped ImageBitmaps, a texture without an image yet) keeps three's path.
+ * draw: ~2,700 calls and as many uniform compares a frame at Dry Creek (the shadow map's PCF taps
+ * and the PMREM's in every lit material, mostly), plus a select in the shader. A render target or
+ * depth texture is always flipped and a plain image, canvas or data array never is, which is known
+ * when the material is built (models and canvases load before the warm-up): those samples are built
+ * with the flip baked in, the node never updates and its object uniforms shrink. Anything else
+ * (flipped ImageBitmaps, a plain texture without an image yet) keeps three's path.
  * Also: a node that doesn't use the UV matrix no longer recomputes it (sin/cos) on every draw.
  */
 function settleTextureFlips() {
@@ -165,14 +167,33 @@ function settleTextureFlips() {
   const setupUV = TN.setupUV;
   const hasBitmap = typeof ImageBitmap !== 'undefined';
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  TN.setupUV = function (builder: any, uvNode: unknown) {
-    const t = this.value as THREE.Texture | null;
-    const img = t?.image as unknown;
-    const fixed = !!t && t.isTexture && img != null && !(t as THREE.Texture & { isRenderTargetTexture?: boolean }).isRenderTargetTexture
-      && !(t as THREE.Texture & { isFramebufferTexture?: boolean }).isFramebufferTexture && !(t as THREE.DepthTexture).isDepthTexture
-      && !(hasBitmap && img instanceof ImageBitmap && t.flipY === true) && !(t as THREE.CubeTexture).isCubeTexture;
-    if (fixed && this._flipYUniform === null && builder.isFlipY?.()) return uvNode;
+  TN.setupUV = function (builder: any, uvNode: any) {
+    if (this._flipYUniform !== null || !builder.isFlipY?.()) return setupUV.call(this, builder, uvNode);
+    const t = this.value as (THREE.Texture & { isRenderTargetTexture?: boolean; isFramebufferTexture?: boolean; isDepthTexture?: boolean }) | null;
+    if (!t || !t.isTexture || (t as unknown as THREE.CubeTexture).isCubeTexture) return setupUV.call(this, builder, uvNode);
+    const img = t.image as unknown;
+    // render targets and depth (the post stack, the shadow map, the PMREM): always flipped. Their
+    // nodes only ever swap one target for another (PMREM's placeholder is marked a target too).
+    if (t.isRenderTargetTexture || t.isFramebufferTexture || t.isDepthTexture) {
+      const v = uvNode.toVar();
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      return this.sampler ? v.flipY() : v.setY(int((textureSize(this, this.levelNode) as any).y).sub(v.y).sub(1));
+    }
+    // plain images, canvases and data: never flipped (an unflipped ImageBitmap included)
+    if (img != null && !(hasBitmap && img instanceof ImageBitmap && t.flipY === true)) return uvNode;
     return setupUV.call(this, builder, uvNode);
+  };
+  // the UV matrix only changes with offset/repeat/rotation/center, and almost none ever move: skip
+  // the sin/cos rebuild while they're unchanged
+  const TX = THREE.Texture.prototype as THREE.Texture & { updateMatrix(): void };
+  const updateMatrix = TX.updateMatrix;
+  TX.updateMatrix = function (this: THREE.Texture & { _uvKey?: Float64Array }) {
+    const o = this.offset, r = this.repeat, c = this.center;
+    let k = this._uvKey;
+    if (k && k[0] === o.x && k[1] === o.y && k[2] === r.x && k[3] === r.y && k[4] === this.rotation && k[5] === c.x && k[6] === c.y) return;
+    k ??= this._uvKey = new Float64Array(7);
+    k[0] = o.x; k[1] = o.y; k[2] = r.x; k[3] = r.y; k[4] = this.rotation; k[5] = c.x; k[6] = c.y;
+    updateMatrix.call(this);
   };
   TN.update = function () {
     const texture = this.value;
