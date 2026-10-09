@@ -372,8 +372,9 @@ class MapView {
     const x0 = this.sx(-S / 2), y0 = this.sy(-S / 2), span = S * this.zoom;
     ctx.imageSmoothingEnabled = true;
     ctx.imageSmoothingQuality = 'high';
-    ctx.drawImage(data.chart, x0, y0, span, span);
-    ctx.drawImage(veil(data), x0, y0, span, span);
+    // only the visible part of each sheet (a CPU canvas, as in WebKitGTK, pays for what it samples)
+    this.blit(data.chart, x0, y0, span);
+    this.blit(veil(data), x0, y0, span);
     // the sheet's edge
     ctx.strokeStyle = 'rgba(255, 179, 71, 0.45)';
     ctx.lineWidth = 1;
@@ -384,6 +385,15 @@ class MapView {
     this.drawPlayer();
     this.scaleBar();
     this.northArrow();
+  }
+
+  /** Draw the part of a square image covering the sheet (x0, y0, span) that lands inside the view. */
+  private blit(img: HTMLCanvasElement, x0: number, y0: number, span: number) {
+    const k = img.width / span;
+    const sx0 = Math.max(0, -x0 * k), sy0 = Math.max(0, -y0 * k);
+    const sx1 = Math.min(img.width, (this.w - x0) * k), sy1 = Math.min(img.height, (this.h - y0) * k);
+    if (sx1 <= sx0 || sy1 <= sy0) return;
+    this.ctx.drawImage(img, sx0, sy0, sx1 - sx0, sy1 - sy0, x0 + sx0 / k, y0 + sy0 / k, (sx1 - sx0) / k, (sy1 - sy0) / k);
   }
 
   private gridLabels(x0: number, y0: number, span: number) {
