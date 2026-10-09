@@ -10,7 +10,8 @@
 // per frame (--gl: every WebGL2 method is counted, which itself costs, so timings are then inflated),
 // JS heap growth per frame (positive deltas only, --enable-precise-memory-info), programs compiled.
 // --shots <dir> saves a screenshot per spot (A/B the look of a change at the same views).
-// Spots: camp (night, fire), creek (Dry Creek noon), highway (noon), garage (inside), fight, wolves.
+// Spots: camp (night, fire), creek (Dry Creek noon), highway (noon), garage (inside), fight, wolves,
+// wellhead / wellheadNight (from Dry Creek, ~150 m from the Kade Wellhead outpost).
 import fs from 'node:fs';
 import path from 'node:path';
 import { launch, waitForGame } from './browser.mjs';
@@ -37,6 +38,8 @@ const SPOTS = {
     game.cam.snap(Math.atan2(at.x - f.x, at.z - f.z), -0.08); }`,
   creek: `{ tp(-262 + 30, -48 + 40); game.atmo.hour = 12; await next();
     game.cam.snap(Math.atan2(30, 40), -0.05); }`,
+  wellhead: `{ tp(-250, -10); game.atmo.hour = 12; await next(); game.cam.snap(Math.atan2(-10, 150), 0.0); }`,
+  wellheadNight: `{ tp(-250, -10); game.atmo.hour = 22; await next(); game.cam.snap(Math.atan2(-10, 150), 0.0); }`,
   highway: `{ tp(22, 100); game.atmo.hour = 12.5; await next();
     game.cam.snap(Math.PI * 0.5, -0.03); }`,
   garage: `{ const p = game.garage.b.points.interior.clone(); p.y -= 0.9; game.player.teleport(p); game.atmo.hour = 12; await next();
