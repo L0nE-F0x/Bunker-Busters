@@ -240,6 +240,7 @@ class Body {
   private static _q = new THREE.Quaternion();
   private static _e = new THREE.Euler(0, 0, 0, 'YXZ');
   private static _one = new THREE.Vector3(1, 1, 1);
+  private static _nm = new THREE.Matrix3();
   /** Set part `i`'s local rotation (pivot fixed). */
   pose(i: number, rx = 0, ry = 0, rz = 0, offset?: THREE.Vector3) {
     const p = this.rig.parts[i].pivot;
@@ -280,7 +281,7 @@ class Body {
     this.wasVisible = true;
     const parts = this.rig.parts;
     let v = this.v0;
-    const nm = new THREE.Matrix3();
+    const nm = Body._nm;
     for (let k = 0; k < parts.length; k++) {
       const part = parts[k];
       const w = this.world[k];
@@ -296,7 +297,8 @@ class Body {
         P[v * 3 + 2] = e[2] * x + e[6] * y + e[10] * z + e[14];
         const a = nrm[i], b = nrm[i + 1], c = nrm[i + 2];
         let nx = n[0] * a + n[3] * b + n[6] * c, ny = n[1] * a + n[4] * b + n[7] * c, nz = n[2] * a + n[5] * b + n[8] * c;
-        const l = Math.hypot(nx, ny, nz) || 1;
+        // (sqrt, not Math.hypot: hypot boxed every double here, ~110 KB of garbage a frame)
+        const l = Math.sqrt(nx * nx + ny * ny + nz * nz) || 1;
         nx /= l; ny /= l; nz /= l;
         N[v * 3] = nx; N[v * 3 + 1] = ny; N[v * 3 + 2] = nz;
       }
