@@ -429,7 +429,7 @@ export class DriveInSite extends Site {
     for (let i = 0; i < 6; i++) b.add(k.dark, box(0.55, 0.02, 0.02, gx + 0.4, 0.4 + i * 0.09, gz - 0.455));
     b.add(k.dark, cyl(0.06, 0.06, 0.7, gx + 0.6, 1.45, gz + 0.2, 6));
     this.genLed.add(b, box(0.05, 0.05, 0.02, gx - 0.55, 0.85, gz - 0.465));
-    this.kit.halos.add(this.frame.p(gx - 0.55, 0.85, gz - 0.5), '#ff3a2a', 0.22, 1, 1.5);
+    this.kit.halos.add(new THREE.Vector3(gx - 0.55, 0.85, gz - 0.5), '#ff3a2a', 0.22, 1, 1.5); // site-local: the halos live under the site's root
     b.add(k.dark, box(0.08, 0.08, 1.3, gx - 0.6, 0.9, gz - 1.1), box(0.08, 2.4, 0.08, gx - 0.6, 2.1, z1 + 0.06));
     b.add(k.red, box(0.25, 0.35, 0.18, gx - 1.4, 0.2, gz + 0.3, 0.5));
     this.kit.col(gx, 0.6, gz, 0.82, 0.6, 0.47);
@@ -488,7 +488,7 @@ export class DriveInSite extends Site {
       const a0 = a, rr = kk * (1 - t2) + (kk === 0.75 ? 1.8 : 0.75) * t2;
       const p = v3(mx + 2.4 + Math.cos(a0 + 0.15) * rr * 0.92, my + 10.6 + Math.sin(a0 + 0.15) * rr * 0.92, mz);
       for (const zz of [0.14, -0.14]) this.bulbs[i % 3].add(b, cyl(0.06, 0.06, 0.04, p.x, p.y, p.z + zz, 8, Math.PI / 2));
-      if (i % 3 === 0) this.kit.halos.add(this.frame.p(p.x, p.y, p.z + 0.2), '#ffd38a', 0.5, 2 + (i % 3), 1.5);
+      if (i % 3 === 0) this.kit.halos.add(new THREE.Vector3(p.x, p.y, p.z + 0.2), '#ffd38a', 0.5, 2 + (i % 3), 1.5);
     }
     // letters that fell off, at the foot of the posts
     for (let i = 0; i < 3; i++) this.kit.d.add(decalMat(), floorDecal('letters', 1.2, 0.3, mx - 1 + i * 1.3, my + 0.03, mz + 1.3 + i * 0.4, 0.3 * i));

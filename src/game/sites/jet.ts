@@ -560,7 +560,7 @@ export class JetSite extends Site {
     sec.add(k.dark, box(0.14, 0.05, 0.26, cx - 0.08, FY + 0.845, 1.1));
     sec.add(k.dark, box(0.07, 0.05, 0.24, cx - 0.08, FY + 0.89, 1.1, 0, 0, 0.1));
     sec.glow(this.phoneLed, box(0.02, 0.012, 0.02, cx - 0.13, FY + 0.88, 1.0));
-    this.kit.halos.add(this.world(sec.p(cx - 0.14, FY + 0.89, 1.0)), '#3dff8a', 0.18, 0, 1.4);
+    this.kit.halos.add(sec.p(cx - 0.14, FY + 0.89, 1.0), '#3dff8a', 0.18, 0, 1.4); // site-local: the halos live under the site's root
     // the TIME mockup, leaning on the wall
     sec.add(k.gold, box(0.04, 0.5, 0.4, cx + 0.12, FY + 1.07, 1.75, 0, 0, -0.18));
     sec.dec('photo', 0.34, 0.43, cx + 0.095, FY + 1.07, 1.75, 0, -Math.PI / 2, -0.18);
@@ -701,7 +701,7 @@ export class JetSite extends Site {
     }
     sec.add(k.dark, box(0.22, 0.12, 0.4, 0, 5.82, 9.6));
     sec.glow(this.strobe, xf(new THREE.SphereGeometry(0.09, 10, 8), mat4(0, 5.95, 9.65)));
-    this.kit.halos.add(this.world(sec.p(0, 5.95, 9.65)), '#ff2a1a', 2.4, this.strobeCh, 3);
+    this.kit.halos.add(sec.p(0, 5.95, 9.65), '#ff2a1a', 2.4, this.strobeCh, 3);
     sec.col(0, 3.4, 7.2, 0.18, 2.2, 2.0, 0.55, 0, 0);
     // rear engine (left) on its pylon; the right pylon is a torn stub
     const eng = this.engineGeo();
