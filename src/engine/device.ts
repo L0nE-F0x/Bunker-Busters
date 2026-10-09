@@ -14,6 +14,9 @@ export const isMobile = q === '1' || (q !== '0' && mobileUA);
 /** iPhone Safari has no element fullscreen; there it takes "Add to Home Screen". */
 export const isIOS = /iPhone|iPad|iPod/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1);
 
+/** A WebKit engine (the Linux desktop app's WebKitGTK, Safari), not Chromium wearing its UA. */
+export const isWebKit = /AppleWebKit/.test(ua) && !/Chrome|Chromium|Android|Edg\//.test(ua);
+
 if (isTouch) document.documentElement.classList.add('touch');
 
 /* eslint-disable @typescript-eslint/no-explicit-any */

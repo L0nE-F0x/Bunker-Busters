@@ -2,7 +2,7 @@ import * as THREE from 'three/webgpu';
 import { Fn, vec4, vec3, uv, length, smoothstep, time, sin, float, color } from 'three/tsl';
 import type { QualitySettings } from '@/engine/renderer';
 import { makeQuality, fitCanvas, compileInParallel, canCompileInParallel } from '@/engine/renderer';
-import { isTouch } from '@/engine/device';
+import { isTouch, isWebKit } from '@/engine/device';
 import { TouchControls } from '@/ui/TouchControls';
 import { PostFX } from '@/engine/postfx';
 import { Physics } from '@/engine/physics';
@@ -375,8 +375,11 @@ export class Game {
     const tWarm = performance.now();
     // First pass (WebGL with KHR_parallel_shader_compile): each batch builds its node graphs and
     // starts its links in the background, so the driver links one batch while the next one builds;
-    // nothing waits on a link status until they're all in. ?serialwarm A/Bs the old single pass.
-    const parallel = canCompileInParallel(this.renderer) && !new URLSearchParams(location.search).has('serialwarm');
+    // nothing waits on a link status until they're all in. Chromium links in parallel for real
+    // (headless: 10.1 -> 6.7 s); WebKitGTK doesn't, and the second pass only cost it (13-20 s ->
+    // 15-33 s in the desktop app), so it keeps the single pass. ?serialwarm / ?parallelwarm A/B it.
+    const qw = new URLSearchParams(location.search);
+    const parallel = canCompileInParallel(this.renderer) && !qw.has('serialwarm') && (!isWebKit || qw.has('parallelwarm'));
     if (parallel) {
       const linking: Promise<void>[] = [];
       for (let i = 0; i < batches; i++) {
