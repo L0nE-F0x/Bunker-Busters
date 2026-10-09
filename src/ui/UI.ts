@@ -1,7 +1,7 @@
 import './styles.css';
 import { ICONS, EYE_ICON } from './icons';
 import type { Vector3 } from 'three/webgpu';
-import { ITEMS, HOTBAR_ITEMS, itemStatus } from '@/content/items';
+import { ITEMS, HOTBAR_ITEMS, itemStatus, USE_LABEL } from '@/content/items';
 import { openTill, type TillOpts } from './Trader';
 import { SKILLS, SKILL_ORDER, focusesFor, capstonesFor } from '@/content/skills';
 import { ARCHETYPES } from '@/content/archetypes';
@@ -707,7 +707,7 @@ export class UI implements UIBridge {
                   <div class="cat">${sel.category}</div><h4>${esc(sel.name)}</h4>
                   <p>${esc(sel.description)}</p>${itemStatus(sel.id, s) ? `<p class="gear-status">${esc(itemStatus(sel.id, s))}</p>` : ''}${sel.flavor ? `<p class="flavor">${esc(sel.flavor)}</p>` : ''}
                   <div class="stats"><span>WT ${sel.weight}kg</span><span>VALUE ${sel.value}</span><span>×${s.count(sel.id)}</span></div>
-                  <div class="rowbtns">${sel.usable ? `<button class="btn use">${sel.id === 'sol_roll' ? 'Unroll (5 picks)' : 'Use'}</button>` : ''}<button class="btn drop">Drop 1</button><button class="btn drop-all">Drop stack</button></div>` : '<p>Empty pockets. The camp can fix that, or the highway can.</p>'}
+                  <div class="rowbtns">${sel.usable ? `<button class="btn use">${USE_LABEL[sel.id] ?? 'Use'}</button>` : ''}<button class="btn drop">Drop 1</button><button class="btn drop-all">Drop stack</button></div>` : '<p>Empty pockets. The camp can fix that, or the highway can.</p>'}
                 </div>
                 <div class="kit-build">
                   <div class="label">Build · ${d.skillPoints} point${d.skillPoints === 1 ? '' : 's'} to spend</div>

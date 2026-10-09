@@ -268,7 +268,7 @@ export class PlayerArms {
     this.combat.debris.emit('smoke', muzzle, w.suppressed ? 1 : 2, _fwd.clone().multiplyScalar(1.5), 0.3, w.suppressed ? 0.05 : 0.1, undefined, 0.5);
     if (w.suppressed) this.audio.combat?.suppressedShot();
     else this.audio.combat?.gunshot(id as 'revolver' | 'shotgun' | 'rifle');
-    if (w.magFed) { this.eject(0); if (this.mag(id) === 0) this.hands.arms.slideLock(true); }
+    if (w.magFed && w.id === 'pistol22') { this.eject(0); if (this.mag(id) === 0) this.hands.arms.slideLock(true); }
     if (id === 'shotgun') setTimeout(() => { this.audio.combat?.foley('pumpBack'); this.eject(1); setTimeout(() => this.audio.combat?.foley('pumpFwd'), 170); }, 230);
     if (id === 'rifle') setTimeout(() => { this.audio.combat?.foley('leverOpen'); this.eject(0); setTimeout(() => this.audio.combat?.foley('leverClose'), 210); }, 190);
     if (id !== 'revolver') this.audio.combat?.foley('casing', w.suppressed ? 0.5 : 0.8);
@@ -396,13 +396,13 @@ export class PlayerArms {
     }
     this.autoReloadT = -1;
     const k = this.reloadSpeed();
-    if (w.magFed && this.mag(w.id) > 0) this.hands.arms.slideLock(false);
+    if (w.id === 'pistol22' && this.mag(w.id) > 0) this.hands.arms.slideLock(false);
     // the revolver's empties drop out of the open cylinder
     const spent = w.id === 'revolver' ? w.mag - this.mag(w.id) : 0;
     if (spent > 0) setTimeout(() => { for (let i = 0; i < spent; i++) this.eject(0, true); this.audio.combat?.foley('casing', 0.7); }, w.reload.open * k * 700);
     this.reload = { phase: 'open', t: 0, dur: w.reload.open * k, stop: false };
     this.hands.arms.reloadOpen(w.reload.open * k);
-    this.audio.combat?.foley(w.magFed ? 'magOut' : w.id === 'revolver' ? 'cylOpen' : w.id === 'rifle' ? 'gate' : 'shell', 0.6);
+    this.audio.combat?.foley(w.id === 'pistol22' ? 'magOut' : w.id === 'revolver' ? 'cylOpen' : w.id === 'rifle' ? 'gate' : 'shell', 0.6);
     this.wasEmpty = this.mag(w.id) === 0;
   }
 
@@ -420,7 +420,7 @@ export class PlayerArms {
         const n = Math.min(w.mag - this.mag(w.id), this.reserve(w.id));
         if (n > 0 && this.state.removeItem(w.ammo!, n)) {
           this.setMag(w.id, this.mag(w.id) + n);
-          this.audio.combat?.foley('magIn');
+          this.audio.combat?.foley(w.id === 'pistol22' ? 'magIn' : 'round');
         }
         r.stop = true;
       } else if (r.phase === 'load') {
@@ -437,7 +437,7 @@ export class PlayerArms {
       } else {
         this.reload = { phase: 'close', t: 0, dur: w.reload.close * k, stop: false };
         this.hands.arms.reloadClose(w.reload.close * k);
-        if (w.magFed) { if (this.wasEmpty) this.audio.combat?.foley('slide', 0.8); }
+        if (w.id === 'pistol22') { if (this.wasEmpty) this.audio.combat?.foley('slide', 0.8); }
         else this.audio.combat?.foley(w.id === 'revolver' ? 'cylClose' : w.id === 'shotgun' ? 'pumpFwd' : 'leverClose', 0.8);
       }
     } else {

@@ -223,6 +223,15 @@ RECIPES.push(
     mod: 'scope',
   },
   {
+    id: 'mod_speed',
+    group: 'Weapon mods',
+    name: 'A speedloader for the .38',
+    detail: '1 sleep ring + 2 scrap → load all six at once',
+    out: { id: 'revolver', qty: 0 },
+    need: [{ id: 'smart_ring', qty: 1 }, { id: 'scrap', qty: 2 }],
+    mod: 'speed',
+  },
+  {
     id: 'mod_choke',
     group: 'Weapon mods',
     name: 'Choke the Pump Twelve',

@@ -87,10 +87,11 @@ export const WEAPON_ORDER: WeaponId[] = ['crowbar', 'pistol22', 'revolver', 'sho
  * Camp-fitted weapon mods (overnight swarm 2). A flag in the save (`mod.<weapon>.<id>`) once fitted;
  * `modded()` folds them into the weapon's numbers, the viewmodel shows the part (Arms.setMods).
  */
-export type ModId = 'scope' | 'choke';
+export type ModId = 'scope' | 'choke' | 'speed';
 export const MODS: Record<ModId, { weapon: WeaponId; name: string; flag: string; blurb: string }> = {
   scope: { weapon: 'rifle', name: 'Survey scope', flag: 'mod.rifle.scope', blurb: 'Half a pair of binoculars on rings: 4× through a real reticle, tighter aimed shots.' },
   choke: { weapon: 'shotgun', name: 'Full choke', flag: 'mod.shotgun.choke', blurb: 'A tube in the muzzle: a tighter pattern that still bites at fifteen metres.' },
+  speed: { weapon: 'revolver', name: 'Speedloader', flag: 'mod.revolver.speed', blurb: 'Six in the cylinder in one push instead of one at a time.' },
 };
 
 /** Why a mod can't be fitted right now (or undefined). */
@@ -112,6 +113,8 @@ export function modded(w: WeaponDef, has: (flag: string) => boolean): WeaponDef 
   if (d) return d;
   d = { ...w, recoil: { ...w.recoil } };
   if (key.includes('scope')) { d.adsFov = 13; d.adsSpread = w.adsSpread * 0.5; d.draw = w.draw * 1.15; }
+  // all six at once (the whole reload is one load cycle, a little longer than a single round)
+  if (key.includes('speed')) { d.magFed = true; d.reload = { ...w.reload, per: 0.55 }; }
   if (key.includes('choke')) { d.hipSpread = w.hipSpread * 0.78; d.adsSpread = w.adsSpread * 0.66; d.range = w.range + 5; d.maxRange = w.maxRange + 8; }
   _modCache.set(key, d);
   return d;

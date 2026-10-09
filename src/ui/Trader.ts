@@ -1,5 +1,5 @@
 import { ITEMS, canteenSips, CANTEEN_SIPS } from '@/content/items';
-import { TILL_STOCK, rollStock, sellable, sellPrice, buyPrice } from '@/content/trade';
+import { TILL_STOCK, TILL_QUIPS, rollStock, sellable, sellPrice, buyPrice } from '@/content/trade';
 import type { GameState } from '@/game/State';
 import { ICONS } from './icons';
 
@@ -139,12 +139,12 @@ export function openTill(host: TillHost, s: GameState, opts: TillOpts): Promise<
       };
       panel.querySelectorAll<HTMLButtonElement>('.till-buy').forEach((b) => (b.onclick = () => {
         const id = b.dataset.id!;
-        act(b.dataset.key!, () => tillBuy(s, id, opts.markup), `${ITEMS[id].name}. She wraps it in yesterday's news.`);
+        act(b.dataset.key!, () => tillBuy(s, id, opts.markup), TILL_QUIPS[id]?.buy ?? `${ITEMS[id].name}. She wraps it in yesterday's news.`);
       }));
       panel.querySelectorAll<HTMLButtonElement>('.till-sell').forEach((b) => (b.onclick = () => {
         const id = b.dataset.id!;
         const n = Number(b.dataset.n) || 1;
-        act(b.dataset.key!, () => tillSell(s, id, n, opts.offer), n > 1 ? `${ITEMS[id].name} ×${n}. Onto the slate, in pencil.` : `${ITEMS[id].name}. Onto the slate.`);
+        act(b.dataset.key!, () => tillSell(s, id, n, opts.offer), TILL_QUIPS[id]?.sell ?? (n > 1 ? `${ITEMS[id].name} ×${n}. Onto the slate, in pencil.` : `${ITEMS[id].name}. Onto the slate.`));
       }));
       const sv = panel.querySelector<HTMLButtonElement>('.till-salvage');
       if (sv) sv.onclick = () => act('salvage', () => {

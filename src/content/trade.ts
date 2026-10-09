@@ -39,6 +39,32 @@ export const TILL_LINES = {
   town: 'Town prices. The town voted. I counted the votes. Funny how that works.',
 };
 
+/** What Inez says when a particular thing crosses the counter (sold to her: `sell`, bought: `buy`). */
+export const TILL_QUIPS: Record<string, { sell?: string; buy?: string }> = {
+  gpu: { sell: 'She holds it up to the light. "It agrees with me already."' },
+  nft_drive: { sell: '"Monkeys. Again." She pays you a bean. She has a jar of beans for this.' },
+  mug: { sell: '"Move fast." She puts it on the shelf very, very slowly.' },
+  hoodie: { sell: '"Seed stage." She folds it like a flag at a funeral.' },
+  visor: { sell: 'She looks through it at you. "No. Still you."' },
+  smart_ring: { sell: '"It says I slept badly." She drops it in the jar with the others.' },
+  asic: { sell: 'She weighs it in both hands. "It paid for itself. On a chart."' },
+  speaker_badge: { sell: '"Disrupting the Apocalypse." She files it under fiction.' },
+  seed_plate: { sell: 'She reads all twenty-four words, out loud, slowly, as if one of them might be water.' },
+  smart_lock: { sell: '"The most secure object on Earth." She uses it as a paperweight.' },
+  kombucha: { sell: '"It\'s still alive." She sets it apart from the other bottles. For their sake.' },
+  mezcal: { sell: '"Four hundred dollars." She sniffs it. "Fuel."' },
+  fleece: { sell: 'She checks the fund\'s logo. "Liquidated. Like everyone who wore it."' },
+  scooter_cell: { sell: '"Please park responsibly." She parks it under the counter.' },
+  kade_badge: { sell: 'She turns the photo face down. "They smile at you otherwise."' },
+  exit_pass: { sell: '"Seat 1A." She tucks it in the till. "Somebody\'ll want a seat."' },
+  pistol22: { buy: '"Quiet one." She wipes it down. "Don\'t tell me what for."' },
+  binoculars: { buy: '"Survey issue. Kade wants those back." She smiles. "Kade can ask."' },
+  vest: { buy: '"One size fits most stakeholders." She holds it against you. "You\'re a stakeholder."' },
+  molotov: { buy: 'She wraps it in yesterday\'s news and does not light anything.' },
+  nootropics: { buy: '"Founder Focus." She shakes the bottle. "Rattles like a pitch."' },
+  canteen: { buy: '"It used to glow." She sounds a little sad about it.' },
+};
+
 /** Things she won't take: the town's own paper, your story, and anything nobody could price. */
 export function sellable(id: string) {
   const d = ITEMS[id];

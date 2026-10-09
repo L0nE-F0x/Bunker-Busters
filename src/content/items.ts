@@ -274,6 +274,11 @@ const defs: ItemDef[] = [
 
 export const ITEMS: Record<string, ItemDef> = Object.fromEntries(defs.map((d) => [d.id, d]));
 export const HOTBAR_ITEMS = ['emp', 'ration', 'water', 'medkit'];
+/** The Kit's button for items whose "Use" is really something else. */
+export const USE_LABEL: Record<string, string> = {
+  sol_roll: 'Unroll (5 picks)', binoculars: 'Raise', molotov: 'Throw', emp: 'Throw', noisemaker: 'Throw',
+  canteen: 'Drink', water: 'Drink', kombucha: 'Drink', ration: 'Eat', soylent: 'Drink', bandage: 'Wrap', nootropics: 'Take', medkit: 'Patch up', antivenom: 'Treat',
+};
 /** Items that are never dropped with your pack on death (story, weapons, worn gear). */
 export const KEEP_ON_DEATH = (id: string) => { const c = ITEMS[id]?.category; return c === 'intel' || c === 'weapon' || id === 'sol_roll' || id === 'deed' || id === 'binoculars' || id === 'vest' || id === 'canteen'; };
 
@@ -298,5 +303,6 @@ export function itemStatus(id: string, s: GearView): string {
   if (id === 'canteen') { const n = canteenSips(s); return n > 0 ? `${n} of ${CANTEEN_SIPS} drinks left` : 'Empty: rest at the fire, or ask Inez'; }
   if (id === 'rifle' && s.has?.('mod.rifle.scope')) return 'Fitted: survey scope (4×)';
   if (id === 'shotgun' && s.has?.('mod.shotgun.choke')) return 'Fitted: full choke';
+  if (id === 'revolver' && s.has?.('mod.revolver.speed')) return 'Fitted: speedloader';
   return '';
 }
