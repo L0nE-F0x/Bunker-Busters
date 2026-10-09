@@ -221,7 +221,8 @@ export class BoosterSite extends Site {
         new THREE.Quaternion().setFromEuler(new THREE.Euler((r() - 0.5) * 0.2, (r() - 0.5) * (crushed ? 0.6 : 0.12), -Math.PI / 2 + (r() - 0.5) * (crushed ? 0.5 : 0.1))),
         v3(1, crushed ? 0.75 : 1, crushed ? 0.82 : 1),
       );
-      k.b.add(M.bell, xf(bell.clone(), this.aft.clone().multiply(m)));
+      k.b.add(M.bell, xf(bell[0].clone(), this.aft.clone().multiply(m)));
+      k.b.add(M.soot, xf(bell[1].clone(), this.aft.clone().multiply(m)));
       // the turbopump and plumbing behind each bell
       k.b.add(M.pipe, xf(new THREE.CylinderGeometry(0.1, 0.1, 0.5, 8).rotateZ(Math.PI / 2).translate(-17.4, yy + 0.18, zz + 0.1), this.aft));
     }
@@ -373,8 +374,14 @@ export class BoosterSite extends Site {
     // berms along the slide, pushed up on the -z side
     k.drift(2, -4.4, 30, 3.4, 0.03, (u, v) => Math.max(0, Math.sin(u * Math.PI) ** 0.6 * Math.sin(v * Math.PI) * 0.9 - 0.05), 0.7);
     k.drift(19, -2.6, 6, 6, -0.1, (u, v) => Math.max(0, Math.sin(u * Math.PI) * Math.sin(v * Math.PI) * 1.1 - 0.05), 0.6);
+    // the crater the landing burn dug before it fell over: a low ring of blown sand round the engine end
+    k.drift(-21, 0, 28, 28, 0, (u, v) => {
+      const d = Math.hypot(u - 0.5, v - 0.5) * 28;
+      return Math.max(0, 0.75 * Math.exp(-(((d - 9.5) / 2.6) ** 2)) * (0.8 + 0.2 * Math.sin(Math.atan2(v - 0.5, u - 0.5) * 5)) - 0.05);
+    }, 0.8);
     // the scorch of the landing burn (it lit the desert for a mile), the gouge, oil
     k.d.add(decalMat(), floorDecal('scorch', 30, 26, -19, 0.03, 0, 0.3));
+    k.d.add(decalMat(), floorDecal('scorch', 20, 18, -20, 0.032, 0.5, 2.1));
     k.d.add(decalMat(), floorDecal('scorch', 16, 14, -26, 0.035, 5, 1.4));
     k.d.add(decalMat(), floorDecal('gouge', 34, 7, 2, 0.04, -1.2, 0.02));
     k.d.add(decalMat(), floorDecal('oil', 6, 5, -12, 0.045, 3.4, 0.7));
@@ -471,6 +478,15 @@ export class BoosterSite extends Site {
       k.col(px, k.ground(px, pz) + 0.32, pz, 0.4, 0.4, 0.4, 0);
     }
     this.copvAt = this.frame.p(-8, 0.4, 9);
+    // shards along the slide: skin, carbon and heat-shield scraps half in the sand
+    const shardMats = [M.skin, M.skin, M.carbon, M.heat, M.skinDark];
+    for (let i = 0; i < 34; i++) {
+      const along = -14 + r() * 42, off = (r() - 0.5) * 16;
+      if (Math.abs(off) < R + 0.6 && along > -18 && along < 21) continue; // not inside the tank
+      const s = 0.25 + r() * 0.7;
+      const g = new THREE.BoxGeometry(s, 0.03 + r() * 0.03, s * (0.4 + r() * 0.8));
+      k.b.add(shardMats[i % shardMats.length], xf(g, mat4(along, k.ground(along, off) + 0.02, off, (r() - 0.5) * 0.7, r() * 6, (r() - 0.5) * 0.7)));
+    }
     // a cable tray ripped off the raceway, coiled on the sand
     const s = v3(10, 0.05, -4.0), e = v3(15.5, 0.05, -5.6);
     k.b.add(M.cableA, norm(new THREE.TubeGeometry(new THREE.CatmullRomCurve3([s, v3(12, 0.25, -5.2), v3(13.5, 0.1, -4.2), e]), 18, 0.05, 5)));
@@ -723,9 +739,10 @@ function mats() {
   return {
     skin: plainStandard('#dcd9d1', 0.5, 0.2),
     skinDark: rustyMetal({ base: '#8f8c86', rust: 0.25, metalness: 0.5, roughness: 0.5 }),
-    heat: rustyMetal({ base: '#2c2a28', rust: 0.15, metalness: 0.3, roughness: 0.75 }),
-    heatDark: rustyMetal({ base: '#1e1d1c', rust: 0.1, metalness: 0.5, roughness: 0.6 }),
-    bell: rustyMetal({ base: '#3b3735', rust: 0.12, metalness: 0.85, roughness: 0.4 }),
+    heat: plainStandard('#2a2826', 0.8, 0.2),
+    heatDark: plainStandard('#1c1b1a', 0.65, 0.35),
+    bell: rustyMetal({ base: '#5a5d63', rust: 0.06, metalness: 0.85, roughness: 0.35 }),
+    soot: plainStandard('#100e0d', 0.92),
     pipe: rustyMetal({ base: '#7d7a74', rust: 0.3, metalness: 0.8, roughness: 0.4 }),
     steel: rustyMetal({ base: '#a3a39d', rust: 0.25, metalness: 0.8, roughness: 0.4 }),
     carbon: plainStandard('#202124', 0.55, 0.1),
@@ -749,15 +766,16 @@ function mats() {
 }
 
 // ------------------------------------------------------------------ helpers
-/** A rocket engine bell: a thin-walled lathe (inside and out), throat at the top, exit at y = -1.4. */
-function bellGeometry() {
-  const pts: THREE.Vector2[] = [];
-  const n = 10;
-  for (let i = 0; i <= n; i++) { const t = i / n; pts.push(new THREE.Vector2(0.17 + 0.27 * Math.pow(t, 0.7) + 0.012, -t * 1.4)); }
-  for (let i = n; i >= 0; i--) { const t = i / n; pts.push(new THREE.Vector2(0.17 + 0.27 * Math.pow(t, 0.7), -t * 1.4 + 0.004)); }
-  const g = new THREE.LatheGeometry(pts, 20);
-  // the injector dome and the gimbal block above the throat
-  return norm(g);
+/** A rocket engine bell, thin-walled: [outside, inside] lathes, throat at the top, exit at y = -1.4. */
+function bellGeometry(): [THREE.BufferGeometry, THREE.BufferGeometry] {
+  const n = 12;
+  const r = (t: number) => 0.17 + 0.3 * Math.pow(t, 0.75);
+  const out: THREE.Vector2[] = [], ins: THREE.Vector2[] = [];
+  for (let i = 0; i <= n; i++) { const t = i / n; out.push(new THREE.Vector2(r(t) + 0.014, -t * 1.4)); }
+  for (let i = n; i >= 0; i--) { const t = i / n; ins.push(new THREE.Vector2(r(t), -t * 1.4 + 0.004)); }
+  // a lip at the exit so the rim catches light
+  out.push(new THREE.Vector2(r(1) + 0.03, -1.4), new THREE.Vector2(r(1), -1.41));
+  return [norm(new THREE.LatheGeometry(out, 22)), norm(new THREE.LatheGeometry(ins, 22))];
 }
 
 /** A grid fin: frame plus a 45° lattice, about 1.5 m out from the hinge and 1.1 m along. */
