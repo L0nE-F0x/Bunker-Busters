@@ -1357,6 +1357,11 @@ The owner: people sitting together played identical, synced loops and mirrored e
 - **Balance:** on Story the breacher holds at 10 m (7 elsewhere), its pellets do 60% and its pump is 1.5× slower: a player standing still in front of one went 100 → 69 hp over 12 s (it killed one before). The marksman's settle never drops below 1.8 s (Hard's react made it 1.4 s).
 - **Slots** (Apex's gatehouse and exit ambush share the 12): scripted squads (`summon`: the ambush, `?fight`) are now their own squads beside the road patrol (they used to replace it, despawning a patrol even mid-fight) and despawn once dead or left 260 m behind. `summon` first stands down calm outposts > 250 m away, then a calm road pair, and comes in short when every body is in a fight. Headless at (-290, -110): Wellhead 6 + gatehouse 3, both fighting, ambush of 3 → 12/12 all in combat; a second ambush then returns 0 and nothing breaks. (A road patrol can't spawn there: patrols keep 130 m from outposts.)
 
+**Polish round:**
+- **Plates come off:** the breacher's carrier (front/back plates, tape, patch, shell pouches, straps) is on its own bone (`BONE.plates`, 17 bones a person: 12 × 17 = 13 KB of bone matrices, still inside WebGL2's 16 KB block). It rides the chest until `platesGone` → `Human.crackPlates`: it slides off and drops face up in the dirt in front of him in 0.45 s and stays there (also under a ragdoll), so you can see he's soft now. No new material or program (pipelines 194 → 194; `plates.png`).
+- **The breacher racks his pump** (`combatAudio.rack`, positional, synthesised like the player's pump foley): 0.45 s before every volley (he can't fire unracked: your cue to move), and every 3–5 s while he walks you down out of sight within 45 m (you hear him coming). Headless has no AudioContext, so the sound itself wasn't heard here; the gate was checked (he racks, then fires).
+- `?bench&fight` (8 contractors fighting, the breacher among them): update 1.2–1.3 ms, 60 fps, pipelines 194 → 194.
+
 **Not done / next:**
 - **Re-voice** the new barks (`BARKS.body/radio/radioAck/radioNone/breach/plates/smoke/push/surrender/spared/burn`, speaker "Kade Recovery"); until then they play with the radio squelch.
 - `?fight` benches now include the Survey Camp crew (the summoned squad radios it in); the desktop bench will show more contractors than earlier runs.

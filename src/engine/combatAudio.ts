@@ -568,6 +568,19 @@ export class CombatAudio {
   }
 
   /** Small machine sounds at `pos`: a mine's arming beep, a turret's chime and servo, a drone's warble. */
+  /**
+   * Someone else racking a pump-action at `pos`: clack (back), clack (forward), a ring off the
+   * steel. The breacher's tell before each volley, and its footsteps' company while it walks you down.
+   */
+  rack(pos: THREE.Vector3, k = 1) {
+    const t = this.b.ctx.currentTime + 0.005;
+    const out = this.panner(pos, 5, 1);
+    this.burst(out, t, 'bandpass', 1250, 1.4, 0.6 * k, 0.004, 0.08, 820);
+    this.ping(out, t + 0.05, 1150, 0.07 * k, 0.1);
+    this.burst(out, t + 0.16, 'bandpass', 1600, 1.4, 0.7 * k, 0.003, 0.07, 2300);
+    this.ping(out, t + 0.2, 1550, 0.08 * k, 0.13);
+  }
+
   machine(kind: 'beep' | 'armed' | 'chime' | 'servo' | 'warble' | 'spinup' | 'down', pos: THREE.Vector3, k = 1) {
     const t = this.b.ctx.currentTime + 0.005;
     const out = this.panner(pos, 2, 1.1);

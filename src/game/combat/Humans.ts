@@ -27,8 +27,10 @@ export const BONE = {
   uArmL: 3, fArmL: 4, handL: 5, uArmR: 6, fArmR: 7, handR: 8,
   thighL: 9, shinL: 10, footL: 11, thighR: 12, shinR: 13, footR: 14,
   weapon: 15,
+  /** The breacher's plate carrier: rides the chest until the plates are spent, then falls in the dirt. */
+  plates: 16,
 } as const;
-const NB = 16;
+const NB = 17;
 
 export type HumanWeapon = 'rifle' | 'shotgun' | 'revolver';
 /**
@@ -214,7 +216,8 @@ function buildKit(out: Sink, L: HumanLook, base: number, meshy: boolean) {
   const oy = meshy ? 0.07 : 0;
   if (L.kit === 'heavy') {
     // plate carrier: front and back plates over the vest, the KADE patch, hi-vis tape, shell pouches
-    at(BONE.chest);
+    // (its own bone: it drops off when the plates are spent)
+    at(BONE.plates);
     const plate = '#2f3331', tape = '#d8dcd8';
     const fz = 0.155 * (0.72 + (w - 1) * 0.4) / 0.72 + (meshy ? -0.025 : 0);
     const pw = (meshy ? 0.27 : 0.31) * w;
@@ -351,6 +354,38 @@ export class Human {
   private surK = 0;
   /** Where its gun lies after it gave up (it never picks it back up), or null: armed. */
   dropped: THREE.Matrix4 | null = null;
+  /** Seconds since its plate carrier came off (−1: still on); where it fell from and where it lies. */
+  platesOff = -1;
+  private readonly plP0 = new THREE.Vector3();
+  private readonly plP1 = new THREE.Vector3();
+  private readonly plQ0 = new THREE.Quaternion();
+  private readonly plQ1 = new THREE.Quaternion();
+  private readonly plS = new THREE.Vector3(1, 1, 1);
+
+  /** The plates are spent: the carrier slides off the chest and drops in front of it. */
+  crackPlates(hf: Heightfield) {
+    if (this.platesOff >= 0) return;
+    this.platesOff = 0;
+    const c = this.mats[BONE.chest];
+    c.decompose(this.plP0, this.plQ0, this.plS);
+    const f = _l.set(Math.sin(this.yaw), 0, Math.cos(this.yaw));
+    const gp = this.plP1.copy(this.pos).addScaledVector(f, 0.45);
+    // lying face up: the carrier's spine axis along the ground, its front to the sky
+    gp.y = (this.floor ?? hf.heightAt(gp.x, gp.z)) - 0.13 * this.plS.x + 0.03;
+    frameTo(_plm, gp, f, UP, 1);
+    this.plQ1.setFromRotationMatrix(_plm);
+  }
+
+  /** The carrier's matrix: on the chest, falling, or on the ground. */
+  private placePlates(dt: number) {
+    const m = this.mats[BONE.plates];
+    if (this.platesOff < 0) { m.copy(this.mats[BONE.chest]); return; }
+    this.platesOff += dt;
+    const u = Math.min(1, this.platesOff / 0.45);
+    _plp.lerpVectors(this.plP0, this.plP1, u * u);
+    _plq.slerpQuaternions(this.plQ0, this.plQ1, Math.min(1, u * 1.3));
+    m.compose(_plp, _plq, this.plS);
+  }
   private phase = Math.random() * 6;
   /** Standing still, a person still breathes and shifts their weight: their own clock and tempo. */
   private idleT = Math.random() * 100;
@@ -423,7 +458,7 @@ export class Human {
   /** Place every bone for this frame. */
   update(dt: number, hf: Heightfield) {
     if (!this.active) return;
-    if (this.ragdoll) { this.ragdoll.sync(this.mats); this.updateDerived(); return; }
+    if (this.ragdoll) { this.ragdoll.sync(this.mats); if (this.platesOff >= 0) this.placePlates(dt); this.updateDerived(); return; }
     const L = this.look_;
     const H = L.height;
     const gy = this.floor ?? hf.heightAt(this.pos.x, this.pos.z);
@@ -491,6 +526,7 @@ export class Human {
     const chestBase = _cb.copy(pelvis).addScaledVector(UP, 0.09 * H);
     frameTo(this.mats[BONE.hips], pelvis, _tmp.copy(UP).addScaledVector(f, cr * 0.15), f, H);
     frameTo(this.mats[BONE.chest], chestBase, torsoUp, cf, H);
+    this.placePlates(dt);
     const neck = J.neck.copy(chestBase).addScaledVector(torsoUp, 0.465 * H);
     // head: looks along the aim (or round, idle)
     const hy = chestYaw + (this.readyK > 0.5 ? angDiff(chestYaw, this.aimYaw) : this.look);
@@ -650,6 +686,7 @@ const _cb = new THREE.Vector3(), _tmp = new THREE.Vector3(), _hf = new THREE.Vec
 const _pole = new THREE.Vector3(), _toe = new THREE.Vector3(), _ad = new THREE.Vector3(), _rd = new THREE.Vector3(), _rdy = new THREE.Vector3();
 const _wd = new THREE.Vector3(), _wp = new THREE.Vector3(), _wu = new THREE.Vector3(), _a = new THREE.Vector3(), _b = new THREE.Vector3(), _c = new THREE.Vector3();
 const _h1 = new THREE.Vector3(), _h2 = new THREE.Vector3(), _hc = new THREE.Vector3(), _hs = new THREE.Vector3();
+const _plm = new THREE.Matrix4(), _plp = new THREE.Vector3(), _plq = new THREE.Quaternion();
 
 /** Every contractor's body in one skinned mesh. `slots` people max; looks are fixed per slot. */
 export class HumanCrowd {
@@ -743,7 +780,7 @@ const PARTS: [number, number, number, number, 'ball' | 'hinge'][] = [
   [BONE.shinR, 0.17, 0.06, 9, 'hinge'],
 ];
 /** Bones that ride on a part (hands on forearms, feet on shins). */
-const RIDERS: [number, number][] = [[BONE.handL, 4], [BONE.handR, 6], [BONE.footL, 8], [BONE.footR, 10]];
+const RIDERS: [number, number][] = [[BONE.handL, 4], [BONE.handR, 6], [BONE.footL, 8], [BONE.footR, 10], [BONE.plates, 1]];
 
 /**
  * A dead contractor: rigid capsules joined at the shoulders, hips, neck and spine (ball joints) and

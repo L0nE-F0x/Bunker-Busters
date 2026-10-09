@@ -177,6 +177,9 @@ class Member implements Hostile {
   radioT = 0;
   /** Breacher: has said its line. */
   pushed = false;
+  /** Breacher: pump racked for the next volley (heard 0.45 s before it), and the next idle rack. */
+  racked = false;
+  rackT = 0;
   /** Surrendered: seconds on its knees, and the prompt to take its lanyard. */
   surT = 0;
   surIt: Interactable | null = null;
@@ -505,6 +508,7 @@ export class Recovery implements HostileProvider {
     h.cower = 0;
     h.floor = null;
     h.dropped = null;
+    h.platesOff = -1;
     return h;
   }
 
@@ -720,6 +724,7 @@ export class Recovery implements HostileProvider {
   /** The breacher's plates cracked: it says so, and from now on it fights from cover like the rest. */
   platesGone(m: Member) {
     this.host.audio.combat?.impact('metal', m.h.chestPos, 1.3);
+    m.h.crackPlates(this.host.hf);
     this.bark(m, 'plates', true);
     m.coverT = 99;
   }
@@ -1454,7 +1459,22 @@ export class Recovery implements HostileProvider {
     const crouchedHidden = m.cover && !m.peek && !moving && m.cover.h > 0.6;
     const pinned = m.supp > 0.85 && !m.suppressing;
     if (m.kit === 'marksman') { this.snipe(m, dt, dist, !!crouchedHidden || pinned); return; }
-    if (m.canSee && !crouchedHidden && !pinned && m.react <= 0 && m.fireT <= 0 && dist < g.range && T.alive) {
+    // the breacher racks its pump before every volley (your cue to move), and now and then as it walks
+    // up on you out of sight (you hear it coming)
+    if (m.kit === 'heavy') {
+      m.rackT -= dt;
+      const aboutTo = m.canSee && !crouchedHidden && !pinned && m.react <= 0 && dist < g.range && T.alive;
+      if (aboutTo && !m.racked && m.fireT <= 0.45) {
+        m.racked = true;
+        m.fireT = Math.max(m.fireT, 0.45);
+        m.rackT = rnd(3, 5);
+        this.host.audio.combat?.rack(h.muzzle);
+      } else if (!m.canSee && m.pushing && m.rackT <= 0 && dist < 45) {
+        m.rackT = rnd(3, 5);
+        this.host.audio.combat?.rack(h.muzzle, 0.8);
+      }
+    }
+    if (m.canSee && !crouchedHidden && !pinned && m.react <= 0 && m.fireT <= 0 && dist < g.range && T.alive && (m.kit !== 'heavy' || m.racked)) {
       // the first shots go wide; the longer they watch you, the tighter it gets
       const settle = 1 + 2.6 * Math.exp(-m.seeT / 1.3);
       const run = Math.hypot(T.velocity.x, T.velocity.z) > 4.5 ? 1.6 : 1;
@@ -1495,7 +1515,7 @@ export class Recovery implements HostileProvider {
     h.recoil = 1;
     m.mag--;
     m.burst--;
-    if (m.burst <= 0) { m.burst = Math.max(1, Math.round(rnd(1, g.burst))); m.fireT = g.interval * rnd(1.4, 2.4) * pace; }
+    if (m.burst <= 0) { m.burst = Math.max(1, Math.round(rnd(1, g.burst))); m.fireT = g.interval * rnd(1.4, 2.4) * pace; m.racked = false; }
     else m.fireT = g.interval * rnd(0.85, 1.15) * pace;
   }
 
