@@ -1743,7 +1743,7 @@ export class Game {
         this.openWorldMap(this.ui.lastMapView ?? undefined);
       },
       travel: travel.options(), travelBlocked: travel.busy ? 'On the road.' : this.travelHost().why(),
-      sub: `Survey sheet · ${this.surveyed()}% surveyed · Day ${(s.data.days ?? 0) + 1} · ${clockText(this.atmo.hour)}`,
+      sub: `Survey sheet · ${this.surveyed()}% surveyed · ${s.dayLabel} · ${clockText(this.atmo.hour)}`,
       onTravel: (id) => void travel.go(id),
     }, () => this.afterModal());
   }
