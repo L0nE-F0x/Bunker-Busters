@@ -254,7 +254,7 @@ export class Apex extends Bunker<ApexBuilder> {
     L.room.color.set(alarm ? 0xff2a18 : 0xbfe8ff);
     L.flood.intensity = nightOn * (alarm ? 40 + pulse * 60 : 70);
     L.flood.color.set(alarm ? 0xff6050 : 0xfff1d0);
-    L.rocket.intensity = nightOn * 90;
+    L.rocket.intensity = nightOn * 55;
     S.strip.value = (alarm ? 1.5 : 5) * flick;
     S.hallStrip.value = alarm ? 0.8 + pulse * 3 : 4;
     S.roomStrip.value = alarm ? 0.8 + pulse * 3 : 4.5;
@@ -267,6 +267,12 @@ export class Apex extends Bunker<ApexBuilder> {
     S.keypad.value = st?.has(F.airlock) ? 0.4 : 2 + (alarm ? pulse * 4 : 0);
     b.feed.glow.value = 1.4 + nightOn * 0.6;
     b.clock.glow.value = 1.6 + nightOn * 0.8;
+    const [flood, up1, up2] = b.cones;
+    flood.mesh.visible = nightOn > 0.05;
+    flood.intensity.value = nightOn * (alarm ? 0.5 + pulse * 0.4 : 0.45);
+    (flood.color.value as THREE.Color).set(alarm ? 0xff6050 : 0xfff1d0);
+    for (const c of [up1, up2]) { c.mesh.visible = nightOn > 0.05; c.intensity.value = nightOn * 0.35; }
+    for (const u of b.uplights) u.value = nightOn * 7;
     for (const bc of b.beacons) {
       bc.visible = alarm;
       if (alarm) bc.rotation.y += dt * 5;

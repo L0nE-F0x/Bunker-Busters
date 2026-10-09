@@ -6,7 +6,7 @@ import { printPaint } from '../../world/printAtlas';
 import { surfaces, type Surface } from '@/engine/surface';
 import { SALT_FLAT } from '@/content/world';
 import { concrete, plainStandard, rustyMetal, desertRock, GlowPalette, fabric, wood, carGlass } from '../../world/materials';
-import { GlowSprites } from '../../world/effects';
+import { GlowSprites, lightCone } from '../../world/effects';
 import { VirtualLight } from '../../world/lights';
 import { rockGeometry } from '../../world/Props';
 import { buildCar } from '../../world/vehicles';
@@ -77,6 +77,8 @@ export class ApexBuilder implements BunkerShell {
   lights!: { hangar: VirtualLight[]; hall: VirtualLight; room: VirtualLight; flood: VirtualLight; rocket: VirtualLight };
   /** Glow slots Apex animates (intensity handles). */
   readonly slots: Record<'strip' | 'hallStrip' | 'roomStrip' | 'flood' | 'beacon' | 'aviation' | 'screens' | 'leds' | 'keypad', { value: number }> = {} as never;
+  /** Night beams: the mast's flood onto the apron, two uplights on the booster. */
+  readonly cones: ReturnType<typeof lightCone>[] = [];
   /** Alarm beacons (shown while it rings). */
   readonly beacons: THREE.Object3D[] = [];
   private far!: THREE.Object3D;
@@ -126,8 +128,13 @@ export class ApexBuilder implements BunkerShell {
     return pivot;
   }
 
+  /** Uplight lenses (night only). */
+  readonly uplights: { value: number }[] = [];
+  private flatB: MeshBatch | null = null;
+
   private build() {
     const b = new MeshBatch();
+    this.flatB = b;
     const inner = new MeshBatch();
     const M_ = this.mats();
     this.buildApron(b, M_);
@@ -136,6 +143,24 @@ export class ApexBuilder implements BunkerShell {
     this.buildBlock(b, inner, M_);
     this.buildSalt(b, M_);
     this.buildLights();
+    // volumetric beams for the night (one shared program with every other cone)
+    const beamTo = (from: THREE.Vector3, to: THREE.Vector3, radius: number, color: string) => {
+      const len = from.distanceTo(to);
+      const c = lightCone(len, radius, color, 0);
+      c.mesh.position.copy(from);
+      c.mesh.quaternion.setFromUnitVectors(V(0, -1, 0), to.clone().sub(from).normalize());
+      c.mesh.visible = false;
+      this.group.add(c.mesh);
+      this.cones.push(c);
+    };
+    beamTo(V(-25, 10.3, 18.7), V(-12, 0, 21), 6.5, '#fff1d0');
+    beamTo(V(10.6, 2.6, 1.2), V(13.4, 30, -2.6), 3.2, '#ffe2bc');
+    beamTo(V(17.6, 2.6, 1.2), V(14.6, 30, -2.6), 3.2, '#ffe2bc');
+    for (const x of [10.6, 17.6]) {
+      const lamp = this.pal.slot('#ffe2bc', 0);
+      lamp.add(this.flatB!, box(0.5, 0.3, 0.5, x, 2.55, 1.2));
+      this.uplights.push(lamp.intensity);
+    }
     // footsteps: concrete on the apron, in the hangar and the vault; steel in the duct; the salt crunches
     const z = (x0: number, z0: number, x1: number, z1: number, kind: Surface) => surfaces.zone(this.w(x0, -2, z0), this.w(x1, 8, z1), kind);
     z(APEX_GROUNDS.x0 + 2, -6, APEX_GROUNDS.x1 - 2, 29, 'concrete');
@@ -706,7 +731,8 @@ export class ApexBuilder implements BunkerShell {
     d.add(m.black, box(0.04, 0.5, 0.12, cx0 + 0.21, 1.45, -11.0));
     d.add(m.print, apexPrint('stripes', 0.8, 0.18, M(cx0 + 0.2, 2.06, -11.2, Math.PI / 2)));
     this.points.breaker = this.w(cx0 + 0.7, 1.4, -11.2);
-    this.camera('cam_hall', d, m, cx1 - 0.35, 3.3, innerZ - 0.6, Math.PI + 0.25, 0.3, 6, 13, 22, this.interior);
+    // down the corridor, sweeping across it: hug the far wall while it looks the other way
+    this.camera('cam_hall', d, m, cx1 - 0.35, 3.3, innerZ - 0.6, Math.PI, 0.45, 8, 14, 12, this.interior);
 
     // the vault wall and its door (a slab with a wheel), hinged on the west side
     this.wall(b, m.wallC, cx0, -11.2, vaultZ - 0.3, vaultZ, hall);
