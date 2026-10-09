@@ -102,6 +102,10 @@ export class Atmosphere {
   readonly uCloudCover = uniform(0.45);
   /** Debug / scripted: pin the cumulus cover (null = let it wander). */
   cloudCover: number | null = null;
+  /** The sun's light (colour × intensity); the light's colour node dims it under drifting cloud shadows. */
+  readonly uSunLight = uniform(new THREE.Color());
+  /** How much a thick cloud's shadow takes from the sun, 0..1 (0 = no cloud shadows). */
+  readonly uCloudShadow = uniform(0.42);
   /** Ground sand-flow offset integrated from the wind (terrain storm ribbons). */
   readonly uSandFlow = uniform(new THREE.Vector2());
   readonly uFront = uniform(0);
@@ -145,7 +149,7 @@ export class Atmosphere {
     // e.g. the far city whenever the sun stood still (paused clock, storm fronts in screenshots).
     for (const u of [this.uSunDir, this.uMoonDir, this.uZenith, this.uHorizon, this.uHaze, this.uSunColor, this.uFogDensity,
       this.uFogFalloff, this.uFogBase, this.uNight, this.uDust, this.uWind, this.uStorm, this.uCloudDrift, this.uFront,
-      this.uUpwind, this.uStormColor, this.uSandFlow, this.uFlash, this.uGust, this.uCloudCover] as N[]) u.setGroup(renderGroup);
+      this.uUpwind, this.uStormColor, this.uSandFlow, this.uFlash, this.uGust, this.uCloudCover, this.uSunLight, this.uCloudShadow] as N[]) u.setGroup(renderGroup);
     this.sun = new THREE.DirectionalLight(0xffffff, 4);
     this.sun.castShadow = true;
     const s = this.sun.shadow;
@@ -160,6 +164,8 @@ export class Atmosphere {
     s.bias = -0.0004;
     s.normalBias = 0.04;
     s.radius = 3;
+    // read once when three builds the light's node, so it must be set before the first render
+    (this.sun as N).colorNode = this.cloudShadow();
     scene.add(this.sun, this.sun.target);
 
     this.hemi = new THREE.HemisphereLight(0x88aabb, 0x553322, 0.6);
@@ -210,6 +216,23 @@ export class Atmosphere {
     const edge = w.mul(float(1).sub(w)).mul(4);
     const rim = this.uSunColor.mul(pow(mu, 3).mul(0.3).add(0.05).mul(sunVis).mul(lift.add(edge.mul(0.6))));
     return base.add(rim);
+  });
+
+  /**
+   * The sun's colour at a lit fragment: full sunlight, dimmed where a cumulus stands between this point
+   * and the sun. The same kind of field as the sky's cumulus (same cover, same drift), anchored to the
+   * world on a plane 1.5 km up and followed along the sun's ray, so the shadows lengthen and slide
+   * with a low sun and race across the flats with the wind. Soft-edged (no detail tap); none at night.
+   */
+  private cloudShadow = Fn(() => {
+    const sd = this.uSunDir;
+    const p = positionWorld.xz.add(sd.xz.div(max(sd.y, 0.08)).mul(1500));
+    const cq = p.div(3571).add(this.uCloudDrift.mul(1.3));
+    const cw = noise(cq.mul(0.25).add(vec2(0.13, 0.71))).g.sub(0.5);
+    const th = float(0.82).sub(this.uCloudCover.add(cw.mul(0.6)).mul(0.42));
+    const sh = smoothstep(th.sub(0.03), th.add(0.17), noise(cq).r);
+    const k = this.uCloudShadow.mul(smoothstep(-0.02, 0.12, sd.y)).mul(float(1).sub(this.uStorm));
+    return (this.uSunLight as N).mul(float(1).sub(sh.mul(k)));
   });
 
   /** Haze colour seen along a view ray (no sun disk). Shared by sky + fog. */
@@ -558,6 +581,7 @@ export class Atmosphere {
     }
     this.sun.intensity = lerp(a.sunI, b.sunI, t) * Math.max(0.05, horizonFade) * (1 - this.dustiness * 0.35) * (1 - st * 0.93) * (1 - this.sunShade * 0.7);
     if (!isDay) this.sun.color.set('#6f8cd0');
+    (this.uSunLight.value as THREE.Color).copy(this.sun.color).multiplyScalar(this.sun.intensity);
     this.sun.position.copy(focus).addScaledVector(lightDir, 300);
     this.sun.target.position.copy(focus);
     // texel-snap shadow camera to avoid shimmering
