@@ -192,6 +192,9 @@ export class Game {
   private benchUpd = 0;
   private benchPhys = 0;
   private benchRen = 0;
+  /** ?bench: frame intervals (rAF to rAF) of the current window, for the p50/p90 the log prints */
+  private benchInt = new Float32Array(1024);
+  private frameGap = 0;
   backendLabel = 'WebGL2';
 
   constructor(private renderer: THREE.WebGPURenderer, public isWebGPU: boolean, private canvas: HTMLCanvasElement) {
@@ -1659,11 +1662,17 @@ export class Game {
   }
 
   private bench(now: number) {
+    if (this.benchFrames < this.benchInt.length) this.benchInt[this.benchFrames] = this.frameGap;
     this.benchFrames++;
     if (!this.benchT) this.benchT = now;
     if (now - this.benchT >= 2000) {
       const info = this.renderer.info.render;
-      console.log(`[BENCH] mode=${this.mode} backend=${this.backendLabel} fps=${((this.benchFrames * 1000) / (now - this.benchT)).toFixed(1)} buffer=${this.renderer.domElement.width}x${this.renderer.domElement.height} q=${this.quality.level} tris=${info.triangles} ms[update=${(this.benchUpd / this.benchFrames).toFixed(1)} physics=${(this.benchPhys / this.benchFrames).toFixed(1)} render=${(this.benchRen / this.benchFrames).toFixed(1)}]`);
+      // frame intervals vs the frame's own JS: the gap is what the webview spends outside our code
+      // (style/paint of the HUD, compositing, the swap and its wait for the display)
+      const iv = Array.from(this.benchInt.subarray(0, Math.min(this.benchFrames, this.benchInt.length))).sort((a, b) => a - b);
+      const q = (k: number) => iv[Math.min(iv.length - 1, Math.floor(iv.length * k))].toFixed(1);
+      const js = (this.benchUpd + this.benchPhys + this.benchRen) / this.benchFrames;
+      console.log(`[BENCH] mode=${this.mode} backend=${this.backendLabel} fps=${((this.benchFrames * 1000) / (now - this.benchT)).toFixed(1)} buffer=${this.renderer.domElement.width}x${this.renderer.domElement.height} q=${this.quality.level} tris=${info.triangles} ms[update=${(this.benchUpd / this.benchFrames).toFixed(1)} physics=${(this.benchPhys / this.benchFrames).toFixed(1)} render=${(this.benchRen / this.benchFrames).toFixed(1)}] js=${js.toFixed(1)} interval[p10=${q(0.1)} p50=${q(0.5)} p90=${q(0.9)}]`);
       this.benchUpd = this.benchPhys = this.benchRen = 0;
       this.benchT = now;
       this.benchFrames = 0;
@@ -1679,7 +1688,8 @@ export class Game {
     // Re-fit the canvas whenever the window size changes. The 'resize' event alone isn't enough: the
     // desktop app's window gets tiled/resized while we're still loading, before the listener exists.
     if (innerWidth !== this.fitW || innerHeight !== this.fitH) this.resize();
-    const dt = Math.min(1 / 20, (now - this.last) / 1000);
+    this.frameGap = now - this.last;
+    const dt = Math.min(1 / 20, this.frameGap / 1000);
     this.last = now;
     this.t += dt;
     this.frames++;
