@@ -1770,8 +1770,8 @@ export class Game {
         const s = this.state!;
         if (this.busy || this.dying || !this.player) return 'Not now.';
         if (this.huntedBy > 0) return 'Something is hunting you. Lose it first.';
-        if (this.garage.alarm > 0 || this.garage.drone.state === 'alert') return 'Not with an alarm going.';
-        if (this.garage.playerInside) return 'Not from inside a man\'s bunker. Walk out the way you came.';
+        if (this.bunkerAlarm || this.garage.drone.state === 'alert') return 'Not with an alarm going.';
+        if (this.bunkerInside) return 'Not from inside a bunker. Walk out the way you came.';
         if ((s.data.poison ?? 0) > 0) return 'Venom first. Walk it off and it walks you off a cliff.';
         if (this.combat.heat > 0.35) return 'Too loud out here. Let the shooting settle first.';
         return null;
