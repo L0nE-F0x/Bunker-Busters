@@ -11,7 +11,11 @@ export interface BanterView {
   archetype: ArchetypeDef;
   night: boolean;
   storm: number;
+  /** Time of day (routines: who is where). */
+  hour?: number;
 }
+
+const hr = (v: BanterView) => v.hour ?? 12;
 
 export interface Banter {
   id: string;
@@ -244,6 +248,43 @@ export const BANTER: Banter[] = [
     near: { x: -366, z: 26, r: 60 },
     when: (v) => !v.has('lore.walkwest'),
     text: 'Footprints on the shoulder, all heading west. Old ones. Nobody\'s come back the other way.',
+  },
+  // ------------------------------------------------------------------ routines (content/routines.ts)
+  {
+    id: 'routine.watch', speaker: 'self', priority: 2,
+    near: { lm: 'gas', r: 28 },
+    when: (v) => hr(v) >= 21 || hr(v) < 5.5,
+    text: 'Hollis is on a crate past the end of the store, watching the highway. He nods without looking round.',
+  },
+  {
+    id: 'routine.lookout', speaker: 'self', priority: 2,
+    near: { lm: 'gas', r: 28 },
+    when: (v) => v.has('q.ren.truth'),
+    text: 'Ren\'s on the lookout crate by the road, counting our highway now. Ren raises the mug without turning round.',
+  },
+  {
+    id: 'routine.pippool', speaker: 'self', priority: 2,
+    near: { lm: 'gas', r: 28 },
+    when: (v) => hr(v) >= 10 && hr(v) < 16 && (v.has('q.capsule.sealed') || v.has('q.capsule.peeked') || v.has('q.capsule.mara')),
+    text: 'Pip is sitting by her pool in the noon sun, feet just off the chalk. Lifeguard duty.',
+  },
+  {
+    id: 'routine.docfire', speaker: 'self', priority: 2,
+    near: { lm: 'creek', r: 40 },
+    when: (v) => hr(v) >= 19,
+    text: 'Doc\'s out at Sol\'s fire with his clipboard, pretending he isn\'t on shift.',
+  },
+  {
+    id: 'routine.creekdark', speaker: 'self', priority: 2,
+    near: { lm: 'creek', r: 45 },
+    when: (v) => hr(v) < 5,
+    text: 'Dry Creek is dark except for Sol\'s fire. There\'s a note on the diner counter. The town sleeps in shifts.',
+  },
+  {
+    id: 'routine.till', speaker: 'self', priority: 1,
+    near: { lm: 'creek', r: 45 },
+    when: (v) => hr(v) >= 21 || hr(v) < 7,
+    text: 'The Till\'s shut. A light upstairs, and a sign that says knock if you\'re on fire.',
   },
   {
     id: 'pool', speaker: 'self', priority: 2,

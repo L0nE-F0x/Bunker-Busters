@@ -1651,7 +1651,7 @@ export class Game {
     }
     if (s.data.pack) out.push({ id: 'pack', x: s.data.pack.position[0], z: s.data.pack.position[2], label: 'Your pack', color: '#ff8a2a', kind: 'intel' });
     for (const op of OUTPOSTS) {
-      if (!s.has(`seen:${op.id}`) && this.map.revealedAt(op.x, op.z) < 40) continue;
+      if (!s.has(`seen:${op.id}`) && !s.has(`rumour.${op.id}`) && this.map.revealedAt(op.x, op.z) < 40) continue;
       const cleared = s.has(`outpost.${op.id}.cleared`) && (s.data.marks[`cleared.${op.id}`] ?? -1e9) > s.data.stats.playTime - 30 * 60;
       out.push({ id: `op:${op.id}`, x: op.x, z: op.z, label: cleared ? `${op.name} (cleared)` : op.name, color: cleared ? '#7d725f' : '#ff4a3a', kind: 'bunker' });
     }
@@ -2032,6 +2032,7 @@ export class Game {
       px: player.position.x,
       pz: player.position.z,
       night: this.atmo.isNight,
+      hour: this.atmo.hour,
       storm: this.weather.intensity,
       alarm: this.garage.alarm > 0 || this.garage.drone.state === 'alert',
     });

@@ -252,7 +252,7 @@ export class Story {
   }
 
   // ------------------------------------------------------------------ per frame (cheap)
-  update(dt: number, ctx: { blocked: boolean; px: number; pz: number; night: boolean; storm: number; alarm: boolean }) {
+  update(dt: number, ctx: { blocked: boolean; px: number; pz: number; night: boolean; storm: number; alarm: boolean; hour?: number }) {
     if (this.dirty) this.sync(false);
     this.sinceBanter += dt;
     this.banterT -= dt;
@@ -260,7 +260,7 @@ export class Story {
     this.banterT = 1;
     if (ctx.blocked || ctx.alarm || this.sinceBanter < BANTER_GAP || this.ui.subtitleBusy) return;
     const s = this.state;
-    const v: BanterView = { has: (f) => s.has(f), archetype: s.archetype, night: ctx.night, storm: ctx.storm };
+    const v: BanterView = { has: (f) => s.has(f), archetype: s.archetype, night: ctx.night, storm: ctx.storm, hour: ctx.hour ?? 12 };
     let best: (typeof BANTER)[number] | null = null;
     for (const b of BANTER) {
       if (s.has(`b:${b.id}`)) continue;

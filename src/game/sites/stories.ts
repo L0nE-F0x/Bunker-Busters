@@ -486,7 +486,8 @@ export class Stories {
     if (choice === 'rumour') {
       // Dez's pick of the night: the pickup it points at goes on the map
       const r = rumourTonight({ has: (f) => s.has(f), count: (i) => s.count(i), rep: (p) => s.rep(p), name: s.archetype.name, rests: s.data.rests });
-      if (r?.intel && s.set(`rumour.${r.intel}`)) setTimeout(() => this.toast('Marked on your map: what the band was talking about.', 'info'), 400);
+      const key = r?.intel ?? r?.op;
+      if (key && s.set(`rumour.${key}`)) setTimeout(() => this.toast('Marked on your map: what the band was talking about.', 'info'), 400);
     }
     if (choice === 'song.hollis' && s.has('q.song.asked')) s.set('q.song.hollis');
     if (choice === 'song.dez' && s.has('q.song.hollis')) s.set('q.song.dez');

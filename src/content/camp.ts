@@ -23,8 +23,58 @@ export interface CampView {
  * What the band says tonight: Dez's pick of the night's chatter, one per rest, each pointing at a
  * real place. Hearing one sets `rumour.<intel>` (the map shows that pickup) or names a site.
  */
-export interface Rumour { id: string; text: string; intel?: string; when?: (v: CampView) => boolean }
+export interface Rumour { id: string; text: string; intel?: string; op?: string; when?: (v: CampView) => boolean }
 export const RUMOURS: Rumour[] = [
+  // ---- the places themselves (a Kade outpost goes on the map when the band names it)
+  {
+    id: 'rp7', op: 'rp7', when: (v) => !v.has('seen:rp7'),
+    text: 'Recovery Point 7 is stacking pianos again. Kade repossesses anything with keys. Somebody\'s grandmother\'s upright is out there under a tarp, next to a vending machine that still takes coins. East of the Garage, off the highway.',
+  },
+  {
+    id: 'wellhead', op: 'wellhead', when: (v) => !v.has('outpost.wellhead.cleared'),
+    text: 'The Wellhead crew changes shift at dawn, south-west of Dry Creek. Twenty minutes where the tank is guarded by one sentry that says sorry first. Twenty minutes is a lot of water.',
+  },
+  {
+    id: 'pipeline', op: 'pipeline', when: (v) => !v.has('seen:pipeline'),
+    text: 'Pipeline Camp 3 put a Hornet drone up. It circles the pad at night and sulks at dawn. The ground round it is mined. Somebody planted daisies on the mines. Corporate thought it would help.',
+  },
+  {
+    id: 'survey', op: 'survey', when: (v) => !v.has('q.wick.book'),
+    text: 'The survey crew on the slope below the Cut leaves its lunch on the folding table at noon. Somebody keeps taking the pudding. Kade has opened an investigation. The field book sits right next to the pudding.',
+  },
+  {
+    id: 'jet', when: (v) => !v.has('site.jet.done'),
+    text: 'A camp out in the south-west dunes says the tail fin catches the sun at four o\'clock, like a sundial for rich people. There\'s a go-bag aboard, they say. Nobody\'s been brave enough to unzip it.',
+  },
+  {
+    id: 'drivein', when: (v) => !v.has('site.drivein.done'),
+    text: 'Kids on the north band dare each other to sit in the Starlite at night. The screen lights up for some of them. They won\'t say what it shows. They come back very polite.',
+  },
+  {
+    id: 'coldstorage', when: (v) => !v.has('site.datacenter.done'),
+    text: 'Somebody out by ColdStorage swears the building said "please" to them. Out loud, through a door. They walked home very fast and haven\'t said please since.',
+  },
+  {
+    id: 'tube', when: (v) => !v.has('site.tube.done'),
+    text: 'There\'s a pod in the Tube, east of the Spire, that still says "Now boarding". It\'s said it for three years. Inez sold somebody a ticket for it. She won\'t say who.',
+  },
+  {
+    id: 'garage', when: (v) => v.has('intel:intel.gas.note') && !v.has('garage.complete'),
+    text: 'Tanner\'s megaphone carries on a still night. He\'s been rehearsing an apology to Vesper. It\'s forty minutes long and it has a Q and A.',
+  },
+  {
+    id: 'capsule', when: (v) => !v.has('q.capsule.dug'),
+    text: 'Somebody\'s been poking round the old Kade Kids sign, west of Dry Creek, short of the highway. Kids\' things in the ground, they say. A time capsule. Pip went very quiet when she heard.',
+  },
+  {
+    id: 'relay', when: (v) => !v.has('q.cam.cut') && !v.has('q.cam.loop') && !v.has('q.cam.hello'),
+    text: 'There\'s a mast on the rise south-east of this fire with two dishes on it. One of them is pointed right at us. I\'ve been sitting with my back to it for a year. I would like to stop.',
+  },
+  {
+    id: 'wick', when: (v) => v.has('cave.known'),
+    text: 'Wick says nothing on the radio every night at nine. You can hear him not saying it. It\'s the most reliable signal on the band.',
+  },
+  // ---- what the paperwork points at
   {
     id: 'drone', intel: 'intel.chat.8',
     text: 'Camp up on the ridge road says a white drone came down under the Spire, way back, and its little blue light still blinks at night. Glimpse drones carry memory cards. Memory cards carry memories. That\'s the whole business model.',
