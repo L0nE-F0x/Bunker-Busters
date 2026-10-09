@@ -504,6 +504,7 @@ export class Recovery implements HostileProvider {
   }
 
   private release(m: Member) {
+    this.dropSurrender(m);
     m.h.dyingT = -1;
     m.h.floor = null;
     if (m.flankCover) { m.flankCover.taken = false; m.flankCover = null; }
