@@ -2,6 +2,8 @@ import './styles.css';
 import { ICONS, EYE_ICON } from './icons';
 import type { Vector3 } from 'three/webgpu';
 import { ITEMS, HOTBAR_ITEMS } from '@/content/items';
+import { itemStatus, USE_LABEL, hotbarItem } from '@/content/items';
+import { openTill, type TillOpts } from './Trader';
 import { SKILLS, SKILL_ORDER, focusesFor, capstonesFor } from '@/content/skills';
 import { ARCHETYPES } from '@/content/archetypes';
 import { PEOPLE, standingTier, STANDING_WORD } from '@/content/people';
@@ -381,8 +383,8 @@ export class UI implements UIBridge {
 
   refreshHotbar() {
     if (!this.state) return;
-    this.els.hotbar.innerHTML = HOTBAR_ITEMS.map((id, i) => {
-      const q = this.state!.count(id);
+    this.els.hotbar.innerHTML = HOTBAR_ITEMS.map((_, i) => {
+      const { id, q } = hotbarItem(i, this.state!);
       const a = `hotbar${i + 1}` as Action;
       const k = device() === 'pad' && binds.pad(a) ? padName(binds.pad(a)) : keyLabel(binds.keys(a)[0] ?? '');
       return `<div class="slot ${q ? '' : 'empty'}" data-key="act:${a}"><span class="k">${k}</span>${ICONS[ITEMS[id].icon]}<span class="q">${q}</span></div>`;
@@ -704,9 +706,9 @@ export class UI implements UIBridge {
               <div>
                 <div class="panel info">${sel ? `
                   <div class="cat">${sel.category}</div><h4>${esc(sel.name)}</h4>
-                  <p>${esc(sel.description)}</p>${sel.flavor ? `<p class="flavor">${esc(sel.flavor)}</p>` : ''}
+                  <p>${esc(sel.description)}</p>${itemStatus(sel.id, s) ? `<p class="gear-status">${esc(itemStatus(sel.id, s))}</p>` : ''}${sel.flavor ? `<p class="flavor">${esc(sel.flavor)}</p>` : ''}
                   <div class="stats"><span>WT ${sel.weight}kg</span><span>VALUE ${sel.value}</span><span>×${s.count(sel.id)}</span></div>
-                  <div class="rowbtns">${sel.usable ? `<button class="btn use">${sel.id === 'sol_roll' ? 'Unroll (5 picks)' : 'Use'}</button>` : ''}<button class="btn drop">Drop 1</button><button class="btn drop-all">Drop stack</button></div>` : '<p>Empty pockets. The camp can fix that, or the highway can.</p>'}
+                  <div class="rowbtns">${sel.usable ? `<button class="btn use">${USE_LABEL[sel.id] ?? 'Use'}</button>` : sel.category === 'weapon' ? '<button class="btn use">Equip</button>' : ''}<button class="btn drop">Drop 1</button><button class="btn drop-all">Drop stack</button></div>` : '<p>Empty pockets. The camp can fix that, or the highway can.</p>'}
                 </div>
                 <div class="kit-build">
                   <div class="label">Build · ${d.skillPoints} point${d.skillPoints === 1 ? '' : 's'} to spend</div>
@@ -1044,7 +1046,7 @@ export class UI implements UIBridge {
     people: { id: string; name: string; role: string }[];
     onRest: () => void;
     onCraft: (id: string) => string | null;
-    recipes: { id: string; name: string; detail: string; disabled?: string }[];
+    recipes: { id: string; name: string; detail: string; disabled?: string; group?: string }[];
   }): Promise<string> {
     this.modalOpen = true;
     this.audio.play('ui');
@@ -1053,12 +1055,23 @@ export class UI implements UIBridge {
     ov.appendChild(panel);
     this.root.appendChild(ov);
     let note = 'The fire is real. The full heal is not, unless you\'ve learned how to sleep.';
+    let rgroup = '';
     return new Promise((resolve) => {
       const finish = (why: string) => {
         window.removeEventListener('keydown', onKey, true);
         ov.remove();
         this.modalOpen = false;
         resolve(why);
+      };
+      // recipes in tabs by group (Tools, Ammunition, …), each tab counting what you can make right now
+      const recipeTabs = () => {
+        const groups = [...new Set(opts.recipes.map((r) => r.group ?? ''))];
+        if (!groups.includes(rgroup)) rgroup = groups.find((g) => opts.recipes.some((r) => (r.group ?? '') === g && !r.disabled)) ?? groups[0] ?? '';
+        if (groups.length < 2) return '';
+        return `<div class="recipe-tabs">${groups.map((g) => {
+          const n = opts.recipes.filter((r) => (r.group ?? '') === g && !r.disabled).length;
+          return `<button class="tab rtab ${g === rgroup ? 'on' : ''}" data-g="${esc(g)}">${esc(g)}${n ? `<i class="tab-dot">${n}</i>` : ''}</button>`;
+        }).join('')}</div>`;
       };
       const paint = () => {
         const people = opts.people.map((p) => {
@@ -1080,7 +1093,8 @@ export class UI implements UIBridge {
             </div>
             <div class="camp-col">
               <div class="label">Work the scrap</div>
-              <div class="recipes">${opts.recipes.map((r) => `<div class="recipe"><div><b>${esc(r.name)}</b><span>${esc(r.detail)}</span>${r.disabled ? `<small>${esc(r.disabled)}</small>` : ''}</div><button class="btn craft" data-id="${esc(r.id)}" ${r.disabled ? 'disabled' : ''}>Make</button></div>`).join('')}</div>
+              ${recipeTabs()}
+              <div class="recipes">${opts.recipes.filter((r) => (r.group ?? '') === rgroup).map((r) => `<div class="recipe"><div><b>${esc(r.name)}</b><span>${esc(r.detail)}</span>${r.disabled ? `<small>${esc(r.disabled)}</small>` : ''}</div><button class="btn craft" data-id="${esc(r.id)}" ${r.disabled ? 'disabled' : ''}>Make</button></div>`).join('')}</div>
             </div>
           </div>
           <footer><span class="kb"><span class="kbd">Esc</span> back to the fire</span></footer>`;
@@ -1088,6 +1102,7 @@ export class UI implements UIBridge {
         const radio = panel.querySelector('.radio') as HTMLButtonElement;
         radio.onclick = () => { if (radio.disabled) return; this.audio.play('uiConfirm'); finish('radio'); };
         panel.querySelectorAll('.camp-person').forEach((b) => (b as HTMLButtonElement).onclick = () => { this.audio.play('ui'); finish((b as HTMLElement).dataset.person ?? 'closed'); });
+        panel.querySelectorAll('.rtab').forEach((b) => (b as HTMLButtonElement).onclick = () => { rgroup = (b as HTMLElement).dataset.g ?? ''; this.audio.play('ui'); paint(); });
         panel.querySelectorAll('.craft').forEach((b) => (b as HTMLButtonElement).onclick = () => {
           const err = opts.onCraft((b as HTMLElement).dataset.id ?? '');
           this.audio.play(err ? 'deny' : 'uiConfirm');
@@ -1108,6 +1123,12 @@ export class UI implements UIBridge {
       window.addEventListener('keydown', onKey, true);
       paint();
     });
+  }
+
+  /** Inez's Till (Dry Creek): buy, sell, barter on her slate. */
+  till(opts: TillOpts) {
+    const ui = this;
+    return openTill({ root: this.root, audio: this.audio, get modalOpen() { return ui.modalOpen; }, set modalOpen(v) { ui.modalOpen = v; }, refreshHotbar: () => this.refreshHotbar() }, this.state!, opts);
   }
 
   // ------------------------------------------------------------------ UIBridge minigames

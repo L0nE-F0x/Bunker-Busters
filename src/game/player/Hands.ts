@@ -364,6 +364,11 @@ export const POSES: Record<string, { r: HandPose; l: HandPose; items?: { r?: str
   empHold: { r: P(0.17, -0.18, -0.38, 0.2, 0.2, -1.15, 0.78, 0.65, 0.6), l: READY, items: { r: 'emp' } },
   empWind: { r: P(0.23, -0.09, -0.27, 0.85, -0.35, -1.45, 0.78, 0.65, 0.6), l: P(0.16, -0.2, -0.44, 0.0, 0.1, -0.6, 0.15, 0.15, 0.1, 0.15), items: { r: 'emp' } },
   empThrow: { r: P(0.08, -0.1, -0.58, -0.35, 0.1, -0.6, 0.12, 0.15, 0.1, 0.25), l: READY },
+  // a molotov: held by the neck, lit rag up, then the same overarm throw as the EMP
+  molHold: { r: P(0.16, -0.16, -0.4, 0.45, 0.2, -1.2, 0.85, 0.8, 0.75), l: READY, items: { r: 'molotov' } },
+  molWind: { r: P(0.24, -0.06, -0.26, 1.05, -0.35, -1.45, 0.85, 0.8, 0.75), l: P(0.16, -0.2, -0.44, 0.0, 0.1, -0.6, 0.15, 0.15, 0.1, 0.15), items: { r: 'molotov' } },
+  // binoculars at the eyes: both hands up and in, just under the frame (the view is the eyepieces)
+  binos: { r: P(0.07, -0.2, -0.2, 0.9, 0.3, -1.3, 0.7, 0.65, 0.6), l: P(0.07, -0.2, -0.2, 0.9, 0.3, -1.3, 0.7, 0.65, 0.6) },
   eat: { r: P(0.03, -0.14, -0.26, 0.6, 0.75, -1.25, 0.75, 0.55, 0.5), l: READY, items: { r: 'ration' } },
   // character select: kneeling at the fire. One hand shows the gear, the other warms at the flames.
   showcaseEmp: {
@@ -626,6 +631,32 @@ function buildItems(look: HandLook) {
   const label = new THREE.Mesh(new THREE.BoxGeometry(0.031, 0.0185, 0.03), hardMat('#7a2f2a', 0.7));
   ration.add(foil, label);
   ration.rotation.set(0, 0.3, 0);
+  // molotov: a square mezcal bottle held by the neck, a rag in the mouth with a live flame on it
+  const mol = g('molotov');
+  const bottle = new THREE.Group();
+  const glass = hardMat('#2d3a2a', 0.12, 0.2);
+  const shoulder = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.03, 0.035, 12), glass);
+  shoulder.position.y = -0.03;
+  const bBody = new THREE.Mesh(new THREE.CylinderGeometry(0.031, 0.034, 0.13, 4).rotateY(Math.PI / 4), glass);
+  bBody.position.y = -0.11;
+  const tag = new THREE.Mesh(new THREE.CylinderGeometry(0.0352, 0.0352, 0.05, 4, 1, true).rotateY(Math.PI / 4), hardMat('#d8ccb0', 0.7, 0));
+  tag.position.y = -0.115;
+  const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, 0.05, 10), glass);
+  neck.position.y = 0.005;
+  const ragM = hardMat('#6e6458', 0.95, 0);
+  const ragA = new THREE.Mesh(new THREE.CylinderGeometry(0.016, 0.01, 0.05, 6), ragM);
+  ragA.position.y = 0.045;
+  const ragB = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.04, 0.004), ragM);
+  ragB.position.set(0.012, 0.055, 0);
+  ragB.rotation.z = -0.5;
+  const fl = glow('#ff6a1a', 3);
+  // a teardrop of flame off the rag (a cone read as an arrowhead up close)
+  const flame = new THREE.Mesh(new THREE.SphereGeometry(0.0125, 12, 8).scale(1, 2.1, 1).translate(0, 0.012, 0), fl.material);
+  flame.position.set(0.004, 0.075, 0);
+  bottle.add(shoulder, bBody, tag, neck, ragA, ragB, flame);
+  mol.add(bottle);
+  mol.rotation.set(-0.25, 0, 0.15);
+  mol.userData.flame = fl.intensity;
   // flashlight: rear end sits in the fist, head + lens protrude well past the knuckles
   const torch = g('flashlight');
   const tb = new THREE.Group();
@@ -753,6 +784,10 @@ export class Hands {
     this.action = first;
   }
 
+  /** Overarm throw of a lit molotov (`onRelease` on letting go). */
+  throwMolotov(onRelease: () => void) {
+    this.play([{ pose: 'molHold', dur: 0.32 }, { pose: 'molWind', dur: 0.28 }, { pose: 'empThrow', dur: 0.4 }], onRelease, 2, 0.06);
+  }
   throwEmp(onRelease: () => void) {
     this.play([{ pose: 'empHold', dur: 0.3 }, { pose: 'empWind', dur: 0.26 }, { pose: 'empThrow', dur: 0.4 }], onRelease, 2, 0.06);
   }
@@ -891,6 +926,8 @@ export class Hands {
     this.accent.value = 2.5 + Math.pow(Math.max(0, Math.sin(this.t * 2.4)), 12) * 6;
     const ring = this.items.emp.userData.ring as { value: number };
     ring.value = 4 + Math.sin(this.t * 18) * 2;
+    const fl = this.items.molotov?.userData.flame as { value: number } | undefined;
+    if (fl) fl.value = 2.6 + Math.sin(this.t * 31) * 0.6 + Math.sin(this.t * 13) * 0.6;
     const lens = this.items.flashlight.userData.lens as { value: number };
     lens.value = this.flashlightOn ? 8 : 0.1;
     const lit = this.flashlightOn && (want.l === 'flashlight' || gunTorch);

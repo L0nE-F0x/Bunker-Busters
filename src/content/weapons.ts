@@ -3,7 +3,7 @@
  * Recovery contractor (100 hp) takes three body shots from the revolver, two to the head, and a wolf
  * (60 hp) two. Every gun is loud: `noise` is how far away the desert hears it.
  */
-export type WeaponId = 'crowbar' | 'revolver' | 'shotgun' | 'rifle';
+export type WeaponId = 'crowbar' | 'revolver' | 'shotgun' | 'rifle' | 'pistol22';
 
 export interface WeaponDef {
   id: WeaponId;
@@ -28,8 +28,12 @@ export interface WeaponDef {
   interval: number;
   /** View kick per shot: radians up, radians of random yaw, viewmodel punch 0..1. */
   recoil: { pitch: number; yaw: number; kick: number };
-  /** Reload: one round at a time (`per` s each, between `open` and `close`). */
+  /** Reload: one round at a time (`per` s each, between `open` and `close`). A `magFed` gun loads the
+   *  whole magazine in one `per` cycle (old one out, new one in, slide). */
   reload: { open: number; per: number; close: number };
+  magFed?: boolean;
+  /** Suppressed: its own quiet report, no muzzle flash worth the name. */
+  suppressed?: boolean;
   /** Field of view while aiming down the sights. */
   adsFov: number;
   /** Metres. Anything with ears inside this radius hears the shot. */
@@ -66,10 +70,55 @@ export const WEAPONS: Record<WeaponId, WeaponDef> = {
     recoil: { pitch: 0.075, yaw: 0.014, kick: 0.85 }, reload: { open: 0.3, per: 0.48, close: 0.36 }, adsFov: 34,
     noise: 220, headMult: 2.0, draw: 0.55, short: '30-30',
   },
+  // The stealth gun: a heard-at-18-m report instead of 140, a weak round (four to the body, two to the
+  // head), quick follow-ups, a ten-round magazine swapped whole.
+  pistol22: {
+    id: 'pistol22', name: 'Hush .22', item: 'pistol22', kind: 'gun', ammo: 'ammo22', mag: 10,
+    damage: 21, pellets: 1, hipSpread: 0.018, adsSpread: 0.003, range: 18, maxRange: 55, interval: 0.2,
+    recoil: { pitch: 0.018, yaw: 0.006, kick: 0.2 }, reload: { open: 0.42, per: 0.62, close: 0.34 }, adsFov: 54,
+    noise: 18, headMult: 2.6, draw: 0.32, short: '.22', magFed: true, suppressed: true,
+  },
 };
 
 /** Cycle order for the mouse wheel / Q. */
-export const WEAPON_ORDER: WeaponId[] = ['crowbar', 'revolver', 'shotgun', 'rifle'];
+export const WEAPON_ORDER: WeaponId[] = ['crowbar', 'pistol22', 'revolver', 'shotgun', 'rifle'];
+
+/**
+ * Camp-fitted weapon mods (overnight swarm 2). A flag in the save (`mod.<weapon>.<id>`) once fitted;
+ * `modded()` folds them into the weapon's numbers, the viewmodel shows the part (Arms.setMods).
+ */
+export type ModId = 'scope' | 'choke' | 'speed';
+export const MODS: Record<ModId, { weapon: WeaponId; name: string; flag: string; blurb: string }> = {
+  scope: { weapon: 'rifle', name: 'Survey scope', flag: 'mod.rifle.scope', blurb: 'Half a pair of binoculars on rings: 4× through a real reticle, tighter aimed shots.' },
+  choke: { weapon: 'shotgun', name: 'Full choke', flag: 'mod.shotgun.choke', blurb: 'A tube in the muzzle: a tighter pattern that still bites at fifteen metres.' },
+  speed: { weapon: 'revolver', name: 'Speedloader', flag: 'mod.revolver.speed', blurb: 'Six in the cylinder in one push instead of one at a time.' },
+};
+
+/** Why a mod can't be fitted right now (or undefined). */
+export function modBlock(s: { count(id: string): number; has(flag: string): boolean }, m: ModId): string | undefined {
+  const d = MODS[m];
+  if (!s.count(WEAPONS[d.weapon].item)) return `No ${WEAPONS[d.weapon].name} to fit it to`;
+  if (s.has(d.flag)) return 'Already fitted';
+  return undefined;
+}
+
+const _modCache = new Map<string, WeaponDef>();
+/** `w` with whatever mods `has` says are fitted (memoized: PlayerArms asks every frame). */
+export function modded(w: WeaponDef, has: (flag: string) => boolean): WeaponDef {
+  let key = '';
+  for (const m of Object.keys(MODS) as ModId[]) if (MODS[m].weapon === w.id && has(MODS[m].flag)) key += m + ',';
+  if (!key) return w;
+  key = w.id + ':' + key;
+  let d = _modCache.get(key);
+  if (d) return d;
+  d = { ...w, recoil: { ...w.recoil } };
+  if (key.includes('scope')) { d.adsFov = 13; d.adsSpread = w.adsSpread * 0.5; d.draw = w.draw * 1.15; }
+  // all six at once (the whole reload is one load cycle, a little longer than a single round)
+  if (key.includes('speed')) { d.magFed = true; d.reload = { ...w.reload, per: 0.55 }; }
+  if (key.includes('choke')) { d.hipSpread = w.hipSpread * 0.78; d.adsSpread = w.adsSpread * 0.66; d.range = w.range + 5; d.maxRange = w.maxRange + 8; }
+  _modCache.set(key, d);
+  return d;
+}
 
 /** Damage at distance `d` for weapon `w` (per hit). */
 export function falloff(w: WeaponDef, d: number) {

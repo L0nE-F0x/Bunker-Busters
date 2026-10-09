@@ -205,11 +205,17 @@ function shotgun(): ArmsModel {
   add(pump, box(0.046, 0.044, 0.17, 0.016, 3), wood, 0, -0.003, 0);
   for (let i = 0; i < 7; i++) add(pump, box(0.047, 0.003, 0.004, 0.001), hardMat('#3b2214', 0.7, 0), 0, -0.003 + 0.014, -0.06 + i * 0.02);
   add(pump, box(0.006, 0.006, 0.12, 0.002), blued, 0.016, 0.018, 0.12); // action bar
-  const muzzle = V3(0, 0.068, -0.68);
+  // full choke (bone, scaled to nothing until fitted): a knurled tube standing proud of the muzzle
+  const choke = new THREE.Group();
+  choke.position.set(0, 0.068, -0.683);
+  root.add(choke);
+  add(choke, cylZ(0.0128, 0.0124, 0.034, 18), steelMat('#9a9ea4', 0.28));
+  for (let i = 0; i < 3; i++) add(choke, cylZ(0.0132, 0.0132, 0.003, 18), steelMat('#5a5e64', 0.5), 0, 0, -0.006 + i * 0.008);
+  const muzzle = V3(0, 0.068, -0.7);
   const flash = buildFlash(muzzle, 0.2);
   bakeParts(root, true);
   root.add(flash);
-  return { root, sightY: 0.1, muzzle, parts: { pump }, flash };
+  return { root, sightY: 0.1, muzzle, parts: { pump, choke }, flash };
 }
 
 function rifle(): ArmsModel {
@@ -256,11 +262,31 @@ function rifle(): ArmsModel {
   const loop = new THREE.TorusGeometry(0.022, 0.0035, 6, 18, Math.PI * 1.4);
   add(lever, loop, case_, 0, -0.025, 0.07, 0, Math.PI / 2, Math.PI * 0.35);
   add(lever, box(0.004, 0.022, 0.006, 0.0015), bright, 0, -0.012, 0.045, 0.35, 0, 0); // trigger
+  // camp-fitted scope (bone, scaled to nothing until fitted): half a pair of survey binoculars on
+  // two rings, matte, a turret on top and one on the side; the sight line rises to its axis
+  const scope = new THREE.Group();
+  scope.position.set(0, 0.128, -0.16);
+  root.add(scope);
+  const matte = hardMat('#1d1f22', 0.6, 0.35);
+  add(scope, cylZ(0.0115, 0.0115, 0.17, 18), matte, 0, 0, 0.0);
+  add(scope, cylZ(0.0115, 0.019, 0.05, 18), matte, 0, 0, -0.105);
+  add(scope, cylZ(0.019, 0.019, 0.018, 18), matte, 0, 0, -0.138);
+  add(scope, cylZ(0.0155, 0.0115, 0.035, 18), matte, 0, 0, 0.1);
+  add(scope, cylZ(0.0158, 0.0158, 0.03, 18), hardMat('#151617', 0.85, 0), 0, 0, 0.13);
+  add(scope, new THREE.CylinderGeometry(0.0068, 0.0068, 0.016, 12), matte, 0, 0.017, 0.0);
+  add(scope, new THREE.CylinderGeometry(0.0068, 0.0068, 0.016, 12).rotateZ(Math.PI / 2), matte, 0.017, 0, 0.0);
+  add(scope, cylZ(0.0172, 0.0172, 0.004, 18), steelMat('#8a8e94', 0.3), 0, 0, -0.146); // objective ring
+  for (const z of [-0.055, 0.07]) {
+    add(scope, box(0.026, 0.008, 0.014, 0.002), blued, 0, -0.012, z);
+    add(scope, box(0.012, 0.044, 0.012, 0.002), blued, 0, -0.034, z);
+  }
+  // a strip of tape where the binoculars' hinge used to be
+  add(scope, cylZ(0.0118, 0.0118, 0.016, 18), hardMat('#cfc6b0', 0.8, 0), 0, 0, 0.03);
   const muzzle = V3(0, 0.06, -0.67);
   const flash = buildFlash(muzzle, 0.15);
   bakeParts(root, true);
   root.add(flash);
-  return { root, sightY: 0.099, muzzle, parts: { lever, hammer }, flash };
+  return { root, sightY: 0.099, muzzle, parts: { lever, hammer, scope }, flash };
 }
 
 function crowbar(): ArmsModel {
@@ -281,6 +307,76 @@ function crowbar(): ArmsModel {
   add(root, box(0.02, 0.006, 0.05, 0.002), worn, 0, -0.006, 0.09, 0.18, 0, 0);
   bakeParts(root, false);
   return { root, sightY: 0, muzzle: V3(0, 0.1, -0.46), parts: {}, flash: null };
+}
+
+/**
+ * The Hush .22: a slab-sided target pistol (fixed barrel, a slide riding on top) wearing a fat
+ * suppressor, with tall sights that clear the can. The magazine is a bone so it drops out of the grip
+ * and comes back up in the left hand; the slide is a bone so it slaps back on every shot.
+ */
+function pistol22(): ArmsModel {
+  const root = new THREE.Group();
+  const black = steelMat('#34373b', 0.4);
+  // two-tone: a stainless slide over a black frame (a target pistol, and it reads at a glance)
+  const parkerized = steelMat('#a3a8ae', 0.32);
+  const bright = steelMat('#8a8e94', 0.3);
+  const can = hardMat('#2b2d30', 0.55, 0.6);
+  const panel = hardMat('#4a3a2c', 0.7, 0);
+  const rubber = hardMat('#141414', 0.88, 0);
+  // grip: raked frame with checkered wood panels, a flared heel at the butt
+  const grip = new THREE.Group();
+  grip.position.set(0, 0.012, 0.012);
+  grip.rotation.x = -0.3;
+  root.add(grip);
+  add(grip, box(0.026, 0.086, 0.04, 0.008, 3), black, 0, -0.03, 0);
+  add(grip, box(0.029, 0.066, 0.032, 0.008, 3), panel, 0, -0.03, 0.002);
+  for (let i = 0; i < 5; i++) add(grip, box(0.0292, 0.0014, 0.028, 0.0005), hardMat('#33281f', 0.8, 0), 0, -0.052 + i * 0.011, 0.002);
+  add(grip, box(0.024, 0.006, 0.042, 0.002), black, 0, 0.012, 0.003); // tang
+  add(grip, box(0.03, 0.01, 0.046, 0.003), rubber, 0, -0.077, 0.004); // heel
+  // frame: dust cover over the trigger, the barrel's lower lug
+  add(root, box(0.024, 0.026, 0.11, 0.004), black, 0, 0.046, -0.038);
+  // trigger guard (squared front, as on target guns) + a smooth target trigger
+  add(root, new THREE.TorusGeometry(0.016, 0.0026, 6, 16, Math.PI * 1.15), black, 0, 0.026, -0.028, 0, Math.PI / 2, -Math.PI * 0.08);
+  add(root, box(0.004, 0.004, 0.022, 0.0012), black, 0, 0.011, -0.045);
+  add(root, box(0.005, 0.02, 0.006, 0.0018), bright, 0, 0.024, -0.03, 0.25, 0, 0);
+  // slide (bone): cycles back on each shot, locks back on empty
+  const slide = new THREE.Group();
+  slide.position.set(0, 0.066, -0.046);
+  root.add(slide);
+  add(slide, box(0.023, 0.024, 0.128, 0.004, 3), parkerized);
+  add(slide, box(0.0236, 0.006, 0.04, 0.001), steelMat('#121314', 0.6), 0, 0.004, -0.02); // ejection port
+  for (let i = 0; i < 6; i++) add(slide, box(0.0238, 0.016, 0.0016, 0.0004), black, 0, -0.002, 0.044 + i * 0.0036); // serrations
+  // rear sight (tall, suppressor height) with a square notch; front blade with a white dot
+  add(slide, box(0.02, 0.012, 0.007, 0.0015), black, 0, 0.018, 0.058);
+  add(slide, box(0.006, 0.006, 0.0075, 0.0006), steelMat('#0d0e0f', 0.7), 0, 0.022, 0.058);
+  add(slide, box(0.0036, 0.016, 0.007, 0.001), black, 0, 0.019, -0.06);
+  add(slide, new THREE.SphereGeometry(0.0014, 8, 6), hardMat('#e8e3d4', 0.4, 0), 0, 0.025, -0.0638);
+  // barrel: a short stub out of the slide, then the threaded can
+  add(root, cylZ(0.0062, 0.0062, 0.026, 12), bright, 0, 0.066, -0.118);
+  add(root, cylZ(0.0168, 0.0168, 0.165, 22), can, 0, 0.066, -0.212);
+  add(root, cylZ(0.0172, 0.0172, 0.008, 22), black, 0, 0.066, -0.132); // rear cap
+  add(root, cylZ(0.0172, 0.0172, 0.008, 22), black, 0, 0.066, -0.29); // front cap
+  for (let i = 0; i < 3; i++) add(root, cylZ(0.0171, 0.0171, 0.0018, 22), steelMat('#4b4e53', 0.45), 0, 0.066, -0.17 - i * 0.045);
+  add(root, cylZ(0.0045, 0.0045, 0.002, 10), steelMat('#050505', 0.9), 0, 0.066, -0.2945); // bore
+  // a strip of white tape round the can, hand-labelled (a contractor's idea of a serial number)
+  add(root, cylZ(0.01705, 0.01705, 0.012, 22), hardMat('#cfc6b0', 0.8, 0), 0, 0.066, -0.245);
+  // magazine (bone): body hidden in the grip, base plate showing; drops out on a reload
+  const mag = new THREE.Group();
+  mag.position.set(0, 0.012, 0.012);
+  root.add(mag);
+  const magBody = new THREE.Group();
+  magBody.rotation.x = -0.3;
+  mag.add(magBody);
+  add(magBody, box(0.016, 0.084, 0.028, 0.002), steelMat('#55595f', 0.4), 0, -0.036, 0.002);
+  add(magBody, box(0.022, 0.007, 0.036, 0.002), black, 0, -0.082, 0.004);
+  add(magBody, box(0.004, 0.006, 0.006, 0.001), steelMat('#b8975a', 0.3), 0, 0.006, -0.008); // top round
+  // magazine release button behind the guard
+  add(root, box(0.028, 0.006, 0.006, 0.002), bright, 0, 0.034, -0.008);
+  const muzzle = V3(0, 0.066, -0.296);
+  const flash = buildFlash(muzzle, 0.045);
+  bakeParts(root, true);
+  root.add(flash);
+  return { root, sightY: 0.094, muzzle, parts: { slide, mag }, flash };
 }
 
 // ------------------------------------------------------------------ per-weapon handling
@@ -359,6 +455,22 @@ const HANDLING: Record<WeaponId, Handling> = {
     reload: [0.07, -0.22, -0.27, 0.28, 0.35, -0.95],
     loadAt: [0.017, 0.03, -0.12],
     loadRot: [0.4, 0.2, -2.3],
+  },
+  pistol22: {
+    scale: 1.45,
+    attach: [0, -0.004, 0.006, 0.05, 0, Math.PI / 2],
+    hip: [0.13, -0.17, -0.42, 0.04, 0.09, 0.02],
+    run: [0.16, -0.3, -0.34, -0.55, 0.5, 0.25],
+    low: [0.16, -0.62, -0.3, -1.1, 0.3, 0],
+    adsZ: -0.44,
+    left: null,
+    mirror: [-0.026, -0.02, -0.026, 0.55],
+    rCurl: [0.62, 0.9, 0.95, 1, 0.55, 0.7],
+    lCurl: [0.62, 0.7, 0.78, 0.86, 0.2, 0.4],
+    // canted right and tipped up, the mag well toward the left hand
+    reload: [0.04, -0.2, -0.42, 0.35, 0.2, -0.5],
+    loadAt: [0, -0.07, 0.03],
+    loadRot: [0.5, 0.6, -2.9],
   },
   crowbar: {
     scale: 1.3,
@@ -471,6 +583,8 @@ export class Arms {
   private hammerT = 0;
   private pumpT = -1;
   private leverT = -1;
+  private slideT = -1;
+  private slideLocked = false;
   private reload: { phase: 'open' | 'load' | 'close'; t: number; dur: number } | null = null;
   private loadCycle = -1;
   private swing: { t: number; dur: number; k: number; hitAt: number; onHit?: () => void; hit: boolean; bash: boolean } | null = null;
@@ -480,7 +594,7 @@ export class Arms {
   private breath = 0;
 
   constructor() {
-    this.models = { revolver: revolver(), shotgun: shotgun(), rifle: rifle(), crowbar: crowbar() };
+    this.models = { revolver: revolver(), shotgun: shotgun(), rifle: rifle(), crowbar: crowbar(), pistol22: pistol22() };
     for (const m of Object.values(this.models)) {
       m.root.visible = false;
       this.root.add(m.root);
@@ -542,7 +656,7 @@ export class Arms {
     const id = this.current;
     if (!id) return;
     const m = this.models[id];
-    const big = id === 'shotgun' ? 1.6 : id === 'rifle' ? 1.25 : 1;
+    const big = id === 'shotgun' ? 1.6 : id === 'rifle' ? 1.25 : id === 'pistol22' ? 0.42 : 1;
     // back, up and a random twist; aimed shots kick less sideways
     this.recoil.v[2] += 1.6 * big * k;
     this.recoil.v[3] += (5.5 + Math.random() * 2) * big * k;
@@ -558,6 +672,20 @@ export class Arms {
     if (id === 'revolver') { this.cylTarget += Math.PI / 3; this.hammerT = 0.0; }
     if (id === 'shotgun') this.pumpT = 0;
     if (id === 'rifle') this.leverT = 0;
+    if (id === 'pistol22') this.slideT = 0;
+  }
+
+  /** Camp-fitted mods: show the part, and move the rifle's sight line up to the scope's axis. */
+  setMods(scope: boolean, choke: boolean) {
+    const r = this.models.rifle, s = this.models.shotgun;
+    r.parts.scope?.scale.setScalar(scope ? 1 : 1e-4);
+    r.sightY = scope ? 0.128 : 0.099;
+    s.parts.choke?.scale.setScalar(choke ? 1 : 1e-4);
+  }
+
+  /** The pistol's slide stays back on an empty magazine (until the reload's slide release). */
+  slideLock(on: boolean) {
+    this.slideLocked = on;
   }
 
   /** Pull the trigger on nothing. */
@@ -714,6 +842,40 @@ export class Arms {
       if (m.parts.lever) m.parts.lever.rotation.x = k * 0.85;
       if (this.leverT > 0.62) this.leverT = -1;
     }
+    if (m.parts.slide) {
+      // a blowback slide: snaps back and returns in ~60 ms; locked back while empty until the release
+      let back = 0;
+      if (this.slideT >= 0) {
+        this.slideT += dt;
+        const u = this.slideT / 0.07;
+        back = u < 0.35 ? u / 0.35 : Math.max(0, 1 - (u - 0.35) / 0.65);
+        if (this.slideT > 0.07) this.slideT = -1;
+      }
+      const rel = this.reload?.phase === 'close' ? Math.min(1, this.reload.t / (this.reload.dur * 0.35)) : 0;
+      if (this.slideLocked && (!this.reload || this.reload.phase !== 'close')) back = Math.max(back, 0.82);
+      else if (this.reload?.phase === 'close' && this.slideLocked) back = 0.82 * (1 - rel);
+      if (this.reload?.phase === 'close' && rel >= 1) this.slideLocked = false;
+      m.parts.slide.position.z = -0.046 + 0.026 * back;
+    }
+    if (m.parts.mag) {
+      // out with a flick and gone below the frame; the fresh one rides up in the left hand
+      const r = this.reload;
+      const seat = _magSeat.set(0, 0.012, 0.012);
+      if (r && r.phase === 'open') {
+        const u = Math.min(1, r.t / r.dur);
+        m.parts.mag.position.set(0, seat.y - 0.5 * u * u - 0.02 * u, seat.z + 0.03 * u);
+      } else if (r && r.phase === 'load') {
+        const c = this.loadCycle;
+        if (c < 0.45) m.parts.mag.position.set(0, -0.6, 0);
+        else {
+          // from the pocket to the well, following the hand (same curve as the left hand below)
+          const k = Math.sin(((c - 0.45) / 0.55) * Math.PI / 2);
+          _inv.copy(m.root.matrix).invert();
+          const from = _p.set(-0.06, -0.42, -0.26).applyMatrix4(_inv);
+          m.parts.mag.position.set(from.x + (seat.x - from.x) * k, from.y + (seat.y - from.y) * k, from.z + (seat.z - from.z) * k);
+        }
+      } else m.parts.mag.position.copy(seat);
+    }
     // muzzle flash: a frame or two, then gone
     if (m.flash) {
       this.flashT -= dt;
@@ -776,6 +938,7 @@ export class Arms {
 }
 
 const _v2 = new THREE.Vector2();
+const _magSeat = new THREE.Vector3();
 
 /**
  * Turn a wrist frame (Hands.root space, scale 1.3) for `rig` into its HandPose channels: the grip

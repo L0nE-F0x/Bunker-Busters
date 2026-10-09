@@ -54,6 +54,20 @@ const defs: ItemDef[] = [
     flavor: 'Somebody carved a tally into the forend and then, later, crossed it out.',
   },
   {
+    id: 'pistol22', name: 'Hush .22', category: 'weapon', weight: 0.9, stack: 1, value: 110, icon: 'pistol22',
+    description: 'A target pistol wearing a suppressor the size of a soda can. Ten in the magazine, and a shot a contractor twenty metres off mistakes for somebody else\'s problem. Soft past twenty metres. Aim for heads.',
+    flavor: 'Kade\'s internal memo calls it a "discreet offboarding tool".',
+  },
+  {
+    id: 'ammo22', name: '.22 Long Rifle', category: 'ammo', weight: 0.004, stack: 50, value: 1, icon: 'ammo22',
+    description: 'Little rimfire rounds for the Hush. The camp can load them by the dozen from scrap.',
+  },
+  {
+    id: 'molotov', name: 'Reserve Molotov', category: 'consumable', weight: 0.7, stack: 4, value: 32, icon: 'molotov', usable: true,
+    description: 'Four-hundred-dollar mezcal and a strip of founder fleece. Throw it (use) and the ground burns for eight seconds: wolves, contractors and you, if you stand in it. Loud enough to turn heads.',
+    flavor: 'Tasting notes: smoke.',
+  },
+  {
     id: 'ammo38', name: '.38 Rounds', category: 'ammo', weight: 0.012, stack: 30, value: 2, icon: 'ammo',
     description: 'Revolver cartridges. The camp can reload brass with scrap.',
   },
@@ -116,6 +130,98 @@ const defs: ItemDef[] = [
     description: 'Bunkr.ly\'s ledger: everyone who paid Tanner for a seat in Apex Vault, and the short list at the back that Vesper Kade calls the Seed. Last Chance is in the unpaid column, circled, with a smiley face.',
     flavor: 'This is the map. The next name has a building.',
   },
+  // --- Gear (overnight swarm 2): tools that change how you play ---
+  {
+    id: 'binoculars', name: 'Survey Binoculars', category: 'tool', weight: 0.7, stack: 1, value: 70, icon: 'binoculars', usable: true,
+    description: 'Use to raise them (again, or Esc, to lower). Anything hostile you hold in the middle for a moment gets tagged: contractors, wolves, turrets, drones. Tagged things show through walls and on the minimap for ninety seconds.',
+    flavor: 'Stencilled: KADE SURVEY · ASSET 0091 · "SEE THE OPPORTUNITY".',
+  },
+  {
+    id: 'vest', name: 'Recovery Plate Carrier', category: 'tool', weight: 3.2, stack: 1, value: 95, icon: 'vest',
+    description: 'Worn while it\'s in your pack. Takes 40% of bullets, blasts, bites and blows until the plates are spent; the plates are 100 points of somebody else\'s problem. Re-plate it at the camp fire.',
+    flavor: 'The inside label says "ONE SIZE FITS MOST STAKEHOLDERS".',
+  },
+  {
+    id: 'bandage', name: 'Fleece Bandage', category: 'consumable', weight: 0.08, stack: 8, value: 8, icon: 'bandage', usable: true,
+    description: 'Quick to wrap, even on the move: 12 health now and 20 more over ten seconds. Not a medkit. A medkit closes a hole. This holds one shut.',
+    flavor: 'Cut from a VC fleece vest. The fund logo is still on the wound side.',
+  },
+  {
+    id: 'canteen', name: 'Canteen', category: 'tool', weight: 0.5, stack: 1, value: 40, icon: 'canteen', usable: true,
+    description: 'Three long drinks. Fills itself up when you rest at the camp fire, so you can stop hauling bottles. Inez will top it up for a scrap.',
+    flavor: 'Rebuilt from a bottle that used to glow when you were dehydrated. Now it just works.',
+  },
+  // --- Satirical salvage (overnight swarm 2): sell it at the Till, or strip it at the fire ---
+  {
+    id: 'smart_ring', name: 'Sleep Ring (Gen 3)', category: 'loot', weight: 0.02, stack: 10, value: 14, icon: 'ring',
+    description: 'Titanium, tracks your sleep. Last sync 1,281 days ago. Sleep score: 0. A tiny cell inside, if you have small screwdrivers and no dignity.',
+    flavor: 'It vibrates once a day to tell you to stand up. Nobody has sat down since the Pivot.',
+  },
+  {
+    id: 'visor', name: 'Metaverse Visor', category: 'loot', weight: 0.6, stack: 3, value: 22, icon: 'visor',
+    description: 'A headset. Inside it is a virtual land parcel that sold for two point three million. The parcel is also nowhere now. Good lenses, though.',
+    flavor: 'The strap still smells like a keynote.',
+  },
+  {
+    id: 'mug', name: '"Move Fast" Mug', category: 'loot', weight: 0.35, stack: 5, value: 4, icon: 'mug',
+    description: 'A matte black mug that says MOVE FAST on one side and, faintly, BREAK THINGS on the other, where somebody tried to scrub it off.',
+    flavor: 'Broke. Moved.',
+  },
+  {
+    id: 'seed_plate', name: 'Seed Phrase Plate', category: 'loot', weight: 0.4, stack: 6, value: 12, icon: 'plate',
+    description: 'Twenty-four words stamped into a steel plate: fireproof, floodproof, meaning-proof. The coins live on a server that is now a crater. The steel is real. It stops a bullet.',
+    flavor: 'Word nineteen is "bunker". Word twenty is "regret".',
+  },
+  {
+    id: 'kombucha', name: 'Raw Kombucha', category: 'consumable', weight: 0.6, stack: 6, value: 9, icon: 'kombucha', usable: true,
+    description: 'Unpasteurised, still alive, getting ideas. A good drink and a little food, and your stomach files a complaint.',
+    flavor: 'The SCOBY has been the CEO since the founder left.',
+  },
+  {
+    id: 'mezcal', name: 'Founder\'s Reserve Mezcal', category: 'loot', weight: 0.8, stack: 4, value: 28, icon: 'bottle',
+    description: 'Small batch, single estate, numbered, four hundred dollars. High proof. The camp has a better use for it than drinking.',
+    flavor: 'Bottle 31 of 500. Tasting notes: exit liquidity.',
+  },
+  {
+    id: 'smart_lock', name: 'Smart Padlock', category: 'loot', weight: 0.5, stack: 4, value: 6, icon: 'padlock',
+    description: 'Opens from an app. The app\'s servers are gone, which makes this the most secure object left on Earth. Strip it for the cell and the steel.',
+    flavor: '"Your door, reimagined." Reimagined as a wall.',
+  },
+  {
+    id: 'asic', name: 'Mining Rig', category: 'loot', weight: 3, stack: 2, value: 30, icon: 'asic',
+    description: 'A box that turned the grid into 0.0004 of a coin. Heavy, hot even now, and full of copper, fans and two good cells.',
+    flavor: 'It paid for itself, according to a chart.',
+  },
+  {
+    id: 'speaker_badge', name: 'Summit Speaker Lanyard', category: 'loot', weight: 0.05, stack: 10, value: 8, icon: 'badge',
+    description: 'SPEAKER · RESILIENCE SUMMIT · "Disrupting the Apocalypse". The talk was at 2 pm. The apocalypse was at 1.',
+    flavor: 'Green room access. The green room is a crater.',
+  },
+  {
+    id: 'nootropics', name: 'Founder Focus™', category: 'consumable', weight: 0.05, stack: 6, value: 18, icon: 'pills', usable: true,
+    description: 'Forty percent caffeine, sixty percent confidence. For two minutes your aim doesn\'t sway and your reloads don\'t shake. Then you\'re thirsty.',
+    flavor: '"Unlock your 10x self." Side effects include certainty.',
+  },
+  {
+    id: 'smart_bottle', name: 'Hydration-Aware Bottle', category: 'loot', weight: 0.3, stack: 3, value: 10, icon: 'smartbottle',
+    description: 'Glows to remind you to drink. Has been glowing since the end of the world. Gut the electronics and it\'s a perfectly good canteen.',
+    flavor: 'Hydration streak: 0 days. Glow streak: 1,281.',
+  },
+  {
+    id: 'scooter_cell', name: 'Scooter Battery', category: 'loot', weight: 1.8, stack: 3, value: 34, icon: 'scootercell',
+    description: 'From a fleet of forty thousand rental scooters that all went into the same river on the same night. Two good lithium cells inside.',
+    flavor: 'Ride ended. Please park responsibly.',
+  },
+  {
+    id: 'fleece', name: 'VC Fleece Vest', category: 'loot', weight: 0.4, stack: 4, value: 12, icon: 'fleece',
+    description: 'The uniform. A fund\'s logo over the heart. Warm, sleeveless, pointless, and it tears into very good bandages.',
+    flavor: 'The fund is gone. The vest abides.',
+  },
+  {
+    id: 'gpu', name: 'Graphics Card', category: 'loot', weight: 1.1, stack: 3, value: 45, icon: 'gpu',
+    description: 'Pulled from a rack that ran a chatbot which told one CEO he was right, every time, for six years. Inez pays well for these. She won\'t say why.',
+    flavor: 'Still warm. Still agreeing.',
+  },
   // --- Dry Creek favours ---
   {
     id: 'sol_roll', name: 'Sol\'s Pick Roll', category: 'tool', weight: 0.3, stack: 1, value: 30, icon: 'lockpick', usable: true,
@@ -174,5 +280,42 @@ const defs: ItemDef[] = [
 
 export const ITEMS: Record<string, ItemDef> = Object.fromEntries(defs.map((d) => [d.id, d]));
 export const HOTBAR_ITEMS = ['emp', 'ration', 'water', 'medkit'];
-/** Items that are never dropped with your pack on death (story, weapons). */
-export const KEEP_ON_DEATH = (id: string) => { const c = ITEMS[id]?.category; return c === 'intel' || c === 'weapon' || id === 'sol_roll' || id === 'deed'; };
+/** The Kit's button for items whose "Use" is really something else. */
+export const USE_LABEL: Record<string, string> = {
+  sol_roll: 'Unroll (5 picks)', binoculars: 'Raise', molotov: 'Throw', emp: 'Throw', noisemaker: 'Throw',
+  canteen: 'Drink', water: 'Drink', kombucha: 'Drink', ration: 'Eat', soylent: 'Drink', bandage: 'Wrap', nootropics: 'Take', medkit: 'Patch up', antivenom: 'Treat',
+};
+/** Items that are never dropped with your pack on death (story, weapons, worn gear). */
+export const KEEP_ON_DEATH = (id: string) => { const c = ITEMS[id]?.category; return c === 'intel' || c === 'weapon' || id === 'sol_roll' || id === 'deed' || id === 'binoculars' || id === 'vest' || id === 'canteen'; };
+
+// --- Gear state (overnight swarm 2). Lives in `data.marks` (absent = fresh), so saves need no migration.
+export const VEST_PLATES = 100;
+export const CANTEEN_SIPS = 3;
+type GearView = { count(id: string): number; has?(flag: string): boolean; data: { marks: Record<string, number> } };
+/** Plate points left on the vest you wear. */
+export const vestPlates = (s: GearView) => Math.max(0, Math.min(VEST_PLATES, s.data.marks['gear.vest'] ?? VEST_PLATES));
+/** Drinks left in the canteen. */
+export const canteenSips = (s: GearView) => Math.max(0, Math.min(CANTEEN_SIPS, s.data.marks['gear.canteen'] ?? CANTEEN_SIPS));
+/** Why a gear-restoring recipe can't run right now (or undefined). */
+export function restoreBlock(s: GearView, id: 'vest' | 'canteen'): string | undefined {
+  if (!s.count(id)) return id === 'vest' ? 'No vest to re-plate' : 'No canteen';
+  if (id === 'vest' && vestPlates(s) >= VEST_PLATES) return 'The plates are fine';
+  if (id === 'canteen' && canteenSips(s) >= CANTEEN_SIPS) return 'It\'s full';
+  return undefined;
+}
+/** Hotbar slot `i`: its item, or the gear that does the same job when you're out (water → canteen, medkit → bandage). */
+export function hotbarItem(i: number, s: GearView): { id: string; q: number } {
+  const id = HOTBAR_ITEMS[i];
+  if (id === 'water' && !s.count('water') && s.count('canteen')) return { id: 'canteen', q: canteenSips(s) };
+  if (id === 'medkit' && !s.count('medkit') && s.count('bandage')) return { id: 'bandage', q: s.count('bandage') };
+  return { id, q: s.count(id) };
+}
+/** A live line for the kit panel (plates, sips), or ''. */
+export function itemStatus(id: string, s: GearView): string {
+  if (id === 'vest') { const p = Math.round(vestPlates(s)); return p > 0 ? `Plates ${p} / ${VEST_PLATES}` : 'Plates spent: re-plate it at the fire'; }
+  if (id === 'canteen') { const n = canteenSips(s); return n > 0 ? `${n} of ${CANTEEN_SIPS} drinks left` : 'Empty: rest at the fire, or ask Inez'; }
+  if (id === 'rifle' && s.has?.('mod.rifle.scope')) return 'Fitted: survey scope (4×)';
+  if (id === 'shotgun' && s.has?.('mod.shotgun.choke')) return 'Fitted: full choke';
+  if (id === 'revolver' && s.has?.('mod.revolver.speed')) return 'Fitted: speedloader';
+  return '';
+}

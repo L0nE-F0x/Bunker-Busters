@@ -26,7 +26,7 @@ export type GunKind = 'revolver' | 'shotgun' | 'rifle' | 'carbine' | 'turret';
 export type ImpactKind = 'dirt' | 'rock' | 'metal' | 'flesh' | 'wood' | 'glass';
 export type Foley =
   | 'dry' | 'cylOpen' | 'cylClose' | 'cylSpin' | 'round' | 'shell' | 'pumpBack' | 'pumpFwd' | 'leverOpen' | 'leverClose'
-  | 'gate' | 'swing' | 'swingHeavy' | 'draw' | 'holster' | 'empty' | 'casing';
+  | 'gate' | 'swing' | 'swingHeavy' | 'draw' | 'holster' | 'empty' | 'casing' | 'magOut' | 'magIn' | 'slide';
 export type Creature = 'growl' | 'snarl' | 'bite' | 'yelp' | 'whimper' | 'rattle' | 'hiss' | 'click' | 'squelch' | 'bodyfall';
 
 const SPEED_OF_SOUND = 343;
@@ -195,6 +195,51 @@ export class CombatAudio {
     }
   }
 
+  /**
+   * The Hush .22 through its can: no crack and no rolling report, just a hard cough of gas, the slide
+   * slapping back and forward, and a little brass. `pos` absent = the player's own.
+   */
+  suppressedShot(pos?: THREE.Vector3) {
+    const ctx = this.b.ctx;
+    const dist = pos ? pos.distanceTo(this.b.listener()) : 0;
+    const t = ctx.currentTime + 0.004 + dist / SPEED_OF_SOUND;
+    const out = pos ? this.panner(pos, 2, 1.4) : this.b.sfx;
+    const enc = Math.min(1, Math.max(0, ((this.b.enclosed?.() ?? 0) - 0.2) / 0.6));
+    // the cough: band-limited gas through baffles, with a little low thump behind it
+    this.burst(out, t, 'bandpass', 1500, 0.9, 0.55, 0.001, 0.05, 700);
+    this.burst(out, t, 'highpass', 5200, 1, 0.12, 0.0008, 0.012);
+    this.tone(out, t, 'sine', 180, 0.28, 0.002, 0.06, 90);
+    // the action: louder than the shot, as with any can
+    this.burst(out, t + 0.012, 'bandpass', 2700, 2.4, 0.22, 0.001, 0.025);
+    this.ping(out, t + 0.016, 2500, 0.035, 0.06);
+    // the can rings very faintly; a room gives it a short slap
+    this.ping(out, t + 0.002, 900, 0.012, 0.18);
+    if (enc > 0.05) this.burst(pos ? out : this.b.room, t + 0.01, 'bandpass', 1200, 0.8, 0.18 * enc, 0.002, 0.12);
+    else this.burst(this.b.reverb, t + 0.02, 'lowpass', 900, 0.6, 0.05, 0.01, 0.25);
+  }
+
+  /** A bottle breaking and fuel catching: glass, then the whoomp of vapour going up. */
+  molotov(pos: THREE.Vector3) {
+    const ctx = this.b.ctx;
+    const dist = pos.distanceTo(this.b.listener());
+    const t = ctx.currentTime + 0.004 + dist / SPEED_OF_SOUND;
+    const out = this.panner(pos, 4, 1.2);
+    this.burst(out, t, 'highpass', 3800, 1, 0.55, 0.001, 0.18);
+    for (let i = 0; i < 7; i++) this.ping(out, t + 0.015 + Math.random() * 0.2, 2800 + Math.random() * 3600, 0.05, 0.12);
+    this.burst(out, t + 0.05, 'lowpass', 380, 0.7, 0.9, 0.04, 0.5, 120);
+    this.tone(out, t + 0.05, 'sine', 70, 0.5, 0.03, 0.4, 40);
+    this.burst(this.b.reverb, t + 0.08, 'lowpass', 500, 0.6, 0.18, 0.05, 0.8, 150);
+  }
+
+  /** One lick of a fuel fire (call a few times a second while it burns; `k` 0..1 how big). */
+  crackle(pos: THREE.Vector3, k = 1) {
+    const ctx = this.b.ctx;
+    const t = ctx.currentTime + 0.004;
+    const out = this.panner(pos, 3, 1.4);
+    this.burst(out, t, 'lowpass', 520, 0.6, 0.22 * k, 0.04, 0.28, 260);
+    for (let i = 0; i < 3; i++) if (Math.random() < 0.7) this.burst(out, t + Math.random() * 0.25, 'bandpass', 2400 + Math.random() * 2400, 3, 0.07 * k, 0.001, 0.015);
+  }
+
   /** A bullet passing close by (`miss` = how close in metres): a snap and a tearing hiss. */
   whizz(pos: THREE.Vector3, miss: number) {
     const ctx = this.b.ctx;
@@ -329,6 +374,20 @@ export class CombatAudio {
         break;
       case 'empty':
         this.tone(o, t, 'square', 210, 0.04 * k, 0.003, 0.08);
+        break;
+      case 'magOut':
+        this.burst(o, t, 'bandpass', 2300, 2.5, 0.22 * k, 0.001, 0.03);
+        this.burst(o, t + 0.02, 'bandpass', 900, 1.5, 0.12 * k, 0.004, 0.06, 600);
+        break;
+      case 'magIn':
+        this.burst(o, t, 'bandpass', 1600, 2, 0.35 * k, 0.002, 0.04);
+        this.ping(o, t + 0.008, 2300, 0.05 * k, 0.07);
+        break;
+      case 'slide':
+        // back (a scrape), then forward hard
+        this.burst(o, t, 'bandpass', 2000, 1.8, 0.22 * k, 0.006, 0.05, 1300);
+        this.burst(o, t + 0.09, 'bandpass', 2600, 2, 0.4 * k, 0.001, 0.04);
+        this.ping(o, t + 0.09, 2100, 0.05 * k, 0.08);
         break;
       case 'casing':
         for (let i = 0; i < 3; i++) this.ping(o, t + 0.35 + i * 0.09 + Math.random() * 0.03, 3600 + Math.random() * 900, 0.018 * k / (i + 1), 0.06);

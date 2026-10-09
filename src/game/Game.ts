@@ -48,6 +48,7 @@ import { WORLD_CACHES, briefingFor, debriefFor, campRadio, epilogueFor, DEBRIEF_
 import { CAMP, type CampView } from '@/content/camp';
 import { Story } from './Story';
 import { RECIPES, type Recipe } from '@/content/craft';
+import { RECIPE_GROUPS } from '@/content/craft';
 import { SKILLS } from '@/content/skills';
 import { GARAGE } from '@/content/bunkers/garage';
 import { ITEMS, HOTBAR_ITEMS, KEEP_ON_DEATH } from '@/content/items';
@@ -57,6 +58,10 @@ import { XP_REWARDS, fallFactor, empRadius } from '@/content/progression';
 import { damp } from '@/engine/noise';
 import { Combat, sphereRay, type HurtKind, type Hostile } from './combat/Combat';
 import { PlayerArms } from './combat/PlayerArms';
+import { Throwables } from './combat/Throwables';
+import { Gear } from './player/Gear';
+import { modBlock, WEAPONS, type WeaponId } from '@/content/weapons';
+import { hotbarItem, restoreBlock } from '@/content/items';
 import { Recovery } from './combat/Recovery';
 import { Machines } from './combat/Machines';
 import { MenuDirector } from './MenuDirector';
@@ -141,6 +146,10 @@ export class Game {
   combat!: Combat;
   /** The player's weapons (per run). */
   arms: PlayerArms | null = null;
+  /** Binoculars, the vest, bandages, canteen, focus pills, molotovs (per run). */
+  gear: Gear | null = null;
+  /** Thrown fire (molotovs): bottles in flight and burning ground. */
+  throwables!: Throwables;
   /** Kade Recovery: outposts, crews, road patrols. */
   recovery!: Recovery;
   /** Sentries, Hornet drones and mines at the outposts. */
@@ -294,6 +303,8 @@ export class Game {
     this.combat.puffs = this.puffs;
     this.combat.acoustics = this.acoustics;
     this.scene.add(this.combat.group);
+    this.throwables = new Throwables(this.physics, this.hf, this.combat, this.audio);
+    this.scene.add(this.throwables.group);
     this.combat.register(this.fauna.pack);
     this.combat.register(this.fauna.critters);
     this.fauna.combat = this.combat;
@@ -472,6 +483,7 @@ export class Game {
       }),
       choose: (o) => self.withMinigame('idle', () => self.ui.choose(o)),
       converse: (o) => self.withMinigame('idle', () => self.ui.converse(o)),
+      till: (o) => self.withMinigame('idle', () => self.ui.till(o)),
       banner: (a, b, k) => self.ui.banner(a, b, k),
       subtitle: (a, b, v) => self.ui.subtitle(a, b, v),
     };
@@ -783,7 +795,8 @@ export class Game {
       see: (a, b) => this.combat.clearLine(a, b, this.combat.target.collider),
       say: (speaker, text, pos) => this.ui.subtitle(speaker, text, { pos: pos.clone() }),
     };
-    this.combat.register({ hostiles: () => [], hear: (p, _r, k) => { if (this.player) barks.hear(p, k, this.player.position); } });
+    // (a suppressed shot, heard at 18 m, doesn't startle a town 100 m off)
+    this.combat.register({ hostiles: () => [], hear: (p, r, k) => { if (this.player && r > 30) barks.hear(p, k, this.player.position); } });
   }
 
   private collectIntel(id: string) {
@@ -825,6 +838,8 @@ export class Game {
   private recipeBlock(r: Recipe): string | undefined {
     const s = this.state!;
     if (r.skill && s.skill(r.skill.id) < r.skill.level) return `Needs ${SKILLS[r.skill.id].name} ${r.skill.level}`;
+    const gear = r.restore ? restoreBlock(s, r.restore) : r.mod ? modBlock(s, r.mod) : undefined;
+    if (gear) return gear;
     for (const n of r.need) if (s.count(n.id) < n.qty) return `Need ${n.qty}× ${ITEMS[n.id]?.name ?? n.id}`;
     return undefined;
   }
@@ -839,10 +854,11 @@ export class Game {
       const disabled = this.recipeBlock(r);
       // "… · Electronics 1" over "Needs Electronics 1" said it twice: the reason line carries it
       const shown = disabled && r.skill && disabled.startsWith('Needs') ? detail.replace(` · ${SKILLS[r.skill.id].name} ${r.skill.level}`, '') : detail;
-      return { id: r.id, name: r.name, detail: shown, disabled };
+      return { id: r.id, name: r.name, detail: shown, disabled, group: r.group };
     };
-    const recipes = RECIPES.map(recipeRow);
-    const refreshRecipes = () => recipes.splice(0, recipes.length, ...RECIPES.map(recipeRow));
+    const ordered = [...RECIPES].sort((a, b) => RECIPE_GROUPS.indexOf(a.group ?? 'Tools') - RECIPE_GROUPS.indexOf(b.group ?? 'Tools'));
+    const recipes = ordered.map(recipeRow);
+    const refreshRecipes = () => recipes.splice(0, recipes.length, ...ordered.map(recipeRow));
     const campView = (): CampView => ({ has: (f) => s.has(f), count: (id) => s.count(id), rep: (id) => s.rep(id), name: s.archetype.name });
     void this.withMinigame('idle', async () => {
       for (;;) {
@@ -1072,6 +1088,9 @@ export class Game {
     this.cam.snap(state.data.yaw + Math.PI, -0.05);
     this.grantArms(state);
     this.arms = new PlayerArms(state, this.hands, this.cam, this.camera, this.input, this.combat, this.audio, this.player);
+    this.gear?.dispose();
+    this.gear = new Gear(state, this.hands, this.cam, this.camera, this.input, this.combat, this.audio, this.player, this.throwables, this.ui.root, (t, k) => this.ui.toast(t, k));
+    this.arms.steadyK = () => this.gear?.steadyK() ?? 1;
     this.placePack();
     this.combat.hooks = {
       onVenom: (sec) => {
@@ -1212,6 +1231,8 @@ export class Game {
     this.story?.dispose();
     this.story = null;
     this.arms = null;
+    this.gear?.dispose();
+    this.gear = null;
     this.combat.hooks = null;
     this.cam.aimK = 0;
     if (this.player) {
@@ -1420,6 +1441,7 @@ export class Game {
   private playerHurt(amount: number, from: THREE.Vector3 | null, kind: HurtKind) {
     const s = this.state;
     if (!s || !this.player || s.data.health <= 0) return;
+    if (this.gear) amount = this.gear.absorb(amount, kind);
     s.damage(amount);
     const k = Math.min(1, amount / 30);
     this.post.damage.value = Math.min(0.9, (this.post.damage.value as number) + 0.22 + k * 0.45);
@@ -1441,6 +1463,9 @@ export class Game {
     const s = this.state!;
     if (!s.count(id)) { this.audio.play('deny'); return; }
     if (this.hands?.busy) return;
+    if (this.gear?.use(id)) { this.ui.refreshHotbar(); return; }
+    // the Kit's Equip on a weapon (handy on a phone, and for finding a new gun)
+    if (ITEMS[id]?.category === 'weapon' && WEAPONS[id as WeaponId]) { this.arms?.equip(id as WeaponId); return; }
     if (id === 'emp') {
       if (this.hands && this.mode === 'playing' && !this.ui.modalOpen) this.hands.throwEmp(() => this.throwEmp());
       else this.throwEmp();
@@ -1652,6 +1677,7 @@ export class Game {
       const cleared = s.has(`outpost.${op.id}.cleared`) && (s.data.marks[`cleared.${op.id}`] ?? -1e9) > s.data.stats.playTime - 30 * 60;
       out.push({ id: `op:${op.id}`, x: op.x, z: op.z, label: cleared ? `${op.name} (cleared)` : op.name, color: cleared ? '#7d725f' : '#ff4a3a', kind: 'bunker' });
     }
+    if (this.gear) out.push(...this.gear.tagMarkers());
     const goal = this.story?.target();
     if (goal) out.push({ id: 'quest', x: goal.x, z: goal.z, label: goal.label, color: '#ffd27a', kind: 'intel' });
     if (this.player && this.garage.drone.position.distanceTo(this.player.position) < 70 && this.garage.drone.state !== 'disabled') {
@@ -1747,6 +1773,7 @@ export class Game {
     this.lightning.update(this.weather.flash, this.weather.intensity);
     this.stormWall.update(this.camera.position, this.weather.wallDist, this.weather.wallVis, this.atmo.uUpwind.value as THREE.Vector2);
     this.updateGrenades(dt);
+    this.throwables.update(dt);
     this.recovery.update(dt, focusPos, this.camera.position, this.mode === 'playing' && !!this.player && !this.ui.modalOpen);
     if (this.mode === 'playing' && !this.ui.modalOpen) this.machines.update(dt, this.camera.position);
     this.combat.update(dt);
@@ -1867,7 +1894,7 @@ export class Game {
         this.input.exitLock();
       }
       HOTBAR_ITEMS.forEach((id, i) => {
-        if (input.actPressed(`hotbar${i + 1}` as 'hotbar1')) this.useItem(id);
+        if (input.actPressed(`hotbar${i + 1}` as 'hotbar1')) this.useItem(hotbarItem(i, s).id || id);
       });
     }
 
@@ -1918,14 +1945,15 @@ export class Game {
     tg.eye.copy(this.camera.position);
     if (this.arms) {
       this.arms.validate();
-      this.wantAds = this.arms.update(dt, blocked || this.busy, !!this.hands?.busy).wantAds;
+      this.wantAds = this.arms.update(dt, blocked || this.busy || !!this.gear?.viewing, !!this.hands?.busy).wantAds;
     }
+    this.gear?.update(dt, blocked || this.busy);
     this.audio.breathe(dt, player.exertion);
     if (player.winded && !this.windedHint) {
       this.windedHint = true;
       this.ui.toast('Winded. Catch your breath before sprinting again.', 'info');
     }
-    this.hands?.update(dt, { speed: hs, grounded: player.grounded, crouch: player.crouching, sprint: player.sprinting, bobPhase: this.cam.bobPhase, lookDX: input.mouseDX, lookDY: input.mouseDY, vy: player.velocity.y, ads: this.wantAds, steady: s.focus('firearms') === 'marksman' });
+    this.hands?.update(dt, { speed: hs, grounded: player.grounded, crouch: player.crouching, sprint: player.sprinting, bobPhase: this.cam.bobPhase, lookDX: input.mouseDX, lookDY: input.mouseDY, vy: player.velocity.y, ads: this.wantAds, steady: s.focus('firearms') === 'marksman' || !!this.gear?.focused });
 
     // interaction
     this.focus = blocked ? null : this.pickFocus();

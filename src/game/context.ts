@@ -51,6 +51,8 @@ export interface UIBridge {
   }): Promise<void>;
   banner(title: string, sub: string, kind?: 'good' | 'bad' | 'info'): void;
   subtitle(speaker: string, text: string, voice?: { pos?: THREE.Vector3; variant?: number }): void;
+  /** A shop: Inez's Till (ui/Trader.ts). */
+  till?(opts: { line: string; markup: number; offer: number }): Promise<void>;
 }
 
 export interface Action {

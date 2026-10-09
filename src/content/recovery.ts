@@ -48,7 +48,7 @@ export const OUTPOSTS: OutpostDef[] = [
       { weapon: 'rifle', role: 'patrol', at: [-6, 2], yaw: -1.2 },
       { weapon: 'revolver', role: 'sit', at: [1.6, -1.8], yaw: 2.6 },
     ],
-    loot: [{ id: 'water', qty: 2 }, { id: 'ammo38', qty: 10 }, { id: 'ration', qty: 1 }, { id: 'antivenom', qty: 1 }],
+    loot: [{ id: 'water', qty: 2 }, { id: 'ammo38', qty: 10 }, { id: 'ration', qty: 1 }, { id: 'antivenom', qty: 1 }, { id: 'binoculars', qty: 1 }, { id: 'smart_bottle', qty: 1 }],
   },
   {
     id: 'rp7', name: 'Recovery Point 7', tier: 2, x: 215, z: -95, rot: -0.4, r: 20,
@@ -60,7 +60,7 @@ export const OUTPOSTS: OutpostDef[] = [
       { weapon: 'revolver', role: 'sit', at: [-2.5, -2], yaw: 1.4 },
     ],
     sentries: [[-7, 12.5, 0.15]],
-    loot: [{ id: 'water', qty: 3 }, { id: 'shotgun', qty: 1 }, { id: 'shells', qty: 8 }, { id: 'medkit', qty: 1 }, { id: 'ammo3030', qty: 6 }],
+    loot: [{ id: 'water', qty: 3 }, { id: 'shotgun', qty: 1 }, { id: 'shells', qty: 8 }, { id: 'medkit', qty: 1 }, { id: 'ammo3030', qty: 6 }, { id: 'pistol22', qty: 1 }, { id: 'ammo22', qty: 20 }, { id: 'gpu', qty: 1 }],
   },
   {
     id: 'pipeline', name: 'Pipeline Camp 3', tier: 2, x: 260, z: -150, rot: 1.1, r: 18,
@@ -74,7 +74,7 @@ export const OUTPOSTS: OutpostDef[] = [
     sentries: [[-10, 9, -0.5]],
     mines: 8,
     hornet: true,
-    loot: [{ id: 'water', qty: 3 }, { id: 'rifle', qty: 1 }, { id: 'ammo3030', qty: 10 }, { id: 'battery', qty: 2 }, { id: 'emp', qty: 1 }],
+    loot: [{ id: 'water', qty: 3 }, { id: 'rifle', qty: 1 }, { id: 'ammo3030', qty: 10 }, { id: 'battery', qty: 2 }, { id: 'emp', qty: 1 }, { id: 'molotov', qty: 2 }, { id: 'asic', qty: 1 }],
   },
   {
     id: 'wellhead', name: 'Kade Wellhead', tier: 3, x: -240, z: -160, rot: 0.25, r: 22,
@@ -89,7 +89,7 @@ export const OUTPOSTS: OutpostDef[] = [
     sentries: [[12, 14, 0.6], [-13, 13, -0.6]],
     mines: 14,
     hornet: true,
-    loot: [{ id: 'water', qty: 6 }, { id: 'medkit', qty: 2 }, { id: 'ammo3030', qty: 12 }, { id: 'shells', qty: 10 }, { id: 'charge', qty: 1 }, { id: 'kade_badge', qty: 3 }],
+    loot: [{ id: 'water', qty: 6 }, { id: 'medkit', qty: 2 }, { id: 'ammo3030', qty: 12 }, { id: 'shells', qty: 10 }, { id: 'charge', qty: 1 }, { id: 'kade_badge', qty: 3 }, { id: 'vest', qty: 1 }, { id: 'seed_plate', qty: 2 }],
   },
 ];
 
@@ -102,6 +102,14 @@ export const BODY_LOOT: { id: string; qty: [number, number]; p: number }[] = [
   { id: 'medkit', qty: [1, 1], p: 0.08 },
   { id: 'battery', qty: [1, 1], p: 0.1 },
   { id: 'antivenom', qty: [1, 1], p: 0.06 },
+  // the contractor's own pockets: wellness kit, merch, company issue
+  { id: 'nootropics', qty: [1, 1], p: 0.12 },
+  { id: 'smart_ring', qty: [1, 1], p: 0.1 },
+  { id: 'bandage', qty: [1, 2], p: 0.12 },
+  { id: 'kombucha', qty: [1, 1], p: 0.08 },
+  { id: 'mug', qty: [1, 1], p: 0.05 },
+  { id: 'ammo22', qty: [5, 10], p: 0.08 },
+  { id: 'vest', qty: [1, 1], p: 0.03 },
 ];
 
 /** Bark lines by situation. Corporate to the end. */

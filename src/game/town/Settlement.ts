@@ -1,3 +1,4 @@
+import { TILL_LINES } from '@/content/trade';
 import * as THREE from 'three/webgpu';
 import { Interior } from '../world/interiors';
 import type { Heightfield } from '@/game/world/Heightfield';
@@ -897,6 +898,7 @@ export class Settlement {
   // ------------------------------------------------------------------ Inez
   private async talkInez() {
     if (this.s.set('creek.talk.inez')) this.s.addXP(XP_REWARDS.talk, 'Heard Inez');
+    let shop = false;
     await this.ctx.ui.converse({
       start: 'hello',
       node: (id) => this.inezNode(id),
@@ -918,8 +920,21 @@ export class Settlement {
         if (choice === 'tickets') s.set('inez.tube');
         if (choice === 'deed' && s.removeItem('deed', 1)) s.set('q.inez.inez');
         if (choice === 'crew') this.joinCrew('inez');
+        if (choice === 'shelf') shop = true;
       },
     });
+    if (shop) await this.openTill();
+  }
+
+  /** The Till's shelf (ui/Trader.ts). Her prices follow who owns the Till and how well she knows you. */
+  private async openTill() {
+    const s = this.s;
+    const soc = this.townSocial();
+    const owner = s.has('q.inez.inez'), town = s.has('q.inez.town');
+    const markup = (owner ? 1.1 : town ? 1.45 : 1.3) - soc * 0.03;
+    const offer = (owner ? 0.6 : 0.5) + soc * 0.04;
+    const line = owner ? TILL_LINES.owner : town ? TILL_LINES.town : TILL_LINES.stranger;
+    await this.ctx.ui.till?.({ line, markup, offer });
   }
 
   private inezNode(id: string) {
@@ -936,6 +951,7 @@ export class Settlement {
             ? 'The town\'s Till is open. The town\'s prices went up. Funny how that works.'
             : 'The Till is open. The sign about the closet is also open, which is a kind of honesty. Don\'t palm the drawer. I can hear a hand.') + this.news('inez'),
         choices: [
+          { id: 'shelf', label: 'Let\'s see the shelf.' },
           { id: 'trade', label: `${rate} scrap for a bottle.`, disabled: soc >= 2 ? (s.count('scrap') >= rate ? undefined : `Need ${rate} scrap.`) : this.needSocial(2, 'She doesn\'t trade with strangers.'), next: 'hello' },
           ...(s.count('deed') && !owner && !s.has('q.inez.town') ? [{ id: 'deed', label: 'I found the deed to the Till. It\'s yours.', next: 'deeded' }] : []),
           { id: 'closet', label: 'The closet.', disabled: s.has('creek.stair') ? 'You\'ve been up there.' : this.needSocial(3, 'She won\'t discuss the closet with a stranger.'), next: 'closet' },
