@@ -148,6 +148,47 @@ function coalesceUniformUploads(renderer: THREE.WebGPURenderer) {
 }
 
 /**
+ * WebGL2: no per-draw flip-Y uniform for textures that can never be flipped. On WebGL three gives
+ * every texture sample a `flipY` uniform (true only for render targets, depth textures and flipped
+ * ImageBitmaps) and a per-object update that refreshes it, and the texture's UV matrix, on every
+ * draw: ~2,800 calls and as many uniform compares a frame here, all of them `false`, plus a
+ * select in the shader. A texture sampled from a plain image, canvas or data array is settled when
+ * its material is built (models and canvases load before the warm-up), so its sample is built
+ * without the select, the node never updates, and its object uniforms shrink. Anything else
+ * (render targets, depth, flipped ImageBitmaps, a texture without an image yet) keeps three's path.
+ * Also: a node that doesn't use the UV matrix no longer recomputes it (sin/cos) on every draw.
+ */
+function settleTextureFlips() {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const TN = (THREE as any).TextureNode?.prototype;
+  if (!TN || typeof TN.setupUV !== 'function' || typeof TN.update !== 'function') return;
+  const setupUV = TN.setupUV;
+  const hasBitmap = typeof ImageBitmap !== 'undefined';
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  TN.setupUV = function (builder: any, uvNode: unknown) {
+    const t = this.value as THREE.Texture | null;
+    const img = t?.image as unknown;
+    const fixed = !!t && t.isTexture && img != null && !(t as THREE.Texture & { isRenderTargetTexture?: boolean }).isRenderTargetTexture
+      && !(t as THREE.Texture & { isFramebufferTexture?: boolean }).isFramebufferTexture && !(t as THREE.DepthTexture).isDepthTexture
+      && !(hasBitmap && img instanceof ImageBitmap && t.flipY === true) && !(t as THREE.CubeTexture).isCubeTexture;
+    if (fixed && this._flipYUniform === null && builder.isFlipY?.()) return uvNode;
+    return setupUV.call(this, builder, uvNode);
+  };
+  TN.update = function () {
+    const texture = this.value;
+    const matrixUniform = this._matrixUniform;
+    if (matrixUniform !== null) {
+      matrixUniform.value = texture.matrix;
+      if (texture.matrixAutoUpdate === true) texture.updateMatrix();
+    }
+    const flipYUniform = this._flipYUniform;
+    if (flipYUniform !== null) {
+      flipYUniform.value = ((hasBitmap && texture.image instanceof ImageBitmap && texture.flipY === true) || texture.isRenderTargetTexture === true || texture.isFramebufferTexture === true || texture.isDepthTexture === true);
+    }
+  };
+}
+
+/**
  * WebGPU first, WebGL2 fallback. Some driver stacks (e.g. Chrome + Vulkan on hybrid-GPU Linux)
  * expose WebGPU but fail at the canvas swapchain; if the device reports errors right after start
  * we remember that and reload on the WebGL2 backend.
@@ -176,6 +217,7 @@ export async function createRenderer(canvas: HTMLCanvasElement) {
   await renderer.init();
   quietShadowAlphaTest(renderer);
   coalesceUniformUploads(renderer);
+  if (!qs.has('noflipfix')) settleTextureFlips(); // (?noflipfix: A/B)
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFShadowMap;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
