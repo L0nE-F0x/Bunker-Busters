@@ -8,7 +8,7 @@ import { noise, fbm2, noiseAt } from '@/engine/noiseTex';
 import type { Heightfield } from './Heightfield';
 import type { Atmosphere } from './Atmosphere';
 import type { Physics } from '@/engine/physics';
-import { SALT_FLAT } from '@/content/world';
+import { LANDMARKS, SALT_FLAT } from '@/content/world';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 type N = any;
@@ -326,6 +326,24 @@ export class Terrain {
     col = mix(col, paveCol, pave.mul(0.9));
     col = mix(col, pebCol, pebble);
     col = mix(col, mud, lowMask);
+    // lived-on ground (LANDMARKS `trampled`, e.g. Waitlist City's camp): years of feet broke the playa
+    // crust into dust; the crack network survives only in scraps, under a mottle of footprints, with
+    // darker packed paths and paler loose sand blown into the lee of things
+    let trample: N = float(0);
+    for (const lm of LANDMARKS.filter((l) => l.trampled)) {
+      const u = uniform(new THREE.Vector3(lm.position[0], lm.position[2], lm.flatten?.r ?? 16));
+      trample = trample.max(smoothstep(u.z.add(2), u.z.sub(12), xz.sub(u.xy).length().add(mid.mul(14)).add(fine.mul(4))));
+    }
+    trample = trample.mul(inside).mul(float(1).sub(rockMask));
+    const tTap = noise(xz.div(3.3).add(vec2(0.47, 0.19)));
+    const packed = smoothstep(0.55, 0.75, tTap.r).mul(0.6).add(smoothstep(0.35, 0.15, abs(noise(xz.div(11).add(0.7)).g.sub(0.5))).mul(0.5));
+    const loose = smoothstep(0.6, 0.85, tTap.g);
+    const blotch = noise(xz.div(9.5).add(vec2(0.13, 0.71))).r;
+    const trampledCol = mix(
+      mix(vec3(0.5, 0.37, 0.25), vec3(0.34, 0.25, 0.17), clamp(packed, 0, 1)),
+      sand.mul(0.98), loose.mul(0.75),
+    ).mul(float(0.82).add(blotch.mul(0.3)).add(grain.mul(0.2)).add(fine.mul(0.1)));
+    col = mix(col, trampledCol, trample.mul(0.92));
     col = mix(col, dirt, trackMask);
     col = mix(col, rock, rockMask);
     col = mix(col, asphalt, roadFinal);
@@ -353,6 +371,8 @@ export class Terrain {
     h = mix(h, crk.mul(-0.35).add(fine.mul(0.1)), silt.mul(0.8));
     h = mix(h, rockH, rockMask);
     h = mix(h, crk.mul(-0.6).add(fine.mul(0.15)), lowMask);
+    // trampled: the crack relief is gone; footprint mottle and loose sand ripples instead
+    h = mix(h, grain.mul(0.25).add(fine.mul(0.14)).add(ripple.mul(0.14)).add(loose.mul(0.2)), trample.mul(0.95));
     h = mix(h, roadCracks.mul(-0.4).add(grain.mul(0.08)), roadFinal);
     h = mix(h, tyre.mul(-0.5).add(grain.mul(0.1)), trackMask);
     h = mix(h, rim.mul(0.55).add(plate.r.mul(0.12)).add(grain.mul(0.04)), saltK);
