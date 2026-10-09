@@ -665,6 +665,22 @@ export class ApexBuilder implements BunkerShell {
     b.add(m.wallC, box(x1 - x0 + 0.6, 0.6, vaultZ - z0 + 0.3, (x0 + x1) / 2, room + 0.3, (z0 + vaultZ) / 2 - 0.15));
     d.add(m.darkC, box(cx1 - cx0, 0.1, z1 - vaultZ, (cx0 + cx1) / 2, 0.05, (vaultZ + z1) / 2));
     d.add(m.darkC, box(x1 - x0, 0.1, vaultZ - z0, (x0 + x1) / 2, 0.05, (z0 + vaultZ) / 2));
+    // the block's outside: pilasters, her wordmark, a pipe run, an HVAC unit by the vent, a lamp over it
+    for (let z = z0 + 2; z < z1 - 1; z += 4) {
+      // (gaps for the vent and for the two wordmarks)
+      if (Math.abs(z + 17.5) > 1.2 && Math.abs(z + 27.5) > 4) b.add(m.wallC, box(0.4, room + 0.6, 0.7, x1 + 0.5, (room + 0.6) / 2, z));
+      if (Math.abs(z + 21) > 4) b.add(m.wallC, box(0.4, room + 0.6, 0.7, x0 - 0.5, (room + 0.6) / 2, z));
+    }
+    b.add(m.print, apexPrint('logo', 7, 1.55, M(x1 + 0.32, 4.6, -27.5, Math.PI / 2)));
+    b.add(m.print, apexPrint('logo', 7, 1.55, M(x0 - 0.32, 4.6, -21, -Math.PI / 2)));
+    b.add(m.brushed, beam(V(x1 + 0.45, 5.7, z0 + 1), V(x1 + 0.45, 5.7, z1 - 0.5), 0.14, 8), beam(V(x1 + 0.45, 5.3, z0 + 1), V(x1 + 0.45, 5.3, z1 - 0.5), 0.09, 8));
+    b.add(m.white, box(1.3, 1.6, 2.2, x1 + 1.0, 0.8, -22.5));
+    b.add(m.black, place(new THREE.CircleGeometry(0.5, 20), x1 + 1.66, 1.0, -22.5, 0, Math.PI / 2, 0));
+    b.add(m.brushed, place(new THREE.TorusGeometry(0.5, 0.04, 6, 20), x1 + 1.67, 1.0, -22.5, 0, Math.PI / 2, 0));
+    for (let k = 0; k < 4; k++) b.add(m.brushed, place(new THREE.BoxGeometry(0.02, 0.9, 0.06), x1 + 1.68, 1.0, -22.5, (k * Math.PI) / 4, Math.PI / 2, 0));
+    this.col(x1 + 1.0, 0.8, -22.5, 0.65, 0.8, 1.1);
+    b.add(m.black, box(0.3, 0.2, 0.5, x1 + 0.45, 2.3, -17.5));
+    this.pal.slot('#fff1d0', 3).add(b, box(0.02, 0.12, 0.4, x1 + 0.61, 2.24, -17.5));
     // the earth cap over the whole block, rocks bedded in it, solar on its back, a dish on top
     const cap = new THREE.SphereGeometry(1, 28, 12, 0, Math.PI * 2, 0, Math.PI / 2);
     b.add(m.rock, place(cap, (x0 + x1) / 2, room + 0.5, (z0 + z1) / 2 - 1.5, 0, 0, 0, 9.6, 4.6, 15.4));
