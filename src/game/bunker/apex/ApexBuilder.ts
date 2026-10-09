@@ -485,6 +485,11 @@ export class ApexBuilder implements BunkerShell {
     this.camera('cam_hangar', b, m, 1.2, 6.0, -4.6, -1.64, 0.42, 7, 18, 26);
     this.points.camHangar = this.w(1.2, 6.0, -4.6);
 
+    // --- inside: insulated liner panels (the cladding is a mirror; inside it would glare)
+    const lin = plainStandard('#8b9095', 0.78, 0.15);
+    b.add(lin, box(0.06, h - 0.6, z1 - z0 - 0.4, x0 + 0.05, (h - 0.6) / 2 + 0.3, (z0 + z1) / 2), box(0.06, h - 0.6, z1 - z0 - 0.4, x1 - 0.05, (h - 0.6) / 2 + 0.3, (z0 + z1) / 2));
+    b.add(lin, box(Hg.doorX0 - x0 - 0.2, h - 0.6, 0.06, (x0 + Hg.doorX0) / 2, (h - 0.6) / 2 + 0.3, z1 - 0.25), box(x1 - Hg.doorX1 - 0.2, h - 0.6, 0.06, (x1 + Hg.doorX1) / 2, (h - 0.6) / 2 + 0.3, z1 - 0.25));
+    for (let z = z0 + 2; z < z1; z += 4) b.add(m.black, box(0.08, h - 0.6, 0.06, x0 + 0.09, (h - 0.6) / 2 + 0.3, z), box(0.08, h - 0.6, 0.06, x1 - 0.09, (h - 0.6) / 2 + 0.3, z));
     // --- inside: the battery wall along the west side
     const leds = this.pal.slot('#3cff7a', 2.4);
     for (let i = 0; i < 7; i++) {
@@ -529,6 +534,33 @@ export class ApexBuilder implements BunkerShell {
     b.add(m.print, apexPrint('tag', 4.2, 1.3, M(x1 + 0.22, 2.0, 6, Math.PI / 2)));
     b.add(m.print, apexPrint('chevron', 2, 1, M(-10, 0.15, -3.5, Math.PI / 2, -Math.PI / 2)));
     b.add(m.print, apexPrint('stripes', 2.4, 0.35, M(-10, 2.78, z0 + 0.03)));
+    // the camps' water, stacked like inventory: pallets of blue jugs with the camps' names stencilled
+    // on the wrap ("community contribution"), and a spare nose cone on a cradle she calls the backup
+    const jug = plainStandard('#4f9ccf', 0.3, 0);
+    for (const [px, pz] of [[-19.6, 4.2], [-19.6, 6.4], [-17.4, 4.2]] as [number, number][]) {
+      b.add(m.crate, box(1.2, 0.14, 1.0, px, 0.21, pz));
+      const layers = px === -17.4 ? 2 : 3;
+      for (let l = 0; l < layers; l++) for (let i = 0; i < 3; i++) for (let k = 0; k < 2; k++) b.add(jug, cyl(0.17, 0.17, 0.46, px - 0.38 + i * 0.38, 0.52 + l * 0.48, pz - 0.22 + k * 0.44, 10));
+      b.add(m.tarp, box(1.24, 0.04, 1.04, px, 0.28 + layers * 0.48, pz));
+      this.col(px, 0.75, pz, 0.6, 0.75, 0.5);
+    }
+    b.add(m.print, apexPrint('pFree', 0.7, 1.05, M(-18.5, 1.5, 7.05)));
+    const nx = -13.5, nz = 2.6;
+    b.add(m.yellow, box(0.3, 0.9, 3.6, nx - 1.2, 0.45, nz), box(0.3, 0.9, 3.6, nx + 1.2, 0.45, nz));
+    // lying on its side, tip to the door, the open base capped with a soot-black bulkhead
+    b.add(m.brushed, place(new THREE.SphereGeometry(1.4, 28, 12, 0, Math.PI * 2, 0, Math.PI / 2), nx, 1.45, nz - 1.2, Math.PI / 2, 0, 0, 1, 2.8, 1));
+    b.add(m.soot, place(new THREE.CircleGeometry(1.4, 28), nx, 1.45, nz - 1.21, 0, Math.PI, 0));
+    b.add(m.brushed, place(new THREE.TorusGeometry(1.4, 0.05, 6, 28), nx, 1.45, nz - 1.2));
+    this.col(nx, 1.2, nz + 1.6, 1.6, 1.2, 1.9);
+    // a scissor lift parked under the arch, raised, nobody on it
+    const lx = -6.2, lz = 5.4;
+    b.add(m.orange, box(1.2, 0.35, 2.4, lx, 0.35, lz), box(1.3, 0.12, 2.6, lx, 3.2, lz));
+    for (const sx of [-0.55, 0.55]) for (let k = 0; k < 4; k++) {
+      const y0 = 0.5 + k * 0.68, y1 = y0 + 0.68;
+      b.add(m.black, beam(V(lx + sx, y0, lz - 0.9), V(lx + sx, y1, lz + 0.9), 0.04, 4), beam(V(lx + sx, y0, lz + 0.9), V(lx + sx, y1, lz - 0.9), 0.04, 4));
+    }
+    for (const [ax, az] of [[-0.6, -1.25], [0.6, -1.25], [-0.6, 1.25], [0.6, 1.25]]) b.add(m.yellow, box(0.04, 1, 0.04, lx + ax, 3.7, lz + az));
+    this.col(lx, 0.6, lz, 0.6, 0.6, 1.2);
     // high-bay lamps and strip lights under the arch
     const strip = this.pal.slot('#fff2dc', 5);
     this.slots.strip = strip.intensity;
