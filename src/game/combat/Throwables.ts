@@ -28,6 +28,8 @@ interface Bottle { mesh: THREE.Group; body: ReturnType<Physics['world']['createR
 interface Patch { p: THREE.Vector3; t: number; tick: number; crackle: number; light: VirtualLight; emit: number }
 
 const _v = new THREE.Vector3(), _w = new THREE.Vector3(), _up = new THREE.Vector3(0, 1, 0);
+/** Fuel smoke is black, not the pale dust a gun or a blast kicks up. */
+const SOOT = new THREE.Color(0.08, 0.075, 0.07);
 
 export class Throwables {
   readonly group = new THREE.Group();
@@ -103,8 +105,17 @@ export class Throwables {
     // the whoomp: a low, wide roll of flame (not a fireball: fuel, not explosive)
     this.combat.flames.emit(0, _v.copy(p).setY(y + 0.25), 9, _w.set(0, 1.6, 0), 2.2, 0.55, 0.7, 1.8, 1.6);
     this.combat.debris.emit('chunk', p, 8, _w.set(0, 3, 0), 3, 0.02);
-    this.combat.debris.emit('smoke', _v.copy(p).setY(y + 0.6), 4, _w.set(0, 1.8, 0), 1.2, 0.9, undefined, 1.2);
+    this.combat.debris.emit('smoke', _v.copy(p).setY(y + 0.6), 4, _w.set(0, 1.8, 0), 1.2, 0.9, SOOT, 1.2);
     this.combat.noise(p, 45, 'can');
+    // the fuel scorches the ground it lands on: two overlapping sooty smudges (the marks pool's sand
+    // divot, scaled up: brown-black with a ragged edge, on any ground)
+    if (y === ground) {
+      const n = this.hf.normalAt(p.x, p.z);
+      _up.set(n.x, n.y, n.z).normalize();
+      // lifted 10 cm: the quad is metres wide, the terrain isn't a plane, and road decks sit above it
+      this.combat.marks.add('dirt', _v.copy(p).addScaledVector(_up, 0.1), _up, null, 8.5);
+      this.combat.marks.add('dirt', _v.set(p.x + (Math.random() - 0.5) * 0.8, p.y, p.z + (Math.random() - 0.5) * 0.8).addScaledVector(_up, 0.11), _up, null, 6);
+    }
     const light = this.lights[this.lightI++ % this.lights.length];
     const prev = this.patches.find((q) => q.light === light);
     if (prev) this.patches.splice(this.patches.indexOf(prev), 1);
@@ -135,6 +146,8 @@ export class Throwables {
         continue;
       }
       const k = Math.min(1, life * 2.2);
+      // by day the sun washes additive flame out; push it (the night eye is adapted, it stays dim)
+      const day = 1 + 0.7 * THREE.MathUtils.clamp(this.combat.atmo.sunElevation * 3, 0, 1);
       // tongues of flame over the whole puddle (a steady rate, not per frame), thinning as the fuel goes:
       // small, short-lived and dim each, so overlapping tongues read as fire and not a white blob
       f.emit += dt * (14 + 22 * k);
@@ -142,9 +155,9 @@ export class Throwables {
         const a = Math.random() * Math.PI * 2, rr = Math.sqrt(Math.random()) * FIRE_R * (0.55 + 0.45 * k);
         _v.set(f.p.x + Math.cos(a) * rr, f.p.y + 0.1, f.p.z + Math.sin(a) * rr);
         const edge = rr / FIRE_R;
-        this.combat.flames.emit(0, _v, 1, _w.set(0, 0.9 + Math.random() * 0.9 * (1 - edge * 0.5), 0), 0.18, (0.2 + 0.22 * k) * (1.15 - edge * 0.4), 0.45 + Math.random() * 0.3, 1.5, 1.25);
+        this.combat.flames.emit(0, _v, 1, _w.set(0, 0.9 + Math.random() * 0.9 * (1 - edge * 0.5), 0), 0.18, (0.2 + 0.22 * k) * (1.15 - edge * 0.4), 0.45 + Math.random() * 0.3, 1.5, 1.25 * day);
       }
-      if (Math.random() < dt * 6) this.combat.debris.emit('smoke', _v.set(f.p.x, f.p.y + 1, f.p.z), 1, _w.set(0, 1.4, 0), 0.6, 0.8 * k, undefined, 1.4);
+      if (Math.random() < dt * 6) this.combat.debris.emit('smoke', _v.set(f.p.x, f.p.y + 1, f.p.z), 1, _w.set(0, 1.4, 0), 0.6, 0.8 * k, SOOT, 1.4);
       f.light.intensity = (16 + Math.sin(f.t * 23) * 3 + Math.sin(f.t * 9.7) * 4) * k;
       f.crackle -= dt;
       if (f.crackle <= 0) { f.crackle = 0.28 + Math.random() * 0.2; this.audio.combat?.crackle(f.p, k); }
@@ -176,7 +189,7 @@ export class Throwables {
     const dir = _w.subVectors(h.center, p).setY(0.3).normalize().clone();
     const killed = h.damage({ amount: amt, dir, point: h.center.clone(), zone: 'body', source: 'blast' });
     this.combat.hooks?.onHit(killed ? 'kill' : 'hit', h);
-    void _up;
+
   }
 }
 
