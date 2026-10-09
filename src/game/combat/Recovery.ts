@@ -5,6 +5,7 @@ import type { Heightfield } from '../world/Heightfield';
 import type { Interactable } from '../context';
 import { HumanCrowd, Ragdoll, BONE, SCOPE_LENS, type HumanLook, type HumanWeapon, type HumanKit, type Human, type HitZone } from './Humans';
 import { Debris } from './fx';
+import { laserMaterial } from './Machines';
 import { Fn, uniform, uv, vec3, vec4, float, exp, abs, length } from 'three/tsl';
 import type { HumanSkins } from './humanSkin';
 import { buildOutpost, type OutpostBuild, type CoverPoint } from './Outposts';
@@ -340,6 +341,8 @@ export class Recovery implements HostileProvider {
   /** The marksman's scope glint: one additive star, brightest while it settles a shot on you. */
   private glint: THREE.Sprite;
   private glintK = uniform(0);
+  /** At night the scope's glint is the marksman's rangefinder instead: a red beam on you (the sentries' material). */
+  private beam: THREE.Mesh;
   t = 0;
 
   constructor(private host: RecoveryHost) {
@@ -413,6 +416,15 @@ export class Recovery implements HostileProvider {
     this.glint.frustumCulled = false;
     this.glint.visible = false;
     this.group.add(this.glint);
+    const bg = new THREE.PlaneGeometry(1, 0.02).translate(0.5, 0, 0).rotateY(-Math.PI / 2);
+    this.beam = new THREE.Mesh(bg, laserMaterial());
+    const b2 = new THREE.Mesh(bg, laserMaterial());
+    b2.rotation.z = Math.PI / 2;
+    this.beam.add(b2);
+    this.beam.frustumCulled = false;
+    b2.frustumCulled = false;
+    this.beam.visible = false;
+    this.group.add(this.beam);
   }
 
   hostiles() {
@@ -1576,7 +1588,26 @@ export class Recovery implements HostileProvider {
   private updateGlint(cam: THREE.Vector3) {
     let best: Member | null = null, bk = 0.01;
     for (const m of this.members) if (m.alive && m.kit === 'marksman' && m.h.active && m.glint > bk) { best = m; bk = m.glint; }
+    this.beam.visible = false;
     if (!best) { this.glint.visible = false; return; }
+    // night: the rangefinder's red beam walks onto you as the shot settles (from the lens toward your chest)
+    const TT = this.host.combat.target;
+    if (TT.night > 0.5 && best.charge > 0.04 && best.canSee) {
+      const lens = _a.copy(SCOPE_LENS).applyMatrix4(best.h.mats[BONE.weapon]);
+      // the dot walks in from beside you and settles on your chest as the shot does (end-on, a beam
+      // aimed straight at the eye would read as nothing but a point)
+      const u = 1 - best.charge;
+      const side = _c.subVectors(TT.chest, lens).setY(0).normalize();
+      const to = _b.copy(TT.chest).addScaledVector(_d.set(-side.z, 0, side.x), u * 4.5 * (best.h.slot % 2 ? 1 : -1)).addScaledVector(UP, -u * 1.3);
+      const d = lens.distanceTo(to);
+      if (d > 6) {
+        this.beam.visible = true;
+        this.beam.position.copy(lens);
+        this.beam.lookAt(to);
+        const w = (0.7 + 1.3 * best.charge) * (1 + d / 40);
+        this.beam.scale.set(w, w, d - (to.distanceTo(cam) < 2.5 ? 2.5 : 0));
+      }
+    }
     const wm = best.h.mats[BONE.weapon];
     const lens = _a.copy(SCOPE_LENS).applyMatrix4(wm);
     const fwd = _b.setFromMatrixColumn(wm, 2).normalize().negate();
