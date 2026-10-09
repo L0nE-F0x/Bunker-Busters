@@ -10,7 +10,6 @@ export interface TillLine { id: string; qty: [number, number]; p: number }
 
 /** Always on the shelf (in some quantity), then the day's luck. */
 export const TILL_STOCK: TillLine[] = [
-  { id: 'water', qty: [3, 6], p: 1 },
   { id: 'ration', qty: [2, 4], p: 1 },
   { id: 'ammo38', qty: [12, 24], p: 1 },
   { id: 'ammo22', qty: [20, 50], p: 1 },
@@ -43,7 +42,8 @@ export const TILL_LINES = {
 /** Things she won't take: the town's own paper, your story, and anything nobody could price. */
 export function sellable(id: string) {
   const d = ITEMS[id];
-  return !!d && d.value > 0 && d.category !== 'intel' && id !== 'sol_roll' && id !== 'deed';
+  // water: she sells it by the bottle for scrap (her own line), and buys none back
+  return !!d && d.value > 0 && d.category !== 'intel' && id !== 'sol_roll' && id !== 'deed' && id !== 'water';
 }
 
 /** Her offer for one, as a share of `value` (she likes cards that agree with people). */

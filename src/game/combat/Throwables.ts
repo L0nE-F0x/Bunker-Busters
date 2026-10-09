@@ -25,7 +25,7 @@ const BURN = 9;
 const BURN_PLAYER = 5;
 
 interface Bottle { mesh: THREE.Group; body: ReturnType<Physics['world']['createRigidBody']>; fuse: number; lastVel: THREE.Vector3; armed: number }
-interface Patch { p: THREE.Vector3; t: number; tick: number; crackle: number; light: VirtualLight }
+interface Patch { p: THREE.Vector3; t: number; tick: number; crackle: number; light: VirtualLight; emit: number }
 
 const _v = new THREE.Vector3(), _w = new THREE.Vector3(), _up = new THREE.Vector3(0, 1, 0);
 
@@ -90,20 +90,27 @@ export class Throwables {
     this.physics.world.removeRigidBody(b.body);
     this.flying.splice(this.flying.indexOf(b), 1);
     b.mesh.visible = false;
+    this.ignite(at);
+  }
+
+  /** Burning fuel on the ground at `at` (a bottle broke there). Public for tests and future content. */
+  ignite(at: THREE.Vector3) {
     const ground = this.hf.heightAt(at.x, at.z);
     // on a roof or a crate it burns where it broke; on the desert, on the sand
     const y = at.y - ground < 1.2 ? ground : at.y - 0.1;
     const p = new THREE.Vector3(at.x, y, at.z);
     this.audio.combat?.molotov(p);
-    this.combat.flames.emit(0, _v.copy(p).setY(y + 0.3), 18, _w.set(0, 2.6, 0), 2.4, 0.7, 0.8, 2, 5);
+    // the whoomp: a low, wide roll of flame (not a fireball: fuel, not explosive)
+    this.combat.flames.emit(0, _v.copy(p).setY(y + 0.25), 9, _w.set(0, 1.6, 0), 2.2, 0.55, 0.7, 1.8, 1.6);
     this.combat.debris.emit('chunk', p, 8, _w.set(0, 3, 0), 3, 0.02);
+    this.combat.debris.emit('smoke', _v.copy(p).setY(y + 0.6), 4, _w.set(0, 1.8, 0), 1.2, 0.9, undefined, 1.2);
     this.combat.noise(p, 45, 'can');
     const light = this.lights[this.lightI++ % this.lights.length];
     const prev = this.patches.find((q) => q.light === light);
     if (prev) this.patches.splice(this.patches.indexOf(prev), 1);
     light.position.copy(p).setY(y + 0.8);
-    light.intensity = 60;
-    this.patches.push({ p, t: 0, tick: 0, crackle: 0, light });
+    light.intensity = 30;
+    this.patches.push({ p, t: 0, tick: 0, crackle: 0, light, emit: 0 });
   }
 
   update(dt: number) {
@@ -114,7 +121,7 @@ export class Throwables {
       b.mesh.position.set(t.x, t.y, t.z);
       b.mesh.quaternion.set(r.x, r.y, r.z, r.w);
       // the rag trails a little fire
-      if (Math.random() < 0.6) this.combat.flames.emit(0, _v.set(t.x, t.y + 0.08, t.z), 1, _w.set(0, 0.6, 0), 0.15, 0.12, 0.25, 1.2, 3);
+      if (Math.random() < 0.5) this.combat.flames.emit(0, _v.set(t.x, t.y + 0.08, t.z), 1, _w.set(0, 0.6, 0), 0.15, 0.1, 0.22, 1.2, 1.6);
       const jolt = Math.hypot(v.x - b.lastVel.x, v.y - b.lastVel.y, v.z - b.lastVel.z);
       b.lastVel.set(v.x, v.y, v.z);
       if ((b.armed <= 0 && jolt > 2.2) || b.fuse <= 0 || t.y < -200) this.burst(b, _v.set(t.x, t.y, t.z).clone());
@@ -128,15 +135,17 @@ export class Throwables {
         continue;
       }
       const k = Math.min(1, life * 2.2);
-      // tongues of flame over the whole puddle, thinning as the fuel goes
-      const n = Math.random() < k ? 2 : 1;
-      for (let i = 0; i < n; i++) {
-        const a = Math.random() * Math.PI * 2, rr = Math.sqrt(Math.random()) * FIRE_R * (0.6 + 0.4 * k);
-        _v.set(f.p.x + Math.cos(a) * rr, f.p.y + 0.12, f.p.z + Math.sin(a) * rr);
-        this.combat.flames.emit(0, _v, 1, _w.set(0, 1.1 + Math.random(), 0), 0.25, 0.28 + 0.3 * k, 0.55 + Math.random() * 0.3, 1.6, 3.5);
+      // tongues of flame over the whole puddle (a steady rate, not per frame), thinning as the fuel goes:
+      // small, short-lived and dim each, so overlapping tongues read as fire and not a white blob
+      f.emit += dt * (14 + 22 * k);
+      for (; f.emit >= 1; f.emit--) {
+        const a = Math.random() * Math.PI * 2, rr = Math.sqrt(Math.random()) * FIRE_R * (0.55 + 0.45 * k);
+        _v.set(f.p.x + Math.cos(a) * rr, f.p.y + 0.1, f.p.z + Math.sin(a) * rr);
+        const edge = rr / FIRE_R;
+        this.combat.flames.emit(0, _v, 1, _w.set(0, 0.9 + Math.random() * 0.9 * (1 - edge * 0.5), 0), 0.18, (0.2 + 0.22 * k) * (1.15 - edge * 0.4), 0.45 + Math.random() * 0.3, 1.5, 1.25);
       }
       if (Math.random() < dt * 6) this.combat.debris.emit('smoke', _v.set(f.p.x, f.p.y + 1, f.p.z), 1, _w.set(0, 1.4, 0), 0.6, 0.8 * k, undefined, 1.4);
-      f.light.intensity = (34 + Math.sin(f.t * 23) * 6 + Math.sin(f.t * 9.7) * 8) * k;
+      f.light.intensity = (16 + Math.sin(f.t * 23) * 3 + Math.sin(f.t * 9.7) * 4) * k;
       f.crackle -= dt;
       if (f.crackle <= 0) { f.crackle = 0.28 + Math.random() * 0.2; this.audio.combat?.crackle(f.p, k); }
       f.tick -= dt;
