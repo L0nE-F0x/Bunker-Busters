@@ -12,7 +12,7 @@ import { canvasTexture, norm } from './kit';
 type Draw = (c: CanvasRenderingContext2D, w: number, h: number) => void;
 interface Region { u0: number; u1: number; v0: number; v1: number }
 
-const W = 1024, H = 1024, PAD = 4;
+const W = 2048, H = 1024, PAD = 4;
 const UI = '"Chakra Petch", Arial, sans-serif';
 const DISPLAY = '"Big Shoulders Stencil Display", Impact, sans-serif';
 const MONO = '"JetBrains Mono", monospace';
@@ -215,6 +215,35 @@ const ART: Record<string, [number, number, Draw]> = {
     c.strokeStyle = '#fff'; c.lineWidth = 4;
     c.beginPath(); c.ellipse(w / 2, h / 2, 30, 16, 0, 0, Math.PI * 2); c.stroke();
     c.fillStyle = '#fff'; c.beginPath(); c.arc(w / 2, h / 2, 9, 0, Math.PI * 2); c.fill();
+  }],
+  namesBanner: [512, 160, (c, w, h) => {
+    // a bedsheet, hand-painted with a brush that was mostly a stick
+    c.fillStyle = '#e9e3d4'; c.fillRect(0, 0, w, h);
+    c.fillStyle = 'rgba(150,120,80,0.18)';
+    for (let i = 0; i < 9; i++) c.fillRect(0, (i / 9) * h + rnd() * 6, w, 2);
+    c.fillStyle = '#b8302a'; c.textAlign = 'center'; c.textBaseline = 'middle';
+    c.save(); c.translate(w / 2, h / 2 - 8); c.rotate(-0.025);
+    c.font = `900 66px ${DISPLAY}`; c.fillText('WE READ THE NAMES', 0, 0);
+    c.restore();
+    c.fillStyle = '#26304a'; c.font = `700 18px ${UI}`; c.fillText('ALL OF THEM · ON AIR · LAST CHANCE', w / 2 + 20, h - 22);
+    weather(c, w, h, 0.9);
+  }],
+  freeTrial: [256, 128, (c, w, h) => {
+    c.fillStyle = '#f1f1ee'; c.fillRect(0, 0, w, h);
+    c.fillStyle = '#c8302a'; c.fillRect(0, 0, w, 26);
+    c.fillStyle = '#fff'; c.textAlign = 'center'; c.textBaseline = 'middle';
+    c.font = `700 14px ${UI}`; c.fillText('KADE HOLDINGS · COMMUNITY CARE', w / 2, 13);
+    c.fillStyle = '#1d2733'; c.font = `900 40px ${DISPLAY}`; c.fillText('FREE TRIAL', w / 2, 62);
+    c.font = `600 11px ${UI}`; c.fillText('Silence is a subscription. Cancel anytime.*', w / 2, 96);
+    c.font = `500 8px ${UI}`; c.fillText('*You cannot cancel.', w / 2, 114);
+    weather(c, w, h, 0.7);
+  }],
+  jugLabel: [128, 64, (c, w, h) => {
+    c.fillStyle = '#ffffff'; c.fillRect(0, 0, w, h);
+    c.fillStyle = '#c8302a'; c.fillRect(0, 0, w, 14);
+    c.fillStyle = '#1d2733'; c.textAlign = 'center'; c.textBaseline = 'middle';
+    c.font = `900 22px ${DISPLAY}`; c.fillText('KADE', w / 2, 32);
+    c.font = `600 9px ${UI}`; c.fillText('COMMUNITY ALLOCATION', w / 2, 52);
   }],
   chalkPool: [384, 192, (c, w, h) => {
     // transparent ground, chalk only (the material alpha-tests it into a decal)

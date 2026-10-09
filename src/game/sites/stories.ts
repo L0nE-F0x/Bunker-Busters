@@ -249,6 +249,7 @@ export class Stories {
       this.lods.push(new DistanceLod(landmarks.campPosition.clone(), 20, crates, null, 170));
     }
     this.keeps = this.keepsakes();
+    this.endingProps(landmarks);
   }
 
   /**
@@ -291,6 +292,59 @@ export class Stories {
     });
     return { radio, plate };
   }
+  /**
+   * Last Chance after the debrief, one thing per ending: read the names, and a bedsheet under the
+   * canopy says so; take the deal, and Vesper's jugs stand by the pumps (nineteen; Ren counted);
+   * keep the leverage, and her free-trial crate sits on the forecourt with its parachute.
+   */
+  private endingProps(landmarks: Landmarks) {
+    const top = landmarks.campPosition.y; // the forecourt slab
+    const o = landmarks.campPoint(0, 0, 0);
+    const ax = landmarks.campPoint(1, 0, 0).sub(o).normalize();
+    const fy = Math.atan2(ax.x, ax.z) - Math.PI / 2;
+    const paper = loreMaterial();
+    const make = (name: string, flag: string, x: number, z: number, yaw: number, build: (mb: MeshBatch) => void) => {
+      const mb = new MeshBatch();
+      build(mb);
+      const g = mb.build(name);
+      const w = landmarks.campPoint(x, 0, z);
+      placed(g, w.x, top, w.z, fy + yaw);
+      g.visible = false;
+      const wrap = new THREE.Group();
+      wrap.add(g);
+      this.group.add(wrap);
+      this.lods.push(new DistanceLod(new THREE.Vector3(w.x, top, w.z), 2, wrap, null, 170));
+      this.flagged.push({ obj: g, flag });
+    };
+    // the banner: hung from the canopy's north fascia (z 6.1, its bottom edge 4.95 up), facing the logs
+    make('names-banner', 'act1.broadcast', -1.2, 6.32, 0, (mb) => {
+      mb.add(paper, T(loreQuad('namesBanner', 4.2, 1.3), 0, 4.2, 0, 0.04, 0, 0));
+      const rope = plainStandard('#c9b48c', 0.9);
+      for (const sx of [-2.05, 2.05]) mb.add(rope, rod(V(sx, 4.86, 0.0), V(sx * 1.02, 4.97, -0.12), 0.012, 4));
+    });
+    // nineteen jugs in a pyramid by the east pumps: ten, six, three
+    make('kade-jugs', 'act1.deal', 4.7, 1.6, 0.2, (mb) => {
+      const blue = plainStandard('#3f7fc0', 0.25, 0.05);
+      const cap = plainStandard('#1d2733', 0.5);
+      const rows: [number, number, number][] = [[5, 2, 0], [3, 2, 1], [3, 1, 2]];
+      for (const [nx, nz, k] of rows) for (let i = 0; i < nx; i++) for (let j = 0; j < nz; j++) {
+        const x = (i - (nx - 1) / 2) * 0.3, z = (j - (nz - 1) / 2) * 0.3, y = 0.24 + k * 0.48;
+        mb.add(blue, T(new THREE.CylinderGeometry(0.14, 0.14, 0.44, 10), x, y, z));
+        mb.add(cap, T(new THREE.CylinderGeometry(0.035, 0.035, 0.05, 8), x, y + 0.24, z));
+        if (j === nz - 1) mb.add(paper, T(loreQuad('jugLabel', 0.18, 0.09), x, y, z + 0.141));
+      }
+    });
+    // the free-trial drop: a white Kade crate, a slumped orange parachute, the cord across the slab
+    make('free-trial', 'act1.leverage', 5.2, -3.2, -0.5, (mb) => {
+      mb.add(plainStandard('#ecebe6', 0.5), T(new THREE.BoxGeometry(0.9, 0.62, 0.62), 0, 0.31, 0));
+      mb.add(plainStandard('#c8302a', 0.5), T(new THREE.BoxGeometry(0.92, 0.08, 0.64), 0, 0.5, 0));
+      mb.add(paper, T(loreQuad('freeTrial', 0.6, 0.3), 0, 0.28, 0.312));
+      const chute = fabric('#e8742a', 0.9);
+      mb.add(chute, T(rockGeometry(83, 2).scale(0.95, 0.16, 0.75), -1.35, 0.06, -0.5, 0, 0.4, 0.05), T(rockGeometry(84, 1).scale(0.45, 0.2, 0.4), -0.75, 0.1, -0.15, 0, 1.1, 0));
+      mb.add(plainStandard('#c9b48c', 0.9), rod(V(-0.45, 0.6, 0), V(-1.0, 0.05, -0.3), 0.008, 4), rod(V(-0.45, 0.6, 0.1), V(-1.2, 0.04, 0.1), 0.008, 4));
+    });
+  }
+  private flagged: { obj: THREE.Object3D; flag: string }[] = [];
   private keeps: { radio: THREE.Object3D; plate: THREE.Object3D } | null = null;
   private keepT = 0;
 
@@ -461,6 +515,7 @@ export class Stories {
       const plate = s.has('q.rider.delivered');
       if (this.keeps.plate.userData.on !== plate) { this.keeps.plate.userData.on = plate; this.keeps.plate.visible = plate; }
       if (s.favours().pipPool && !this.pool.visible) this.pool.visible = true;
+      for (const f of this.flagged) { const on = s.has(f.flag); if (f.obj.visible !== on) f.obj.visible = on; }
     }
     this.t += dt;
     // the camera blinks blue while it uploads (dark once cut); the relay's light follows its feed
