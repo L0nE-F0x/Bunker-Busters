@@ -217,7 +217,7 @@ export class SolarSite extends Site {
     this.botAt = v3(dx, dy + 0.4, dz);
     k.col(dx, dy + 0.25, dz, 0.45, 0.25, 0.7, 0.7);
     // the sign at the gate, facing the way in from the south
-    const sx = 18, sz = -24, sy = k.ground(sx, sz);
+    const sx = 24.5, sz = -24, sy = k.ground(sx, sz); // beside the gate gap (14..20.5), not in it
     for (const ox of [-1.5, 1.5]) k.b.add(M.post, xf(new THREE.BoxGeometry(0.12, 2.6, 0.12), mat4(sx + ox, sy + 1.3, sz)));
     k.b.add(M.box, xf(new THREE.BoxGeometry(3.3, 1.66, 0.06), mat4(sx, sy + 1.9, sz + 0.04)));
     this.prints.add(artQuad('ppSign', 3.2, 1.6, mat4(sx, sy + 1.9, sz - 0.005, 0, Math.PI)));
