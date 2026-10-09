@@ -13,6 +13,7 @@ import { OUTPOSTS, BARKS, BODY_LOOT, KIT_LOOT, type OutpostDef, type CrewRole } 
 import { HIGHWAY } from '@/content/world';
 import { ITEMS } from '@/content/items';
 import { distToPolyline } from '../world/Heightfield';
+import { viewCull } from '../world/kit';
 
 /**
  * Kade Recovery: squads that hold the outposts and walk the highway. Each contractor perceives
@@ -1453,7 +1454,9 @@ export class Recovery implements HostileProvider {
     if (ready) {
       const run = Math.hypot(T.velocity.x, T.velocity.z) > 4.5 ? 1.35 : 1;
       const dark = T.night > 0.5 && !T.torch ? 1.4 - 0.4 * T.light : 1;
-      m.charge = Math.min(1, m.charge + dt / (1.9 * diff.react * run * dark));
+      // off your screen, the glint can't warn you: it takes twice as long to settle
+      const unseen = viewCull.sees(m.h.eye, 0.4) ? 1 : 2;
+      m.charge = Math.min(1, m.charge + dt / (1.9 * diff.react * run * dark * unseen));
     } else m.charge = Math.max(0, m.charge - dt * (m.canSee ? 0.5 : 1.4));
     m.glint = m.charge > 0 ? 0.3 + 0.7 * m.charge * m.charge : 0.16;
     if (m.charge >= 1) {

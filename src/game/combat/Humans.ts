@@ -219,7 +219,7 @@ function buildKit(out: Sink, L: HumanLook, base: number, meshy: boolean) {
     const fz = 0.155 * (0.72 + (w - 1) * 0.4) / 0.72 + (meshy ? -0.025 : 0);
     const pw = (meshy ? 0.27 : 0.31) * w;
     out.add(new THREE.BoxGeometry(pw, 0.33, 0.045, 2, 2, 1), mul(T(0, 0.27 + oy, fz), R(-0.06, 0, 0)), plate, 0.55, 0.35, 0, 3);
-    out.add(new THREE.BoxGeometry(pw, 0.35, 0.045, 2, 2, 1), mul(T(0, 0.27 + oy, -fz - (meshy ? -0.02 : -0.01)), R(0.05, 0, 0)), plate, 0.55, 0.35, 0, 3);
+    out.add(new THREE.BoxGeometry(pw, 0.35, 0.045, 2, 2, 1), mul(T(0, 0.27 + oy, -fz - (meshy ? 0.05 : -0.01)), R(0.05, 0, 0)), plate, 0.55, 0.35, 0, 3);
     if (!meshy) out.add(new THREE.CylinderGeometry(0.205, 0.2, 0.12, 16, 1, true), mul(T(0, 0.13, 0), S(1.2 * w, 1, 0.78 + (w - 1) * 0.4)), '#2a2c2a', 0.8, 0, 0, 6);
     for (const s of [-1, 1]) out.add(rbox(0.025, 0.05, fz * 2), T(s * pw * 0.42, 0.4 + oy, -0.01), '#2a2c2a', 0.8, 0, 0, 6); // shoulder straps
     out.add(rbox(pw * 0.96, 0.03, 0.006), mul(T(0, 0.35 + oy, fz + 0.026), R(-0.06, 0, 0)), tape, 0.35, 0, 0, 4);
@@ -233,7 +233,7 @@ function buildKit(out: Sink, L: HumanLook, base: number, meshy: boolean) {
     // a face shield hung from the hat brim: smoked polycarbonate (it mirrors the sky), a steel rim
     at(BONE.head);
     const fy = meshy ? 0.13 : 0.15, fr = meshy ? 0.135 : 0.13, arc = 1.7;
-    out.add(new THREE.CylinderGeometry(fr, fr * 0.9, 0.16, 20, 1, true, -arc / 2, arc), mul(T(0, fy, 0.01), S(0.95, 1, 1)), '#3a4a54', 0.05, 0.85, 0, 2);
+    out.add(new THREE.CylinderGeometry(fr, fr * 0.9, 0.16, 20, 1, true, -arc / 2, arc), mul(T(0, fy, 0.01), S(0.95, 1, 1)), '#6a7e88', 0.08, 0.45, 0.12, 2);
     out.add(new THREE.TorusGeometry(fr + 0.003, 0.007, 5, 20, arc), mul(T(0, fy + 0.08, 0.01), R(Math.PI / 2, 0, -Math.PI / 2 - arc / 2), S(0.95, 1, 1)), steel, 0.4, 0.7, 0, 3);
     return;
   }
