@@ -32,6 +32,9 @@ const FY = -0.7; // cabin floor, relative to the section axis
 const CEIL = 1.45; // headliner
 
 /** Geometry/collider helper for one fuselage section (section-local → site-local). */
+/** Halo channel of the chemlights (follows the night). */
+const CHEM_CH = 3;
+
 class Sec {
   constructor(readonly kit: SiteKit, readonly m: THREE.Matrix4) {}
   add(mat: THREE.Material, ...g: THREE.BufferGeometry[]) { for (const x of g) this.kit.b.add(mat, xf(x, this.m)); }
@@ -104,6 +107,9 @@ export class JetSite extends Site {
   private hold!: HoldState;
   private goBag!: THREE.Object3D;
   private strobe!: GlowSlot;
+  /** Chemlights a salvager stuck in the sand along the trench (steady green; the jet's way in at night). */
+  private chem!: GlowSlot;
+  private chemLight!: VirtualLight;
   private strobeCh = 1;
   private screenFlicker!: GlowSlot;
   private aisle!: GlowSlot;
@@ -140,6 +146,7 @@ export class JetSite extends Site {
     this.buildTrench();
     this.buildDebris();
     this.buildCanopy();
+    this.buildChemlights();
 
     const far = new Map<THREE.Material, THREE.ColorRepresentation>();
     const { near, far: farGroup } = this.kit.build(root, ctx.scene, 'jet', far);
@@ -149,6 +156,7 @@ export class JetSite extends Site {
     // the strobe still reads from the highway at night
     const farHalo = new (this.kit.halos.constructor as typeof import('../world/effects').GlowSprites)(4);
     farHalo.add(this.tail.p(0.0, 6.3, 9.6), '#ff2a1a', 2.2, 1, 3);
+    for (const p of this.farChem) farHalo.add(p, '#5dff7a', 1.6, 2, 1.4);
     farGroup.add(farHalo.build());
     this.farHalo = farHalo;
     this.lod(near, farGroup, 34);
@@ -560,7 +568,7 @@ export class JetSite extends Site {
     sec.add(k.dark, box(0.14, 0.05, 0.26, cx - 0.08, FY + 0.845, 1.1));
     sec.add(k.dark, box(0.07, 0.05, 0.24, cx - 0.08, FY + 0.89, 1.1, 0, 0, 0.1));
     sec.glow(this.phoneLed, box(0.02, 0.012, 0.02, cx - 0.13, FY + 0.88, 1.0));
-    this.kit.halos.add(this.world(sec.p(cx - 0.14, FY + 0.89, 1.0)), '#3dff8a', 0.18, 0, 1.4);
+    this.kit.halos.add(sec.p(cx - 0.14, FY + 0.89, 1.0), '#3dff8a', 0.18, 0, 1.4);
     // the TIME mockup, leaning on the wall
     sec.add(k.gold, box(0.04, 0.5, 0.4, cx + 0.12, FY + 1.07, 1.75, 0, 0, -0.18));
     sec.dec('photo', 0.34, 0.43, cx + 0.095, FY + 1.07, 1.75, 0, -Math.PI / 2, -0.18);
@@ -701,7 +709,7 @@ export class JetSite extends Site {
     }
     sec.add(k.dark, box(0.22, 0.12, 0.4, 0, 5.82, 9.6));
     sec.glow(this.strobe, xf(new THREE.SphereGeometry(0.09, 10, 8), mat4(0, 5.95, 9.65)));
-    this.kit.halos.add(this.world(sec.p(0, 5.95, 9.65)), '#ff2a1a', 2.4, this.strobeCh, 3);
+    this.kit.halos.add(sec.p(0, 5.95, 9.65), '#ff2a1a', 2.4, this.strobeCh, 3);
     sec.col(0, 3.4, 7.2, 0.18, 2.2, 2.0, 0.55, 0, 0);
     // rear engine (left) on its pylon; the right pylon is a torn stub
     const eng = this.engineGeo();
@@ -853,6 +861,37 @@ export class JetSite extends Site {
   }
 
   // ================================================================ debris
+  /**
+   * Somebody came out here with a box of chemlights and staked out the crash along both berms,
+   * meaning to come back. They didn't. Steady green sticks in the sand every ~10 m, each with a glow
+   * on the ground, halos that carry to the highway at night, and one green VirtualLight midway.
+   */
+  private buildChemlights() {
+    const kit = this.kit;
+    const r = rng(77);
+    const cx = (z: number) => 1.2 * Math.sin(z * 0.05) - 0.4;
+    const stick = new THREE.CylinderGeometry(0.012, 0.012, 0.16, 5);
+    const tip = new THREE.CylinderGeometry(0.014, 0.014, 0.1, 5);
+    let i = 0;
+    // two staked lines outside the berms, from where the jet first touched down to past the nose
+    for (let n = 0; n < 24; n++, i++) {
+      const side = n % 2 ? 1 : -1;
+      const z = -44 + Math.floor(n / 2) * 9.5 + (r() - 0.5) * 2;
+      const x = cx(z) + side * (10 + r() * 1.5);
+      const y = kit.ground(x, z);
+      const lean = 0.25 + r() * 0.35, ry = r() * 6.28;
+      kit.b.add(this.mats.dark, xf(stick, mat4(x, y + 0.06, z, lean, ry, 0)));
+      this.chem.add(kit.b, xf(tip, mat4(x + Math.sin(ry) * Math.sin(lean) * 0.12, y + 0.15, z + Math.cos(ry) * Math.sin(lean) * 0.12, lean, ry, 0)));
+      kit.gd.add(glowDecalMat(), floorDecal('poolGreen', 3.4, 3.4, x, y + 0.03, z, r() * 3));
+      kit.halos.add(new THREE.Vector3(x, y + 0.2, z), '#5dff7a', 1.3, CHEM_CH, 1.8); // site-local: the sprite rides the near group
+      if (i % 3 === 0) this.farChem.push(new THREE.Vector3(x, y + 0.3, z));
+    }
+    this.chemLight = new VirtualLight(0x5dff7a, 0, 12, 2);
+    this.chemLight.position.copy(this.world(new THREE.Vector3(cx(4), kit.ground(cx(4), 4) + 0.6, 4)));
+  }
+
+  private readonly farChem: THREE.Vector3[] = [];
+
   private buildDebris() {
     const k = this.mats;
     const kit = this.kit;
@@ -993,6 +1032,7 @@ export class JetSite extends Site {
   private buildLights() {
     const pal = this.kit.pal;
     this.strobe = pal.slot('#ff2a1a', 0);
+    this.chem = pal.slot('#5dff7a', 1.2);
     this.screenFlicker = pal.slot('#ffb02e', 0.6);
     this.aisle = pal.slot('#46ff8c', 0.8);
     this.cove = pal.slot('#ffd6a0', 0);
@@ -1406,6 +1446,9 @@ export class JetSite extends Site {
     this.strobe.intensity.value = flash * (6 + night * 18);
     this.kit.halos.channels[this.strobeCh] = flash * (0.25 + night * 0.9);
     this.farHalo.channels[1] = flash * night;
+    this.farHalo.channels[2] = night;
+    this.kit.halos.channels[CHEM_CH] = 0.15 + night * 0.85;
+    this.chemLight.intensity = night * 2.2;
     this.sparks.update(dt);
     if (!nearOn) return;
 
