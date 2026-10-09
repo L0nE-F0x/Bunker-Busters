@@ -130,14 +130,16 @@ export class Drone {
     // arms, motors, rotor guards; the four rotor discs are one mesh animated in the shader
     const rotorMat = new THREE.MeshBasicNodeMaterial({ transparent: true, depthWrite: false, side: THREE.DoubleSide });
     const spin = this.rotorSpin;
-    rotorMat.colorNode = vec3(0.08, 0.08, 0.09);
+    // (colour and blade speed as uniforms: the Hornet's rotors share this program)
+    rotorMat.colorNode = uniform(new THREE.Color(0.08, 0.08, 0.09));
+    const bladeK = uniform(70);
     rotorMat.opacityNode = Fn(() => {
       const p = uv().sub(0.5).mul(2);
       const r = length(p);
       const a = atan(p.y, p.x);
       // neighbouring props counter-rotate
       const dir = sign(positionLocal.x.mul(positionLocal.z));
-      const blades = smoothstep(0.6, 1.0, sin(a.mul(2).add(time.mul(spin).mul(70).mul(dir))).abs()).mul(0.5).add(0.18);
+      const blades = smoothstep(0.6, 1.0, sin(a.mul(2).add(time.mul(spin).mul(bladeK).mul(dir))).abs()).mul(0.5).add(0.18);
       return blades.mul(smoothstep(1.0, 0.92, r)).mul(smoothstep(0.08, 0.15, r)).mul(float(0.35).add(spin.mul(0.65)));
     })();
     const discs: THREE.BufferGeometry[] = [];

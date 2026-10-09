@@ -1,5 +1,5 @@
 import * as THREE from 'three/webgpu';
-import { float, texture } from 'three/tsl';
+import { float, texture, uniform } from 'three/tsl';
 import { canvasTexture, grime, norm } from '../world/kit';
 import { F_DISPLAY, F_MONO, F_UI, uSiteNight, uSiteFlicker } from './jetKit';
 
@@ -132,7 +132,8 @@ export function artGlow() {
     polygonOffset: true, polygonOffsetFactor: -3, polygonOffsetUnits: -6,
   });
   const t: N = texture(atlas().tex);
-  m.colorNode = t.rgb.mul(t.a).mul(float(0.35).add(uSiteNight.mul(2.4)).mul(uSiteFlicker));
+  // (levels as uniforms: jetKit's glow decals have this graph too, so the two share one program)
+  m.colorNode = t.rgb.mul(t.a).mul(uniform(0.35).add(uSiteNight.mul(uniform(2.4))).mul(uSiteFlicker));
   m.opacityNode = float(1);
   _glow = m;
   return m;
