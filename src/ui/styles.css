@@ -634,6 +634,21 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #000; color:
 .lowfx .overlay { animation: none; }
 @keyframes lowfxBannerIn { from { transform: translate(-50%, -20px) scale(1.15); opacity: 0; } }
 .lowfx .banner { animation-name: lowfxBannerIn; }
+/* Blurred shadows: WebKitGTK (2.52) re-renders every blurred text-shadow and box-shadow over the
+   canvas on every frame, static or not. The HUD's took ~3 ms a frame in the desktop app (47-51 → 58-60
+   fps at the spawn, 2026-10-10). Hard 1 px shadows read the same at HUD sizes; glows become solid
+   edges or go (the bars are bright gradients already). */
+.lowfx #hud .objective .text, .lowfx .toast, .lowfx .weapon .ammo, .lowfx .subtitle, .lowfx .banner .sub { text-shadow: 0 1px 0 #000, 1px 1px 0 rgba(0, 0, 0, 0.45); }
+.lowfx .hp i.on, .lowfx .xpbar i, .lowfx .weapon .rounds i.on, .lowfx .dmgarcs .arc { box-shadow: none; }
+.lowfx .crosshair { box-shadow: none; outline: 1px solid rgba(0, 0, 0, 0.55); }
+.lowfx .crosshair.td { box-shadow: none; outline: none; }
+.lowfx .xhair i, .lowfx .hitmark i { box-shadow: none; outline: 1px solid rgba(0, 0, 0, 0.45); }
+.lowfx .levelup .ring { box-shadow: 0 0 0 6px rgba(255, 179, 71, 0.25), 0 0 0 14px rgba(255, 179, 71, 0.1); }
+/* (phones: the same over a mobile GPU) */
+.lowfx #touch .tb { box-shadow: inset 0 1px 0 rgba(255, 220, 170, 0.08); }
+.lowfx #touch .t-use.lit { animation: none; box-shadow: 0 0 0 2px rgba(255, 138, 42, 0.55); }
+.lowfx #touch .stick .knob { box-shadow: 0 0 0 2px rgba(255, 138, 42, 0.3); }
+.lowfx #touch .stick.sprint .knob { box-shadow: 0 0 0 2px rgba(63, 242, 224, 0.5); }
 
 /* ---------- modal close button (all devices) ---------- */
 .modal header .close-x { margin-left: auto; width: 40px; height: 40px; padding: 0; text-align: center; font-size: 18px; flex: none; }
