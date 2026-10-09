@@ -882,6 +882,45 @@ export const QUESTS: QuestDef[] = [
   },
 ];
 
+/** Number 2,212 (Doc): his sister's place in the Everafter line. Props: sites/stories.ts; talk: Settlement (Doc). */
+QUESTS.push({
+  id: 'doc.ada',
+  kind: 'side',
+  title: 'Number 2,212',
+  giver: 'doc',
+  where: 'Dry Creek → Waitlist City',
+  blurb:
+    'Doc\'s sister Ada queued for Everafter, the bunker at the head of Waitlist City. Number 2,212. She wrote to the clinic every month for a year, from her camp chair, about the weather and the people either side of her. Then the letters stopped.',
+  start: (v) => v.has('doc.ada') || v.has('q.ada.found'),
+  steps: [
+    {
+      id: 'find', text: 'Find number 2,212 in the Everafter line', at: 'adachair',
+      hint: 'Waitlist City, in the basin south-east past the Tube. Her chair might not be in the line any more. Look along its edge.',
+      done: (v) => v.has('q.ada.found'),
+    },
+    {
+      id: 'tell', text: 'Tell Doc what you found', at: 'creek',
+      hint: 'At the clinic by day, at Sol\'s fire in the evening.',
+      done: (v) => v.has('q.ada.told') || v.has('q.ada.kind'),
+    },
+  ],
+  outcomes: [
+    {
+      flag: 'q.ada.told',
+      label: 'You gave Doc his sister\'s letter.',
+      text: 'Doc read it twice, folded it into his coat and went back to work. That night he wrote one of his own, addressed to "the Panopticon, the old coast, attn: Ada Ivers", and asked Dez to read it on the band. He doesn\'t expect an answer. He expects her to hear it.',
+      reward: { xp: 90, items: [{ id: 'medkit', qty: 1 }], rep: { doc: 2, creek: 1 } },
+    },
+    {
+      flag: 'q.ada.kind',
+      label: 'You told Doc she got a seat inside.',
+      text: 'Doc said "good" twice, like a man checking a pulse. Her number is on the clinic wall now: 2,212, SEATED. You still have the letter. It weighs more than it should.',
+      reward: { xp: 60, items: [{ id: 'medkit', qty: 1 }], rep: { doc: 1 } },
+    },
+  ],
+  wrap: { speaker: 'Doc Ivers', text: 'Two thousand two hundred and twelve. She always did hate a queue.' },
+});
+
 /** The founders' chat, in reading order (content/world.ts WORLD_INTEL, series 'lifeboat'). */
 export const LIFEBOAT_PAGES = LORE_SERIES.lifeboat.ids;
 export const lifeboatCount = (v: { has: (f: string) => boolean }) => LIFEBOAT_PAGES.filter((id) => v.has(`intel:${id}`)).length;
@@ -891,6 +930,8 @@ export const lifeboatCount = (v: { has: (f: string) => boolean }) => LIFEBOAT_PA
  * runtime to the first chat page you haven't read.
  */
 export const STORY_SPOTS: Record<string, [number, number]> = {
+  /** Ada's chair, dragged out of the Everafter line (Waitlist City, site-local (-31, 18)). */
+  adachair: [294, 269],
   capsule: [-306, 4],
   glimpsecam: [-121, 126],
   glimpserelay: [-74, 178],

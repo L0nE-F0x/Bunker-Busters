@@ -250,6 +250,35 @@ export class Stories {
       this.lods.push(new DistanceLod(landmarks.campPosition.clone(), 20, crates, null, 170));
     }
     this.keeps = this.keepsakes();
+    // ---------------------------------------------------------------- Number 2,212: Ada's chair at Waitlist City
+    {
+      const [x, z] = place(...STORY_SPOTS.adachair);
+      const y = hf.heightAt(x, z);
+      const mb = new MeshBatch();
+      const frame = rustyMetal({ base: '#9aa0a4', rust: 0.3, metalness: 0.7 });
+      const seat = fabric('#3f6f8a', 0.9);
+      // a folding camp chair dragged out of the line and left facing west, a number taped to the back
+      for (const [lx, lz] of [[-0.25, -0.2], [0.25, -0.2], [-0.25, 0.22], [0.25, 0.22]] as const) mb.add(frame, rod(V(lx, 0, lz), V(lx * 0.9, 0.45, -lz * 0.6), 0.012, 5));
+      mb.add(seat, T(new THREE.BoxGeometry(0.5, 0.03, 0.42), 0, 0.44, 0.0, 0.06, 0, 0));
+      mb.add(seat, T(new THREE.BoxGeometry(0.5, 0.45, 0.03), 0, 0.68, -0.24, -0.2, 0, 0));
+      mb.add(plainStandard('#efe9da', 0.8), T(new THREE.BoxGeometry(0.2, 0.12, 0.004), 0, 0.72, -0.262, -0.2, 0, 0)); // the number card
+      mb.add(loreMaterial(), T(loreQuad('letter', 0.15, 0.19), 0.05, 0.462, 0.05, -Math.PI / 2 + 0.06, 0, 0.4));
+      mb.add(desertRock(), T(rockGeometry(91, 1).scale(0.05, 0.035, 0.05), 0.08, 0.475, 0.07));
+      mb.add(rustyMetal({ base: '#c23b2a', rust: 0.3, metalness: 0.3 }), T(new THREE.BoxGeometry(0.42, 0.3, 0.28), 0.6, 0.15, 0.1, 0, 0.3, 0)); // her cooler
+      const chair = mb.build('ada-chair');
+      placed(chair, x, y, z, Math.PI / 2 + 0.3);
+      shadowProxy(chair);
+      const wrap = new THREE.Group();
+      wrap.add(chair);
+      this.group.add(wrap);
+      this.lods.push(new DistanceLod(V(x, y, z), 1, wrap, null, 170));
+      this.spots.adachair = V(x + 1.6, y, z + 0.6);
+      this.interactables.push({
+        id: 'story.adachair', pos: V(x, y + 0.6, z), radius: 1.8,
+        visible: () => !this.s?.has('q.ada.found'),
+        primary: { label: 'Read the note on chair 2,212', available: () => true, run: () => this.readAda() },
+      });
+    }
     this.endingProps(landmarks);
   }
 
@@ -391,6 +420,26 @@ export class Stories {
         choices: [{ id: 'ok', label: 'Fold it back the way it was. It won\'t be.' }],
       });
     }
+  }
+
+  // ------------------------------------------------------------------ Number 2,212
+  private async readAda() {
+    const s = this.s;
+    if (s.has('q.ada.found')) return;
+    await this.ctx.ui.choose({
+      speaker: 'Note on chair 2,212',
+      text:
+        'TO HAL IVERS, DRY CREEK CLINIC. HAND DELIVERY. YOU KNOW WHY. "Hal. Thirteen months in a chair. The board still says now serving one. ' +
+        'A man from Glimpse came down the line with a tablet and said the Panopticon seats everyone, no appointments, because it can always see you, so nobody ever has to wait. ' +
+        'Half the line went with him to the coast. I\'m going too. Don\'t come after me. Don\'t send the chicken. Love, Ada. P.S. The woman in 2,213 snores. Tell her I said so."',
+      choices: [{ id: 'ok', label: 'Take the letter to Doc.' }],
+    });
+    if (!s.set('q.ada.found')) return;
+    s.set('doc.ada');
+    s.set('lore.panopticon');
+    s.addItem('ada_letter', 1, false, true);
+    s.addXP(30, 'Chair 2,212');
+    this.ctx.audio.play('pickup');
   }
 
   // ------------------------------------------------------------------ Seen

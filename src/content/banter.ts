@@ -249,6 +249,23 @@ export const BANTER: Banter[] = [
     when: (v) => !v.has('lore.walkwest'),
     text: 'Footprints on the shoulder, all heading west. Old ones. Nobody\'s come back the other way.',
   },
+  // ------------------------------------------------------------------ the new road
+  {
+    id: 'waitlist.chair', speaker: 'self', priority: 3,
+    near: { lm: 'waitlist', r: 60 },
+    when: (v) => v.has('doc.ada') && !v.has('q.ada.found'),
+    text: 'Two thousand two hundred and twelve. If Ada left the line, she\'d have dragged her chair out of it. Check the edges.',
+  },
+  {
+    id: 'apex.done', speaker: 'Mara', priority: 6,
+    when: (v) => v.has('apex.complete') && v.has('q.capsule.dug'),
+    text: 'Pip ran the tap behind the pumps for ten seconds this morning, just to hear it. Then she wrote it down. Then she ran it again. I didn\'t stop her.',
+  },
+  {
+    id: 'panopticon.far', speaker: 'self', priority: 2,
+    when: (v) => (v.has('q:act2:done') || v.has('apex.complete')) && v.has('q.cam.hello'),
+    text: 'Somewhere on the old coast, north of the salt, Ezra is watching this exact moment. Fine. Let him write it down.',
+  },
   // ------------------------------------------------------------------ routines (content/routines.ts)
   {
     id: 'routine.watch', speaker: 'self', priority: 2,

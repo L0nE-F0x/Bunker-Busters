@@ -249,6 +249,12 @@ const defs: ItemDef[] = [
     description: 'The Survey Camp\'s field book. Ridge seep: 0.4 L/hr, class DATA ASSET. Resident: one, male, loud. Recommended action: relocation package (tote bag).',
     flavor: 'Every page is initialled V.K. in a different pen.',
   },
+  // --- Number 2,212 ---
+  {
+    id: 'ada_letter', name: 'Letter from Chair 2,212', category: 'intel', weight: 0, stack: 1, value: 0, icon: 'intel',
+    description: 'Folded under a stone on a camp chair at the edge of the Everafter line. TO HAL IVERS, DRY CREEK CLINIC. HAND DELIVERY. YOU KNOW WHY.',
+    flavor: 'The handwriting leans forward, like someone in a hurry to be somewhere.',
+  },
   // --- The founders' favours: Class of Tomorrow ---
   {
     id: 'pip_letter', name: 'Pip\'s Envelope', category: 'intel', weight: 0, stack: 1, value: 0, icon: 'intel',

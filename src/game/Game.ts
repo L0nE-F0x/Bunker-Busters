@@ -1792,6 +1792,9 @@ export class Game {
         this.atmo.hour = (this.atmo.hour + hours) % 24;
         this.envTimer = 0;
         this.revealTimer = 0;
+        // routines (content/routines.ts): arrive to people already where the new hour puts them
+        this.settlement.reroute();
+        this.landmarks.reroute();
       },
       card: (c) => travelCard(c),
       end: () => {

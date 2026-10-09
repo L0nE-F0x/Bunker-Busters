@@ -22,6 +22,7 @@ export interface TownBark {
 /** The street's reactions to what you've done. Merged into TOWN_BARKS below. */
 const NEWS: Record<string, TownBark[]> = {
   nia: [
+    { speaker: 'Nia Pell', kind: 'hello', when: (h) => h('apex.complete'), text: 'Water in the pipes. Real water. Sit down, I\'m making soup with it out of spite.' },
     { speaker: 'Nia Pell', kind: 'hello', when: (h) => h('act1.broadcast'), text: 'You\'re the voice off the radio. Sit. The soup heard you too.' },
     { speaker: 'Nia Pell', kind: 'hello', when: (h) => h('q.rider.delivered'), text: 'Stove lights first time now. Every time. I think of that boy every time.' },
     { speaker: 'Nia Pell', kind: 'night', when: (h) => h('q.chat.air'), text: 'Did you hear Dez do Vesper\'s voice? I laughed so hard I burnt the beans.' },
@@ -31,26 +32,32 @@ const NEWS: Record<string, TownBark[]> = {
     { speaker: 'Doc Ivers', kind: 'hello', when: (h) => h('q.doc.delivered'), text: 'Wick\'s cough is down to a rumble. Don\'t tell him I asked.' },
     { speaker: 'Doc Ivers', kind: 'hello', when: (h) => h('act1.deal'), text: 'Boil the Kade jugs. I don\'t care what the label says. Especially what the label says.' },
     { speaker: 'Doc Ivers', kind: 'night', when: (h) => h('q.nia.peace'), text: 'Nia sent over soup. For the sterilizer, she says. Sterilizers don\'t eat soup.' },
+    { speaker: 'Doc Ivers', kind: 'hello', when: (h) => h('apex.complete'), text: 'Drink the water. It\'s clean. I checked. Twice. Three times.' },
+    { speaker: 'Doc Ivers', kind: 'night', when: (h) => h('q.ada.told'), text: 'Dez read my letter on the band tonight. If she hears it, she hears it.' },
   ],
   inez: [
     { speaker: 'Inez Quill', kind: 'hello', when: (h) => h('q.inez.inez'), text: 'Welcome to my Till. Mine. Say it with me.' },
     { speaker: 'Inez Quill', kind: 'hello', when: (h) => h('q.inez.town'), text: 'The town\'s Till. Browse the town\'s shelves. Pay the town\'s prices. Weep the town\'s tears.' },
     { speaker: 'Inez Quill', kind: 'hello', when: (h) => h('lore.lifeboat'), text: 'Founder phones are going for six scrap on the east band. Bring me one. I won\'t ask where.' },
+    { speaker: 'Inez Quill', kind: 'hello', when: (h) => h('apex.complete'), text: 'Water\'s free now. I\'ve had to diversify. Into what, I don\'t know yet. Gloating, possibly.' },
   ],
   sol: [
     { speaker: 'Sol Varga', kind: 'hello', when: (h) => h('q.sol.returned'), text: 'Roll\'s back where it belongs. So are my hands.' },
     { speaker: 'Sol Varga', kind: 'hello', when: (h) => h('q.song.quiet'), text: 'Mm. (He\'s humming. He doesn\'t stop this time.)' },
     { speaker: 'Sol Varga', kind: 'night', when: (h) => h('q.song.band'), text: 'Sunset, on the band. She\'d have liked the reach. Night\'s for listening.' },
+    { speaker: 'Sol Varga', kind: 'hello', when: (h) => h('apex.complete'), text: 'Mm. Every tap in town is open. Nobody\'s locking anything tonight. Bad for business. Good for sleep.' },
   ],
   ren: [
     { speaker: 'Ren Oka', kind: 'hello', when: (h) => h('act1.deal'), text: 'Kade drone count this week: one. Jug count: nineteen. It\'s always nineteen.' },
     { speaker: 'Ren Oka', kind: 'hello', when: (h) => h('act1.broadcast'), text: 'Four hundred and six names. I counted. I lost count at the senators.' },
     { speaker: 'Ren Oka', kind: 'night', when: (h) => h('lore.walkwest'), text: 'Forty walked west, one week. I stopped counting the ones coming back.' },
+    { speaker: 'Ren Oka', kind: 'hello', when: (h) => h('apex.complete'), text: 'Cistern trucks heading east. I lost count. I\'ve never been so happy to lose count.' },
   ],
   wick: [
     { speaker: 'Wick', kind: 'hello', when: (h) => h('q.wick.left'), text: 'Seep\'s running. Your share\'s in the jar. Don\'t make it weird.' },
     { speaker: 'Wick', kind: 'hello', when: (h) => h('q.wick.burned'), text: 'Still warm, that fire. I fed it a whole survey. Best meal it\'s had.' },
     { speaker: 'Wick', kind: 'night', when: (h) => h('lore.panopticon'), text: 'Blue light over the ridge again. Slow. Like it\'s reading.' },
+    { speaker: 'Wick', kind: 'hello', when: (h) => h('apex.complete'), text: 'Heard the pipe sing last night, all the way up here. First song it\'s sung in years.' },
   ],
 };
 
