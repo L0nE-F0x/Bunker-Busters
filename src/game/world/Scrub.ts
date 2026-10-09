@@ -106,11 +106,14 @@ export class Scrub {
     // thin blades take the light like the ground they stand on (their own normals turned a tuft into
     // black spikes whenever you faced the sun), and the sun shines through them: dry grass glows
     // straw-gold against a low sun and stays a warm silhouette at noon
+    // (the light that comes through is real sunlight: the normal turns toward the sun, so the shadow
+    // map still applies and a tuft in a mesa's shadow stays dark; only a faint glow skips it)
     const upView = cameraViewMatrix.mul(vec4(0, 1, 0, 0)).xyz;
-    mat.normalNode = normalize(mix(normalView, upView, 0.6));
+    const sunView = cameraViewMatrix.mul(vec4(uRimSunDir, 0)).xyz;
     const toCam = normalize(cameraPosition.sub(positionWorld));
     const through = pow(max(dot(toCam.negate(), uRimSunDir), 0), 3);
-    mat.emissiveNode = col.mul(rimColor).mul(through.mul(1.3).add(0.06)).mul(float(0.4).add(hgt.mul(0.9))).mul(uDaylight);
+    mat.normalNode = normalize(mix(normalView, upView, 0.6).add(sunView.mul(through.mul(2.5))));
+    mat.emissiveNode = col.mul(rimColor).mul(through.mul(0.3).add(0.04)).mul(float(0.4).add(hgt.mul(0.9))).mul(uDaylight);
     // fade out at the edge of the streaming radius; parts this tuft doesn't have are cut away
     const d = length(positionWorld.xz.sub(cameraPosition.xz));
     mat.opacityNode = smoothstep(62, 50, d);

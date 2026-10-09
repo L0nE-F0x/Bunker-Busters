@@ -404,7 +404,7 @@ export const floraMaterial = () => memo('flora', () => {
   // and any sun shines through foliage you look at against it (backlit bushes were near-black clumps)
   const toCam = normalize(cameraPosition.sub(positionWorld));
   const through = pow(max(dot(toCam.negate(), uRimSunDir), 0), 3).mul(leaf).mul(uDaylight);
-  m.emissiveNode = glowLeaf.add(sd.color.mul(rimColor).mul(through.mul(0.9)));
+  m.emissiveNode = glowLeaf.add(sd.color.mul(rimColor).mul(through.mul(0.45)));
   return m;
 });
 
