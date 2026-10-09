@@ -8,6 +8,7 @@ import { storyObjective } from '@/content/story';
 import { LANDMARKS } from '@/content/world';
 import { ITEMS } from '@/content/items';
 import { GARAGE } from '@/content/bunkers/garage';
+import { actionWord } from '@/engine/bindings';
 import { OUTPOSTS } from '@/content/recovery';
 
 /** Seconds between two banter lines, at least. Exploring should feel accompanied, not narrated. */
@@ -99,7 +100,8 @@ export class Story {
         s.set(`q:${q.id}`);
         if (!silent) {
           this.audio.play('intel');
-          this.ui.toast(`New ${q.kind === 'main' ? 'chapter' : 'quest'} · ${q.title}. J to read it.`, 'info');
+          const j = actionWord('journal');
+          this.ui.toast(`New ${q.kind === 'main' ? 'chapter' : 'quest'} · ${q.title}. ${j ? `${j} to read it.` : 'It is in the journal.'}`, 'info');
         }
       }
       for (const step of q.steps) {

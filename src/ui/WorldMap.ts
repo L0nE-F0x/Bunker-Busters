@@ -252,7 +252,10 @@ class MapView {
     if (f.lb) this.cycle(-1);
     if (f.rb) this.cycle(1);
     if (f.y) this.centre(this.o.px, this.o.pz);
-    return { ...f, lx: 0, ly: 0, rx: 0, ry: 0, lb: false, rb: false, y: false };
+    // the left stick also reads as menu directions past half-tilt: while it pans, the buttons stay put
+    const stick = Math.abs(f.lx) > 0.3 || Math.abs(f.ly) > 0.3;
+    const dirs = stick ? { up: false, down: false, left: false, right: false } : {};
+    return { ...f, ...dirs, lx: 0, ly: 0, rx: 0, ry: 0, lb: false, rb: false, y: false };
   }
 
   stop() {
@@ -719,7 +722,7 @@ export function buildWorldMap(data: MapData, o: WorldMapOpts, close: () => void)
       <h4>${esc(sel.label)}</h4>
       ${sel.note ? `<p>${esc(sel.note)}</p>` : ''}
       <div class="wmap-dist">${d < 25 ? 'You are here.' : `${distText(d)} ${bearing(sel.x - o.px, sel.z - o.pz)} of you`}</div>
-      ${t ? `<button class="btn primary wmap-go-sel" ${t.blocked || o.travelBlocked ? 'disabled' : ''}>${t.blocked || o.travelBlocked ? esc(t.blocked ?? o.travelBlocked!) : `Travel · ${esc(t.detail)}`}</button>` : ''}`;
+      ${t ? `<button class="btn primary wmap-go-sel pad-default" ${t.blocked || o.travelBlocked ? 'disabled' : ''}>${t.blocked || o.travelBlocked ? esc(t.blocked ?? o.travelBlocked!) : `Travel · ${esc(t.detail)}`}</button>` : ''}`;
     const b = card.querySelector('.wmap-go-sel') as HTMLElement | null;
     if (b) b.onclick = () => go(sel.id);
   };
@@ -758,17 +761,18 @@ export function buildWorldMap(data: MapData, o: WorldMapOpts, close: () => void)
 
 // ------------------------------------------------------------------ travel card
 /**
- * The card shown under the fade while you walk: where from, where to, how long it took, what it
- * cost. Shown over the black fader; `hide()` fades it out.
+ * The card shown while you walk: where from, where to, how long it took, what it cost. It sits
+ * over the black fader; the returned function fades it out.
  */
-export function travelCard(root: HTMLElement, c: { from: string; to: string; walked: string; arrive: string; cost: string; blurb: string }) {
+export function travelCard(c: { from: string; to: string; walked: string; arrive: string; cost: string; blurb: string }) {
   const el = document.createElement('div');
   el.className = 'travel-card';
   el.innerHTML = `<div class="tc-route"><span>${esc(c.from)}</span><i></i><span>${esc(c.to)}</span></div>
     <div class="tc-name">${esc(c.to.toUpperCase())}</div>
     <div class="tc-blurb">${esc(c.blurb)}</div>
     <div class="tc-stats"><span><small>On foot</small>${esc(c.walked)}</span><span><small>Arrive</small>${esc(c.arrive)}</span><span><small>Cost</small>${esc(c.cost)}</span></div>`;
-  root.appendChild(el);
+  // on the body, next to the fader: inside #ui (its own stacking context) it would sit under the black
+  document.body.appendChild(el);
   requestAnimationFrame(() => requestAnimationFrame(() => el.classList.add('on')));
   return () => {
     el.classList.remove('on');

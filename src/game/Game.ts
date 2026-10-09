@@ -9,7 +9,7 @@ import { Physics } from '@/engine/physics';
 import { modelProgress } from '@/engine/models';
 import { Input } from '@/engine/input';
 import { pad } from '@/engine/gamepad';
-import { binds } from '@/engine/bindings';
+import { binds, actionWord, type Action } from '@/engine/bindings';
 import { PadNav } from '@/ui/PadNav';
 import { AudioEngine, type LoopHandle } from '@/engine/audio';
 import { Acoustics, isSoft } from '@/engine/surface';
@@ -87,6 +87,14 @@ interface Grenade { mesh: THREE.Object3D; body: RigidBody; fuse: number; lastVel
 type RigidBody = ReturnType<Physics['world']['createRigidBody']>;
 
 /** Owns the scene, world, player and the top-level state machine (title → select → play). */
+/** The first-gun tutorial line, in the controls actually bound (keys, or the pad when one is in use). */
+function armsHelp() {
+  const w = (a: Action) => actionWord(a);
+  const pad = document.documentElement.classList.contains('pad');
+  const swap = pad ? `${w('prevWeapon')} / ${w('nextWeapon')}` : `${w('lastWeapon')} / wheel`;
+  return `Armed. ${w('fire')} fire · ${w('aim')} aim · ${w('reload')} reload · ${swap} swap · ${w('holster')} holster · ${w('melee')} melee.`;
+}
+
 export class Game {
   scene = new THREE.Scene();
   camera = new THREE.PerspectiveCamera(55, innerWidth / innerHeight, 0.1, 6000);
@@ -1102,7 +1110,7 @@ export class Game {
       void this.ui.pages(briefingFor(state.archetype)).then(() => {
         state.set('briefed');
         state.set('intro');
-        if (state.set('tut.arms')) setTimeout(() => this.ui.toast(isTouch ? 'Armed: FIRE, AIM, RELOAD and SWAP sit over the jump button.' : 'Armed. LMB fire · RMB aim · R reload · Q / wheel swap · X holster · V melee.', 'info'), 4000);
+        if (state.set('tut.arms')) setTimeout(() => this.ui.toast(isTouch ? 'Armed: FIRE, AIM, RELOAD and SWAP sit over the jump button.' : armsHelp(), 'info'), 4000);
         if (this.player) this.player.frozen = false;
         this.busy = false;
         this.input.requestLock();
@@ -1672,7 +1680,7 @@ export class Game {
         this.envTimer = 0;
         this.revealTimer = 0;
       },
-      card: (c) => travelCard(this.ui.root, c),
+      card: (c) => travelCard(c),
       end: () => {
         this.ui.fade(false);
         this.player!.frozen = false;
@@ -1915,7 +1923,7 @@ export class Game {
         this.input.exitLock();
         const firstKit = !s.has('tut.kit');
         this.ui.openInventory((id) => this.useItem(id), () => {
-          if (firstKit && s.set('tut.kit')) this.ui.toast('Skills live on their own tab (K). Each one branches twice: a focus at rank 2, a capstone at rank 4.', 'info');
+          if (firstKit && s.set('tut.kit')) this.ui.toast(`Skills live on their own tab${actionWord('skills') ? ` (${actionWord('skills')})` : ''}. Each one branches twice: a focus at rank 2, a capstone at rank 4.`, 'info');
           this.afterModal();
         }, tab, this.story);
       } else if (input.actPressed('map')) {

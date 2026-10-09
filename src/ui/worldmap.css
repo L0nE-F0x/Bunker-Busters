@@ -5,6 +5,7 @@
 .wmap-stage { position: relative; min-height: 0; min-width: 0; border: 1px solid var(--line); background: #0b0806; overflow: hidden; }
 .wmap-canvas { position: absolute; left: 0; top: 0; width: 100%; height: 100%; display: block; cursor: grab; touch-action: none; }
 .wmap-side { overflow-y: auto; min-height: 0; display: flex; flex-direction: column; gap: 10px; padding-right: 6px; touch-action: pan-y; }
+.wmap-side > * { flex-shrink: 0; }
 .wmap-side > .label { margin-top: 6px; }
 .wmap-card { padding: 12px 14px; background: rgba(255, 255, 255, 0.035); border-left: 2px solid var(--amber); min-height: 96px; }
 .wmap-card h4 { margin: 4px 0 6px; font-family: var(--display); font-size: 26px; letter-spacing: 0.03em; line-height: 1; color: var(--ink); }

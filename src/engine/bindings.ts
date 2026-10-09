@@ -301,6 +301,22 @@ export function actionKey(a: Action): string {
   return keyLabel(binds.keys(a)[0] ?? '') || '—';
 }
 
+/**
+ * An action's control for a sentence ("J to read it"): the pad button when a controller was used last,
+ * else its first key. On a pad, Skills and Journal are tabs of the kit. Touch has no keys: ''.
+ */
+export function actionWord(a: Action): string {
+  const html = typeof document !== 'undefined' ? document.documentElement : null;
+  if (html?.classList.contains('touch')) return '';
+  if (html?.classList.contains('pad')) {
+    const p = binds.pad(a);
+    if (p) return padName(p);
+    const k = binds.pad('kit');
+    if ((a === 'skills' || a === 'journal') && k) return `${padName(k)}, ${a === 'skills' ? 'Skills' : 'Journal'}`;
+  }
+  return actionKey(a);
+}
+
 /** Minigame steering: arrows always, plus whatever movement keys are bound. */
 export function dirOf(code: string): 'up' | 'down' | 'left' | 'right' | null {
   if (code === 'ArrowUp' || binds.is(code, 'forward')) return 'up';

@@ -21,7 +21,7 @@ import { mountUpdateNotice } from './Updater';
 import { isTouch, isIOS, isStandalone, canFullscreen, isFullscreen, enterFullscreen } from '@/engine/device';
 import type { ArmsHud } from '@/game/combat/PlayerArms';
 import { DIFFICULTY } from '@/content/weapons';
-import { binds, actionGlyph, actionKey, kbdGlyph, keyLabel, padName, type Action } from '@/engine/bindings';
+import { binds, actionGlyph, actionKey, actionWord, kbdGlyph, keyLabel, padName, type Action } from '@/engine/bindings';
 import { openControls } from './ControlsView';
 
 /** Which device's glyphs to show (html.pad is set by Input when a controller was used last). */
@@ -30,6 +30,8 @@ const device = () => (isTouch ? 'touch' : document.documentElement.classList.con
 const kk = (a: Action) => kbdGlyph(binds.keys(a)[0] ?? '');
 /** HUD prompt keys (Game sends 'E', 'F', 'LMB') → the action they stand for. */
 const PROMPT_ACT: Record<string, Action> = { E: 'interact', F: 'alt', LMB: 'fire' };
+/** "(F)" / "(E)" written into content → the control bound on the device in use (touch: its USE / ALT buttons). */
+const proseKeys = (s: string) => (s.indexOf('(') < 0 ? s : s.replace(/\((E|F)\)/g, (_, k: string) => `(${isTouch ? (k === 'E' ? 'USE' : 'ALT') : actionWord(PROMPT_ACT[k])})`));
 
 const esc = (s: string) => s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]!));
 
@@ -360,7 +362,7 @@ export class UI implements UIBridge {
 
   toast(text: string, kind: 'info' | 'good' | 'bad' | 'xp' = 'info') {
     this.claimItems(text);
-    const t = h('div', `toast ${kind}`, text);
+    const t = h('div', `toast ${kind}`, proseKeys(text));
     this.els.toasts?.appendChild(t);
     setTimeout(() => t.remove(), 4800);
     while ((this.els.toasts?.children.length ?? 0) > 6) this.els.toasts.firstChild?.remove();
@@ -481,8 +483,8 @@ export class UI implements UIBridge {
     // on touch the prompts are buttons themselves (data-key → TouchControls)
     const dev = device();
     const html = f.prompt.map((p) => isTouch
-      ? `<div class="p ${p.na ? 'na' : ''}" data-key="act:${PROMPT_ACT[p.key] ?? p.key}"><span class="kbd">${p.key === 'E' ? 'USE' : 'ALT'}</span>${p.label}${p.na ? `<small>${p.na}</small>` : ''}</div>`
-      : `<div class="p ${p.na ? 'na' : ''}">${PROMPT_ACT[p.key] ? actionGlyph(PROMPT_ACT[p.key], dev) : `<span class="kbd">${p.key}</span>`}${p.label}${p.na ? `<small>${p.na}</small>` : ''}</div>`).join('');
+      ? `<div class="p ${p.na ? 'na' : ''}" data-key="act:${PROMPT_ACT[p.key] ?? p.key}"><span class="kbd">${p.key === 'E' ? 'USE' : 'ALT'}</span>${p.label}${p.na ? `<small>${proseKeys(p.na)}</small>` : ''}</div>`
+      : `<div class="p ${p.na ? 'na' : ''}">${PROMPT_ACT[p.key] ? actionGlyph(PROMPT_ACT[p.key], dev) : `<span class="kbd">${p.key}</span>`}${p.label}${p.na ? `<small>${proseKeys(p.na)}</small>` : ''}</div>`).join('');
     if (pr.dataset.html !== html) { pr.innerHTML = html; pr.dataset.html = html; }
     // stance
     this.els.stance.querySelector('.crouch')!.classList.toggle('on', f.crouch);
@@ -705,7 +707,7 @@ export class UI implements UIBridge {
               <div>
                 <div class="panel info">${sel ? `
                   <div class="cat">${sel.category}</div><h4>${esc(sel.name)}</h4>
-                  <p>${esc(sel.description)}</p>${sel.flavor ? `<p class="flavor">${esc(sel.flavor)}</p>` : ''}
+                  <p>${esc(proseKeys(sel.description))}</p>${sel.flavor ? `<p class="flavor">${esc(sel.flavor)}</p>` : ''}
                   <div class="stats"><span>WT ${sel.weight}kg</span><span>VALUE ${sel.value}</span><span>×${s.count(sel.id)}</span></div>
                   <div class="rowbtns">${sel.usable ? `<button class="btn use">${sel.id === 'sol_roll' ? 'Unroll (5 picks)' : 'Use'}</button>` : ''}<button class="btn drop">Drop 1</button><button class="btn drop-all">Drop stack</button></div>` : '<p>Empty pockets. The camp can fix that, or the highway can.</p>'}
                 </div>
