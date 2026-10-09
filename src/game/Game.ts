@@ -1308,6 +1308,7 @@ export class Game {
 
   private removePlayer() {
     this.recovery?.reset();
+    this.throwables?.reset();
     this.story?.dispose();
     this.story = null;
     this.arms = null;
