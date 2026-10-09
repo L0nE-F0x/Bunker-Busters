@@ -174,4 +174,17 @@ export const WORLD_INTEL: IntelItem[] = [
     revealLines: ['The airlock code is the launch clock over the door: hours and minutes, counting down.', 'A vent on the hill\'s east side runs into the launch corridor, past two of the beams.'],
     xp: 50,
   },
+  // Act II → Tier 3: on Vesper's cot in the Cistern Room
+  {
+    id: 'intel.apex.memo',
+    title: 'Memo — Re: Your Guests',
+    body:
+      'FROM: The Panopticon, office of the founder. TO: V. Kade. RE: your guests. ' +
+      'Every face that has crossed your apron since Pivot Day: matched, timestamped, ranked by likelihood to become content. The camps are attached. ' +
+      'Your water for our data, as discussed. P.S. We noticed the person reading this. Hello. We are always listening, and we call that a feature.',
+    position: [-380.5, 0, -159.5],
+    reveals: ['lore.panopticon'],
+    revealLines: ['Somebody on the old coast has been trading Vesper faces for water. They know you read this.'],
+    xp: 60,
+  },
 ];

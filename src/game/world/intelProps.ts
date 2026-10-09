@@ -107,7 +107,8 @@ export function buildIntelProp(id: string, opts: { crate?: boolean } = {}): Inte
   const steel = rustyMetal({ base: '#6a6d70', rust: 0.45, metalness: 0.7 });
   let glintAt = V(0, 0.2, 0);
   let blink: { value: number } | undefined;
-  if (id === 'intel.gas.note') {
+  // (Apex's shift note and the memo in the Cistern Room are pages on a crate too)
+  if (id === 'intel.gas.note' || id === 'intel.apex.shift' || id === 'intel.apex.memo') {
     // a folded page on an upturned milk crate, pinned under a fist-sized rock, a dented can beside it
     const crateMat = plainStandard('#b8401e', 0.7);
     const H = opts.crate === false ? 0.004 : 0.3;
@@ -147,7 +148,7 @@ export function buildIntelProp(id: string, opts: { crate?: boolean } = {}): Inte
     l.position.set(-0.1, 1.53, 0.105);
     g.add(l);
     glintAt = V(0, 1.45, 0.15);
-  } else if (id === 'intel.highway.permit') {
+  } else if (id === 'intel.highway.permit' || id === 'intel.salt.waybill') {
     // a clipboard face-up on the shoulder, propped on a stone
     const tilt = -Math.PI / 2 + 0.25;
     g.scale.setScalar(1.2);

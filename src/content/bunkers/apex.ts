@@ -193,6 +193,9 @@ export const APEX: Bunker = {
 
 /** The pad Heightfield flattens under Apex (around `location`): the apron, the hangar, the berm. */
 export const APEX_PAD = { r: 37, falloff: 14, target: -5 };
+/** A second pad under the vault block in the hill (offset from `location`): its back corners are past
+ *  APEX_PAD's flat circle, and the range's slope came up through the Cistern Room's floor. */
+export const APEX_BLOCK_PAD = { dx: -10, dz: -24, r: 16, falloff: 10, target: -5 };
 
 /** Flags Apex's own code reads (the runtime derives the rest from the ids above). */
 export const APEX_FLAGS = {

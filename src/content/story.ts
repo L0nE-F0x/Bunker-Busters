@@ -300,6 +300,7 @@ export function journalEntries(v: StoryView): JournalEntry[] {
   add('apex.code', 'The launch clock', 'The airlock code is the countdown over the door, hours and minutes to her launch. It is never the same twice. She calls that zero trust. Her guards call it their knees.');
   add('apex.demo', 'A fan, on tour', 'You told Vesper you were a fan and she let you into the hangar for content. Somewhere there is a clip of you looking unimpressed by a truck.');
   add('apex.complete', 'The Cistern Room', 'A tank with her name on it, the valley\'s water inside, and a framed poll on the wall: should the camps get water? 88% said lol. The tap still works. The cistern runs east.');
+  add('intel:intel.apex.memo', 'Your guests', 'A memo on Vesper\'s cot, from somewhere called the Panopticon: every face that crossed her apron, matched and ranked, traded for her water. It ended "we noticed the person reading this. Hello."');
   add('q:act2:done', 'The Panopticon', 'Dez caught it on the band after Apex: a building on the old coast with no windows and a lot of antennas. Somebody who sold the world a feed kept a copy of it. It read our names back before we said them.');
   add('cave.wick.vesper', 'She stood where you stood', 'Wick says Vesper Kade called the Garage a prototype with bad unit economics. He told her the prototype had his cousin\'s water. She painted her initials in a pocket of the rock and left.');
   return out.reverse();
