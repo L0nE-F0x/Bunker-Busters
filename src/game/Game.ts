@@ -1786,6 +1786,7 @@ export class Game {
         this.busy = true;
         this.player!.frozen = true;
         this.input.exitLock();
+        if (this.gear?.viewing) this.gear.toggleBinos(false); // an hour's walk, not an hour behind the binoculars
         this.ui.fade(true);
       },
       place: (p, yaw, hours) => {
