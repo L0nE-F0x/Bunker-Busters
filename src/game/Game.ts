@@ -1144,7 +1144,8 @@ export class Game {
     this.grantArms(state);
     this.arms = new PlayerArms(state, this.hands, this.cam, this.camera, this.input, this.combat, this.audio, this.player);
     this.gear?.dispose();
-    this.gear = new Gear(state, this.hands, this.cam, this.camera, this.input, this.combat, this.audio, this.player, this.throwables, this.ui.root, (t, k) => this.ui.toast(t, k));
+    this.gear = new Gear(state, this.hands, this.cam, this.camera, this.input, this.combat, this.audio, this.player, this.throwables, this.ui.root, this.hf, (t, k) => this.ui.toast(t, k));
+    this.gear.extra = () => this.bunkers.flatMap((b) => b.reconTargets());
     this.arms.steadyK = () => this.gear?.steadyK() ?? 1;
     // controller aim assist (friction over hostiles, a light pull on ADS): pad only
     const assist = (this.aimAssist ??= new AimAssist(this.combat, (a, b) => this.recovery.smoked(a, b)));

@@ -10,6 +10,7 @@ import { XP_REWARDS, empRadius, stealthMeter } from '@/content/progression';
 import type { Bunker as BunkerDef, BunkerEntryDef, BunkerSecurity, LockCard, LockMethod } from '@/content/types';
 import type { Action, GameContext, Interactable } from '../context';
 import type { LoopHandle } from '@/engine/audio';
+import type { ReconTarget } from '../player/Gear';
 
 /**
  * The bunker runtime: one heist site described by data (`content/bunkers/<id>.ts`, its `security`)
@@ -144,6 +145,22 @@ export abstract class Bunker<S extends BunkerShell = BunkerShell> {
   }
 
   /** Make the world match saved progress. */
+  private recon: ReconTarget[] | null = null;
+  /**
+   * What survey binoculars can tag here (player/Gear.ts): cameras while they're on, tripwires while
+   * armed, laser beams while powered, patrol drones while flying. Built once; `live()` says which count.
+   */
+  reconTargets(): ReconTarget[] {
+    if (this.recon) return this.recon;
+    const out: ReconTarget[] = [];
+    const cams = this.cameras, wires = this.tripwires, grid = this.lasers;
+    if (cams) for (const c of cams.cams) out.push({ key: c, pos: c.eye, radius: 0.25, label: 'camera', live: () => !cams.off });
+    if (wires) for (const w of wires.wires) out.push({ key: w, pos: w.a.clone().lerp(w.b, 0.5), radius: 0.3, label: 'tripwire', live: () => w.armed });
+    if (grid) for (const l of grid.beams) out.push({ key: l, pos: l.a.clone().lerp(l.b, 0.5), radius: 0.4, label: 'laser', live: () => !grid.off });
+    for (const d of this.drones) out.push({ key: d, pos: d.position, radius: 0.7, label: 'drone', live: () => d.state !== 'disabled' });
+    return (this.recon = out);
+  }
+
   applyFlags(instant = false) {
     const st = this.ctx.state as GameContext['state'] | null;
     const has = (f: string) => st?.has(f) ?? false;

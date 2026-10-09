@@ -9,7 +9,8 @@ import type { Combat, Hostile, HurtKind } from '../combat/Combat';
 import type { Throwables } from '../combat/Throwables';
 import type { MapMarker } from '@/ui/Minimap';
 import { CANTEEN_SIPS, VEST_PLATES, canteenSips, vestPlates } from '@/content/items';
-import { actionKey } from '@/engine/bindings';
+import { actionKey, binds, padName, type Action } from '@/engine/bindings';
+import type { Heightfield } from '../world/Heightfield';
 import { MODS } from '@/content/weapons';
 
 /**
@@ -25,15 +26,28 @@ import { MODS } from '@/content/weapons';
  */
 
 const TAG_S = 90;
+/** Security doesn't wander off: a tagged camera or wire stays marked longer. */
+const TAG_SEC_S = 240;
 const DWELL = 0.4;
 const VEST_SHARE = 0.4;
 const FOCUS_S = 120;
 const TAGGABLE = new Set(['human', 'wolf', 'drone', 'turret', 'mine']);
 
 const _fwd = new THREE.Vector3(), _to = new THREE.Vector3(), _p = new THREE.Vector3(), _r = new THREE.Vector3();
+const _q = new THREE.Vector3(), _v = new THREE.Vector3(), _a = new THREE.Vector3();
+
+/**
+ * Something the binoculars can tag besides a Hostile: a bunker's cameras, armed tripwires, live laser
+ * beams and patrol drones (`Bunker.reconTargets`). `pos` is live (a drone's own position vector).
+ */
+export interface ReconTarget { key: object; pos: THREE.Vector3; radius: number; label: string; live(): boolean }
+interface Tag { until: number; pos: THREE.Vector3; lift: number; live: () => boolean; security: boolean; hostile: Hostile | null }
+
+/** The bound key or, with a controller in hand, its button ("Hold LB"), for prose. */
+const keyFor = (a: Action) => (document.documentElement.classList.contains('pad') && binds.pad(a) ? padName(binds.pad(a)) : actionKey(a));
 
 /** Screen markers + the binocular mask: built once, shared by every run. */
-interface GearDom { scope: HTMLDivElement; binos: HTMLDivElement; range: HTMLElement; tagged: HTMLElement; layer: HTMLDivElement; marks: HTMLElement[]; dist: HTMLElement[] }
+interface GearDom { arc: HTMLElement[]; land: HTMLElement; scope: HTMLDivElement; binos: HTMLDivElement; range: HTMLElement; tagged: HTMLElement; layer: HTMLDivElement; marks: HTMLElement[]; dist: HTMLElement[] }
 let dom: GearDom | null = null;
 function ensureDom(root: HTMLElement): GearDom {
   if (dom && dom.binos.isConnected) return dom;
@@ -69,10 +83,24 @@ function ensureDom(root: HTMLElement): GearDom {
     <g fill="#0b0b0b"><rect x="39" y="44.55" width="33" height="0.9"/><rect x="88" y="44.55" width="33" height="0.9"/><rect x="79.55" y="53" width="0.9" height="33"/><rect x="79.55" y="4" width="0.9" height="33"/></g>
     <g stroke="#0b0b0b" stroke-width="0.14"><path d="M72 45 H88 M80 37 V53"/><path d="M78.6 48 H81.4 M79 51 H81 M78.6 47 H81.4" stroke-width="0.12"/></g></svg>
     <div class="binos-label">SURVEY SCOPE · 4× · HOLD STILL</div>`;
+  // the throw preview: a dotted arc and a ring where the bottle lands (DOM over the canvas: no geometry,
+  // no material, nothing to compile)
+  const arc: HTMLElement[] = [];
+  for (let i = 0; i < 18; i++) {
+    const d = document.createElement('i');
+    d.className = 'arcdot';
+    d.style.display = 'none';
+    layer.appendChild(d);
+    arc.push(d);
+  }
+  const land = document.createElement('b');
+  land.className = 'arcland';
+  land.style.display = 'none';
+  layer.appendChild(land);
   root.prepend(scope);
   root.prepend(binos);
   root.prepend(layer);
-  dom = { scope, binos, range: binos.querySelector('.range')!, tagged: binos.querySelector('.tagged')!, layer, marks, dist };
+  dom = { arc, land, scope, binos, range: binos.querySelector('.range')!, tagged: binos.querySelector('.tagged')!, layer, marks, dist };
   return dom;
 }
 
@@ -80,8 +108,13 @@ export class Gear {
   /** Binoculars up (0..1 eased; `viewing` is the switch). */
   viewing = false;
   private binoK = 0;
-  private tags = new Map<Hostile, number>();
-  private dwell = new Map<Hostile, number>();
+  private tags = new Map<object, Tag>();
+  private dwell = new Map<object, number>();
+  /** Bunker security in tag range (set by Game: every bunker's `reconTargets()`). */
+  extra: (() => ReconTarget[]) | null = null;
+  /** Holding the throw key: the arc is up, the bottle lit in hand; release throws. */
+  private aiming = false;
+  private shownSec: boolean[] = [];
   private regen = 0;
   private regenAcc = 0;
   private focusT = 0;
@@ -111,17 +144,18 @@ export class Gear {
     private player: Player,
     private throwables: Throwables,
     uiRoot: HTMLElement,
+    private hf: Heightfield,
     private toast: (text: string, kind?: 'info' | 'good' | 'bad') => void,
   ) {
     this.uiRoot = uiRoot;
     this.dom = ensureDom(uiRoot);
     this.dom.binos.classList.remove('on');
-    this.dom.binos.querySelector('.binos-label .kbd')!.textContent = actionKey('binoculars');
+    this.dom.binos.querySelector('.binos-label .kbd')!.textContent = keyFor('binoculars');
     // first pickups: say which key does what (the keys are rebindable, so ask the binds)
     this.unsub = state.events.on('item', ({ id }) => {
       const hint: Record<string, string> = {
-        binoculars: `Binoculars: ${actionKey('binoculars')} to raise them. Hold a hostile in the middle to tag it.`,
-        molotov: `Molotov: ${actionKey('throw')} to light and throw one.`,
+        binoculars: `Binoculars: ${keyFor('binoculars')} to raise them. Hold a hostile, a camera or a wire in the middle to tag it.`,
+        molotov: `Molotov: hold ${keyFor('throw').replace(/^Hold /, '')} to light one and see where it lands, let go to throw.`,
         vest: 'Plate carrier: worn while it\'s in your pack. It takes a share of every hit until the plates are spent.',
         pistol22: 'The Hush .22: quiet enough that the desert mostly doesn\'t notice. Aim for heads.',
       };
@@ -216,6 +250,7 @@ export class Gear {
     if (on === this.viewing) return;
     this.viewing = on;
     this.dwell.clear();
+    if (on) this.dom.binos.querySelector('.binos-label .kbd')!.textContent = keyFor('binoculars');
     this.hands.setBase(on ? 'binos' : 'idle');
     this.audio.play(on ? 'ui' : 'ui');
     this.audio.combat?.foley(on ? 'draw' : 'holster', 0.6);
@@ -240,7 +275,7 @@ export class Gear {
   /** Tag markers for the minimap / map. */
   tagMarkers(): MapMarker[] {
     const out: MapMarker[] = [];
-    for (const [h] of this.tags) out.push({ id: 'tag', x: h.center.x, z: h.center.z, label: 'Tagged', color: '#ff4a3a', kind: 'drone' });
+    for (const [, t] of this.tags) out.push({ id: 'tag', x: t.pos.x, z: t.pos.z, label: t.security ? 'Tagged security' : 'Tagged', color: t.security ? '#ffb347' : '#ff4a3a', kind: 'drone' });
     return out;
   }
 
@@ -266,7 +301,7 @@ export class Gear {
       if (this.regenAcc >= 1 || this.regen <= 0) { s.heal(Math.round(this.regenAcc)); this.regenAcc = 0; }
     }
     if (!blocked && input.actPressed('binoculars')) this.toggleBinos();
-    if (!blocked && input.actPressed('throw')) this.throwMolotov();
+    this.throwAim(blocked);
     // binoculars come down for anything urgent (a menu over them doesn't count: the Kit's Use raises them)
     if (this.viewing && !blocked && (this.player.sprinting || !this.player.grounded || input.actPressed('fire') || input.actPressed('aim') || input.actPressed('interact') || !s.count('binoculars'))) {
       this.toggleBinos(false);
@@ -280,19 +315,98 @@ export class Gear {
     this.scopeView(dt);
     if (this.viewing && !blocked && this.binoK > 0.85) this.scan(dt);
     // expire tags
-    for (const [h, until] of this.tags) if (!h.alive || until < this.t) this.tags.delete(h);
+    for (const [k, t] of this.tags) if (!t.live() || t.until < this.t) this.tags.delete(k);
     // a crew that despawned (or a pooled body reused for another) drops its tags
     this.liveT -= dt;
     if (this.tags.size && this.liveT <= 0) {
       this.liveT = 0.5;
-      const live = new Set<Hostile>();
+      const live = new Set<object>();
       for (const pr of this.combat.providers) for (const h of pr.hostiles()) if (this.tags.has(h)) live.add(h);
-      for (const h of [...this.tags.keys()]) if (!live.has(h)) this.tags.delete(h);
+      for (const [k, t] of [...this.tags]) if (t.hostile && !live.has(k)) this.tags.delete(k);
     }
     this.markT -= dt;
     if (this.markT <= 0) { this.markT = 1 / 30; this.drawMarks(); }
     this.pillT -= dt;
     if (this.pillT <= 0) { this.pillT = 0.25; this.drawPills(); }
+  }
+
+  /**
+   * Hold the throw key: the bottle comes up lit and a dotted arc shows where it will land (the same
+   * launch as Throwables, stepped under gravity, stopped by the ground or anything solid); let go to
+   * throw. A tap throws at once. On a controller the hold is the bind itself ("Hold RB").
+   */
+  private throwAim(blocked: boolean) {
+    const held = !blocked && this.input.act('throw');
+    if (held && !this.aiming) {
+      if (!this.state.count('molotov')) { if (this.input.actPressed('throw')) this.throwMolotov(); return; }
+      if (this.hands.busy) return;
+      if (this.viewing) this.toggleBinos(false);
+      this.aiming = true;
+      this.hands.setBase('molHold');
+      this.audio.combat?.foley('draw', 0.5);
+    }
+    if (!this.aiming) return;
+    if (!held) {
+      this.aiming = false;
+      this.hands.setBase('idle');
+      this.hideArc();
+      if (!blocked) this.throwMolotov();
+      return;
+    }
+    this.drawArc();
+  }
+
+  private hideArc() {
+    for (const e of this.dom.arc) if (e.style.display !== 'none') e.style.display = 'none';
+    if (this.dom.land.style.display !== 'none') this.dom.land.style.display = 'none';
+  }
+
+  /** The predicted flight, projected to the screen as dots (60 Hz only while the key is held). */
+  private drawArc() {
+    const eye = this.camera.getWorldPosition(_a);
+    this.camera.getWorldDirection(_fwd);
+    _r.set(1, 0, 0).applyQuaternion(this.camera.quaternion);
+    // Throwables.throwMolotov's launch: from the right hand, pitched up a little, 13 m/s plus your own
+    const dir = _v.copy(_fwd);
+    dir.y = Math.max(dir.y + 0.28, 0.1);
+    dir.normalize();
+    const p = _p.copy(eye).addScaledVector(_r, 0.2);
+    p.y -= 0.12;
+    p.addScaledVector(dir, 0.45);
+    const carry = this.player.velocity;
+    const vel = _q.copy(dir).multiplyScalar(13).add(_to.set(carry.x, Math.max(0, carry.y), carry.z));
+    const w = innerWidth, h = innerHeight;
+    const dots = this.dom.arc;
+    const step = 0.045;
+    let shown = 0, landed = false;
+    const prev = new THREE.Vector3();
+    for (let i = 0; i < 90 && !landed; i++) {
+      prev.copy(p);
+      vel.y -= 9.81 * step;
+      p.addScaledVector(vel, step);
+      const ground = this.hf.heightAt(p.x, p.z);
+      // something solid on the way (a wall, a roof, a car): one short ray per step
+      const seg = _fwd.subVectors(p, prev);
+      const len = seg.length();
+      const hit = len > 1e-4 ? this.combat.worldRay(prev, seg.divideScalar(len), len, this.combat.target.collider) : null;
+      if (hit) { p.copy(prev).addScaledVector(seg, hit.t); landed = true; }
+      else if (p.y <= ground) { p.y = ground; landed = true; }
+      // a dot every other step, fading along the flight
+      if (!landed && i % 2 === 1 && shown < dots.length) {
+        const s = _v.copy(p).project(this.camera);
+        const el = dots[shown++];
+        if (s.z > 1 || Math.abs(s.x) > 1.2 || Math.abs(s.y) > 1.2) { el.style.display = 'none'; continue; }
+        el.style.display = '';
+        el.style.transform = `translate(${((s.x + 1) * 0.5 * w).toFixed(1)}px, ${((1 - s.y) * 0.5 * h).toFixed(1)}px)`;
+        el.style.opacity = (1 - shown / (dots.length + 4)).toFixed(2);
+      }
+    }
+    for (let j = shown; j < dots.length; j++) if (dots[j].style.display !== 'none') dots[j].style.display = 'none';
+    const s = _v.copy(p).project(this.camera);
+    if (landed && s.z <= 1 && Math.abs(s.x) < 1.2 && Math.abs(s.y) < 1.2) {
+      this.dom.land.style.display = '';
+      this.dom.land.style.transform = `translate(${((s.x + 1) * 0.5 * w).toFixed(1)}px, ${((1 - s.y) * 0.5 * h).toFixed(1)}px)`;
+    } else if (this.dom.land.style.display !== 'none') this.dom.land.style.display = 'none';
   }
 
   /**
@@ -325,28 +439,39 @@ export class Gear {
     const eye = this.camera.getWorldPosition(_p);
     this.camera.getWorldDirection(_fwd);
     let near = 0;
-    const seen = new Set<Hostile>();
+    const seen = new Set<object>();
+    const centers = new Set<THREE.Vector3>();
+    const look = (key: object, pos: THREE.Vector3, radius: number, name: string, live: () => boolean, lift: number, hostile: Hostile | null) => {
+      _to.subVectors(pos, eye);
+      const d = _to.length();
+      if (d > 320 || d < 1) return;
+      const ang = Math.acos(Math.min(1, _to.dot(_fwd) / d));
+      // a little wider than the target itself: you're looking through glass, not a scope
+      if (ang > 0.045 + Math.atan2(radius, d)) return;
+      // wall-mounted things: test the line to a point just in front of them, not into the wall
+      const end = hostile ? pos : _q.copy(pos).addScaledVector(_to, -Math.min(0.35, d * 0.5) / d);
+      if (!this.combat.clearLine(eye, end, this.combat.target.collider)) return;
+      seen.add(key);
+      const w = (this.dwell.get(key) ?? 0) + dt;
+      this.dwell.set(key, w);
+      const until = this.t + (hostile ? TAG_S : TAG_SEC_S);
+      const had = this.tags.get(key);
+      if (w >= DWELL && !had) {
+        this.tags.set(key, { until, pos, lift, live, security: !hostile, hostile });
+        this.audio.play('ui');
+        this.state.events.emit('toast', { text: `Tagged: ${name}, ${Math.round(d)} m.`, kind: 'info' });
+      } else if (had) had.until = until;
+      near = near || Math.round(d);
+    };
     for (const pr of this.combat.providers) {
       for (const h of pr.hostiles()) {
         if (!h.alive || !TAGGABLE.has(h.kind)) continue;
-        _to.subVectors(h.center, eye);
-        const d = _to.length();
-        if (d > 320 || d < 1) continue;
-        const ang = Math.acos(Math.min(1, _to.dot(_fwd) / d));
-        // a little wider than the target itself: you're looking through glass, not a scope
-        if (ang > 0.045 + Math.atan2(h.radius, d)) continue;
-        if (!this.combat.clearLine(eye, h.center, this.combat.target.collider)) continue;
-        seen.add(h);
-        const w = (this.dwell.get(h) ?? 0) + dt;
-        this.dwell.set(h, w);
-        if (w >= DWELL && !this.tags.has(h)) {
-          this.tags.set(h, this.t + TAG_S);
-          this.audio.play('ui');
-          this.state.events.emit('toast', { text: `Tagged: ${label(h)}, ${Math.round(d)} m.`, kind: 'info' });
-        } else if (this.tags.has(h)) this.tags.set(h, this.t + TAG_S);
-        near = near || Math.round(d);
+        centers.add(h.center);
+        look(h, h.center, h.radius, label(h), () => h.alive, h.kind === 'human' ? 0.55 : h.radius + 0.25, h);
       }
     }
+    // bunker security (SeedBot is already a hostile: same position vector, so it's skipped here)
+    if (this.extra) for (const t of this.extra()) if (!centers.has(t.pos) && t.live()) look(t.key, t.pos, t.radius, t.label, t.live, 0.35, null);
     for (const h of [...this.dwell.keys()]) if (!seen.has(h)) this.dwell.delete(h);
     // range to whatever's under the reticle
     const hit = this.combat.worldRay(eye, _fwd, 600, this.combat.target.collider);
@@ -362,15 +487,16 @@ export class Gear {
     if (this.tags.size) {
       const w = innerWidth, h = innerHeight;
       const eye = this.camera.position;
-      for (const [host] of this.tags) {
+      for (const [, t] of this.tags) {
         if (i >= d.marks.length) break;
-        _p.copy(host.center);
-        _p.y += host.kind === 'human' ? 0.55 : host.radius + 0.25;
+        _p.copy(t.pos);
+        _p.y += t.lift;
         const dist = Math.round(_p.distanceTo(eye));
         _p.project(this.camera);
         if (_p.z > 1 || Math.abs(_p.x) > 1.05 || Math.abs(_p.y) > 1.05) continue;
         const el = d.marks[i];
         el.style.display = '';
+        if (this.shownSec[i] !== t.security) { this.shownSec[i] = t.security; el.classList.toggle('sec', t.security); }
         el.style.transform = `translate(${((_p.x + 1) * 0.5 * w).toFixed(1)}px, ${((1 - _p.y) * 0.5 * h).toFixed(1)}px)`;
         if (this.shownDist[i] !== dist) { this.shownDist[i] = dist; d.dist[i].textContent = `${dist}`; }
         i++;
@@ -413,6 +539,8 @@ export class Gear {
     this.dom.scope.classList.remove('on');
     this.hands.root.visible = true;
     for (const m of this.dom.marks) m.style.display = 'none';
+    this.hideArc();
+    if (this.aiming) { this.aiming = false; this.hands.setBase('idle'); }
     if (this.pills) for (const e of Object.values(this.pills)) e.remove();
     this.pills = null;
     this.unsub?.();
