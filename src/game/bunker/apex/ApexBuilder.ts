@@ -342,14 +342,14 @@ export class ApexBuilder implements BunkerShell {
     g.translate(0, 0, -1.0);
     g.rotateY(-Math.PI / 2);
     const T = M(x, 0, z, yaw);
-    b.add(m.steel, g.toNonIndexed().applyMatrix4(T));
+    b.add(m.steel, g.applyMatrix4(T)); // ExtrudeGeometry is already non-indexed
     // glass band (a slimmer wedge inset at the roofline)
     const gs = new THREE.Shape();
     gs.moveTo(2.0, 1.29); gs.lineTo(0.38, 1.88); gs.lineTo(-1.6, 1.52); gs.lineTo(-1.6, 1.28); gs.closePath();
     const gg = new THREE.ExtrudeGeometry(gs, { depth: 2.04, bevelEnabled: false });
     gg.translate(0, 0, -1.02);
     gg.rotateY(-Math.PI / 2);
-    b.add(m.glass, gg.toNonIndexed().applyMatrix4(T));
+    b.add(m.glass, gg.applyMatrix4(T));
     // wheels, the light bar, the plate
     for (const [wx, wz] of [[-0.95, 1.9], [0.95, 1.9], [-0.95, -1.75], [0.95, -1.75]]) {
       b.add(m.rubber, cyl(0.47, 0.47, 0.34, wx, 0.47, wz, 16, 0, 0, Math.PI / 2).applyMatrix4(T));

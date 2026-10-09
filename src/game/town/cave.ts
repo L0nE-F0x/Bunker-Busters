@@ -300,7 +300,7 @@ function shell(physics: Physics, f: Frame, extra: (g: Grid) => THREE.BufferGeome
 
 /** Appends extra geometries (each with a cCol attribute) to the shell as one non-indexed geometry. */
 function mergeWithCol(base: THREE.BufferGeometry, parts: THREE.BufferGeometry[]) {
-  const all = [base.toNonIndexed(), ...parts.map((p) => (p.index ? p.toNonIndexed() : p))];
+  const all = [base.index ? base.toNonIndexed() : base, ...parts.map((p) => (p.index ? p.toNonIndexed() : p))];
   let n = 0;
   for (const g of all) n += g.attributes.position.count;
   const P = new Float32Array(n * 3), C = new Float32Array(n * 4), Nn = new Float32Array(n * 3);
