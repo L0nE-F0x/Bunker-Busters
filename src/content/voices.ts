@@ -38,6 +38,7 @@ export const CAST: Record<string, CastVoice> = {
   'pod-01 "momentum"': { voice: 'af_alloy', fx: 'pa' },
   'compliance sentry': { voice: 'af_nova', fx: 'pa', speed: 1.02 },
   seedbot: { voice: 'am_echo', fx: 'bot', speed: 1.1 },
+  everafter: { voice: 'af_bella', fx: 'pa', speed: 1.0 }, // Waitlist City's concierge (sites/waitlist.ts)
   'kade recovery': { voice: ['am_fenrir', 'am_michael', 'bm_george', 'bm_daniel'], fx: 'radio', speed: 1.05 },
 };
 
