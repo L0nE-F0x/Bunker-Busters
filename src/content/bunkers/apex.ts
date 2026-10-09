@@ -27,6 +27,7 @@ export const VESPER = {
   vent: { speaker: VK, text: 'The vent? Really? That vent has a podcast now. You\'re a guest on it.' },
   lockout: { speaker: VK, text: 'Wrong code, twice. The clock was right there. It was literally counting for you.' },
   busted: { speaker: VK, text: 'Fine. This is fine. I\'m launching something anyway. Into the sun, probably.' },
+  ambush: { speaker: VK, text: 'You know what? Content. I\'m sending a delivery. Limited edition. Limited to you.' },
   after: { speaker: VK, text: 'You again. There\'s nothing left in there but a tank shaped like my feelings.' },
 };
 
@@ -208,6 +209,8 @@ export const APEX_FLAGS = {
   demo: 'apex.demo',
   /** You know about the vent on the hill's east side. */
   vent: 'apex.vent',
+  /** Her "delivery" on your way out with the water (once). */
+  ambush: 'apex.ambush',
 };
 
 /**

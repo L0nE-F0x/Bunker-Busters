@@ -390,7 +390,9 @@ export class ApexBuilder implements BunkerShell {
     b.add(m.black, box(2.2, 2.4, 2.2, tx, TH + 1.2, tz));
     // aviation lights up the tower and on the nose; they blink
     avi2(b, cyl(0.16, 0.16, 0.25, tx, TH + 2.5, tz, 8));
-    for (const y of [16, 31, TH + 2.6]) this.halos.add(this.w(tx + S + 0.2, y, tz), '#ff2a14', 2.4, ApexBuilder.CH.BLINK, 2.5);
+    for (const y of [16, 31]) this.halos.add(this.w(tx + S + 0.2, y, tz), '#ff2a14', 2.4, ApexBuilder.CH.BLINK, 2.5);
+    // the top light is the one you see from Dry Creek at night
+    this.halos.add(this.w(tx, TH + 2.6, tz), '#ff2a14', 6, ApexBuilder.CH.BLINK, 3);
     this.points.rocket = this.w(cx, 3, cz + 5);
 
     // a portable stair and fuel lines to the pedestal
@@ -429,7 +431,7 @@ export class ApexBuilder implements BunkerShell {
       return new THREE.ShapeGeometry(s, 1).translate(cx, y0, 0);
     };
     // the back gable is the vault block's concrete carried up under the arch; the front is cladding
-    for (const [z, mat] of [[z0 - 0.1, m.wallC], [z1 - 0.1, m.side]] as [number, THREE.Material][]) b.add(mat, arch(h).translate(0, 0, z), arch(h).rotateY(Math.PI).translate(2 * cx, 0, 2 * z));
+    for (const [z, mat] of [[z0 - 0.1, m.wallC], [z1 - 0.1, m.side]] as [number, THREE.Material][]) b.add(mat, arch(h).translate(0, 0, z), arch(h).rotateY(Math.PI).translate(2 * cx, 0, z));
     const roofG = new THREE.CylinderGeometry(1, 1, z1 - z0 + 0.6, 40, 1, true, -Math.PI / 2, Math.PI);
     roofG.rotateX(-Math.PI / 2);
     roofG.scale(span / 2 + 0.15, rise + 0.1, 1);

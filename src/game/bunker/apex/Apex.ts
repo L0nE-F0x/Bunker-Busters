@@ -184,6 +184,7 @@ export class Apex extends Bunker<ApexBuilder> {
 
   // ------------------------------------------------------------------ per frame
   protected override frame(_dt: number, p: THREE.Vector3) {
+    // (_dt is used: the exit ambush counts down on it)
     const near = p.distanceTo(this.b.origin) < 120;
     // an Infiltrator reads a building by its vents: the duct on the hill's east side is on their map
     if (near && this.s.archetype.id === 'infiltrator' && this.s.set(F.vent)) {
@@ -202,6 +203,18 @@ export class Apex extends Bunker<ApexBuilder> {
       const key = this.clockDigits();
       if (key !== this.clockKey) { this.clockKey = key; this.b.clock.repaint(); }
     }
+    // the way out: once you're back outside with her water, she sends a "delivery" up her road
+    // (Kade, two of them, three if you rang her alarm on the way in). Once per run.
+    if (this.complete && !this.playerInside && this.playerOnGrounds && !this.s.has(F.ambush) && this.ambushT < 0) this.ambushT = 5;
+    if (this.ambushT > 0) {
+      this.ambushT -= _dt;
+      if (this.ambushT <= 0 && this.s.set(F.ambush)) {
+        this.taunt(VESPER.ambush.text);
+        this.ctx.audio.play('droneAlert', { pos: this.b.points.speaker });
+        // from the road side of the apron (+z, a little east): yaw so -(sin, cos) points that way
+        this.onAmbush?.(p.clone(), Math.PI + 0.29, 28, this.rang ? 3 : 2);
+      }
+    }
     // her reactions to the lasers and cameras going down (however it happened)
     const lasersOff = !!this.lasers?.off;
     if (lasersOff && !this.lastLasersOff && this.t > 2) this.taunt(VESPER.lasers.text);
@@ -210,11 +223,16 @@ export class Apex extends Bunker<ApexBuilder> {
 
   override triggerAlarm(at: THREE.Vector3 | null, reason: string) {
     super.triggerAlarm(at, reason);
+    this.rang = true;
     this.onAlarm?.(at ?? this.b.points.airlock);
   }
 
   /** Game hooks the gatehouse crew in here. */
   onAlarm: ((at: THREE.Vector3) => void) | null = null;
+  /** Game sends a Kade squad here: `n` of them, `d` metres from `at` along -(sin yaw, cos yaw). */
+  onAmbush: ((at: THREE.Vector3, yaw: number, d: number, n: number) => void) | null = null;
+  private rang = false;
+  private ambushT = -1;
 
   protected override updateLights(dt: number, night: number) {
     const b = this.b, L = b.lights, ch = b.halos.channels, S = b.slots;
@@ -267,15 +285,15 @@ export class Apex extends Bunker<ApexBuilder> {
     const s = this.s;
     if (this.isOpen('vault')) return 'The Cistern Room. Open the tap and the two lockers. The water is the point.';
     if (this.playerInside) {
-      if (this.lasers && !this.lasers.off) return 'Three beams in the launch corridor: jump the low ones, crouch the high one, or kill the breaker by the door.';
+      if (this.lasers && !this.lasers.off) return 'Three beams: jump the low ones, crouch the high one, or kill the breaker by the inner door.';
       return 'The vault door at the end of the corridor. Six pins, or a big charge (Demolition 5).';
     }
     if (this.isOpen('airlock')) return 'The airlock is open. Into the launch corridor.';
     if (this.isOpen('hangar')) {
-      if (s.has(F.code)) return 'The airlock code is the launch clock over the door, hours and minutes. Read it, then type.';
-      return `The airlock at the back of the hangar: a keypad that "counts down", or SPLICE it (Electronics 3). Her cameras sweep the floor.${s.has(F.vent) ? ' The vent outside skips it.' : ''}`;
+      if (s.has(F.code)) return 'The airlock code is the launch clock over the door: hours and minutes. Read it, then type.';
+      return `The airlock: a keypad that "counts down", or SPLICE it (Electronics 3).${s.has(F.vent) ? ' The vent skips it.' : ' Mind the cameras.'}`;
     }
-    const vent = s.has(F.vent) ? ' Or the vent on the hill\'s east side.' : '';
-    return `The hangar door: pick it, short its controller, blow it, or buzz Vesper on the intercom.${vent} The camera over the door sweeps the apron.`;
+    const vent = s.has(F.vent) ? ' Or the vent on the hill\'s east side.' : ' Mind the camera over the door.';
+    return `The hangar door: pick it, short it, blow it, or buzz Vesper.${vent}`;
   }
 }
