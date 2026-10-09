@@ -9,6 +9,7 @@ import { LANDMARKS, WORLD_INTEL } from '@/content/world';
 import { ITEMS } from '@/content/items';
 import { GARAGE } from '@/content/bunkers/garage';
 import { actionWord } from '@/engine/bindings';
+import { APEX } from '@/content/bunkers/apex';
 import { OUTPOSTS } from '@/content/recovery';
 
 /** Seconds between two banter lines, at least. Exploring should feel accompanied, not narrated. */
@@ -192,11 +193,11 @@ export class Story {
 
   // ------------------------------------------------------------------ the corner
   /** Label and text for the objective box. `garage` is the Garage's own advice when you are at it. */
-  objective(garage: string): { label: string; text: string } {
+  objective(garage: string, label: string = QUEST.act1.title): { label: string; text: string } {
     // asked every frame: answer from the memo unless a flag, the tracked quest or the Garage text changed
-    const key = `${this.state.data.flags.length}|${this.state.data.tracked}|${garage}`;
+    const key = `${this.state.data.flags.length}|${this.state.data.tracked}|${garage}|${label}`;
     if (this.objMemo?.key === key) return this.objMemo.out;
-    const out = this.computeObjective(garage);
+    const out = this.computeObjective(garage, label);
     this.objMemo = { key, out };
     return out;
   }
@@ -204,7 +205,7 @@ export class Story {
   private objMemo: { key: string; out: { label: string; text: string } } | null = null;
   private targetMemo: { key: string; out: { x: number; z: number; label: string } | null } | null = null;
 
-  private computeObjective(garage: string): { label: string; text: string } {
+  private computeObjective(garage: string, label: string): { label: string; text: string } {
     const s = this.state;
     const v = this.view();
     const q = this.focusQuest();
@@ -213,7 +214,7 @@ export class Story {
       const step = currentStep(q, v);
       out = { label: q.title, text: step ? step.text + (step.hint ? `. ${firstSentence(step.hint)}` : '') : 'Go back to whoever asked.' };
     } else if (garage) {
-      out = { label: QUEST.act1.title, text: garage };
+      out = { label, text: garage };
     } else if (q) {
       const step = currentStep(q, v);
       out = { label: q.title, text: step ? `${step.text}. ${firstSentence(step.hint ?? '')}`.trim() : storyObjective({ has: (f) => s.has(f), archetype: s.archetype }) };
@@ -267,6 +268,7 @@ export class Story {
     }
     const spot = STORY_SPOTS[step.at];
     if (spot) return { x: spot[0], z: spot[1], label: q.title };
+    if (step.at === 'apex') return { x: APEX.location.position[0], z: APEX.location.position[2], label: q.title };
     const lm = LANDMARKS.find((l) => l.id === step.at);
     if (lm) return { x: lm.position[0], z: lm.position[2], label: q.title };
     const op = OUTPOSTS.find((o) => o.id === step.at);

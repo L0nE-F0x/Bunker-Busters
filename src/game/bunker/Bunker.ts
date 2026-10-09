@@ -586,7 +586,9 @@ export abstract class Bunker<S extends BunkerShell = BunkerShell> {
   private animateDoors(dt: number) {
     for (const d of Object.values(this.b.doors)) {
       d.open += (d.target - d.open) * (1 - Math.exp(-3 * dt));
-      d.pivot.rotation.y = d.open * d.amount;
+      // sliding doors move along x from where the builder put them (userData.x0); the rest swing
+      if (d.axis === 'slide') d.pivot.position.x = (d.pivot.userData.x0 ?? 0) + d.open * d.amount;
+      else d.pivot.rotation.y = d.open * d.amount;
     }
   }
 

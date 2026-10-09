@@ -112,7 +112,8 @@ export function buildIntelProp(id: string, opts: { crate?: boolean; prop?: strin
     const r = loreProp(opts.prop, mb, g);
     glintAt = r.glint;
     blink = r.blink;
-  } else if (id === 'intel.gas.note') {
+  } else if (id === 'intel.gas.note' || id === 'intel.apex.shift' || id === 'intel.apex.memo') {
+    // (Apex's shift note and the memo in the Cistern Room are pages on a crate too)
     // a folded page on an upturned milk crate, pinned under a fist-sized rock, a dented can beside it
     const crateMat = plainStandard('#b8401e', 0.7);
     const H = opts.crate === false ? 0.004 : 0.3;
@@ -152,7 +153,7 @@ export function buildIntelProp(id: string, opts: { crate?: boolean; prop?: strin
     l.position.set(-0.1, 1.53, 0.105);
     g.add(l);
     glintAt = V(0, 1.45, 0.15);
-  } else if (id === 'intel.highway.permit') {
+  } else if (id === 'intel.highway.permit' || id === 'intel.salt.waybill') {
     // a clipboard face-up on the shoulder, propped on a stone
     const tilt = -Math.PI / 2 + 0.25;
     g.scale.setScalar(1.2);
