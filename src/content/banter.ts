@@ -1,4 +1,5 @@
 import type { ArchetypeDef } from './types';
+import { lifeboatCount } from './quests';
 
 /**
  * Short subtitle lines while you explore: Mara on the radio, or you, to yourself.
@@ -14,8 +15,8 @@ export interface BanterView {
 
 export interface Banter {
   id: string;
-  /** 'Mara' is the radio. 'self' is the player's own first name. */
-  speaker: 'Mara' | 'self';
+  /** 'Mara' is the radio. 'self' is the player's own first name. Anything else is a speaker label as the UI shows it (Ezra, through the camera). */
+  speaker: 'Mara' | 'self' | (string & {});
   text: string | ((v: BanterView) => string);
   when?: (v: BanterView) => boolean;
   /** World XZ and radius, or a landmark id resolved by the runner. */
@@ -189,5 +190,65 @@ export const BANTER: Banter[] = [
     near: { lm: 'tube', r: 120 },
     when: (v) => !v.has('seen:tube'),
     text: 'A silver tube on stilts, running east to nowhere. Top speed: one press release.',
+  },
+
+  // ------------------------------------------------------------------ the founders, from the outside
+  {
+    id: 'lifeboat.first', speaker: 'Mara', priority: 5,
+    when: (v) => v.has('lore.lifeboat') && !v.has('dez.lifeboat') && lifeboatCount(v) === 1,
+    text: 'Dez is shouting in the background. Something about a group chat, and founders, and three in the morning. I\'ll let him tell you. Come back to the fire when you can.',
+  },
+  {
+    id: 'lifeboat.all', speaker: 'Mara', priority: 6,
+    when: (v) => lifeboatCount(v) >= 8 && !v.has('q.chat.air') && !v.has('q.chat.mara') && !v.has('q.chat.pip'),
+    text: 'Dez says you have every page. He\'s cleared a shelf. He\'s never cleared a shelf. Come home before he explodes.',
+  },
+  {
+    id: 'glimpse', speaker: 'Mara', priority: 5,
+    when: (v) => v.has('lore.glimpse') && !v.has('q.cam.seen'),
+    text: '"The one by the gas station still blinks." Hollis has been complaining about a blue light on the road for three years. I thought it was his eyes.',
+  },
+  {
+    id: 'capsule.near', speaker: 'self',
+    near: { x: -306, z: 4, r: 40 },
+    when: (v) => !v.has('q.capsule.dug'),
+    text: (v) => (v.has('pip.capsule')
+      ? 'A rocket on a sign, bent over like it\'s reading the ground. Kade Kids Academy. Pip went here for eleven days.'
+      : 'A school sign with a rocket on it, and no school. The ground round it has been a crater for a while.'),
+  },
+  {
+    id: 'relay.near', speaker: 'self',
+    near: { x: -74, z: 178, r: 32 },
+    when: (v) => !v.has('q.cam.cut') && !v.has('q.cam.loop') && !v.has('q.cam.hello'),
+    text: 'A mast on the rise with two dishes. One looks at the camp. The other looks north, at nothing you can see.',
+  },
+  {
+    id: 'ezra.night', speaker: 'Ezra Seymour · Glimpse', priority: 3,
+    near: { lm: 'gas', r: 40 },
+    when: (v) => v.night && v.has('q.cam.hello'),
+    text: 'Evening! You moved the cooler. Bold choice. I\'m not judging. I\'m archiving.',
+  },
+  {
+    id: 'ezra.wave', speaker: 'Ezra Seymour · Glimpse', priority: 3,
+    near: { lm: 'gas', r: 40 },
+    when: (v) => !v.night && v.has('q.cam.hello') && v.has('q.cam.told'),
+    text: 'Hollis waved at me this morning. With one finger. I\'m counting it.',
+  },
+  {
+    id: 'song.band', speaker: 'Mara', priority: 6,
+    when: (v) => v.has('q.song.band'),
+    text: 'Rosa\'s song, at sunset, on every channel Dez could reach. The whole net went quiet for four minutes. I\'ve never heard the band that quiet. I\'d like to again.',
+  },
+  {
+    id: 'walkwest', speaker: 'self', priority: 2,
+    near: { x: -366, z: 26, r: 60 },
+    when: (v) => !v.has('lore.walkwest'),
+    text: 'Footprints on the shoulder, all heading west. Old ones. Nobody\'s come back the other way.',
+  },
+  {
+    id: 'pool', speaker: 'self', priority: 2,
+    near: { lm: 'gas', r: 30 },
+    when: (v) => v.has('q.capsule.sealed') || v.has('q.capsule.peeked') || v.has('q.capsule.mara'),
+    text: 'A chalk pool on the forecourt, with a ladder. Everybody walks round it. Even the dust seems to.',
   },
 ];

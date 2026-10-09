@@ -779,6 +779,7 @@ export class Game {
       talking: () => this.ui.subtitleBusy,
       armed: () => !!this.arms?.equipped && this.arms.equipped !== 'crowbar',
       night: () => this.atmo.isNight,
+      has: (f) => !!this.state?.has(f),
       see: (a, b) => this.combat.clearLine(a, b, this.combat.target.collider),
       say: (speaker, text, pos) => this.ui.subtitle(speaker, text, { pos: pos.clone() }),
     };

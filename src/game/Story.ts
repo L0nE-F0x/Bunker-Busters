@@ -269,7 +269,7 @@ export class Story {
     s.set(`b:${best.id}`);
     this.sinceBanter = 0;
     const text = typeof best.text === 'function' ? best.text(v) : best.text;
-    const speaker = best.speaker === 'Mara' ? 'Mara · radio' : s.archetype.name.split(' ')[0];
+    const speaker = best.speaker === 'Mara' ? 'Mara · radio' : best.speaker === 'self' ? s.archetype.name.split(' ')[0] : best.speaker;
     this.ui.subtitle(speaker, text);
   }
 }

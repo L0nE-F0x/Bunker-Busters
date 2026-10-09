@@ -15,7 +15,44 @@ export interface TownBark {
   speaker: string;
   kind: BarkKind;
   text: string;
+  /** Only once this is true (story flags): news, said every other time while it applies. */
+  when?: (has: (flag: string) => boolean) => boolean;
 }
+
+/** The street's reactions to what you've done. Merged into TOWN_BARKS below. */
+const NEWS: Record<string, TownBark[]> = {
+  nia: [
+    { speaker: 'Nia Pell', kind: 'hello', when: (h) => h('act1.broadcast'), text: 'You\'re the voice off the radio. Sit. The soup heard you too.' },
+    { speaker: 'Nia Pell', kind: 'hello', when: (h) => h('q.rider.delivered'), text: 'Stove lights first time now. Every time. I think of that boy every time.' },
+    { speaker: 'Nia Pell', kind: 'night', when: (h) => h('q.chat.air'), text: 'Did you hear Dez do Vesper\'s voice? I laughed so hard I burnt the beans.' },
+    { speaker: 'Nia Pell', kind: 'hello', when: (h) => h('q.song.band'), text: 'I\'ve had that song in my head for a week. I\'m not complaining. I\'m reporting.' },
+  ],
+  doc: [
+    { speaker: 'Doc Ivers', kind: 'hello', when: (h) => h('q.doc.delivered'), text: 'Wick\'s cough is down to a rumble. Don\'t tell him I asked.' },
+    { speaker: 'Doc Ivers', kind: 'hello', when: (h) => h('act1.deal'), text: 'Boil the Kade jugs. I don\'t care what the label says. Especially what the label says.' },
+    { speaker: 'Doc Ivers', kind: 'night', when: (h) => h('q.nia.peace'), text: 'Nia sent over soup. For the sterilizer, she says. Sterilizers don\'t eat soup.' },
+  ],
+  inez: [
+    { speaker: 'Inez Quill', kind: 'hello', when: (h) => h('q.inez.inez'), text: 'Welcome to my Till. Mine. Say it with me.' },
+    { speaker: 'Inez Quill', kind: 'hello', when: (h) => h('q.inez.town'), text: 'The town\'s Till. Browse the town\'s shelves. Pay the town\'s prices. Weep the town\'s tears.' },
+    { speaker: 'Inez Quill', kind: 'hello', when: (h) => h('lore.lifeboat'), text: 'Founder phones are going for six scrap on the east band. Bring me one. I won\'t ask where.' },
+  ],
+  sol: [
+    { speaker: 'Sol Varga', kind: 'hello', when: (h) => h('q.sol.returned'), text: 'Roll\'s back where it belongs. So are my hands.' },
+    { speaker: 'Sol Varga', kind: 'hello', when: (h) => h('q.song.quiet'), text: 'Mm. (He\'s humming. He doesn\'t stop this time.)' },
+    { speaker: 'Sol Varga', kind: 'night', when: (h) => h('q.song.band'), text: 'Sunset, on the band. She\'d have liked the reach. Night\'s for listening.' },
+  ],
+  ren: [
+    { speaker: 'Ren Oka', kind: 'hello', when: (h) => h('act1.deal'), text: 'Kade drone count this week: one. Jug count: nineteen. It\'s always nineteen.' },
+    { speaker: 'Ren Oka', kind: 'hello', when: (h) => h('act1.broadcast'), text: 'Four hundred and six names. I counted. I lost count at the senators.' },
+    { speaker: 'Ren Oka', kind: 'night', when: (h) => h('lore.walkwest'), text: 'Forty walked west, one week. I stopped counting the ones coming back.' },
+  ],
+  wick: [
+    { speaker: 'Wick', kind: 'hello', when: (h) => h('q.wick.left'), text: 'Seep\'s running. Your share\'s in the jar. Don\'t make it weird.' },
+    { speaker: 'Wick', kind: 'hello', when: (h) => h('q.wick.burned'), text: 'Still warm, that fire. I fed it a whole survey. Best meal it\'s had.' },
+    { speaker: 'Wick', kind: 'night', when: (h) => h('lore.panopticon'), text: 'Blue light over the ridge again. Slow. Like it\'s reading.' },
+  ],
+};
 
 /** Keyed by the townsperson's npc id (world/npc.ts NpcDef.id). */
 export const TOWN_BARKS: Record<string, TownBark[]> = {
@@ -104,3 +141,4 @@ export const TOWN_BARKS: Record<string, TownBark[]> = {
     { speaker: 'Wick', kind: 'close', text: 'My ears! I only have the two!' },
   ],
 };
+for (const [id, lines] of Object.entries(NEWS)) (TOWN_BARKS[id] ??= []).push(...lines);

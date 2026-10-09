@@ -2,6 +2,7 @@ import { QUESTS, QUEST, questOutcome, currentStep, type QuestDef, type QuestView
 import { PEOPLE, PERSON, standingTier, STANDING_WORD, shortName, type PersonView } from '@/content/people';
 import { journalEntries } from '@/content/story';
 import { ITEMS } from '@/content/items';
+import { WORLD_INTEL, LORE_SERIES } from '@/content/world';
 import type { PersonId } from '@/content/types';
 import type { GameState } from '@/game/State';
 
@@ -14,7 +15,7 @@ export interface JournalSource {
   track(id: string): void;
 }
 
-export type JournalSub = 'quests' | 'people' | 'story';
+export type JournalSub = 'quests' | 'people' | 'story' | 'papers';
 
 export interface JournalSel {
   sub: JournalSub;
@@ -163,12 +164,37 @@ function personDetail(s: GameState, id: PersonId) {
     </div>`;
 }
 
+/**
+ * Papers: every document you've read, the founders' chat first and in page order (missing pages
+ * shown as gaps, so the collection reads as one), then the rest newest first. Bodies are our own
+ * markup (the chat's handles are bold), so they're rendered as is.
+ */
+function papersHTML(s: GameState) {
+  const read = WORLD_INTEL.filter((i) => s.has(`intel:${i.id}`));
+  const out: string[] = [];
+  for (const [key, series] of Object.entries(LORE_SERIES)) {
+    const got = series.ids.filter((id) => s.has(`intel:${id}`)).length;
+    if (!got) continue;
+    const pages = series.ids.map((id, n) => {
+      const it = WORLD_INTEL.find((i) => i.id === id);
+      if (!it || !s.has(`intel:${id}`)) return `<div class="intel-item gap"><b>Page ${n + 1} of ${series.ids.length}</b><span>Not found yet.${s.has(`q:dez.lifeboat`) ? ' Dez can point you at it.' : ''}</span></div>`;
+      return `<div class="intel-item chat"><b>Page ${n + 1} · ${esc(it.title.split('—')[0].trim())}</b><span>${it.body}</span></div>`;
+    }).join('');
+    out.push(`<div class="label jl-sep">${esc(series.title)} · ${got} of ${series.ids.length}${got === series.ids.length ? ' · complete' : ''}</div>${pages}`);
+    void key;
+  }
+  const rest = read.filter((i) => !i.series).reverse();
+  if (rest.length) out.push(`<div class="label jl-sep">Everything else you've read · ${rest.length}</div>${rest.map((i) => `<div class="intel-item"><b>${esc(i.title)}</b><span>${i.body}</span></div>`).join('')}`);
+  return out.join('') || '<div class="intel-item"><span>Nothing read yet. Paper turns up where people left in a hurry.</span></div>';
+}
+
 /** The Journal tab: quests, people, and the story so far. */
 export function journalHTML(s: GameState, src: JournalSource, sel: JournalSel) {
   const v = src.view();
   const { active, done, focus } = questLists(s, src);
-  const tabs = (['quests', 'people', 'story'] as JournalSub[]).map((t) =>
-    `<button class="jsub ${sel.sub === t ? 'on' : ''}" data-jsub="${t}">${t === 'quests' ? `Quests <i>${active.length}</i>` : t === 'people' ? 'People' : 'Story'}</button>`).join('');
+  const nPapers = WORLD_INTEL.filter((i) => s.has(`intel:${i.id}`)).length;
+  const tabs = (['quests', 'people', 'story', 'papers'] as JournalSub[]).map((t) =>
+    `<button class="jsub ${sel.sub === t ? 'on' : ''}" data-jsub="${t}">${t === 'quests' ? `Quests <i>${active.length}</i>` : t === 'people' ? 'People' : t === 'story' ? 'Story' : `Papers <i>${nPapers}</i>`}</button>`).join('');
   let left = '', right = '';
   if (sel.sub === 'quests') {
     const q = QUEST[sel.quest] && s.has(`q:${sel.quest}`) ? QUEST[sel.quest] : active[0] ?? done[0] ?? null;
@@ -181,6 +207,12 @@ export function journalHTML(s: GameState, src: JournalSource, sel: JournalSel) {
     const pid = sel.person && PERSON[sel.person]?.known(pv) ? sel.person : first?.id ?? '';
     left = peopleList(s, pid);
     right = pid ? personDetail(s, pid) : '<p class="empty">Nobody yet.</p>';
+  } else if (sel.sub === 'papers') {
+    const lb = LORE_SERIES.lifeboat;
+    const got = lb.ids.filter((id) => s.has(`intel:${id}`)).length;
+    left = `<div class="jl-arch">${monogram('dez', 'Dez Marlow', true)}<div><b>${esc(lb.title)}</b><small>The founders' group chat · ${got} of ${lb.ids.length} pages</small></div></div>
+      <p class="jl-motive">${got >= lb.ids.length ? 'Every page. Seven founders, one group chat, and Tanner, rejoining.' : got ? 'Every device that died out here kept its last page. Dez hears them try to sync at three in the morning.' : 'Paper turns up where people left in a hurry. Read what you find.'}</p>`;
+    right = `<div class="intel-list journal papers">${papersHTML(s)}</div>`;
   } else {
     const entries = journalEntries({ has: (f) => s.has(f), archetype: s.archetype });
     left = `<div class="jl-arch">${monogram('', s.archetype.name, true)}<div><b>${esc(s.archetype.name)}</b><small>${esc(s.archetype.role)} · ${esc(s.archetype.tagline)}</small></div></div>
