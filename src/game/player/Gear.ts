@@ -87,6 +87,7 @@ export class Gear {
   private focusT = 0;
   private t = 0;
   private markT = 0;
+  private liveT = 0;
   private shownDist: number[] = [];
   private dom: GearDom;
   private plateWarned = false;
@@ -279,6 +280,14 @@ export class Gear {
     if (this.viewing && !blocked && this.binoK > 0.85) this.scan(dt);
     // expire tags
     for (const [h, until] of this.tags) if (!h.alive || until < this.t) this.tags.delete(h);
+    // a crew that despawned (or a pooled body reused for another) drops its tags
+    this.liveT -= dt;
+    if (this.tags.size && this.liveT <= 0) {
+      this.liveT = 0.5;
+      const live = new Set<Hostile>();
+      for (const pr of this.combat.providers) for (const h of pr.hostiles()) if (this.tags.has(h)) live.add(h);
+      for (const h of [...this.tags.keys()]) if (!live.has(h)) this.tags.delete(h);
+    }
     this.markT -= dt;
     if (this.markT <= 0) { this.markT = 1 / 30; this.drawMarks(); }
     this.pillT -= dt;
