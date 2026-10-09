@@ -141,6 +141,9 @@ export interface SpireDressing {
   porch: { value: number };
   /** where the porch lamp hangs (local) */
   porchAt: THREE.Vector3;
+  /** Hivemind's solar security floods on two fence corners: their level (night) and heads (local) */
+  flood: { value: number };
+  floodAt: THREE.Vector3[];
 }
 
 export function dressSpire(b: MeshBatch, collide: Collide): SpireDressing {
@@ -169,6 +172,8 @@ export function dressSpire(b: MeshBatch, collide: Collide): SpireDressing {
   const ledAmber = glow('#ffb03a', 4);
   const fairy = [glow('#ffd27a', 0), glow('#ff6a8a', 0), glow('#7ad8ff', 0)];
   const bulb = glow('#ffd9a0', 0);
+  const flood = glow('#f2f4ff', 0);
+  const floodAt: THREE.Vector3[] = [];
 
   // ---------------------------------------------------------------- the fence
   const X0 = -9.5, X1 = 6.5, Z0 = -6.5, Z1 = 8.5, H = 2.1;
@@ -395,5 +400,18 @@ export function dressSpire(b: MeshBatch, collide: Collide): SpireDressing {
     }
   }
 
-  return { faces, decals, pools, fence, leds: [ledOn.intensity, ledAmber.intensity], fairy: fairy.map((g) => g.intensity), porch: bulb.intensity, porchAt: V(-3.7, 2.1, 4.23) };
+  // Hivemind's solar security floods on two fence corners, aimed in over the compound (cool white
+  // LED, the panel on top); the only thing on the mound brighter than the truthers' fairy lights
+  for (const [x, z] of [[X1 - 0.4, Z1 - 0.4], [X0 + 0.4, Z0 + 0.4]] as const) {
+    const ix = -Math.sign(x + 1.5), iz = -Math.sign(z - 1);
+    b.add(galv, cyl(0.07, 0.09, 5.2, x, 2.5, z, 6));
+    const yaw = Math.atan2(ix, iz);
+    b.add(dark, place(new THREE.BoxGeometry(0.5, 0.32, 0.22), x + ix * 0.15, 4.9, z + iz * 0.15, -0.6, yaw, 0));
+    b.add(flood.material, place(new THREE.BoxGeometry(0.42, 0.24, 0.02), x + ix * 0.24, 4.84, z + iz * 0.24, -0.6, yaw, 0));
+    b.add(purple, place(new THREE.BoxGeometry(0.8, 0.03, 0.55), x, 5.25, z, 0.35, yaw + Math.PI, 0));
+    floodAt.push(V(x + ix * 0.3, 4.8, z + iz * 0.3));
+    pools.push(floorDecal('poolCool', 9, 9, x + ix * 3.4, 0.05, z + iz * 3.4));
+  }
+
+  return { faces, decals, pools, fence, leds: [ledOn.intensity, ledAmber.intensity], fairy: fairy.map((g) => g.intensity), porch: bulb.intensity, porchAt: V(-3.7, 2.1, 4.23), flood: flood.intensity, floodAt };
 }
