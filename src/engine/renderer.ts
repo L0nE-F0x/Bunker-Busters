@@ -23,6 +23,7 @@ export const QUALITY_PRESETS: Record<QualityLevel, Omit<QualitySettings, 'level'
   ultra: { pixelRatio: 1.5, shadowMapSize: 4096, ao: true, godrays: true, bloom: true, smaa: true, dustCount: 6000, grassDensity: 1.3 },
 };
 
+const RES = (() => { const m = /^(\d+)x(\d+)$/.exec(new URLSearchParams(location.search).get('res') ?? ''); return m ? [+m[1], +m[2]] : null; })();
 /** Debug: ?pr=1.25 caps the device pixel ratio the canvas renders at. */
 const PR_CAP = Number(new URLSearchParams(location.search).get('pr')) || Infinity;
 
@@ -72,7 +73,9 @@ function demote(from: BackendChoice, reason: string) {
  * "Requested allocation size … is smaller than the image requires". Aligned sizes work everywhere.
  */
 export function fitCanvas(renderer: THREE.WebGPURenderer, canvas: HTMLCanvasElement, pixelRatio: number, align: boolean) {
-  const vw = window.innerWidth, vh = window.innerHeight;
+  // debug: ?res=1890x1138 renders that buffer whatever the window (GPU load of a big window in a
+  // small one: separates the GPU's share of a frame from the webview's compositing)
+  const vw = RES ? RES[0] : window.innerWidth, vh = RES ? RES[1] : window.innerHeight;
   let w = Math.max(64, Math.round(vw * pixelRatio));
   let h = Math.max(64, Math.round(vh * pixelRatio));
   if (align) {
