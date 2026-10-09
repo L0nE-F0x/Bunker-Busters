@@ -1,10 +1,11 @@
 import * as THREE from 'three/webgpu';
-import { positionLocal, positionGeometry, uniform, vec3, sin, mix, color, float, smoothstep, positionWorld, length, cameraPosition, uv, step, varying, instancedBufferAttribute } from 'three/tsl';
+import { positionLocal, positionGeometry, uniform, vec3, vec4, sin, mix, color, float, smoothstep, positionWorld, length, cameraPosition, uv, step, varying, instancedBufferAttribute, normalView, cameraViewMatrix, normalize, dot, max, pow } from 'three/tsl';
 import { noise } from '@/engine/noiseTex';
 import type { Heightfield } from './Heightfield';
 import { Simplex2 } from '@/engine/noise';
 import { norm, merge } from './kit';
 import { groundPatchAt } from './Terrain';
+import { rimColor, uRimSunDir, uDaylight } from './materials';
 
 const CELL = 1.5; // scatter grid (m)
 
@@ -102,6 +103,17 @@ export class Scrub {
     const petal = mix(mix(color('#f0c43a'), color('#9a5ad0'), smoothstep(0.3, 0.6, v.w)), color('#f2eee0'), smoothstep(0.7, 0.9, v.w));
     col = mix(col, mix(color('#4a5a2a'), petal, smoothstep(0.12, 0.18, hgt)), step(1.5, part));
     mat.colorNode = col;
+    // thin blades take the light like the ground they stand on (their own normals turned a tuft into
+    // black spikes whenever you faced the sun), and the sun shines through them: dry grass glows
+    // straw-gold against a low sun and stays a warm silhouette at noon
+    // (the light that comes through is real sunlight: the normal turns toward the sun, so the shadow
+    // map still applies and a tuft in a mesa's shadow stays dark; only a faint glow skips it)
+    const upView = cameraViewMatrix.mul(vec4(0, 1, 0, 0)).xyz;
+    const sunView = cameraViewMatrix.mul(vec4(uRimSunDir, 0)).xyz;
+    const toCam = normalize(cameraPosition.sub(positionWorld));
+    const through = pow(max(dot(toCam.negate(), uRimSunDir), 0), 3);
+    mat.normalNode = normalize(mix(normalView, upView, 0.6).add(sunView.mul(through.mul(2.5))));
+    mat.emissiveNode = col.mul(rimColor).mul(through.mul(0.3).add(0.04)).mul(float(0.4).add(hgt.mul(0.9))).mul(uDaylight);
     // fade out at the edge of the streaming radius; parts this tuft doesn't have are cut away
     const d = length(positionWorld.xz.sub(cameraPosition.xz));
     mat.opacityNode = smoothstep(62, 50, d);
