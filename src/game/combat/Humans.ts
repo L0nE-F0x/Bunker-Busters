@@ -264,6 +264,9 @@ export class Human {
   private readyK = 0;
   private crouchS = 0;
   private phase = Math.random() * 6;
+  /** Standing still, a person still breathes and shifts their weight: their own clock and tempo. */
+  private idleT = Math.random() * 100;
+  private idleW = 0.8 + Math.random() * 0.4;
   private speedS = 0;
   readonly flinch = new THREE.Vector3();
   flinchK = 0;
@@ -371,6 +374,11 @@ export class Human {
     // pelvis
     const pelvis = J.pelvis.copy(this.pos).addScaledVector(UP, (0.95 - cr * 0.36) * H - bob).addScaledVector(f, cr * 0.06 + run * 0.04);
     pelvis.addScaledVector(left, Math.sin(ph) * 0.02 * walk);
+    // standing still: the weight drifts from foot to foot (less while aiming), the chest breathes
+    this.idleT += dt * this.idleW;
+    const still = (1 - THREE.MathUtils.smoothstep(sp, 0.05, 0.4)) * (this.dyingT < 0 ? 1 : 0);
+    const breath = Math.sin(this.idleT * 1.4) * 0.012 * still;
+    pelvis.addScaledVector(left, Math.sin(this.idleT * 0.55) * Math.sin(this.idleT * 0.23 + 1) * 0.022 * still * (1 - 0.6 * this.aimK));
     // knocked back a step; a leg hit drops that hip
     pelvis.addScaledVector(hd, hr * (hz === 'leg' ? 0.04 : 0.11)).addScaledVector(left, hs * hr * (hz === 'leg' ? 0.07 : 0));
     // torso: leans into a run, a crouch and an aim; twists toward the aim
@@ -383,6 +391,7 @@ export class Human {
     const cl = _cl.set(cf.z, 0, -cf.x);
     const lean = 0.06 + run * 0.25 + cr * 0.32 + this.aimK * 0.08 - (this.pose === 'sit' ? 0 : 0);
     const torsoUp = _tu.copy(UP).multiplyScalar(Math.cos(lean)).addScaledVector(cf, Math.sin(lean));
+    torsoUp.addScaledVector(cf, -breath).normalize();
     // flinch: knocked back from the hit
     if (this.flinchK > 0) torsoUp.addScaledVector(this.flinch, this.flinchK * 0.5).normalize();
     if (hr > 0.002) torsoUp.addScaledVector(hd, hr * (hz === 'body' ? 0.45 : hz === 'head' ? 0.3 : 0.12)).addScaledVector(left, hs * hr * (hz === 'leg' ? 0.38 : 0)).normalize();
@@ -475,16 +484,25 @@ export class Human {
     // dying from a body wound, the free hand goes to it
     if (dying > 0 && hz === 'body' && !pistol) fore = _b.lerp(_c.copy(chestBase).addScaledVector(torsoUp, 0.2 * H).addScaledVector(cf, 0.17).addScaledVector(cl, 0.04), Math.min(1, dying * 1.6));
     const aLen = 0.29 * H, fLen = 0.27 * H;
+    // the support hand cradles the forend (or the revolver hand) palm up; reaching for a pouch, the
+    // radio or a wound, it turns palm-in again. (The grip hand's palm faces the gun: medial.)
+    let cradle = 1 - Math.min(1, reload * 1.6);
+    if (this.pose === 'radio') cradle = 0;
+    if (dying > 0 && hz === 'body' && !pistol) cradle *= 1 - Math.min(1, dying * 1.6);
     for (const side of [1, -1] as const) {
       const sh = side > 0 ? shL : shR;
       const hand = side > 0 ? fore : grip;
-      // wrist sits a palm's length back from where the hand closes
+      // wrist sits a palm's length back from where the hand closes (a cradling hand lies across
+      // under the forend, fingers round its far side, not along the arm)
       const toHand = _tmp.subVectors(hand, sh).normalize();
+      if (side > 0 && !pistol && cradle > 0) toHand.lerp(_c.setFromMatrixColumn(wm, 0).multiplyScalar(0.75).addScaledVector(wDir, 0.45).addScaledVector(UP, -0.25), 0.7 * cradle).normalize();
       const wrist = (side > 0 ? J.wrL : J.wrR).copy(hand).addScaledVector(toHand, -0.07);
       const elbow = ik(sh, wrist, aLen, fLen, _pole.copy(UP).multiplyScalar(-0.9).addScaledVector(cl, side * 0.7).addScaledVector(cf, -0.25), side > 0 ? J.elL : J.elR);
       frameTo(this.mats[side > 0 ? BONE.uArmL : BONE.uArmR], sh, _tmp.subVectors(sh, elbow), cf, H);
       frameTo(this.mats[side > 0 ? BONE.fArmL : BONE.fArmR], elbow, _tmp.subVectors(elbow, wrist), cf, H);
-      frameTo(this.mats[side > 0 ? BONE.handL : BONE.handR], wrist, _tmp.subVectors(wrist, hand), _pole.copy(cl).multiplyScalar(-side), H);
+      const palm = _pole.copy(cl).multiplyScalar(-side);
+      if (side > 0) palm.multiplyScalar(1 - 0.7 * cradle).addScaledVector(UP, 0.9 * cradle);
+      frameTo(this.mats[side > 0 ? BONE.handL : BONE.handR], wrist, _tmp.subVectors(wrist, hand), palm, H);
     }
     this.updateDerived();
   }

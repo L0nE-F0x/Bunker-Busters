@@ -5,6 +5,7 @@ import { loadGLB } from '@/engine/models';
 import { clone as cloneSkinned } from 'three/addons/utils/SkeletonUtils.js';
 import { BONE, type Human } from './Humans';
 import { boundSkinned } from '../world/kit';
+import { WristTwist, mittFrame } from '../world/limbTwist';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 type N = any;
@@ -21,6 +22,12 @@ type N = any;
  * the procedural wrists and ankles by two-bone IK with the model's own limb lengths. So the hands
  * stay on the gun, the feet stay on the ground, and a ragdoll carries the model down with it.
  * Bone axes never matter: everything is solved as world rotations relative to the bind pose.
+ *
+ * Arms roll with the elbow's bend (its hinge axis comes from the IK and never flips as the aim moves;
+ * the bind pose is taken to bend forward). Each hand is aimed on its own along the procedural hand
+ * (wrist → hand, palm toward its +Z: the gun's side on the grip, up under the forend), measured
+ * against the mitt's shape at bind, and half of its roll about the forearm is spread into the
+ * forearm (no twist bones: limbTwist.ts).
  */
 
 /** Meshy contractor height (m) at bind; procedural `look.height` 1 = 1.78 m. */
@@ -47,6 +54,8 @@ const _x = new THREE.Vector3(), _y = new THREE.Vector3(), _z = new THREE.Vector3
 const _dq = { hips: new THREE.Quaternion(), chest: new THREE.Quaternion(), head: new THREE.Quaternion() };
 const _root = new THREE.Vector3(), _target = new THREE.Vector3(), _procMid = new THREE.Vector3(), _pole = new THREE.Vector3();
 const _mid = new THREE.Vector3(), _twist = new THREE.Vector3(), _twist2 = new THREE.Vector3(), _toe = new THREE.Vector3(), _hipW = new THREE.Vector3();
+const _u = new THREE.Vector3(), _f = new THREE.Vector3(), _n = new THREE.Vector3(), _hd = new THREE.Vector3(), _hz = new THREE.Vector3();
+const _fq = new THREE.Quaternion(), _hq = new THREE.Quaternion(), _rel = new THREE.Quaternion();
 
 /** Rotation of a frame with +Y along `y` and +Z toward `zHint` (the Humans.ts frameTo convention). */
 function basis(y: THREE.Vector3, zHint: THREE.Vector3, out: THREE.Quaternion) {
@@ -78,6 +87,8 @@ export class HumanSkins {
   private dir: Record<string, THREE.Vector3> = {};
   private len: Record<string, number> = {};
   private hipsH = 0.996;
+  /** Per side: the mitt's frame at bind (model space: wrist → fingers, out of the palm) and the wrist spreading. */
+  private mitt: Partial<Record<Side, { long: THREE.Vector3; palm: THREE.Vector3; twist: WristTwist }>> = {};
 
   static async load(count: number, leader: number[]): Promise<HumanSkins | null> {
     try {
@@ -132,6 +143,17 @@ export class HumanSkins {
       seg(`${s}UpLeg`, `${s}Leg`); seg(`${s}Leg`, `${s}Foot`); seg(`${s}Foot`, `${s}ToeBase`);
     }
     this.hipsH = this.bind.Hips?.p.y ?? 0.996;
+    // the mitts: their shape at bind (their palms face down there), and the wrist spreading
+    let body: THREE.SkinnedMesh | null = null;
+    src.traverse((o) => { if ((o as THREE.SkinnedMesh).isSkinnedMesh) body ??= o as THREE.SkinnedMesh; });
+    for (const sd of ['Left', 'Right'] as Side[]) {
+      const hand = bones[sd + 'Hand'], fa = bones[sd + 'ForeArm'];
+      const m = body && hand && fa ? mittFrame(body, hand, new THREE.Vector3(0, -1, 0)) : null;
+      if (!m || !hand || !fa) continue;
+      const q = this.bind[sd + 'Hand'].q;
+      const rel = this.bind[sd + 'ForeArm'].q.clone().invert().multiply(q);
+      this.mitt[sd] = { long: m.long.clone().applyQuaternion(q), palm: m.palm.clone().applyQuaternion(q), twist: new WristTwist(rel, hand.position) };
+    }
     const [crewGeo, leadGeo] = this.gearUp(src, bones, hatSrc, maskSrc);
 
     for (let i = 0; i < count; i++) {
@@ -301,9 +323,36 @@ export class HumanSkins {
     const pole = _pole.subVectors(procMid, root);
     const mid = ik(root, target, a, b, pole, _mid);
     const twist = _twist.setFromMatrixColumn(m[P[0]], 2).normalize();
+    const twist2 = _twist2.setFromMatrixColumn(m[P[1]], 2).normalize();
+    const mitt = end === 'Hand' ? this.mitt[sd] : undefined;
+    if (end === 'Hand') {
+      // an arm rolls with its elbow's bend: the upper arm's front faces the way the forearm folds,
+      // the forearm's faces away from the upper arm (the bind pose taken as bending forward, +Z).
+      // The hinge axis comes from the IK, so it doesn't flip as the aim swings across the body.
+      const u = _u.subVectors(mid, root).normalize(), f = _f.subVectors(target, mid).normalize();
+      const n = _n.crossVectors(u, f);
+      if (n.lengthSq() < 1e-6) n.crossVectors(u, pole);
+      if (n.lengthSq() > 1e-8) {
+        n.normalize();
+        twist.crossVectors(n, u);
+        twist2.crossVectors(n, f);
+      }
+    }
     // upper: bind direction → root→mid
     this.aim(bu, sd + up, _v.subVectors(mid, root), twist);
-    const twist2 = _twist2.setFromMatrixColumn(m[P[1]], 2).normalize();
+    if (mitt) {
+      // forearm and hand together, then half the hand's roll about the forearm moves into it
+      this.aimQ(sd + lo, _v.subVectors(target, mid), twist2, Z, _fq);
+      // the hand: along the procedural hand (wrist → hand), palm toward its +Z
+      _hd.setFromMatrixColumn(m[P[2]], 1).negate();
+      _hz.setFromMatrixColumn(m[P[2]], 2);
+      this.aimQ(sd + end, _hd, _hz, mitt.palm, _hq, mitt.long);
+      _rel.copy(_fq).invert().multiply(_hq);
+      mitt.twist.apply(_fq, _rel, 0.5, 60, 80);
+      this.setWorld(bl, _fq);
+      this.setWorld(be, _hq.copy(_fq).multiply(_rel));
+      return;
+    }
     this.aim(bl, sd + lo, _v.subVectors(target, mid), twist2);
     if (end === 'Foot') {
       // the foot: toes along the procedural foot's +Z, sole down
@@ -322,10 +371,17 @@ export class HumanSkins {
 
   /** Turn `bone` so its bind direction points along `d`, twisting toward `hint`. */
   private aim(bone: THREE.Bone, name: string, d: THREE.Vector3, hint: THREE.Vector3) {
-    const d0 = this.dir[name];
+    this.setWorld(bone, this.aimQ(name, d, hint, Z, _q));
+  }
+
+  /**
+   * The world rotation that turns bone `name`'s bind direction (or `dir0`) along `d`, with what
+   * pointed toward `hint0` at bind (orthogonal to it) now toward `hint`.
+   */
+  private aimQ(name: string, d: THREE.Vector3, hint: THREE.Vector3, hint0: THREE.Vector3, out: THREE.Quaternion, dir0 = this.dir[name]) {
     basis(d, hint, _q2);
-    basis(d0, Z, _q3);
-    this.setWorld(bone, _q.copy(_q2).multiply(_q3.invert()).multiply(this.bind[name].q));
+    basis(dir0, hint0, _q3);
+    return out.copy(_q2).multiply(_q3.invert()).multiply(this.bind[name].q);
   }
 
   /**

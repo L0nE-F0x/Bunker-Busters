@@ -136,7 +136,13 @@ const BUILDERS: Record<string, () => THREE.Object3D> = {
     const c = new HumanCrowd(looks, humanSkins);
     c.lineup(new THREE.Vector3(0, 0, 0), hf);
     const pose = qs.get('pose');
-    if (pose) c.people.forEach((p) => { p.pose = pose as never; for (let k = 0; k < 30; k++) p.update(1 / 30, hf); });
+    // &ay=0.6&ap=-0.3: aim this far off straight ahead (yaw, pitch; radians)
+    if (pose) c.people.forEach((p) => {
+      p.pose = pose as never;
+      p.aimYaw = Math.PI + num('ay', 0);
+      p.aimPitch = num('ap', 0);
+      for (let k = 0; k < 30; k++) p.update(1 / 30, hf);
+    });
     if (qs.has('walk')) c.people.forEach((p) => { p.vel.set(0, 0, -Number(qs.get('walk'))); for (let k = 0; k < 17; k++) p.update(1 / 30, hf); });
     // &hit=body|head|arm|leg&at=0.1&side=1: a round from the front (toward −Z... they face −Z), `at` s ago
     // &cower=1: under fire. &dying=0.4: s into dying on its feet (&hit sets the wound)
@@ -148,7 +154,23 @@ const BUILDERS: Record<string, () => THREE.Object3D> = {
       const t = qs.has('dying') ? num('dying', 0.5) : num('at', 0.1);
       for (let k = 0, n = Math.round(t * 60); k < n; k++) p.update(1 / 60, hf);
     });
+    // &still=6: stand still that long first, logging how far each pelvis drifts sideways (idle life)
+    if (qs.has('still')) c.people.forEach((p, k) => {
+      const xs: number[] = [];
+      for (let i = 0, n = Math.round(num('still', 6) * 30); i < n; i++) { p.update(1 / 30, hf); xs.push(p.joints.pelvis.x - p.pos.x); }
+      console.log(`[lab] contractor ${k} standing ${num('still', 6)} s: pelvis sways ${((Math.max(...xs) - Math.min(...xs)) * 100).toFixed(1)} cm`);
+    });
+    // &rel=1.1: s into a reload (2.2 s; the left hand reaches the pouch mid-way)
+    if (qs.has('rel')) c.people.forEach((p) => { p.reloadT = 2.2 - num('rel', 1.1); p.update(1 / 60, hf); });
     c.people.forEach((p) => humanSkins?.pose(p.slot, p, true));
+    // &gaps: how far each model hand is from the procedural one (cm; the model's arms are shorter)
+    if (qs.has('gaps') && humanSkins) {
+      const slots = (humanSkins as unknown as { slots: { b: Record<string, THREE.Bone> }[] }).slots;
+      c.people.forEach((p, k) => {
+        const g = (bone: string, i: number) => (slots[p.slot].b[bone].getWorldPosition(new THREE.Vector3()).distanceTo(new THREE.Vector3().setFromMatrixPosition(p.mats[i])) * 100).toFixed(1);
+        console.log(`[lab] contractor ${k} ${p.pose}: hand gaps L ${g('LeftHand', 5)} cm, R ${g('RightHand', 8)} cm`);
+      });
+    }
     if (humanSkins) { const g = new THREE.Group(); g.add(c.mesh, humanSkins.group); return g; }
     return c.mesh;
   },
