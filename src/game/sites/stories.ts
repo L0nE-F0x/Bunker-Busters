@@ -9,6 +9,7 @@ import { rockGeometry } from '../world/Props';
 import { loreMaterial, loreQuad } from '../world/loreAtlas';
 import { STORY_SPOTS } from '@/content/quests';
 import { rumourTonight } from '@/content/camp';
+import type { SpotHandle } from '@/engine/ambient';
 
 const V = (x: number, y: number, z: number) => new THREE.Vector3(x, y, z);
 const _e = new THREE.Euler();
@@ -345,6 +346,7 @@ export class Stories {
     });
   }
   private flagged: { obj: THREE.Object3D; flag: string }[] = [];
+  private radioLoop: SpotHandle | null = null;
   private keeps: { radio: THREE.Object3D; plate: THREE.Object3D } | null = null;
   private keepT = 0;
 
@@ -513,6 +515,11 @@ export class Stories {
       this.keepT = 0.5;
       const radio = s.has('q.song.band') || s.has('q.song.quiet');
       if (this.keeps.radio.userData.on !== radio) { this.keeps.radio.userData.on = radio; this.keeps.radio.visible = radio; }
+      // and you can hear it: the radio murmurs by Sol's log (a positional loop, built only when you're near)
+      if (radio && !this.radioLoop) {
+        this.radioLoop = this.ctx.audio.loop('radio', this.keeps.radio.position.clone().setY(this.keeps.radio.position.y + 0.45));
+        this.radioLoop?.setGain(0.55);
+      } else if (!radio && this.radioLoop) { this.radioLoop.stop(); this.radioLoop = null; }
       const plate = s.has('q.rider.delivered');
       if (this.keeps.plate.userData.on !== plate) { this.keeps.plate.userData.on = plate; this.keeps.plate.visible = plate; }
       if (s.favours().pipPool && !this.pool.visible) this.pool.visible = true;
