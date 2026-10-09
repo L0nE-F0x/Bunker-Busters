@@ -27,7 +27,8 @@ const setup = await p.evaluate((which) => {
   const C = which === 'camp' ? g.landmarks.campCrowd : crowds.find((c) => c.figs.some((f) => f.def.id === 'sol'));
   if (!C) return null;
   window.__C = C;
-  const figs = C.figs.filter((f) => f.actor);
+  // only the people in their routine slot right now (content/routines.ts): one figure per id
+  const figs = C.figs.filter((f) => f.actor && f.present !== false);
   const heads = C.heads().filter((h) => figs.some((f) => f.def.id === h.id));
   const c = heads.reduce((a, h) => a.add(h.pos), heads[0].pos.clone().multiplyScalar(0)).multiplyScalar(1 / heads.length);
   // approach from where the crowd faces (the average facing, in world space)
@@ -60,7 +61,7 @@ const log = await p.evaluate(async (legs) => {
       await new Promise((r) => setTimeout(r, 100));
       out.push({
         t: (performance.now() - t0) / 1000, d: +d.toFixed(2),
-        f: C.figs.filter((f) => f.actor).map((f) => ({ id: f.def.id, near: f.near, mode: f.mode, look: +f.look.toFixed(3), ...f.actor.state() })),
+        f: C.figs.filter((f) => f.actor && f.present !== false).map((f) => ({ id: f.def.id, near: f.near, mode: f.mode, look: +f.look.toFixed(3), ...f.actor.state() })),
       });
     }
   }
@@ -69,7 +70,7 @@ const log = await p.evaluate(async (legs) => {
 
 // ---- report
 const ids = setup.ids;
-const nb = await p.evaluate(() => Object.fromEntries(window.__C.figs.filter((f) => f.actor).map((f) => [f.def.id, f.nb.map((g) => g.def.id)])));
+const nb = await p.evaluate(() => Object.fromEntries(window.__C.figs.filter((f) => f.actor && f.present !== false).map((f) => [f.def.id, f.nb.map((g) => g.def.id)])));
 console.log('neighbours (≤4.5 m):', nb);
 for (const id of ids) {
   const ev = [];
@@ -106,9 +107,9 @@ const ff = await p.evaluate((minutes) => {
     const last = new Map();
     for (let i = 0; i < minutes * 60 * 30; i++) {
       C.update(1 / 30, pos);
-      for (const f of C.figs) if (f.actor) { const s = f.actor.state().clip; if (last.has(f.def.id) && last.get(f.def.id) !== s) switches++; last.set(f.def.id, s); }
+      for (const f of C.figs) if (f.actor && f.present !== false) { const s = f.actor.state().clip; if (last.has(f.def.id) && last.get(f.def.id) !== s) switches++; last.set(f.def.id, s); }
     }
-    const st = C.figs.filter((f) => f.actor).map((f) => ({ id: f.def.id, ...f.actor.state() }));
+    const st = C.figs.filter((f) => f.actor && f.present !== false).map((f) => ({ id: f.def.id, ...f.actor.state() }));
     res.push({ d, ms: Math.round(performance.now() - t0), switches, st });
   }
   return res;
