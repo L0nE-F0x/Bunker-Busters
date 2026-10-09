@@ -13,7 +13,15 @@ export const HIGHWAY: [number, number][] = [
 export const SIDE_ROADS: [number, number][][] = [
   [[110, 42], [112, -10], [98, -60], [92, -108]],
   [[-40, 112], [10, 150], [80, 172], [148, 176]],
+  // Kade's private road: off the highway's west end, down past Dry Creek and across the salt to Apex Vault
+  [[-326, 63], [-338, 10], [-344, -40], [-352, -80], [-361, -96], [-366, -103]],
 ];
+
+/**
+ * The salt: a dry lake bed west of Dry Creek (Heightfield flattens it to `y`, Terrain paints the
+ * crust inside `r`). Apex Vault sits at its west shore, against the range.
+ */
+export const SALT_FLAT = { x: -326, z: -172, r: 36, falloff: 24, y: -7.2 };
 
 export const LANDMARKS: LandmarkDef[] = [
   {
@@ -139,5 +147,30 @@ export const WORLD_INTEL: IntelItem[] = [
     reveals: ['lore.valve'],
     revealLines: ['Tanner isn\'t hoarding the water. He\'s paying rent with it, to Kade Holdings.'],
     xp: 40,
+  },
+  // Act II: the way to Apex Vault, and the way into it.
+  {
+    id: 'intel.salt.waybill',
+    title: 'Waybill — Kade Line, West',
+    body:
+      'KADE HOLDINGS · PRIVATE ROAD WEST. Consignee: APEX VAULT (V. Kade). Cargo: 40 jugs, "community contribution". ' +
+      'Route: off the highway at the west end, south past Dry Creek, along the salt. Do not cross the salt in daylight, the glare eats drivers. ' +
+      'Margin: "Driver walked. Truck stayed. Jugs stayed. Vesper posted about it."',
+    position: [-318, 0, -150],
+    reveals: ['apex.marker'],
+    revealLines: ['Apex Vault is marked: at the foot of the range, on the salt\'s west shore. Her road leaves the highway at its west end.'],
+    xp: 45,
+  },
+  {
+    id: 'intel.apex.shift',
+    title: 'Shift Note — Apex Gatehouse',
+    body:
+      'R. — She changed the airlock code AGAIN. New system: the code is the launch clock over the door. Hours and minutes, T-minus. ' +
+      'It counts down, so it\'s never the same twice, which she calls "zero trust" and I call "my knees". Read the clock, type it, go in. ' +
+      'Don\'t tell the camps. Don\'t tell Tanner. Don\'t look at the camera over the hangar, it posts you. — D.',
+    position: [-352, 0, -100],
+    reveals: ['apex.code', 'apex.marker'],
+    revealLines: ['The airlock code is the launch clock over the door: hours and minutes, counting down.'],
+    xp: 50,
   },
 ];

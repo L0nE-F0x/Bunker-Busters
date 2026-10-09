@@ -7,6 +7,7 @@ import { noise, fbm2, noiseAt } from '@/engine/noiseTex';
 import type { Heightfield } from './Heightfield';
 import type { Atmosphere } from './Atmosphere';
 import type { Physics } from '@/engine/physics';
+import { SALT_FLAT } from '@/content/world';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 type N = any;
@@ -331,6 +332,20 @@ export class Terrain {
     col = col.mul(float(1).sub(hollow.mul(0.22)).sub(basin.mul(0.1)).add(ridge.mul(0.07)));
     col = mix(col, col.mul(vec3(0.92, 0.86, 0.84)), hollow.mul(float(1).sub(roadFinal)).mul(0.6));
 
+    // the salt (SALT_FLAT): a bright crust of polygon plates with raised white rims, wind-dusted at
+    // the shore, tyre tracks still dark across it. The rims fade before they'd shimmer into moire.
+    const uSalt = uniform(new THREE.Vector3(SALT_FLAT.x, SALT_FLAT.z, SALT_FLAT.r));
+    const saltEdge = xz.sub(uSalt.xy).length().add(mid.mul(16)).add(fine.mul(3));
+    const saltK = smoothstep(uSalt.z.add(5), uSalt.z.sub(7), saltEdge).mul(float(1).sub(rockMask)).mul(float(1).sub(roadFinal)).mul(float(1).sub(trackMask.mul(0.7))).mul(inside);
+    const plate = noise(xz.div(2.4).add(vec2(0.31, 0.77)));
+    const rimAA = smoothstep(0.5, 0.12, fwidth(xz.x.div(2.4)).mul(10));
+    const rim = smoothstep(0.1, 0.02, plate.b).mul(rimAA);
+    const shoreDust = smoothstep(uSalt.z.sub(14), uSalt.z.add(2), saltEdge);
+    const saltCol = mix(vec3(0.86, 0.85, 0.82), vec3(0.95, 0.94, 0.91), plate.r.mul(0.6).add(rim.mul(0.5)))
+      .mul(float(0.94).add(grain.mul(0.08)))
+      .mul(mix(vec3(1), vec3(0.93, 0.86, 0.76), shoreDust.mul(0.7).add(smoothstep(0.62, 0.8, midTap.g).mul(0.25))));
+    col = mix(col, saltCol, saltK);
+
     // pavement lies flat (wind took the ripples), its stones stand proud; silt crusts crack
     let h: N = mix(rippleH.mul(0.5).add(pebble.mul(0.5)), stoneIn.mul(gNear).mul(0.35).add(grain.mul(0.05)), pave);
     h = mix(h, crk.mul(-0.35).add(fine.mul(0.1)), silt.mul(0.8));
@@ -338,6 +353,7 @@ export class Terrain {
     h = mix(h, crk.mul(-0.6).add(fine.mul(0.15)), lowMask);
     h = mix(h, roadCracks.mul(-0.4).add(grain.mul(0.08)), roadFinal);
     h = mix(h, tyre.mul(-0.5).add(grain.mul(0.1)), trackMask);
+    h = mix(h, rim.mul(0.55).add(plate.r.mul(0.12)).add(grain.mul(0.04)), saltK);
 
     if (this.atmo) {
       // storm: sand streams across the ground in long wind-aligned ribbons
@@ -359,6 +375,8 @@ export class Terrain {
     mat.roughnessNode = mix(mix(mix(float(0.8).add(grain.mul(0.1)), float(0.97), pave), float(0.86), rockMask), mix(float(0.78), float(0.55), oil), roadFinal);
     // the sky can't reach into the folds: occlusion on the ambient/IBL only, so sunlit hollows stay lit
     mat.aoNode = float(1).sub(hollow.mul(0.5)).sub(basin.mul(0.2));
+    // the salt glares: a smoother crust catches a low sun across the whole flat
+    mat.roughnessNode = mix(mat.roughnessNode as N, float(0.58).add(rim.mul(0.2)), saltK);
     return mat;
   }
 

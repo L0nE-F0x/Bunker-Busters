@@ -33,6 +33,8 @@ import { updateShownMatrices, viewCull } from './world/kit';
 import { NpcCrowd } from './world/npc';
 import { HumanSkins } from './combat/humanSkin';
 import { Garage } from './bunker/Garage';
+import { Apex } from './bunker/apex/Apex';
+import type { Bunker } from './bunker/Bunker';
 import { Settlement } from './town/Settlement';
 import { buildSites, Errands, type Site } from './sites';
 import { Player } from './player/Player';
@@ -49,6 +51,7 @@ import { Story } from './Story';
 import { RECIPES, type Recipe } from '@/content/craft';
 import { SKILLS } from '@/content/skills';
 import { GARAGE } from '@/content/bunkers/garage';
+import { APEX } from '@/content/bunkers/apex';
 import { ITEMS, HOTBAR_ITEMS, KEEP_ON_DEATH } from '@/content/items';
 import { KadeTerminals } from './combat/terminals';
 import { OUTPOSTS } from '@/content/recovery';
@@ -119,6 +122,10 @@ export class Game {
   stormWall!: StormWall;
   weather!: Weather;
   garage!: Garage;
+  /** Tier 2, Vesper's launch site west of the salt (Act II). */
+  apex!: Apex;
+  /** Every bunker (the Garage first): interactables, update/cull, interiors, EMP, alarms. */
+  bunkers: Bunker[] = [];
   settlement!: Settlement;
   /** Hostiles hunting the player (last frame's `combat.awareness()`; the music's fight stem). */
   private huntedBy = 0;
@@ -310,6 +317,8 @@ export class Game {
     this.ctx = this.makeContext();
     await step(0.7, 'Building a doomsday bunker (pre-revenue)');
     this.garage = new Garage(this.ctx);
+    this.apex = new Apex(this.ctx);
+    this.bunkers = [this.garage, this.apex];
     this.combat.sparks = this.garage.sparks;
     // wolves won't follow you to the fire or into a town
     this.fauna.safe = [{ p: this.landmarks.campPosition.clone(), r: 30 }];
@@ -323,6 +332,8 @@ export class Game {
     // the Meshy contractors (before the warm-up; ?prochuman keeps the procedural bodies)
     this.humanSkins = new URLSearchParams(location.search).has('prochuman') ? null : await models(HumanSkins.load(10, [0]), 0.7, 0.78, bunkerMsg);
     this.buildRecovery();
+    // Vesper's alarm calls Kade's gatehouse crew on her road to the apron
+    this.apex.onAlarm = (at) => this.recovery.alertOutpost('apexgate', at);
     this.buildIntel();
     // stashes and searchable wrecks (not quests: just the desert being generous)
     this.scavenge = new Scavenge({
@@ -338,6 +349,7 @@ export class Game {
     this.interactables.push(...this.errands.interactables);
     if (!SKIP.has('env')) this.buildEnvironment();
     if (SKIP.has('garage')) this.scene.remove(this.garage.b.group, this.garage.drone.group);
+    if (SKIP.has('apex')) this.scene.remove(this.apex.b.group);
     if (SKIP.has('ui')) document.getElementById('ui')!.style.display = 'none';
     if (SKIP.has('terrain')) this.scene.remove(this.terrain.mesh, this.terrain.far);
     if (SKIP.has('sky')) this.scene.remove(this.atmo.sky);
@@ -678,7 +690,7 @@ export class Game {
         primary: { label: c.label, available: () => true, run: () => this.takeCache(c.id) },
       });
     }
-    this.interactables.push(...this.garage.interactables, ...this.settlement.interactables, ...this.sites.flatMap((s) => s.interactables));
+    this.interactables.push(...this.bunkers.flatMap((b) => b.interactables), ...this.settlement.interactables, ...this.sites.flatMap((s) => s.interactables));
   }
 
   private buildRecovery() {
@@ -1077,7 +1089,7 @@ export class Game {
     };
     // hands, everything they can hold, and the shadow body compile on the first frame, under the fade
     this.warmNext = { roots: [this.camera, this.player.model.root], stage: () => this.hands?.stageItems() };
-    this.garage.applyFlags(true);
+    for (const b of this.bunkers) b.applyFlags(true);
     for (const it of WORLD_INTEL) {
       const m = this.intelMeshes.get(it.id);
       if (m) m.visible = !state.has(`intel:${it.id}`);
@@ -1161,12 +1173,22 @@ export class Game {
   private _hidden: THREE.Object3D[] = [];
   private _exterior: THREE.Object3D[] | null = null;
   private _interiors: Interior[] | null = null;
+  /** Any bunker's alarm ringing. */
+  get bunkerAlarm() {
+    return this.bunkers.some((b) => b.alarm > 0);
+  }
+
+  /** The player is inside a bunker's sealed rooms. */
+  get bunkerInside() {
+    return this.bunkers.some((b) => b.playerInside);
+  }
+
   /** Everything outdoors: what interior mode skips. */
   private exteriorRoots() {
     if (this._exterior) return this._exterior;
-    const inside = (o: THREE.Object3D) => this.garage.houseBox.containsPoint(o.getWorldPosition(new THREE.Vector3()));
+    const inside = (o: THREE.Object3D) => this.bunkers.some((b) => b.b.innerBox.containsPoint(o.getWorldPosition(new THREE.Vector3())));
     this._exterior = [
-      this.atmo.sky, this.terrain.mesh, this.terrain.far, this.props.group, this.landmarks.group, this.garage.b.group,
+      this.atmo.sky, this.terrain.mesh, this.terrain.far, this.props.group, this.landmarks.group, ...this.bunkers.map((b) => b.b.group),
       this.scrub.mesh, this.shrubs.group, this.pebbles.mesh, this.fauna.mesh, this.fauna.models, this.recovery.group, this.machines.group,
       this.haze.sprite, this.streaks.sprite, this.devils.sprite, this.lightning.mesh, this.stormWall.mesh, this.scavenge?.group,
       ...[...this.intelMeshes.values()].filter((g) => !inside(g)),
@@ -1177,7 +1199,7 @@ export class Game {
   /** The sealed interior the camera is in and can't see out of, if any (interior mode). */
   private activeInterior() {
     if (this.mode !== 'playing' || NO_INTERIOR) return null;
-    this._interiors ??= [this.garage.interior, this.settlement.caveInterior, ...this.sites.map((s) => s.interior)].filter((x): x is Interior => !!x);
+    this._interiors ??= [...this.bunkers.map((b) => b.interior), this.settlement.caveInterior, ...this.sites.map((s) => s.interior)].filter((x): x is Interior => !!x);
     for (const it of this._interiors) if (it.hides(this.camera)) return it;
     return null;
   }
@@ -1187,7 +1209,7 @@ export class Game {
     if (this.player) this.audio.land(this.acoustics?.surfaceAt(this.player.position) ?? 'sand', k);
     this.cam.land(speed);
     this.hands?.jolt(k * 0.5);
-    if (this.player && !this.garage.playerInside && speed > 3.5) {
+    if (this.player && !this.bunkerInside && speed > 3.5) {
       this.puffs.emit(this.player.position, Math.round(6 + k * 10), 0.8 + k * 2.2, 0.25 + k * 0.5, 0.45 + k * 0.5, this.player.velocity.clone().multiplyScalar(0.4));
     }
     if (speed > 7.7 && this.state) {
@@ -1222,7 +1244,7 @@ export class Game {
       const l = this.audio.loop(spot.kind, spot.pos);
       if (l) this.loops.push(l);
     }
-    this.garage.startAudio();
+    for (const b of this.bunkers) b.startAudio();
   }
 
   save(silent = false) {
@@ -1576,7 +1598,7 @@ export class Game {
         this.post.emp.value = Math.max(0, 1 - near / 14);
         this.cam.addTrauma(Math.max(0, 0.6 - near / 20));
         this.hands?.jolt(Math.max(0, 0.8 - near / 15));
-        const hitGarage = this.garage.emp(g.mesh.position, 8.5);
+        const hitGarage = this.bunkers.map((b) => b.emp(g.mesh.position, 8.5)).some(Boolean);
         const s = this.state;
         const empDur = 12 * ((s?.skill('electronics') ?? 0) >= 2 ? 1.5 : 1) * (s?.focus('electronics') === 'deepcell' ? 1.3 : 1);
         const hitMachines = this.machines.emp(g.mesh.position, empRadius(s?.skill('demolition') ?? 0) * (s?.focus('demolition') === 'wide' ? 1.18 : 1), empDur);
@@ -1629,6 +1651,11 @@ export class Game {
     if (s.has('garage.marker') || nearGarage || s.has('garage.complete')) {
       out.push({ id: 'garage', x: gx, z: gz, label: s.has('garage.complete') ? 'The Garage (busted)' : 'The Garage · Tier 1', color: s.has('garage.complete') ? '#7d725f' : '#ff3a6e', kind: 'bunker' });
     }
+    const [ax, , az] = APEX.location.position;
+    const nearApex = this.player ? Math.hypot(this.player.position.x - ax, this.player.position.z - az) < 110 : false;
+    if (s.has('apex.marker') || nearApex || s.has('apex.complete')) {
+      out.push({ id: 'apex', x: ax, z: az, label: s.has('apex.complete') ? 'Apex Vault (busted)' : 'Apex Vault · Tier 2', color: s.has('apex.complete') ? '#7d725f' : '#ff3a6e', kind: 'bunker' });
+    }
     for (const it of WORLD_INTEL) {
       if (s.has(`intel:${it.id}`)) continue;
       const known = it.id === 'intel.gas.note' || this.map.revealedAt(it.position[0], it.position[2]) > 100;
@@ -1655,7 +1682,9 @@ export class Game {
 
   /** The tracked quest (or the main story) speaks unless you're standing at the Garage. */
   private objective(): string {
-    return this.story ? this.story.objective(this.garage.objective()).text : this.garage.objective();
+    const here = this.garage.objective() || this.apex.objective();
+    const label = here && !this.garage.objective() ? 'Act II · Apex Vault' : undefined;
+    return this.story ? this.story.objective(here, label).text : here;
   }
 
   private bench(now: number) {
@@ -1723,8 +1752,10 @@ export class Game {
     if (this.player && this.mode === 'playing') this.scavenge?.update(dt, this.player.position);
     for (const site of this.sites) site.update(dt, this.camera.position);
     this.errands?.update(dt, this.camera.position);
-    if (this.mode !== 'playing') this.garage.update(dt);
-    this.garage.cull(this.camera.position);
+    for (const b of this.bunkers) {
+      if (this.mode !== 'playing') b.update(dt);
+      b.cull(this.camera.position);
+    }
     this.props.update(dt, focusPos, this.atmo.wind);
     this.scrub.update(focusPos, this.atmo.wind);
     this.shrubs.update(focusPos);
@@ -1758,15 +1789,15 @@ export class Game {
     if (this.mode !== 'playing') this.post.lowHp.value = 0;
     const alertTarget = this.mode === 'playing' && this.garage.drone.state === 'alert' ? 0.8 : this.mode === 'playing' ? this.garage.drone.detection * 0.4 : 0;
     this.post.alert.value = damp(this.post.alert.value as number, alertTarget, 4, dt);
-    const tension = this.mode === 'playing' ? Math.max(this.garage.drone.detection, this.garage.alarm > 0 ? 1 : 0, this.combat.heat) : 0;
+    const tension = this.mode === 'playing' ? Math.max(this.garage.drone.detection, this.bunkerAlarm ? 1 : 0, this.combat.heat) : 0;
     const playing = this.mode === 'playing';
     if (playing && this.acoustics && this.player) this.acoustics.update(dt, this.player.position);
     this.audio.update(dt, this.camera, this.atmo.windStrength, tension, this.weather.intensity, {
       mood: this.mode === 'title' ? 'title' : this.mode === 'charselect' ? 'camp' : playing ? 'play' : 'off',
       night: this.atmo.isNight,
       hour: this.atmo.hour,
-      inside: playing && this.garage.playerInside,
-      alarm: playing && this.garage.alarm > 0,
+      inside: playing && this.bunkerInside,
+      alarm: playing && this.bunkerAlarm,
       room: playing ? this.acoustics?.room : undefined,
       floor: this.acoustics?.surface,
       front: this.weather.front,
@@ -1866,7 +1897,7 @@ export class Game {
       this.audio.play('click');
     }
     player.update(dt, input, this.cam.yaw, true);
-    this.garage.update(dt);
+    for (const b of this.bunkers) b.update(dt);
     // what hostiles can perceive of you this frame
     const tg = this.combat.target;
     tg.feet.copy(player.position);
@@ -1876,7 +1907,7 @@ export class Game {
     tg.crouch = player.crouching;
     tg.noise = player.noise * s.archetype.stats.stealth;
     tg.torch = !!this.hands?.flashlightOn;
-    tg.hidden = this.garage.playerInside;
+    tg.hidden = this.bunkerInside;
     tg.night = this.atmo.isNight ? 1 : Math.max(0, Math.min(1, (0.15 - this.atmo.sunElevation) / 0.25));
     tg.visibility = 1 - this.weather.intensity * 0.75;
     // the stealth model: by day everyone's lit; at night it's the fires, the floodlights, the muzzle
@@ -1987,6 +2018,12 @@ export class Game {
         s.set('garage.marker');
         this.ui.banner('THE GARAGE', 'The camp\'s water is in his cistern. The names are in the vault. He is still inside.', 'info');
       }
+      const [ax, , az] = APEX.location.position;
+      if (!s.has('seen:apex') && Math.hypot(player.position.x - ax, player.position.z - az) < 75) {
+        s.set('seen:apex');
+        s.set('apex.marker');
+        this.ui.banner('APEX VAULT', 'The valley\'s water, a rocket that has never left, and a woman live-streaming both. Tier 2.', 'info');
+      }
       for (const c of WORLD_CACHES) {
         if (s.has(c.id) || s.has(`approach:${c.id}`)) continue;
         if (Math.hypot(player.position.x - c.x, player.position.z - c.z) < 22) {
@@ -2019,13 +2056,13 @@ export class Game {
       pz: player.position.z,
       night: this.atmo.isNight,
       storm: this.weather.intensity,
-      alarm: this.garage.alarm > 0 || this.garage.drone.state === 'alert',
+      alarm: this.bunkerAlarm || this.garage.drone.state === 'alert',
     });
 
     // autosave
     s.data.stats.playTime += dt;
     this.autosaveTimer -= dt;
-    if (this.autosaveTimer <= 0 && this.garage.alarm <= 0) {
+    if (this.autosaveTimer <= 0 && !this.bunkerAlarm) {
       this.autosaveTimer = 60;
       this.save(true);
     }

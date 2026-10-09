@@ -91,6 +91,19 @@ export const OUTPOSTS: OutpostDef[] = [
     hornet: true,
     loot: [{ id: 'water', qty: 6 }, { id: 'medkit', qty: 2 }, { id: 'ammo3030', qty: 12 }, { id: 'shells', qty: 10 }, { id: 'charge', qty: 1 }, { id: 'kade_badge', qty: 3 }],
   },
+  {
+    // Act II: Vesper's road to Apex Vault. Her alarm calls this crew to the apron (Game wires it).
+    id: 'apexgate', name: 'Apex Gatehouse', tier: 2, x: -332, z: -70, rot: 2.6, r: 16,
+    blurb: 'Kade guards Vesper\'s road. The sign says WELCOME, SEED MEMBERS. The guns say the rest.',
+    crew: [
+      { weapon: 'rifle', role: 'leader', at: [0, 5], yaw: 0 },
+      { weapon: 'shotgun', role: 'guard', at: [6, 6], yaw: 0.6 },
+      { weapon: 'rifle', role: 'patrol', at: [-7, -2], yaw: -1.6 },
+    ],
+    sentries: [[-8, 9, -0.4]],
+    hornet: true,
+    loot: [{ id: 'water', qty: 3 }, { id: 'ammo3030', qty: 10 }, { id: 'battery', qty: 1 }, { id: 'charge', qty: 1 }, { id: 'kade_badge', qty: 2 }],
+  },
 ];
 
 /** What each fallen contractor might carry (plus their gun's ammunition). */
