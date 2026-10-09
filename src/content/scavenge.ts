@@ -40,28 +40,39 @@ export const CACHES: CacheDef[] = [
 export type LootRoll = { id: string | 'ammo'; qty: [number, number]; p: number };
 
 export const CACHE_LOOT: Record<CacheKind, LootRoll[]> = {
-  can: [{ id: 'ammo', qty: [1, 1], p: 1 }, { id: 'ammo', qty: [1, 1], p: 0.7 }, { id: 'scrap', qty: [1, 2], p: 0.3 }],
-  locker: [{ id: 'ammo', qty: [1, 1], p: 1 }, { id: 'water', qty: [1, 2], p: 0.8 }, { id: 'medkit', qty: [1, 1], p: 0.35 }, { id: 'lockpick', qty: [1, 2], p: 0.35 }, { id: 'battery', qty: [1, 1], p: 0.2 }],
-  pack: [{ id: 'water', qty: [1, 2], p: 0.9 }, { id: 'ration', qty: [1, 1], p: 0.7 }, { id: 'ammo', qty: [1, 1], p: 0.75 }, { id: 'lockpick', qty: [1, 1], p: 0.3 }, { id: 'antivenom', qty: [1, 1], p: 0.15 }],
-  crate: [{ id: 'ammo', qty: [1, 1], p: 1 }, { id: 'ammo', qty: [1, 1], p: 0.8 }, { id: 'battery', qty: [1, 1], p: 0.5 }, { id: 'medkit', qty: [1, 1], p: 0.3 }, { id: 'kade_badge', qty: [1, 1], p: 0.6 }, { id: 'charge', qty: [1, 1], p: 0.12 }],
-  cooler: [{ id: 'water', qty: [2, 3], p: 1 }, { id: 'ration', qty: [1, 1], p: 0.6 }, { id: 'ammo', qty: [1, 1], p: 0.3 }],
+  can: [{ id: 'ammo', qty: [1, 1], p: 1 }, { id: 'ammo', qty: [1, 1], p: 0.7 }, { id: 'scrap', qty: [1, 2], p: 0.3 }, { id: 'seed_plate', qty: [1, 1], p: 0.12 }],
+  locker: [
+    { id: 'ammo', qty: [1, 1], p: 1 }, { id: 'water', qty: [1, 2], p: 0.8 }, { id: 'medkit', qty: [1, 1], p: 0.35 }, { id: 'lockpick', qty: [1, 2], p: 0.35 }, { id: 'battery', qty: [1, 1], p: 0.2 },
+    { id: 'bandage', qty: [1, 2], p: 0.3 }, { id: 'smart_lock', qty: [1, 1], p: 0.2 }, { id: 'mezcal', qty: [1, 1], p: 0.15 }, { id: 'asic', qty: [1, 1], p: 0.08 },
+  ],
+  pack: [
+    { id: 'water', qty: [1, 2], p: 0.9 }, { id: 'ration', qty: [1, 1], p: 0.7 }, { id: 'ammo', qty: [1, 1], p: 0.75 }, { id: 'lockpick', qty: [1, 1], p: 0.3 }, { id: 'antivenom', qty: [1, 1], p: 0.15 },
+    { id: 'fleece', qty: [1, 1], p: 0.25 }, { id: 'smart_ring', qty: [1, 1], p: 0.2 }, { id: 'smart_bottle', qty: [1, 1], p: 0.15 }, { id: 'nootropics', qty: [1, 2], p: 0.15 }, { id: 'speaker_badge', qty: [1, 1], p: 0.15 },
+  ],
+  crate: [
+    { id: 'ammo', qty: [1, 1], p: 1 }, { id: 'ammo', qty: [1, 1], p: 0.8 }, { id: 'battery', qty: [1, 1], p: 0.5 }, { id: 'medkit', qty: [1, 1], p: 0.3 }, { id: 'kade_badge', qty: [1, 1], p: 0.6 }, { id: 'charge', qty: [1, 1], p: 0.12 },
+    { id: 'gpu', qty: [1, 1], p: 0.15 }, { id: 'visor', qty: [1, 1], p: 0.15 }, { id: 'molotov', qty: [1, 1], p: 0.1 },
+  ],
+  cooler: [{ id: 'water', qty: [2, 3], p: 1 }, { id: 'ration', qty: [1, 1], p: 0.6 }, { id: 'ammo', qty: [1, 1], p: 0.3 }, { id: 'kombucha', qty: [1, 2], p: 0.4 }, { id: 'mezcal', qty: [1, 1], p: 0.12 }],
 };
 
 /** Highway wrecks: glovebox, footwell, trunk. Searched once. */
 export const WRECK_LOOT: LootRoll[] = [
   { id: 'ammo', qty: [1, 1], p: 0.55 }, { id: 'water', qty: [1, 1], p: 0.3 }, { id: 'scrap', qty: [1, 3], p: 0.55 },
   { id: 'lockpick', qty: [1, 1], p: 0.15 }, { id: 'ration', qty: [1, 1], p: 0.15 },
+  { id: 'mug', qty: [1, 1], p: 0.15 }, { id: 'scooter_cell', qty: [1, 1], p: 0.08 }, { id: 'smart_ring', qty: [1, 1], p: 0.08 }, { id: 'kombucha', qty: [1, 1], p: 0.1 },
 ];
 
 /** A handful of each calibre (one `ammo` roll). */
-export const AMMO_HANDFUL: Record<'ammo38' | 'shells' | 'ammo3030', [number, number]> = {
+export const AMMO_HANDFUL: Record<'ammo38' | 'shells' | 'ammo3030' | 'ammo22', [number, number]> = {
   ammo38: [6, 12],
   shells: [3, 6],
   ammo3030: [4, 8],
+  ammo22: [10, 20],
 };
 
 /** Which gun eats which calibre (found ammo favours guns you carry). */
-export const AMMO_FOR: Record<'ammo38' | 'shells' | 'ammo3030', string> = { ammo38: 'revolver', shells: 'shotgun', ammo3030: 'rifle' };
+export const AMMO_FOR: Record<'ammo38' | 'shells' | 'ammo3030' | 'ammo22', string> = { ammo38: 'revolver', shells: 'shotgun', ammo3030: 'rifle', ammo22: 'pistol22' };
 
 /** Play-time seconds before a looted stash has something in it again. */
 export const RESTOCK_S = 35 * 60;

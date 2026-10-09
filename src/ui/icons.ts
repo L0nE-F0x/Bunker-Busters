@@ -26,6 +26,27 @@ export const ICONS: Record<string, string> = {
   antivenom: S('<rect x="12" y="16" width="24" height="20" rx="3"/><path d="M18 16 v-4 h12 v4"/><path d="M19 26 c3 -4 7 4 10 0" stroke="#5dff9a"/>', '#5dff9a'),
   spike: S('<rect x="10" y="18" width="18" height="14" rx="2"/><path d="M28 22 h8 l6 3 l-6 3 h-8"/><path d="M14 18 v-5 M20 18 v-5 M24 18 v-5"/><path d="M17 23 l-2 4 h4 l-2 4" stroke="#7fe8ff"/>', '#3ff2e0'),
   badge: S('<rect x="14" y="16" width="20" height="24" rx="2"/><path d="M20 16 l4 -8 l4 8"/><circle cx="24" cy="25" r="4"/><path d="M18 34 h12"/>', '#ffb347'),
+  // --- overnight swarm 2: the Hush, thrown fire, gear, and the salvage ---
+  pistol22: S('<path d="M2 20 h14 v6 h-14z"/><path d="M5 20 v6 M9 20 v6"/><path d="M16 19 h18 v6 h-18"/><path d="M22 25 l-3 13 h7 l3 -10 h5 v-3"/><path d="M27 28 c1 3 4 3 5 1"/><path d="M31 17 h3 v2"/>', '#ff8a5a'),
+  ammo22: S('<path d="M12 18 v20 h5 v-20 c0 -4 -5 -4 -5 0z"/><path d="M21.5 18 v20 h5 v-20 c0 -4 -5 -4 -5 0z"/><path d="M31 18 v20 h5 v-20 c0 -4 -5 -4 -5 0z"/><path d="M11 34 h26"/>', '#ffd27a'),
+  molotov: S('<path d="M18 20 h12 v20 a2 2 0 0 1 -2 2 h-8 a2 2 0 0 1 -2 -2z"/><path d="M21 20 v-6 h6 v6"/><path d="M22 14 c-1 -3 2 -4 1 -7"/><path d="M26 14 c2 -2 0 -4 2 -6"/><path d="M18 28 h12"/><path d="M24 4 c3 3 4 6 0 9 c-4 -3 -3 -6 0 -9z" stroke="#ffd27a"/>', '#ff8a5a'),
+  binoculars: S('<rect x="8" y="16" width="12" height="22" rx="4"/><rect x="28" y="16" width="12" height="22" rx="4"/><path d="M20 22 h8 M20 28 h8"/><path d="M10 16 v-5 h8 v5 M30 16 v-5 h8 v5"/><circle cx="14" cy="32" r="3"/><circle cx="34" cy="32" r="3"/>', '#3ff2e0'),
+  vest: S('<path d="M15 8 l5 4 h8 l5 -4 l7 6 v26 h-32 v-26z"/><path d="M14 22 h20 v10 h-20z"/><path d="M20 12 v10 M28 12 v10"/><path d="M18 36 h4 M26 36 h4"/>', '#3ff2e0'),
+  bandage: S('<path d="M10 30 l18 -18 a5 5 0 0 1 8 8 l-18 18 a5 5 0 0 1 -8 -8z"/><path d="M19 21 l8 8"/><circle cx="21" cy="27" r="1"/><circle cx="25" cy="23" r="1"/><circle cx="27" cy="27" r="1"/>', '#5dff9a'),
+  canteen: S('<circle cx="24" cy="28" r="13"/><path d="M21 15 v-5 h6 v5"/><path d="M19 8 h10"/><path d="M14 24 c6 -3 14 3 20 0"/>', '#3ff2e0'),
+  ring: S('<circle cx="24" cy="26" r="12"/><circle cx="24" cy="26" r="8"/><path d="M20 14 h8" stroke="#7fe8ff"/>', '#ffb347'),
+  visor: S('<path d="M6 18 h36 v12 c0 4 -4 6 -8 6 h-4 l-4 -5 l-4 5 h-4 c-4 0 -8 -2 -8 -6z"/><path d="M6 22 c-3 0 -3 6 0 6 M42 22 c3 0 3 6 0 6"/><path d="M14 12 h20" />', '#ffb347'),
+  mug: S('<path d="M12 12 h20 v24 a4 4 0 0 1 -4 4 h-12 a4 4 0 0 1 -4 -4z"/><path d="M32 18 h4 a4 4 0 0 1 0 12 h-4"/><path d="M16 20 h12"/>', '#ffb347'),
+  plate: S('<rect x="10" y="10" width="28" height="30" rx="2"/><path d="M15 16 h6 M24 16 h8 M15 22 h8 M26 22 h6 M15 28 h5 M23 28 h9 M15 34 h7 M25 34 h6"/>', '#ffb347'),
+  kombucha: S('<path d="M18 8 h12 v6 l4 4 v20 a3 3 0 0 1 -3 3 h-14 a3 3 0 0 1 -3 -3 v-20 l4 -4z"/><path d="M14 26 c4 2 6 -2 10 0 s6 2 10 0"/><circle cx="20" cy="33" r="1.5"/><circle cx="27" cy="35" r="1"/>', '#5dff9a'),
+  bottle: S('<path d="M17 18 h14 v22 a2 2 0 0 1 -2 2 h-10 a2 2 0 0 1 -2 -2z"/><path d="M21 18 v-10 h6 v10"/><path d="M20 6 h8"/><path d="M17 26 h14 v8 h-14"/>', '#ffb347'),
+  padlock: S('<rect x="12" y="22" width="24" height="18" rx="3"/><path d="M17 22 v-6 a7 7 0 0 1 14 0 v6"/><rect x="20" y="27" width="8" height="8" rx="1" stroke="#7fe8ff"/>', '#ffb347'),
+  asic: S('<rect x="8" y="12" width="32" height="24" rx="2"/><circle cx="17" cy="24" r="6"/><circle cx="31" cy="24" r="6"/><path d="M17 18 v12 M11 24 h12 M31 18 v12 M25 24 h12"/><path d="M12 40 h24"/>', '#ffb347'),
+  pills: S('<rect x="14" y="14" width="20" height="26" rx="3"/><path d="M14 20 h20"/><path d="M16 8 h16 v6 h-16z"/><path d="M20 28 l8 4" stroke-width="5"/>', '#5dff9a'),
+  smartbottle: S('<path d="M18 12 h12 v28 a2 2 0 0 1 -2 2 h-8 a2 2 0 0 1 -2 -2z"/><path d="M20 12 v-4 h8 v4"/><path d="M22 20 v14" stroke="#7fe8ff"/><path d="M26 22 v12" stroke="#7fe8ff"/>', '#ffb347'),
+  scootercell: S('<rect x="8" y="16" width="32" height="18" rx="3"/><path d="M14 16 v-4 h6 v4 M28 16 v-4 h6 v4"/><path d="M25 20 l-4 6 h5 l-4 6"/>', '#ffb347'),
+  fleece: S('<path d="M15 8 l5 3 h8 l5 -3 l5 8 l-3 4 v20 h-22 v-20 l-3 -4z"/><path d="M24 11 v29"/><path d="M28 18 h5"/>', '#ffb347'),
+  gpu: S('<rect x="6" y="14" width="34" height="20" rx="2"/><circle cx="17" cy="24" r="6"/><circle cx="31" cy="24" r="6"/><path d="M40 18 h3 v12 h-3"/><path d="M10 34 v4 M16 34 v4 M22 34 v4 M28 34 v4"/>', '#ffb347'),
 };
 
 export const EYE_ICON = `<svg viewBox="0 0 64 40" fill="none" stroke="currentColor" stroke-width="3"><path d="M4 20 C14 4 50 4 60 20 C50 36 14 36 4 20 Z"/><circle cx="32" cy="20" r="8" fill="currentColor"/></svg>`;

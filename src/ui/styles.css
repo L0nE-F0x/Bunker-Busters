@@ -858,3 +858,57 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #000; color:
   .keypad .hint { margin-top: 6px; }
   .keypad .leave { margin-top: 10px; text-align: center; }
 }
+
+/* ---------- gear: binoculars, tags (overnight swarm 2) ---------- */
+.binos { position: fixed; inset: 0; opacity: 0; visibility: hidden; transition: opacity 0.18s ease, visibility 0s linear 0.18s; pointer-events: none; }
+.binos.on { opacity: 1; visibility: visible; transition: opacity 0.18s ease; }
+.binos svg.mask { position: absolute; inset: 0; width: 100%; height: 100%; }
+.binos-reticle { position: absolute; left: 50%; top: 50%; width: 0; height: 0; }
+.binos-reticle i { position: absolute; background: rgba(243, 233, 216, 0.55); }
+.binos-reticle .h { left: -60px; width: 120px; top: 0; height: 1px; }
+.binos-reticle .v { top: -14px; height: 54px; left: 0; width: 1px; }
+.binos-reticle b { position: absolute; left: -9px; width: 18px; height: 1px; background: rgba(243, 233, 216, 0.45); }
+.binos-reticle .t1 { top: 14px; } .binos-reticle .t2 { top: 26px; left: -6px; width: 12px; } .binos-reticle .t3 { top: 38px; left: -4px; width: 8px; }
+.binos-read { position: absolute; left: 50%; top: calc(50% + 70px); transform: translateX(-50%); display: flex; gap: 22px; font-family: var(--mono); font-size: 13px; letter-spacing: 0.12em; color: var(--ink); }
+.binos-read .tagged { color: #ff7a6a; }
+.binos-label { position: absolute; left: 50%; bottom: 9vh; transform: translateX(-50%); font-size: 11px; letter-spacing: 0.24em; color: var(--ink-faint); display: flex; gap: 8px; align-items: center; white-space: nowrap; }
+.binos-label .kbd { min-width: 20px; height: 20px; font-size: 11px; }
+.tagmarks { position: fixed; inset: 0; pointer-events: none; overflow: hidden; }
+.tagmark { position: absolute; left: 0; top: 0; will-change: transform; }
+.tagmark i { position: absolute; left: -6px; top: -6px; width: 12px; height: 12px; border: 2px solid #ff4a3a; transform: rotate(45deg); background: rgba(255, 74, 58, 0.18); }
+.tagmark span { position: absolute; left: -20px; top: 10px; width: 40px; text-align: center; font-family: var(--mono); font-size: 11px; font-weight: 600; color: #ffb0a6; text-shadow: 0 1px 2px #000; }
+.panel.info .gear-status { font-family: var(--mono); font-size: 12px; letter-spacing: 0.08em; color: var(--teal); margin: 6px 0; }
+.recipe-group { margin-top: 14px; padding-top: 4px; color: var(--ink-faint); }
+.recipe-group:first-child { margin-top: 0; }
+.cell.cat-weapon { box-shadow: inset 0 -2px 0 rgba(255,138,90,0.55); }
+.cell.cat-ammo { box-shadow: inset 0 -2px 0 rgba(255,210,122,0.5); }
+
+/* ---------- the Till (ui/Trader.ts) ---------- */
+.till-panel { width: min(1040px, 95vw); max-height: 92vh; display: flex; flex-direction: column; overflow: hidden; }
+.till-body { display: flex; flex-direction: column; gap: 12px; }
+.till-note { margin: 0; color: var(--ink-dim); font-size: 14px; line-height: 1.5; font-style: italic; min-height: 1.5em; }
+.till-slate { display: flex; align-items: baseline; gap: 14px; padding: 10px 14px; border: 1px solid var(--line); background: rgba(0,0,0,0.3); }
+.till-slate b { font-family: var(--mono); font-size: 26px; color: var(--amber); min-width: 3ch; }
+.till-slate small { color: var(--ink-faint); font-size: 12px; }
+.till-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; min-height: 0; }
+.till-col { display: flex; flex-direction: column; min-height: 0; }
+.till-list { display: flex; flex-direction: column; gap: 4px; margin-top: 8px; max-height: 46vh; overflow-y: auto; padding-right: 4px; }
+.till-row { display: grid; grid-template-columns: 34px 1fr auto; gap: 10px; align-items: center; padding: 5px 6px; border-top: 1px solid rgba(255,255,255,0.06); }
+.till-row:hover { background: rgba(255,179,71,0.05); }
+.till-row .ic svg { width: 30px; height: 30px; display: block; }
+.till-row .nm b { display: block; font-size: 14px; font-weight: 600; }
+.till-row .nm small { color: var(--ink-faint); font-family: var(--mono); font-size: 11px; }
+.till-row .bt { display: flex; gap: 6px; }
+.till-row .btn { font-size: 12px; padding: 7px 11px; letter-spacing: 0.08em; white-space: nowrap; }
+.till-row.cat-weapon .nm b { color: #ffb39a; }
+.till-row.cat-tool .nm b { color: #9ff7ee; }
+.till-extra { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.till-extra .btn { font-size: 12px; padding: 8px 12px; }
+.till-desc { margin: 0; min-height: 3em; color: var(--ink-dim); font-size: 13px; line-height: 1.45; border-top: 1px solid var(--line); padding-top: 10px; }
+.till-panel footer .over { color: #ff8d7a; }
+.till-panel .empty { color: var(--ink-faint); font-size: 13px; }
+@media (max-width: 760px) {
+  .till-cols { grid-template-columns: 1fr; }
+  .till-list { max-height: 30vh; }
+  .till-row .btn { padding: 9px 10px; }
+}

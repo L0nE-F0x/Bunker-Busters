@@ -1,5 +1,5 @@
 import { isMobile } from '@/engine/device';
-import { ITEMS } from '@/content/items';
+import { ITEMS, restoreBlock } from '@/content/items';
 import { ARCHETYPES } from '@/content/archetypes';
 import { SKILLS, emptySkills, FOCUSES, CAPSTONES, SKILL_ORDER, FOCUS_RANK, CAPSTONE_RANK } from '@/content/skills';
 import { RECIPES, type Recipe } from '@/content/craft';
@@ -277,6 +277,8 @@ export class GameState {
   /** A real rest. Survival 5 is the only rank that puts you all the way back. */
   restAtFire() {
     this.data.rests++;
+    delete this.data.marks['gear.canteen']; // the camp's barrel fills the canteen
+
     const sv = this.skill('survival');
     if (sv >= 5) {
       this.data.health = MAX_HEALTH;
@@ -366,6 +368,14 @@ export class GameState {
     }
     for (const n of recipe.need) {
       if (this.count(n.id) < n.qty) return `Need ${n.qty}× ${ITEMS[n.id]?.name ?? n.id}.`;
+    }
+    if (recipe.restore) {
+      // gear upkeep (re-plating the vest): spend the parts, the piece is like new
+      const no = restoreBlock(this, recipe.restore);
+      if (no) return `${no}.`;
+      for (const n of recipe.need) this.removeItem(n.id, n.qty);
+      delete this.data.marks[`gear.${recipe.restore}`];
+      return null;
     }
     for (const n of recipe.need) this.removeItem(n.id, n.qty);
     const want = this.craftYield(recipe);

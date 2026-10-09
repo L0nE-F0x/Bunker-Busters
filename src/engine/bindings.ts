@@ -16,7 +16,8 @@ export type Action =
   | 'interact' | 'alt' | 'torch'
   | 'fire' | 'aim' | 'reload' | 'melee' | 'nextWeapon' | 'prevWeapon' | 'lastWeapon' | 'holster'
   | 'hotbar1' | 'hotbar2' | 'hotbar3' | 'hotbar4'
-  | 'kit' | 'skills' | 'journal' | 'map';
+  | 'kit' | 'skills' | 'journal' | 'map'
+  | 'binoculars' | 'throw';
 
 export interface ActionDef {
   id: Action;
@@ -50,6 +51,8 @@ export const ACTIONS: ActionDef[] = [
   { id: 'hotbar2', label: 'Ration', group: 'Items & menus', kb: ['Digit2'], pad: 'P15' },
   { id: 'hotbar3', label: 'Water', group: 'Items & menus', kb: ['Digit3'], pad: 'P13' },
   { id: 'hotbar4', label: 'Medkit', group: 'Items & menus', kb: ['Digit4'], pad: 'P14' },
+  { id: 'binoculars', label: 'Binoculars', group: 'Items & menus', kb: ['KeyB'], pad: '' },
+  { id: 'throw', label: 'Throw a molotov', group: 'Fight', kb: ['KeyG'], pad: '' },
   { id: 'kit', label: 'Kit', group: 'Items & menus', kb: ['Tab', 'KeyI'], pad: 'P8' },
   { id: 'skills', label: 'Skills', group: 'Items & menus', kb: ['KeyK'], pad: '' },
   { id: 'journal', label: 'Journal', group: 'Items & menus', kb: ['KeyJ'], pad: '' },

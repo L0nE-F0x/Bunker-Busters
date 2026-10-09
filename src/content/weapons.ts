@@ -3,7 +3,7 @@
  * Recovery contractor (100 hp) takes three body shots from the revolver, two to the head, and a wolf
  * (60 hp) two. Every gun is loud: `noise` is how far away the desert hears it.
  */
-export type WeaponId = 'crowbar' | 'revolver' | 'shotgun' | 'rifle';
+export type WeaponId = 'crowbar' | 'revolver' | 'shotgun' | 'rifle' | 'pistol22';
 
 export interface WeaponDef {
   id: WeaponId;
@@ -28,8 +28,12 @@ export interface WeaponDef {
   interval: number;
   /** View kick per shot: radians up, radians of random yaw, viewmodel punch 0..1. */
   recoil: { pitch: number; yaw: number; kick: number };
-  /** Reload: one round at a time (`per` s each, between `open` and `close`). */
+  /** Reload: one round at a time (`per` s each, between `open` and `close`). A `magFed` gun loads the
+   *  whole magazine in one `per` cycle (old one out, new one in, slide). */
   reload: { open: number; per: number; close: number };
+  magFed?: boolean;
+  /** Suppressed: its own quiet report, no muzzle flash worth the name. */
+  suppressed?: boolean;
   /** Field of view while aiming down the sights. */
   adsFov: number;
   /** Metres. Anything with ears inside this radius hears the shot. */
@@ -66,10 +70,18 @@ export const WEAPONS: Record<WeaponId, WeaponDef> = {
     recoil: { pitch: 0.075, yaw: 0.014, kick: 0.85 }, reload: { open: 0.3, per: 0.48, close: 0.36 }, adsFov: 34,
     noise: 220, headMult: 2.0, draw: 0.55, short: '30-30',
   },
+  // The stealth gun: a heard-at-18-m report instead of 140, a weak round (four to the body, two to the
+  // head), quick follow-ups, a ten-round magazine swapped whole.
+  pistol22: {
+    id: 'pistol22', name: 'Hush .22', item: 'pistol22', kind: 'gun', ammo: 'ammo22', mag: 10,
+    damage: 21, pellets: 1, hipSpread: 0.018, adsSpread: 0.003, range: 18, maxRange: 55, interval: 0.2,
+    recoil: { pitch: 0.018, yaw: 0.006, kick: 0.2 }, reload: { open: 0.42, per: 0.62, close: 0.34 }, adsFov: 54,
+    noise: 18, headMult: 2.6, draw: 0.32, short: '.22', magFed: true, suppressed: true,
+  },
 };
 
 /** Cycle order for the mouse wheel / Q. */
-export const WEAPON_ORDER: WeaponId[] = ['crowbar', 'revolver', 'shotgun', 'rifle'];
+export const WEAPON_ORDER: WeaponId[] = ['crowbar', 'pistol22', 'revolver', 'shotgun', 'rifle'];
 
 /** Damage at distance `d` for weapon `w` (per hit). */
 export function falloff(w: WeaponDef, d: number) {

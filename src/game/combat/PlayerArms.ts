@@ -46,6 +46,10 @@ export class PlayerArms {
   private fireBuffer = 0;
   private autoReloadT = -1;
   private meleeCd = 0;
+  /** The last reload started on an empty gun (the pistol's slide is locked back: release it). */
+  private wasEmpty = false;
+  /** Gear hook: 0..1 scale on recoil (Founder Focus steadies the hands). */
+  steadyK: (() => number) | null = null;
   /** Set each frame: a takedown is available on this target. */
   takedownTarget: Hostile | null = null;
   ads = 0;
@@ -235,7 +239,7 @@ export class PlayerArms {
     let target: Hostile | null = null;
     for (let i = 0; i < w.pellets; i++) {
       const dir = jitter(_fwd, i === 0 && w.pellets > 1 ? spread * 0.3 : spread, _dir);
-      const r = this.combat.playerRound(eye, dir, muzzle, id, dmgFn, w.maxRange, w.pellets === 1 || i < 3);
+      const r = this.combat.playerRound(eye, dir, muzzle, id, dmgFn, w.maxRange, !w.suppressed && (w.pellets === 1 || i < 3));
       if (r) {
         const k = r.killed ? 'kill' : r.zone === 'head' ? 'head' : 'hit';
         if (!best || rank(k) > rank(best)) { best = k; target = r.h; }
@@ -246,19 +250,21 @@ export class PlayerArms {
       if (best === 'kill' && deadeye && w.ammo && this.mag(id) < w.mag) this.setMag(id, this.mag(id) + 1);
     }
     // feel: kick, flash, sound, smoke
-    const recoilK = (fa >= 4 ? 0.5 : 1 - fa * 0.06) * (1 - ads * 0.3) * (this.player.crouching ? 0.85 : 1);
+    const recoilK = (fa >= 4 ? 0.5 : 1 - fa * 0.06) * (1 - ads * 0.3) * (this.player.crouching ? 0.85 : 1) * (this.steadyK?.() ?? 1);
     this.hands.arms.fire(recoilK);
     // a controller kicks with the gun (stronger for the heavy ones)
     this.input.rumble(Math.min(1, w.recoil.pitch * 6) * recoilK, 0.45 * recoilK, 70);
     this.pendingKick += w.recoil.pitch * recoilK * (0.85 + Math.random() * 0.3);
     this.pendingYaw += (Math.random() - 0.5) * 2 * w.recoil.yaw * recoilK;
     this.cam.addTrauma(w.recoil.kick * 0.18 * recoilK);
-    this.combat.playerFlash(muzzle, w.id === 'shotgun' ? 1.4 : 1);
-    this.combat.debris.emit('smoke', muzzle, 2, _fwd.clone().multiplyScalar(1.5), 0.3, 0.1, undefined, 0.5);
-    this.audio.combat?.gunshot(id as 'revolver' | 'shotgun' | 'rifle');
+    this.combat.playerFlash(muzzle, w.id === 'shotgun' ? 1.4 : w.suppressed ? 0.1 : 1);
+    this.combat.debris.emit('smoke', muzzle, w.suppressed ? 1 : 2, _fwd.clone().multiplyScalar(1.5), 0.3, w.suppressed ? 0.05 : 0.1, undefined, 0.5);
+    if (w.suppressed) this.audio.combat?.suppressedShot();
+    else this.audio.combat?.gunshot(id as 'revolver' | 'shotgun' | 'rifle');
+    if (w.magFed) { this.eject(0); if (this.mag(id) === 0) this.hands.arms.slideLock(true); }
     if (id === 'shotgun') setTimeout(() => { this.audio.combat?.foley('pumpBack'); this.eject(1); setTimeout(() => this.audio.combat?.foley('pumpFwd'), 170); }, 230);
     if (id === 'rifle') setTimeout(() => { this.audio.combat?.foley('leverOpen'); this.eject(0); setTimeout(() => this.audio.combat?.foley('leverClose'), 210); }, 190);
-    if (id !== 'revolver') this.audio.combat?.foley('casing', 0.8);
+    if (id !== 'revolver') this.audio.combat?.foley('casing', w.suppressed ? 0.5 : 0.8);
     this.combat.noise(this.player.position, w.noise, 'gunshot');
     if (this.mag(id) === 0 && this.reserve(id) > 0) this.autoReloadT = w.interval + 0.15;
   }
@@ -366,7 +372,7 @@ export class PlayerArms {
   // ------------------------------------------------------------------ reloading
 
   private reloadSpeed() {
-    let k = 1;
+    let k = this.steadyK ? 0.6 + 0.4 * this.steadyK() : 1;
     if (this.state.skill('firearms') >= 2) k *= 0.8;
     if (this.state.focus('firearms') === 'quickdraw') k *= 0.8;
     return k;
@@ -383,12 +389,14 @@ export class PlayerArms {
     }
     this.autoReloadT = -1;
     const k = this.reloadSpeed();
+    if (w.magFed && this.mag(w.id) > 0) this.hands.arms.slideLock(false);
     // the revolver's empties drop out of the open cylinder
     const spent = w.id === 'revolver' ? w.mag - this.mag(w.id) : 0;
     if (spent > 0) setTimeout(() => { for (let i = 0; i < spent; i++) this.eject(0, true); this.audio.combat?.foley('casing', 0.7); }, w.reload.open * k * 700);
     this.reload = { phase: 'open', t: 0, dur: w.reload.open * k, stop: false };
     this.hands.arms.reloadOpen(w.reload.open * k);
-    this.audio.combat?.foley(w.id === 'revolver' ? 'cylOpen' : w.id === 'rifle' ? 'gate' : 'shell', 0.6);
+    this.audio.combat?.foley(w.magFed ? 'magOut' : w.id === 'revolver' ? 'cylOpen' : w.id === 'rifle' ? 'gate' : 'shell', 0.6);
+    this.wasEmpty = this.mag(w.id) === 0;
   }
 
   private reloadTick(dt: number, paused: boolean) {
@@ -400,7 +408,15 @@ export class PlayerArms {
     if (r.t < r.dur) return;
     const k = this.reloadSpeed();
     if (r.phase === 'open' || r.phase === 'load') {
-      if (r.phase === 'load') {
+      if (r.phase === 'load' && w.magFed) {
+        // a fresh magazine: top it up from the reserve in one go
+        const n = Math.min(w.mag - this.mag(w.id), this.reserve(w.id));
+        if (n > 0 && this.state.removeItem(w.ammo!, n)) {
+          this.setMag(w.id, this.mag(w.id) + n);
+          this.audio.combat?.foley('magIn');
+        }
+        r.stop = true;
+      } else if (r.phase === 'load') {
         // the round goes in at the end of the cycle
         if (this.state.removeItem(w.ammo!, 1)) {
           this.setMag(w.id, this.mag(w.id) + 1);
@@ -414,7 +430,8 @@ export class PlayerArms {
       } else {
         this.reload = { phase: 'close', t: 0, dur: w.reload.close * k, stop: false };
         this.hands.arms.reloadClose(w.reload.close * k);
-        this.audio.combat?.foley(w.id === 'revolver' ? 'cylClose' : w.id === 'shotgun' ? 'pumpFwd' : 'leverClose', 0.8);
+        if (w.magFed) { if (this.wasEmpty) this.audio.combat?.foley('slide', 0.8); }
+        else this.audio.combat?.foley(w.id === 'revolver' ? 'cylClose' : w.id === 'shotgun' ? 'pumpFwd' : 'leverClose', 0.8);
       }
     } else {
       this.reload = null;

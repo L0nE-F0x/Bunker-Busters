@@ -1,0 +1,73 @@
+import { ITEMS } from './items';
+
+/**
+ * Inez Quill's Till, Dry Creek: the one shop in the valley. Barter on her slate: what you sell goes
+ * on it at her offer, what you buy comes off it at her price. The slate, the day's stock and what's
+ * left of it live in `data.marks` (`till.*`), so saves need nothing new. Stock turns over at midnight.
+ */
+
+export interface TillLine { id: string; qty: [number, number]; p: number }
+
+/** Always on the shelf (in some quantity), then the day's luck. */
+export const TILL_STOCK: TillLine[] = [
+  { id: 'water', qty: [3, 6], p: 1 },
+  { id: 'ration', qty: [2, 4], p: 1 },
+  { id: 'ammo38', qty: [12, 24], p: 1 },
+  { id: 'ammo22', qty: [20, 50], p: 1 },
+  { id: 'bandage', qty: [2, 5], p: 1 },
+  { id: 'lockpick', qty: [3, 6], p: 1 },
+  { id: 'shells', qty: [5, 10], p: 0.8 },
+  { id: 'ammo3030', qty: [6, 14], p: 0.7 },
+  { id: 'medkit', qty: [1, 2], p: 0.6 },
+  { id: 'antivenom', qty: [1, 2], p: 0.6 },
+  { id: 'battery', qty: [1, 3], p: 0.6 },
+  { id: 'molotov', qty: [1, 3], p: 0.5 },
+  { id: 'nootropics', qty: [1, 3], p: 0.45 },
+  { id: 'kombucha', qty: [2, 4], p: 0.45 },
+  { id: 'canteen', qty: [1, 1], p: 0.4 },
+  { id: 'spike', qty: [1, 2], p: 0.35 },
+  { id: 'binoculars', qty: [1, 1], p: 0.35 },
+  { id: 'pistol22', qty: [1, 1], p: 0.3 },
+  { id: 'vest', qty: [1, 1], p: 0.25 },
+  { id: 'seed_plate', qty: [1, 2], p: 0.3 },
+  { id: 'emp', qty: [1, 1], p: 0.15 },
+];
+
+/** What she says when you walk up, by mood. */
+export const TILL_LINES = {
+  stranger: 'Browse. Don\'t palm. Prices are for people I don\'t know yet. Everyone starts as people I don\'t know yet.',
+  owner: 'My Till, my slate, my pencil. You get the good number. Don\'t make me regret the pencil.',
+  town: 'Town prices. The town voted. I counted the votes. Funny how that works.',
+};
+
+/** Things she won't take: the town's own paper, your story, and anything nobody could price. */
+export function sellable(id: string) {
+  const d = ITEMS[id];
+  return !!d && d.value > 0 && d.category !== 'intel' && id !== 'sol_roll' && id !== 'deed';
+}
+
+/** Her offer for one, as a share of `value` (she likes cards that agree with people). */
+export function sellPrice(id: string, k: number) {
+  const d = ITEMS[id];
+  if (!d) return 0;
+  const special = id === 'gpu' ? 1.5 : d.category === 'ammo' ? 0.6 : 1;
+  return Math.max(d.value >= 1 ? 1 : 0, Math.floor(d.value * k * special));
+}
+
+/** Her price for one. */
+export function buyPrice(id: string, k: number) {
+  const d = ITEMS[id];
+  return d ? Math.max(1, Math.ceil(d.value * k)) : 0;
+}
+
+/** Deterministic day stock: a small seeded roll (same day, same shelf, however often you look). */
+export function rollStock(day: number): { id: string; qty: number }[] {
+  let x = (day * 2654435761 + 1013904223) >>> 0;
+  const rnd = () => { x ^= x << 13; x >>>= 0; x ^= x >>> 17; x ^= x << 5; x >>>= 0; return x / 4294967296; };
+  const out: { id: string; qty: number }[] = [];
+  for (const l of TILL_STOCK) {
+    if (rnd() > l.p) continue;
+    out.push({ id: l.id, qty: l.qty[0] + Math.floor(rnd() * (l.qty[1] - l.qty[0] + 1)) });
+  }
+  return out;
+}
