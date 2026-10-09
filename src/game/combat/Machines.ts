@@ -364,13 +364,15 @@ class Hornet implements Hostile {
     this.body.add(parts);
     const rotorMat = new THREE.MeshBasicNodeMaterial({ transparent: true, depthWrite: false, side: THREE.DoubleSide });
     const spin = this.spin;
-    rotorMat.colorNode = vec3(0.06, 0.06, 0.07);
+    // (colour and blade speed as uniforms: SeedBot's rotors share this program)
+    rotorMat.colorNode = uniform(new THREE.Color(0.06, 0.06, 0.07));
+    const bladeK = uniform(90);
     rotorMat.opacityNode = Fn(() => {
       const p = uv().sub(0.5).mul(2);
       const r = length(p);
       const a = atan(p.y, p.x);
       const dir = sign(positionLocal.x.mul(positionLocal.z));
-      const blades = smoothstep(0.6, 1.0, sin(a.mul(2).add(time.mul(spin).mul(90).mul(dir))).abs()).mul(0.5).add(0.18);
+      const blades = smoothstep(0.6, 1.0, sin(a.mul(2).add(time.mul(spin).mul(bladeK).mul(dir))).abs()).mul(0.5).add(0.18);
       return blades.mul(smoothstep(1.0, 0.92, r)).mul(smoothstep(0.08, 0.15, r)).mul(float(0.35).add(spin.mul(0.65)));
     })();
     const discs = [[0.38, 0.32], [-0.38, 0.32], [0.38, -0.32], [-0.38, -0.32]].map(([x, z]) => new THREE.CircleGeometry(0.2, 18).rotateX(-Math.PI / 2).translate(x, 0.08, z));

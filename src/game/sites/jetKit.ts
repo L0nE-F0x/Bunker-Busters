@@ -509,7 +509,8 @@ export function glowDecalMat() {
     polygonOffset: true, polygonOffsetFactor: -3, polygonOffsetUnits: -6,
   });
   const t: N = texture(atlas().tex);
-  const k: N = float(0.18).add(uSiteNight.mul(0.82)).mul(uSiteFlicker);
+  // (levels as uniforms: placesArt's glow has this graph too, so the two share one program)
+  const k: N = uniform(0.18).add(uSiteNight.mul(uniform(0.82))).mul(uSiteFlicker);
   m.colorNode = t.rgb.mul(t.a).mul(k);
   m.opacityNode = float(1);
   _add = m;

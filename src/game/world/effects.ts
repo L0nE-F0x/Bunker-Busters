@@ -647,13 +647,16 @@ export function lightCone(length: number, radius: number, c: THREE.ColorRepresen
  * Channel 0 is always 1.
  */
 export class GlowSprites {
+  static readonly CHANNELS = 24;
   sprite!: THREE.Sprite;
   readonly channels: number[];
   private items: { p: THREE.Vector3; c: THREE.Color; size: number; ch: number }[] = [];
   private uCh: N;
 
   constructor(nChannels = 24) {
-    this.channels = new Array(nChannels).fill(1);
+    // every set gets the same array size, so all halos share one program (a size per set made a
+    // program each); callers still use only the channels they asked for
+    this.channels = new Array(Math.max(nChannels, GlowSprites.CHANNELS)).fill(1);
     this.uCh = uniformArray(this.channels, 'float');
   }
 
