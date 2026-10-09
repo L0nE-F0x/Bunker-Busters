@@ -69,6 +69,19 @@ export function laserMaterial() {
 
 // ------------------------------------------------------------------ sentry
 
+/** Debug: ?nomachlod keeps machines' tiny parts drawn at any distance (A/B). */
+const NO_MACH_LOD = typeof location !== 'undefined' && new URLSearchParams(location.search).has('nomachlod');
+/**
+ * Machines' tiny parts (LEDs, sensor eyes, rotor discs: 5-40 cm) are under a pixel past ~100 m
+ * and cost a draw each; hide them there (with a little hysteresis so they don't flicker at the line).
+ */
+function detailAt(parts: THREE.Object3D[], d: number) {
+  if (!parts.length) return;
+  const on = parts[0].visible;
+  const show = NO_MACH_LOD || (on ? d < 105 : d < 95);
+  if (show !== on) for (const p of parts) p.visible = show;
+}
+
 class Sentry implements Hostile {
   readonly kind = 'turret' as const;
   readonly surface = 'metal' as const;
@@ -92,6 +105,8 @@ class Sentry implements Hostile {
   private readonly lastSeen = new THREE.Vector3();
   private lineI = 0;
   readonly breaker: Interactable;
+  /** Tiny parts (status LED, sensor eye): sub-pixel past ~100 m, a draw each (Machines.update). */
+  readonly detail: THREE.Object3D[] = [];
 
   constructor(private host: MachineHost, readonly outpost: string, at: THREE.Vector3, readonly baseYaw: number) {
     this.yaw = baseYaw;
@@ -124,6 +139,7 @@ class Sentry implements Hostile {
     const eyeMesh = new THREE.Mesh(new THREE.CircleGeometry(0.055, 16), this.eye.material);
     eyeMesh.position.set(0, 0.03, 0.302);
     this.head.add(eyeMesh);
+    this.detail.push(eyeMesh, ...base.children.filter((o) => (o as THREE.Mesh).material === led));
     // the laser: a thin quad along +Z from the eye, length scaled each frame
     const lg = new THREE.PlaneGeometry(1, 0.02).translate(0.5, 0, 0).rotateY(-Math.PI / 2);
     this.laser = new THREE.Mesh(lg, laserMaterial());
@@ -330,6 +346,8 @@ class Hornet implements Hostile {
   hp = 55;
   readonly group = new THREE.Group();
   private body = new THREE.Group();
+  /** Tiny parts (eye, rotor discs): sub-pixel past ~100 m, a draw each (Machines.update). */
+  readonly detail: THREE.Object3D[] = [];
   private eye: ReturnType<typeof glow>;
   private cone: ReturnType<typeof lightCone>;
   private spin = uniform(1);
@@ -379,11 +397,13 @@ class Hornet implements Hostile {
     const rg = new THREE.BufferGeometry();
     const merged = mergeSimple(discs);
     rg.copy(merged);
-    this.body.add(new THREE.Mesh(rg, rotorMat));
+    const rotors = new THREE.Mesh(rg, rotorMat);
+    this.body.add(rotors);
     this.eye = glow('#ff3a2a', 6);
     const eye = new THREE.Mesh(new THREE.SphereGeometry(0.045, 10, 8), this.eye.material);
     eye.position.set(0, -0.05, 0.3);
     this.body.add(eye);
+    this.detail.push(eye, rotors);
     this.cone = lightCone(16, 4.2, '#ffd8c8', 0.25);
     this.cone.mesh.position.set(0, -0.08, 0.3);
     this.cone.mesh.quaternion.setFromUnitVectors(_a.set(0, -1, 0), _b.set(0, -0.6, 0.8).normalize());
@@ -784,7 +804,9 @@ export class Machines implements HostileProvider {
     for (const s of this.sentries) {
       const awake = this.host.awake(s.outpost);
       // a sentry is a small thing: past ~190 m it's a speck, and ~10 draws
-      s.group.visible = cam.distanceTo(s.center) < 190;
+      const d = cam.distanceTo(s.center);
+      s.group.visible = d < 190;
+      detailAt(s.detail, d);
       if (awake) s.update(dt);
     }
     for (const h of this.hornets) {
@@ -793,6 +815,7 @@ export class Machines implements HostileProvider {
       if (was && !awake) h.sleep();
       h.group.visible = awake || !h.alive;
       if (awake) h.update(dt);
+      detailAt(h.detail, cam.distanceTo(h.center));
     }
     for (const op of OUTPOSTS) this.awake.set(op.id, this.host.awake(op.id));
     // the field spans every mined outpost: only draw it when one is close
