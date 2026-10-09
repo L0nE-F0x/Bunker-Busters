@@ -1594,7 +1594,8 @@ export class Recovery implements HostileProvider {
     const T = this.host.combat.target;
     const diff = this.host.combat.diff;
     const g = m.gun;
-    const ready = m.canSee && !down && m.react <= 0 && m.fireT <= 0 && dist < g.range && T.alive && m.h.crouch < 0.5;
+    // (kneeling in the open is a firing position; ducked behind the tower's parapet isn't)
+    const ready = m.canSee && !down && m.react <= 0 && m.fireT <= 0 && dist < g.range && T.alive && !(m.perch && m.h.crouch > 0.5);
     if (ready) {
       const run = Math.hypot(T.velocity.x, T.velocity.z) > 4.5 ? 1.35 : 1;
       const dark = T.night > 0.5 && !T.torch ? 1.4 - 0.4 * T.light : 1;
