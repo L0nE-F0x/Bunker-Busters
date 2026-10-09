@@ -3,6 +3,20 @@
 Each `## vX.Y.Z` section becomes the GitHub release notes and the "what's new" list in the in-app
 update notice (the first few bullets). `scripts/release.sh` refuses to release a version without one.
 
+## v0.6.0
+- **Apex Vault is open.** Act II plays to the end: cross the salt flat in the far west to Vesper Kade's rocket hangar and get in through the hangar door, the airlock (her code is the launch clock), a vent on the hill, or past her intercom with the right words. Lasers, cameras, a Kade gatehouse, an ambush on the way out with her water, and a merch drone. Mara debriefs you at the fire and names the next door: the Panopticon
+- **Five new favours, fifteen things to read.** Piece together the founders' leaked #LIFEBOAT group chat, dig up Pip's time capsule at the ruined Kade Kids Academy, deal with the Glimpse camera watching the camp (and the man behind it), find the song Sol's wife played on the last day, and help Doc look for his sister in the Everafter line. The journal has a new Papers tab
+- **Three new places.** The Longshot, a Kade booster crashed in the south basin; Waitlist City, four thousand people still queued outside a bunker that never opened; Photon Park, a solar farm whose cleaning robots never stopped. Kade checkpoints on the highway, and more stashes to find
+- **People keep hours.** Dry Creek and the camp follow daily routines (the diner stays open late, Doc makes night calls, Hollis keeps watch, Pip sleeps), react to how Act I ended and what you've done since, and Dez's rumours on the band mark places on your map
+- **New gear.** The Hush .22, a suppressed pistol for quiet work; the molotov, with a throw arc to aim it; survey binoculars that tag contractors, cameras, tripwires and lasers; a plate carrier, bandages, a canteen and Founder Focus pills. Weapon mods at the fire (a 4× scope, a choke, a speedloader), 14 kinds of salvage and 13 new recipes
+- **Inez's Till.** Dry Creek has a shop: barter on her slate, and her stock changes every day
+- **Kade sends specialists.** Marksmen on overwatch towers (watch for the scope glint), armoured breachers who walk through your cover, grenadiers with smoke. Crews search where they lost you, find bodies, radio for help, rush you while you reload, keep out of fire, and sometimes surrender
+- **A livelier desert.** Vultures circle kills and land to feed, coyotes slink past at night, and ravens, jackrabbits and lizards scatter at gunshots
+- **A map worth opening.** A full-screen survey map with fog of war, quests you can track, and fast travel between camps you've found (it costs the time, food and water the walk would)
+- **Bigger skies.** Cumulus clouds that catch the sunset, cloud shadows rolling over the flats, a better night sky and moonlight, canyon tablelands on the horizon, backlit grass, leaves in the wind, a mirage on the road on hot afternoons. ColdStorage, the jet, the drive-in and the Spire are lit at night, and the far city's windows come on floor by floor
+- **Smoother in the desktop app.** The HUD no longer costs frame time in the Linux app (calm scenes went from about 45–50 to 56–60 fps on our test laptop), less work per frame, and faster loading
+- **Also:** aim assist on controllers, hints that name your own key bindings, and fixes (the jet's and the drive-in's glows were drawn in the wrong place, the Compliance Sentry's laser was a metre long, crews that ran away kept their outpost "active")
+
 ## v0.5.7
 - **People move like people.** Dry Creek's townsfolk and the camp's four no longer move in lockstep: everyone keeps their own tempo, drifts between several idles, chats with the others now and then, and turns to look at you one by one. Hollis and Dez stopped mirroring each other on their log
 - **Hands that face the right way.** No more wrists wrung like candy wrappers, borrowed animations put hands where they belong, Ren and Pip finally have mugs to drink from and Doc carries his clipboard. Inez rings up the till now and then instead of all the time
