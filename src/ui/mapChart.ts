@@ -1,5 +1,5 @@
 import type { Heightfield } from '@/game/world/Heightfield';
-import { HIGHWAY, SIDE_ROADS, CAVE_TRAIL } from '@/content/world';
+import { HIGHWAY, SIDE_ROADS, CAVE_TRAIL, SALT_FLAT } from '@/content/world';
 import { rasterChart, type ChartInput } from './chartRaster';
 
 /**
@@ -52,6 +52,35 @@ export function finishChart(px: Uint8ClampedArray, N: number, hf: Heightfield): 
   ctx.lineWidth = 1.6 * k;
   ctx.stroke();
   ctx.setLineDash([]);
+
+  // the salt: a pale crust with a soft shore, and its name in the lettering maps give water
+  {
+    const [sx, sy] = P(SALT_FLAT.x, SALT_FLAT.z);
+    const r0 = (SALT_FLAT.r / size) * N, r1 = ((SALT_FLAT.r + SALT_FLAT.falloff * 0.5) / size) * N;
+    const g = ctx.createRadialGradient(sx, sy, r0 * 0.2, sx, sy, r1);
+    g.addColorStop(0, 'rgba(214, 206, 186, 0.5)');
+    g.addColorStop(r0 / r1, 'rgba(200, 192, 172, 0.4)');
+    g.addColorStop(1, 'rgba(200, 192, 172, 0)');
+    ctx.fillStyle = g;
+    ctx.beginPath(); ctx.arc(sx, sy, r1, 0, Math.PI * 2); ctx.fill();
+    // polygon cracks in the crust
+    ctx.strokeStyle = 'rgba(120, 110, 92, 0.35)';
+    ctx.lineWidth = 0.8 * (N / 1024);
+    let seed = 7;
+    const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+    for (let n = 0; n < 26; n++) {
+      const a = rnd() * Math.PI * 2, d = Math.sqrt(rnd()) * r0 * 0.9;
+      let x = sx + Math.cos(a) * d, y = sy + Math.sin(a) * d;
+      ctx.beginPath(); ctx.moveTo(x, y);
+      for (let k = 0; k < 3; k++) { x += (rnd() - 0.5) * r0 * 0.35; y += (rnd() - 0.5) * r0 * 0.35; ctx.lineTo(x, y); }
+      ctx.stroke();
+    }
+    ctx.font = `italic 700 ${Math.round(13 * (N / 1024))}px "Chakra Petch", sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = 'rgba(58, 80, 92, 0.95)';
+    ctx.fillText('T H E   S A L T', sx, sy);
+  }
 
   // dirt tracks: a cream dash on a dark casing
   for (const tr of SIDE_ROADS) {
