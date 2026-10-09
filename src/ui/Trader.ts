@@ -99,7 +99,7 @@ export function openTill(host: TillHost, s: GameState, opts: TillOpts): Promise<
       const lists = panel.querySelectorAll<HTMLElement>('.till-list');
       const scroll = [...lists].map((l) => l.scrollTop);
       const shelf = tillShelf(s);
-      const pack = s.data.inventory.filter((it) => sellable(it.id));
+      const pack = s.data.inventory.filter((it) => sellable(it.id) && sellPrice(it.id, opts.offer) > 0);
       const slate = s.data.marks['till.slate'] ?? 0;
       const salvage = pack.filter((it) => ITEMS[it.id].category === 'loot');
       const salvageValue = salvage.reduce((v, it) => v + sellPrice(it.id, opts.offer) * it.qty, 0);

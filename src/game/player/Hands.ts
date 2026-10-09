@@ -649,9 +649,10 @@ function buildItems(look: HandLook) {
   const ragB = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.04, 0.004), ragM);
   ragB.position.set(0.012, 0.055, 0);
   ragB.rotation.z = -0.5;
-  const fl = glow('#ff9a3a', 7);
-  const flame = new THREE.Mesh(new THREE.ConeGeometry(0.016, 0.05, 8), fl.material);
-  flame.position.y = 0.09;
+  const fl = glow('#ff6a1a', 3);
+  // a teardrop of flame off the rag (a cone read as an arrowhead up close)
+  const flame = new THREE.Mesh(new THREE.SphereGeometry(0.0125, 12, 8).scale(1, 2.1, 1).translate(0, 0.012, 0), fl.material);
+  flame.position.set(0.004, 0.075, 0);
   bottle.add(shoulder, bBody, tag, neck, ragA, ragB, flame);
   mol.add(bottle);
   mol.rotation.set(-0.25, 0, 0.15);
@@ -926,7 +927,7 @@ export class Hands {
     const ring = this.items.emp.userData.ring as { value: number };
     ring.value = 4 + Math.sin(this.t * 18) * 2;
     const fl = this.items.molotov?.userData.flame as { value: number } | undefined;
-    if (fl) fl.value = 6 + Math.sin(this.t * 31) * 1.5 + Math.sin(this.t * 13) * 1.5;
+    if (fl) fl.value = 2.6 + Math.sin(this.t * 31) * 0.6 + Math.sin(this.t * 13) * 0.6;
     const lens = this.items.flashlight.userData.lens as { value: number };
     lens.value = this.flashlightOn ? 8 : 0.1;
     const lit = this.flashlightOn && (want.l === 'flashlight' || gunTorch);

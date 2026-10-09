@@ -51,7 +51,8 @@ export function sellPrice(id: string, k: number) {
   const d = ITEMS[id];
   if (!d) return 0;
   const special = id === 'gpu' ? 1.5 : d.category === 'ammo' ? 0.6 : 1;
-  return Math.max(d.value >= 1 ? 1 : 0, Math.floor(d.value * k * special));
+  // loose ammo goes for what it weighs (no floor of one: the camp loads .22 from scrap by the dozen)
+  return d.category === 'ammo' ? Math.floor(d.value * k * special) : Math.max(1, Math.floor(d.value * k * special));
 }
 
 /** Her price for one. */
