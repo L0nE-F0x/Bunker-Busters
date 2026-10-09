@@ -9,6 +9,7 @@ import type { Combat, Hostile, HurtKind } from '../combat/Combat';
 import type { Throwables } from '../combat/Throwables';
 import type { MapMarker } from '@/ui/Minimap';
 import { CANTEEN_SIPS, VEST_PLATES, canteenSips, vestPlates } from '@/content/items';
+import { actionKey } from '@/engine/bindings';
 
 /**
  * The tools that change how you play (overnight swarm 2), each wired into a system that already exists:
@@ -93,6 +94,17 @@ export class Gear {
   ) {
     this.dom = ensureDom(uiRoot);
     this.dom.binos.classList.remove('on');
+    this.dom.binos.querySelector('.binos-label .kbd')!.textContent = actionKey('binoculars');
+    // first pickups: say which key does what (the keys are rebindable, so ask the binds)
+    state.events.on('item', ({ id }) => {
+      const hint: Record<string, string> = {
+        binoculars: `Binoculars: ${actionKey('binoculars')} to raise them. Hold a hostile in the middle to tag it.`,
+        molotov: `Molotov: ${actionKey('throw')} to light and throw one.`,
+        vest: 'Plate carrier: worn while it\'s in your pack. It takes a share of every hit until the plates are spent.',
+        pistol22: 'The Hush .22: quiet enough that the desert mostly doesn\'t notice. Aim for heads.',
+      };
+      if (hint[id] && state.set(`tut.item.${id}`)) setTimeout(() => this.toast(hint[id], 'info'), 600);
+    });
   }
 
   /** Steady hands (Founder Focus): Hands' `steady` and PlayerArms' recoil/reload scale. */
@@ -233,8 +245,8 @@ export class Gear {
     }
     if (!blocked && input.actPressed('binoculars')) this.toggleBinos();
     if (!blocked && input.actPressed('throw')) this.throwMolotov();
-    // binoculars come down for anything urgent
-    if (this.viewing && (blocked || this.player.sprinting || !this.player.grounded || input.actPressed('fire') || input.actPressed('aim') || input.actPressed('interact') || !s.count('binoculars'))) {
+    // binoculars come down for anything urgent (a menu over them doesn't count: the Kit's Use raises them)
+    if (this.viewing && !blocked && (this.player.sprinting || !this.player.grounded || input.actPressed('fire') || input.actPressed('aim') || input.actPressed('interact') || !s.count('binoculars'))) {
       this.toggleBinos(false);
     }
     this.binoK += ((this.viewing ? 1 : 0) - this.binoK) * (1 - Math.exp(-dt * (this.viewing ? 9 : 14)));
@@ -243,7 +255,7 @@ export class Gear {
       this.cam.aimK = Math.max(this.cam.aimK, this.binoK);
     }
     this.dom.binos.classList.toggle('on', this.binoK > 0.5);
-    if (this.viewing && this.binoK > 0.85) this.scan(dt);
+    if (this.viewing && !blocked && this.binoK > 0.85) this.scan(dt);
     // expire tags
     for (const [h, until] of this.tags) if (!h.alive || until < this.t) this.tags.delete(h);
     this.markT -= dt;
