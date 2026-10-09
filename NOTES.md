@@ -1495,3 +1495,24 @@ Act II used to end on a locked step. Now it runs to the end: Vesper Kade's launc
   - The gatehouse crew has no specialists: the pool has one marksman slot and the Wellhead uses it; left as is.
   - New spoken lines (Mara Voss, Dez Marlow; re-voice): the six debrief pages' variants and the two later calls in `story.ts` (`apexDebrief`, `campRadio`).
 - **Not done / next:** Vesper has no face or body (she's a voice and a feed, which suits her). No desktop-app bench (headless draw calls are in line with the Garage). The SPLICE host could get an Apex-only daemon (hijack her feed). Tier 3 "The Panopticon" is only a name on the band.
+
+## 2026-10-10: one program per shape, not per instance (overnight swarm 2: perf, round 2)
+
+Pipelines had grown 213 → 244 overnight. Dumped every program's GLSL after boot and grouped the ones that differ only in numbers (`scratchpad/perf/progdump.mjs` + `families.py`): **45 of 242 pipelines were duplicates**, and nearly all of them came from one three.js habit. Three names every buffer node's uniform block after the node's id (`uniform NodeBuffer_217926 { mat4 buffer217926[33]; }`), so equal graphs with equally sized buffers each got their own GLSL: every glow-halo set, every rig with the same skeleton, every instanced batch of one size.
+
+**What changed:**
+- **`stableBufferNames` (renderer.ts, WebGL).** The block is named after its type and size per build (`NodeBuffer_vec4x24_0`), and the index only climbs when one program holds two alike. Binding points come from the bind group's order, not from the name, so a shared program still binds each material's own buffer. Three's "shared" buffer data is never actually stored (`getSharedDataFromNode` returns a fresh object), so every build makes its own binding and names can't leak between programs. `?nobufnames` A/Bs it.
+- **GlowSprites** pads its channel array to 24 for every set. The sizes 4/6/8/12/16/24 used to be one program each; callers still use only the channels they asked for.
+- **Literals → uniforms** where two materials were one graph:
+  - SeedBot's and the Hornet's rotor discs (colour, blade speed)
+  - the jet's glow decals and the places' LED glow (day/night levels)
+
+**Numbers (headless):**
+- Pipelines at boot 242 → 193; programs linked 254 → 204.
+- Through the tour, programs stay flat at 204: camp at night with the torch and spins, a storm with strikes, a fight with an explosion and rifle fire, a wolf pack, the Garage interior with spins, SeedBot's EMP, Dry Creek with spins. No console errors.
+- Screenshot A/B (`?nobufnames` vs on) at the camp at night (string-light halos, skinned townsfolk), Dry Creek, the Garage and a wolf pack, plus a close shot of contractors and wolves: same image (`scratchpad/perf/buf-*-ab.png`, `buf-skinned.png`).
+- Headless warm-up: within noise (6.8-7.9 s wall both ways). Chromium links in parallel, and the per-material node builds, which are unchanged, dominate there.
+- Desktop (serial links): about 20% fewer programs to compile, so a cold-cache first launch should shorten roughly in proportion. Not measured: no desktop runs while other agents were on the GPU.
+- Left: 2 families that genuinely differ in size (skeletons of 24 vs 27 bones; instanced batches of 160 vs 120). Making those match would mean padding the buffers.
+
+**Not done:** the Wellhead's draws seen from Dry Creek. Sentries are already hidden past 190 m (Machines.update), and Dry Creek is ~150 m from the outpost, so both sentries (~8 draws each: base, head, eye, LED, solar panel) and an awake Hornet still draw. Next step: hide their sub-pixel details (eye, LED, solar panel) past ~100 m, which is about 3 draws per sentry. That needs a night A/B, because bloom can make a lone emissive pixel visible.
