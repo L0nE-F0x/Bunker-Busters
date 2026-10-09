@@ -83,7 +83,12 @@ export class Apex extends Bunker<ApexBuilder> {
 
   /** The keypad takes whatever the clock says when you start typing. */
   protected override async runMethod(e: BunkerEntryDef, m: LockMethod) {
-    if (e.id === 'airlock' && m.kind === 'keypad') return super.runMethod(e, { ...m, code: this.clockDigits() });
+    if (e.id === 'airlock' && m.kind === 'keypad') {
+      // once you know how it works, the hint reads the clock for you (it's right there over the door)
+      const d = this.clockDigits();
+      const known = { when: [F.code], text: `The launch clock over the door reads T-${d.slice(0, 2)}:${d.slice(2)}. Hours and minutes. Type it before it ticks.` };
+      return super.runMethod(e, { ...m, code: d, hints: [known] });
+    }
     return super.runMethod(e, m);
   }
 
