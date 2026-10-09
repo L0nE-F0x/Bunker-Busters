@@ -63,6 +63,11 @@ export const LANDMARKS: LandmarkDef[] = [
     blurb: 'Kade\'s reusable rocket, reused once. It landed, in the sense that it is on the land.',
     flatten: { r: 34, falloff: 18 },
   },
+  {
+    id: 'waitlist', name: 'Waitlist City', kind: 'site', position: [312, 0, 300], rotation: -1.5708,
+    blurb: 'Four thousand people queued for a bunker that seats by appointment. The appointments never opened.',
+    flatten: { r: 42, falloff: 14 },
+  },
 ];
 
 /**

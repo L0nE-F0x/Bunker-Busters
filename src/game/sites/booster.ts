@@ -97,7 +97,7 @@ export class BoosterSite extends Site {
 
     // lights: the strobe on the interstage, the recorder's screen inside
     const sp = this.bpt(this.fore, 19.6, -0.15, R + 0.25);
-    this.kit.halos.add(this.frame.p(sp.x, sp.y, sp.z), '#dfeaff', 2.6, this.strobeCh, 3);
+    this.kit.halos.add(sp.clone().setY(sp.y + 0.1), '#dfeaff', 2.6, this.strobeCh, 3);
     this.strobeLight = new VirtualLight('#dfeaff', 0, 26, 2);
     this.strobeLight.position.copy(sp);
     this.strobeLight.parent = root;
@@ -116,9 +116,9 @@ export class BoosterSite extends Site {
     near.add(prints, glows);
     // the strobe still reads from the road at night
     this.farHalo = new GlowSprites(4);
-    this.farHalo.add(this.frame.p(sp.x, sp.y, sp.z), '#dfeaff', 3.2, 1, 3);
+    this.farHalo.add(sp.clone().setY(sp.y + 0.1), '#dfeaff', 3.2, 1, 3);
     farGroup.add(this.farHalo.build());
-    this.lod(near, farGroup, 24, 170);
+    this.lod(near, farGroup, 24, 145);
 
     this.buildInteractables();
     this.landmarks.audioSpots.push({ kind: 'wind-hollow', pos: this.frame.p(...this.bpt(this.fore, 19.0, 0, 0).toArray() as [number, number, number]) });
@@ -229,7 +229,7 @@ export class BoosterSite extends Site {
     for (let i = 0; i < 5; i++) {
       const a = 0.4 + i * 1.1;
       const p = this.bpt(this.aft, -18.0, a, R - 0.1);
-      k.nb.add(M.blanket, xf(new THREE.PlaneGeometry(0.7, 1.1, 1, 3).translate(0, -0.55, 0), mat4(p.x, p.y, p.z, 0.3 + r() * 0.4, Math.PI / 2 + (r() - 0.5), r() - 0.5)));
+      k.b.add(M.blanket, xf(new THREE.PlaneGeometry(0.7, 1.1, 1, 3).translate(0, -0.55, 0), mat4(p.x, p.y, p.z, 0.3 + r() * 0.4, Math.PI / 2 + (r() - 0.5), r() - 0.5)));
     }
     // the hypergolic line that still weeps a puff now and then
     this.vent.copy(this.bpt(this.aft, -16.4, 2.3, R + 0.1));
@@ -302,7 +302,7 @@ export class BoosterSite extends Site {
     this.spot('recorder', ins.x, 0, ins.z);
     this.recorderAt = at(0.3, 1.1, 0.4);
     // a cable loom from the rack up into the dome
-    k.nb.add(M.cableA, norm(new THREE.TubeGeometry(new THREE.CatmullRomCurve3([at(0, 1.25, -0.3), at(-0.2, 1.8, -0.1), at(-0.45, 2.2, 0.3)]), 8, 0.03, 4)));
+    k.b.add(M.cableA, norm(new THREE.TubeGeometry(new THREE.CatmullRomCurve3([at(0, 1.25, -0.3), at(-0.2, 1.8, -0.1), at(-0.45, 2.2, 0.3)]), 8, 0.03, 4)));
     // cable looms spilling out of the tear onto the sand
     for (let i = 0; i < 6; i++) {
       const a0 = 1.0 + r() * 0.6;
@@ -310,7 +310,7 @@ export class BoosterSite extends Site {
       const e = this.bpt(this.fore, 18.5 + r() * 2.5, a0 + 0.3, R + 1.2 + r());
       e.y = 0.05;
       const mid = s.clone().lerp(e, 0.5).add(v3(0, 0.5, 0));
-      k.nb.add(i % 2 ? M.cableA : M.cableB, norm(new THREE.TubeGeometry(new THREE.CatmullRomCurve3([s, mid, e]), 10, 0.025 + r() * 0.02, 4)));
+      k.b.add(i % 2 ? M.cableA : M.cableB, norm(new THREE.TubeGeometry(new THREE.CatmullRomCurve3([s, mid, e]), 10, 0.012 + r() * 0.012, 4)));
     }
   }
   private recorderAt = new THREE.Vector3();
@@ -387,7 +387,7 @@ export class BoosterSite extends Site {
       const y = k.ground(x, z);
       for (let j = 0; j < 4; j++) {
         const ta = r() * Math.PI * 2;
-        k.nb.add(M.char, norm(new THREE.CylinderGeometry(0.008, 0.02, 0.4 + r() * 0.4, 4).translate(0, 0.25, 0).rotateZ(0.5 + r() * 0.5).rotateY(ta).translate(x, y, z)));
+        k.b.add(M.char, norm(new THREE.CylinderGeometry(0.008, 0.02, 0.4 + r() * 0.4, 4).translate(0, 0.25, 0).rotateZ(0.5 + r() * 0.5).rotateY(ta).translate(x, y, z)));
       }
     }
     for (let i = 0; i < 9; i++) {
@@ -435,11 +435,11 @@ export class BoosterSite extends Site {
     }
     chute.computeVertexNormals();
     const cx = x - Math.cos(this.podYaw) * 4.4, cz = z + Math.sin(this.podYaw) * 4.4;
-    k.nb.add(M.chute, xf(chute, mat4(cx, k.ground(cx, cz), cz, 0, this.podYaw + 0.3)));
+    k.b.add(M.chute, xf(chute, mat4(cx, k.ground(cx, cz), cz, 0, this.podYaw + 0.3)));
     for (let i = 0; i < 4; i++) {
       const e = v3(cx + (i - 1.5) * 0.9, k.ground(cx, cz) + 0.1, cz + 1.4);
       const s = v3(-1.55, -0.2, (i - 1.5) * 0.15).applyMatrix4(base);
-      k.nb.add(M.cableB, norm(new THREE.TubeGeometry(new THREE.CatmullRomCurve3([s, s.clone().lerp(e, 0.5).setY(0.08), e]), 8, 0.008, 3)));
+      k.b.add(M.cableB, norm(new THREE.TubeGeometry(new THREE.CatmullRomCurve3([s, s.clone().lerp(e, 0.5).setY(0.08), e]), 8, 0.008, 3)));
     }
     k.ocol(base, 1.9, 0.85, 0.85);
     this.spot('pod', x + 2.4, 0, z + 1.2);
@@ -473,7 +473,7 @@ export class BoosterSite extends Site {
     this.copvAt = this.frame.p(-8, 0.4, 9);
     // a cable tray ripped off the raceway, coiled on the sand
     const s = v3(10, 0.05, -4.0), e = v3(15.5, 0.05, -5.6);
-    k.nb.add(M.cableA, norm(new THREE.TubeGeometry(new THREE.CatmullRomCurve3([s, v3(12, 0.25, -5.2), v3(13.5, 0.1, -4.2), e]), 18, 0.05, 5)));
+    k.b.add(M.cableA, norm(new THREE.TubeGeometry(new THREE.CatmullRomCurve3([s, v3(12, 0.25, -5.2), v3(13.5, 0.1, -4.2), e]), 18, 0.05, 5)));
     k.b.add(M.skinDark, xf(new THREE.BoxGeometry(3.2, 0.1, 0.32), mat4(12.2, 0.08, -5.3, 0, 0.35, 0.05)));
     this.cablesAt = this.frame.p(12.5, 0.4, -5.0);
     // rocks set by the dune and the nose, for the composition
@@ -504,11 +504,11 @@ export class BoosterSite extends Site {
       if (i === 4 || i === 13) {
         // broken: two tails, one on the sand and one flapping
         const t = a.clone().lerp(b, 0.35).setY(k.ground((a.x + b.x) / 2, (a.z + b.z) / 2) + 0.03);
-        k.nb.add(M.tape, tape(a, t, 0.1));
+        k.b.add(M.tape, tape(a, t, 0.1));
         continue;
       }
       if (i === 9) continue; // a stake pulled out entirely, tape gone
-      k.nb.add(M.tape, tape(a, b, 0.18 + r() * 0.12));
+      k.b.add(M.tape, tape(a, b, 0.18 + r() * 0.12));
     }
     // the claim sign facing the way you walk in (north, the Garage side)
     const sx = 4, sz = 2 + B + 0.8;
@@ -721,7 +721,7 @@ export class BoosterSite extends Site {
 type Mats = ReturnType<typeof mats>;
 function mats() {
   return {
-    skin: rustyMetal({ base: '#dedbd3', rust: 0.03, metalness: 0.25, roughness: 0.5 }),
+    skin: plainStandard('#dcd9d1', 0.5, 0.2),
     skinDark: rustyMetal({ base: '#8f8c86', rust: 0.25, metalness: 0.5, roughness: 0.5 }),
     heat: rustyMetal({ base: '#2c2a28', rust: 0.15, metalness: 0.3, roughness: 0.75 }),
     heatDark: rustyMetal({ base: '#1e1d1c', rust: 0.1, metalness: 0.5, roughness: 0.6 }),
@@ -731,7 +731,7 @@ function mats() {
     carbon: plainStandard('#202124', 0.55, 0.1),
     fin: rustyMetal({ base: '#57544f', rust: 0.2, metalness: 0.85, roughness: 0.42 }),
     blanket: plainStandard('#c9b98a', 0.55, 0.6),
-    pod: rustyMetal({ base: '#e2ded4', rust: 0.02, metalness: 0.2, roughness: 0.55 }),
+    pod: plainStandard('#e2ded4', 0.55, 0.1),
     podDark: plainStandard('#2e3136', 0.6, 0.2),
     band: plainStandard('#d8641e', 0.55),
     pouch: plainStandard('#3a3d42', 0.8),

@@ -132,7 +132,7 @@ export function artGlow() {
     polygonOffset: true, polygonOffsetFactor: -3, polygonOffsetUnits: -6,
   });
   const t: N = texture(atlas().tex);
-  m.colorNode = t.rgb.mul(t.a).mul(float(0.35).add(uSiteNight.mul(1.4)).mul(uSiteFlicker));
+  m.colorNode = t.rgb.mul(t.a).mul(float(0.35).add(uSiteNight.mul(2.4)).mul(uSiteFlicker));
   m.opacityNode = float(1);
   _glow = m;
   return m;
@@ -264,9 +264,11 @@ artPaint('ascScreen', 256, 160, (c, w, h) => {
 const EVER = '#e9e3d4';
 artPaint('wlName', 1024, 256, (c, w, h, r) => {
   // relief letters on the headwall: the brand, and the promise under it
-  stencil(c, 'EVERAFTER', w / 2, 168, 176, EVER, 'center', 900);
+  // bronze letters with a cast shadow, so the name reads from down the valley
+  stencil(c, 'EVERAFTER', w / 2 + 6, 174, 176, 'rgba(20,16,12,0.55)', 'center', 900);
+  stencil(c, 'EVERAFTER', w / 2, 168, 176, '#5a4630', 'center', 900);
   c.font = `500 40px ${F_UI}`;
-  c.fillStyle = EVER;
+  c.fillStyle = '#3a2e22';
   c.textAlign = 'center';
   c.fillText('CONTINUITY RESIDENCES  ·  BY APPOINTMENT', w / 2, 230);
   blast(c, w, h, r, 900, 4);
