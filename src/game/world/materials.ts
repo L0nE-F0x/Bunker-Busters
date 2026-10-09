@@ -2,7 +2,7 @@ import * as THREE from 'three/webgpu';
 import {
   Fn, vec2, float, positionWorld, positionLocal, normalWorld, mix, smoothstep, abs, sin, uniform, time, pow, max,
   fract, step, uv, cameraPosition, normalize, dot, attribute, uniformArray, int, vertexStage, varying, texture,
-  renderGroup, materialColor, floor,
+  renderGroup, materialColor, floor, vec3,
 } from 'three/tsl';
 import { bumpFromHeight } from './Terrain';
 import { noise } from '@/engine/noiseTex';
@@ -143,6 +143,8 @@ export const uDaylight = uniform(1).setGroup(renderGroup);
 /** Direction toward the sun and how strongly a low sun rims backlit silhouettes (set by the Atmosphere). */
 export const uRimSunDir = uniform(new THREE.Vector3(0, 1, 0)).setGroup(renderGroup);
 export const uBacklight = uniform(0).setGroup(renderGroup);
+/** Wind (xz × strength) for foliage flutter (set by the Atmosphere). */
+export const uFloraWind = uniform(new THREE.Vector3()).setGroup(renderGroup);
 
 const _flatGround = new THREE.DataTexture(new Uint16Array([0]), 1, 1, THREE.RedFormat, THREE.HalfFloatType);
 _flatGround.needsUpdate = true;
@@ -406,6 +408,14 @@ export const floraMaterial = () => memo('flora', () => {
   // (by day only: at golden hour the low-sun rim above already does this, and both together overglowed)
   const through = pow(max(dot(toCam.negate(), uRimSunDir), 0), 3).mul(leaf).mul(uDaylight).mul(float(1).sub(uBacklight));
   m.emissiveNode = glowLeaf.add(sd.color.mul(rimColor).mul(through.mul(0.45)));
+  // leaves flutter in the wind (each vertex on its own phase; a slow sway under a quick shiver, a few
+  // cm in a breeze, more in a storm). Foliage only: wood, cacti and the animals stay put.
+  const kv: N = attribute('fColor', 'vec4').w;
+  const leafV = step(0.5, kv).mul(step(kv, 0.85));
+  const ph = dot(positionLocal, vec3(1.7, 2.3, 1.1));
+  const shiver = sin(time.mul(6.3).add(ph)).mul(0.6).add(sin(time.mul(1.4).add(ph.mul(0.13))).mul(0.4));
+  const fw = uFloraWind;
+  m.positionNode = positionLocal.add(vec3(fw.x, shiver.mul(0.5), fw.z).mul(shiver.add(1).mul(0.012)).mul(leafV));
   return m;
 });
 

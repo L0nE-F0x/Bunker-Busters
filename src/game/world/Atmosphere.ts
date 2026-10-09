@@ -7,7 +7,7 @@ import { clamp as clampN, lerp, smoothstep as smoothN } from '@/engine/noise';
 import { noise } from '@/engine/noiseTex';
 import { gradeU } from '@/engine/postfx';
 import { coneMurk } from './effects';
-import { uDustCover, uDaylight, uRimSunDir, uBacklight } from './materials';
+import { uDustCover, uDaylight, uRimSunDir, uBacklight, uFloraWind } from './materials';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 type N = any;
@@ -556,6 +556,7 @@ export class Atmosphere {
     sc.set('#a8642c').multiplyScalar(0.75 * daylight).lerp(tmpA.copy(this.sunColor).multiplyScalar(0.3 * daylight), 0.2);
     sc.add(tmpA.set('#2a2622').multiplyScalar(1 - daylight)); // night: dim grey-brown murk, still readable
     (this.uWind.value as THREE.Vector2).set(this.windDir.x * this.windStrength, this.windDir.y * this.windStrength);
+    (uFloraWind.value as THREE.Vector3).set(this.windDir.x * this.windStrength, 0, this.windDir.y * this.windStrength);
     const sf = this.uSandFlow.value as THREE.Vector2;
     // wraps every 14*256 m: a whole number of atlas tiles along the stretched axis
     sf.set((sf.x + this.windDir.x * this.windStrength * dt * 4) % 3584, (sf.y + this.windDir.y * this.windStrength * dt * 4) % 3584);
