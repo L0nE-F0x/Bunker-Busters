@@ -79,6 +79,10 @@ export class ApexBuilder implements BunkerShell {
   readonly slots: Record<'strip' | 'hallStrip' | 'roomStrip' | 'flood' | 'beacon' | 'aviation' | 'screens' | 'leds' | 'keypad', { value: number }> = {} as never;
   /** Night beams: the mast's flood onto the apron, two uplights on the booster. */
   readonly cones: ReturnType<typeof lightCone>[] = [];
+  /** Her delivery drone (hidden until the exit ambush) and the merch crate it drops. */
+  readonly drone = new THREE.Group();
+  readonly rotors: THREE.Object3D[] = [];
+  readonly crate = new THREE.Group();
   /** Alarm beacons (shown while it rings). */
   readonly beacons: THREE.Object3D[] = [];
   private far!: THREE.Object3D;
@@ -143,6 +147,7 @@ export class ApexBuilder implements BunkerShell {
     this.buildBlock(b, inner, M_);
     this.buildSalt(b, M_);
     this.buildLights();
+    this.buildDrone();
     // volumetric beams for the night (one shared program with every other cone)
     const beamTo = (from: THREE.Vector3, to: THREE.Vector3, radius: number, color: string) => {
       const len = from.distanceTo(to);
@@ -857,6 +862,45 @@ export class ApexBuilder implements BunkerShell {
     this.points.vent = this.w(x + 0.9, 0.7, zc);
     // the corridor end: the inner grille, kicked out and leaning on the wall
     d.add(m.lattice, place(new THREE.BoxGeometry(0.05, h, z1 - z0), APEX_BLOCK.cx1 + 0.35, h / 2 - 0.05, zc - 1.2, 0, 0.3, 0.25));
+  }
+
+  /**
+   * The merch drone: a white hexacopter-ish delivery rig (her "free trial" drops came on these) with a
+   * crate in a sling. Built at boot and hidden (shaders compile with the scene); Apex flies it.
+   */
+  private buildDrone() {
+    const m = this.mats(), db = new MeshBatch();
+    db.add(m.white, place(new THREE.SphereGeometry(0.55, 18, 10), 0, 0, 0, 0, 0, 0, 1, 0.45, 1.3));
+    db.add(m.black, box(0.9, 0.08, 0.5, 0, -0.3, 0));
+    for (let i = 0; i < 4; i++) {
+      const a = Math.PI / 4 + (i * Math.PI) / 2, ax = Math.cos(a) * 1.1, az = Math.sin(a) * 1.1;
+      db.add(m.white, beam(V(0, 0, 0), V(ax, 0.05, az), 0.06, 6));
+      db.add(m.black, cyl(0.12, 0.12, 0.18, ax, 0.12, az, 10));
+      const rotor = new THREE.Group();
+      rotor.position.set(ax, 0.24, az);
+      const rb = new MeshBatch();
+      rb.add(m.black, box(1.0, 0.02, 0.08, 0, 0, 0), box(0.08, 0.02, 1.0, 0, 0, 0));
+      rotor.add(rb.build('apexRotor'));
+      this.drone.add(rotor);
+      this.rotors.push(rotor);
+    }
+    const blink = this.pal.slot('#58b8ff', 5);
+    blink.add(db, box(0.1, 0.06, 0.1, 0, -0.32, 0.5));
+    // the sling lines
+    for (const [x, z] of [[-0.35, -0.3], [0.35, -0.3], [-0.35, 0.3], [0.35, 0.3]]) db.add(m.black, beam(V(0, -0.3, 0), V(x, -1.25, z), 0.012, 3));
+    this.drone.add(db.build('apexDrone'));
+    this.drone.visible = false;
+    this.drone.name = 'apex-drone';
+    this.group.add(this.drone);
+    const cb = new MeshBatch();
+    cb.add(m.white, box(0.9, 0.6, 0.7, 0, 0.3, 0));
+    cb.add(m.black, box(0.92, 0.06, 0.72, 0, 0.58, 0));
+    cb.add(m.print, apexPrint('merch', 0.8, 0.4, M(0, 0.3, 0.36)), apexPrint('merch', 0.8, 0.4, M(0, 0.3, -0.36, Math.PI)));
+    this.crate.add(cb.build('apexMerch'));
+    this.crate.visible = false;
+    this.crate.name = 'apex-merch';
+    this.group.add(this.crate);
+    this.points.merch = this.w(-3, 0, 21);
   }
 
   // ------------------------------------------------------------------ the salt: what's stranded on it

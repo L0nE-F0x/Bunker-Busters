@@ -211,6 +211,8 @@ export const APEX_FLAGS = {
   vent: 'apex.vent',
   /** Her "delivery" on your way out with the water (once). */
   ambush: 'apex.ambush',
+  /** You opened the merch crate her drone dropped with it. */
+  merch: 'apex.merch',
 };
 
 /**

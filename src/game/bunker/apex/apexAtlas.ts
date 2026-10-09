@@ -190,6 +190,14 @@ const DRAW: Record<string, [number, number, Draw]> = {
     fit(c, 'T-3   T-2   T-1', w / 2, h * 0.8, `900 104px ${DISPLAY}`, '#f2f2f0', w - 10);
     grime(c, w, h, 1, 23);
   }],
+  merch: [256, 128, (c, w, h) => {
+    c.fillStyle = '#f4f4f2'; c.fillRect(0, 0, w, h);
+    c.fillStyle = '#101114'; c.fillRect(0, 0, w, 34);
+    fit(c, 'APEX MERCH', w / 2, 27, `900 30px ${DISPLAY}`, '#f4f4f2', w - 20);
+    fit(c, 'LIMITED EDITION', w / 2, 70, `700 26px ${UI}`, '#101114', w - 24);
+    fit(c, 'limited to you', w / 2, 104, `500 20px ${MONO}`, '#c0281c', w - 24);
+    grime(c, w, h, 0.5, 41);
+  }],
   plate: [128, 64, (c, w, h) => {
     c.fillStyle = '#f4f4f0'; c.fillRect(0, 0, w, h);
     c.strokeStyle = '#101114'; c.lineWidth = 3; c.strokeRect(3, 3, w - 6, h - 6);

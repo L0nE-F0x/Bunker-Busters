@@ -31,6 +31,72 @@ export class Apex extends Bunker<ApexBuilder> {
     this.b.feed.repaint();
     this.b.clock.repaint();
     this.init();
+    // the merch crate her drone drops with the exit ambush
+    this.interactables.push({
+      id: 'apex-merch',
+      pos: this.b.points.merch.clone().setY(this.b.points.merch.y + 0.5),
+      radius: 1.8,
+      visible: () => this.b.crate.visible && (this.flight < 0 || !!this.b.crate.userData.landed) && !this.s.has(F.merch),
+      primary: { label: 'Open the APEX merch crate', available: () => true, run: () => this.openMerch() },
+    });
+  }
+
+  // ------------------------------------------------------------------ the merch drone
+  /** Seconds into the drone's run (−1: parked out of sight). */
+  private flight = -1;
+  private readonly from = new THREE.Vector3();
+
+  private openMerch() {
+    if (!this.s.set(F.merch)) return;
+    this.b.crate.visible = false;
+    this.ctx.audio.play('loot');
+    const got: string[] = [];
+    for (const [id, n, name] of [['water', 1, 'Water'], ['ration', 2, 'Ration'], ['battery', 1, 'Battery']] as [string, number, string][]) {
+      const k = this.s.addItem(id, n);
+      if (k) got.push(`${k}× ${name}`);
+    }
+    this.s.addXP(25, 'Merch');
+    this.ctx.ui.banner('APEX MERCH', `A hoodie in every size at once, and ${got.join(', ') || 'nothing you can carry'}. The tag says "limited to you".`, 'good');
+  }
+
+  override applyFlags(instant = false) {
+    super.applyFlags(instant);
+    const st = this.ctx.state as GameContext['state'] | null;
+    if (!instant || !this.b?.crate) return;
+    // a loaded run: the crate lies where it landed until it's opened
+    const landed = !!st?.has(F.ambush) && !st.has(F.merch);
+    this.b.crate.visible = landed;
+    if (landed) this.b.crate.position.copy(this.b.points.merch).sub(this.b.origin);
+  }
+
+  /** The drone comes in high from the salt, hovers over the apron, drops the crate, leaves west. */
+  private fly(dt: number) {
+    if (this.flight < 0) return;
+    const b = this.b, d = b.drone, drop = b.points.merch.clone().sub(b.origin);
+    this.flight += dt;
+    const t = this.flight;
+    const ease = (x: number) => x * x * (3 - 2 * x);
+    const over = drop.clone().setY(drop.y + 6.5);
+    if (t < 6) d.position.lerpVectors(this.from, over, ease(t / 6));
+    else if (t < 7.5) d.position.copy(over).setY(over.y + Math.sin(t * 3) * 0.12);
+    else d.position.lerpVectors(over, drop.clone().add(new THREE.Vector3(-60, 55, -30)), ease(Math.min(1, (t - 7.5) / 6)));
+    d.rotation.y = Math.sin(t * 0.7) * 0.3;
+    d.rotation.z = t < 6 ? -0.18 : t > 7.5 ? 0.22 : 0;
+    for (const r of b.rotors) r.rotation.y += dt * 40;
+    // the crate rides the sling, drops at 7 s, and lands
+    const c = b.crate;
+    if (t < 7) { c.visible = true; c.position.copy(d.position).setY(d.position.y - 1.85); }
+    else {
+      const fall = t - 7;
+      c.position.set(drop.x, Math.max(drop.y, over.y - 1.85 - 4.9 * fall * fall), drop.z);
+      if (c.position.y <= drop.y + 0.001 && !c.userData.landed) {
+        c.userData.landed = true;
+        this.ctx.audio.play('thud', { pos: b.points.merch, intensity: 0.5 });
+        this.ctx.puffs?.emit(b.points.merch.clone().setY(b.points.merch.y + 0.1), 12, 1.6, 0.4, 0.5);
+      }
+    }
+    d.visible = t < 13.5;
+    if (t >= 13.5) this.flight = -1;
   }
 
   private loops = false;
@@ -218,8 +284,15 @@ export class Apex extends Bunker<ApexBuilder> {
         this.ctx.audio.play('droneAlert', { pos: this.b.points.speaker });
         // from the road side of the apron (+z, a little east): yaw so -(sin, cos) points that way
         this.onAmbush?.(p.clone(), Math.PI + 0.29, 28, this.rang ? 3 : 2);
+        // and the merch, by drone, in from over the salt
+        this.flight = 0;
+        this.from.copy(this.b.points.merch).sub(this.b.origin).add(new THREE.Vector3(55, 48, -40));
+        this.b.drone.position.copy(this.from);
+        this.b.drone.visible = true;
+        this.ctx.audio.play('droneAlert', { pos: this.b.points.merch });
       }
     }
+    this.fly(_dt);
     // her reactions to the lasers and cameras going down (however it happened)
     const lasersOff = !!this.lasers?.off;
     if (lasersOff && !this.lastLasersOff && this.t > 2) this.taunt(VESPER.lasers.text);
