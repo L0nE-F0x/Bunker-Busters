@@ -51,8 +51,8 @@ const GRADE: Pick<SkyKey, 'gS' | 'gH' | 'con' | 'sat' | 'lift'>[] = [
 
 // Keyed on sun elevation, not clock time, so dawn and dusk share a palette.
 const KEYS: Omit<SkyKey, 'gS' | 'gH' | 'con' | 'sat' | 'lift'>[] = [
-  { e: -0.45, zenith: '#03060f', horizon: '#0a1428', haze: '#0b1220', sun: '#5d7fc4', sunI: 0.75, hemiSky: '#2a4472', hemiGround: '#0c0a0a', hemiI: 0.42, fog: 0.0024, env: 0.22, exp: 1.5 },
-  { e: -0.12, zenith: '#081430', horizon: '#262a4a', haze: '#221f36', sun: '#6a84c0', sunI: 0.55, hemiSky: '#2c4270', hemiGround: '#100b0a', hemiI: 0.4, fog: 0.0026, env: 0.22, exp: 1.42 },
+  { e: -0.45, zenith: '#03060f', horizon: '#0a1428', haze: '#0b1220', sun: '#5d7fc4', sunI: 1.15, hemiSky: '#2a4472', hemiGround: '#0c0a0a', hemiI: 0.3, fog: 0.0024, env: 0.22, exp: 1.5 },
+  { e: -0.12, zenith: '#081430', horizon: '#262a4a', haze: '#221f36', sun: '#6a84c0', sunI: 0.85, hemiSky: '#2c4270', hemiGround: '#100b0a', hemiI: 0.33, fog: 0.0026, env: 0.22, exp: 1.42 },
   { e: -0.03, zenith: '#152c58', horizon: '#7e4658', haze: '#4c3448', sun: '#ff4d1a', sunI: 0.6, hemiSky: '#3a4a70', hemiGround: '#2a1610', hemiI: 0.45, fog: 0.0027, env: 0.3, exp: 1.2 },
   { e: 0.04, zenith: '#1c4068', horizon: '#f47c3c', haze: '#a8684a', sun: '#ff6a1e', sunI: 3.2, hemiSky: '#5878a4', hemiGround: '#4e2e1c', hemiI: 0.58, fog: 0.0021, env: 0.5, exp: 1.0 },
   { e: 0.16, zenith: '#1f5484', horizon: '#eaa46c', haze: '#b88a68', sun: '#ffa45c', sunI: 4.2, hemiSky: '#6e9cc0', hemiGround: '#5e3c24', hemiI: 0.62, fog: 0.0016, env: 0.66, exp: 0.9 },
