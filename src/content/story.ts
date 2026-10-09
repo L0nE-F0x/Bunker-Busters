@@ -59,6 +59,17 @@ export function briefingFor(a: ArchetypeDef): StoryPage[] {
  */
 export function campRadio(v: StoryView): { pages: StoryPage[]; flags: string[] } {
   const a = v.archetype;
+  // Act II's debrief: the water came east, and the band is talking about how you got in
+  if (v.has('apex.complete') && !v.has('act2.debriefed')) return { pages: apexDebrief(v), flags: ['act2.debriefed'] };
+  if (v.has('act2.debriefed')) {
+    return {
+      pages: [
+        { speaker: 'Mara Voss', text: 'The cistern\'s holding. Vesper posts about it every hour. Ezra hasn\'t said a word since he read our names, and that\'s worse.' },
+        { speaker: 'Mara Voss', text: 'North of the salt. Eleven hundred cameras. When you go, you go knowing he watched you leave. Mara, out.' },
+      ],
+      flags: [],
+    };
+  }
   // the founders' favours, when there's news Mara would have heard: one call each
   if (v.has('q.chat.mara') && !v.has('mara.chat')) {
     return {
@@ -98,7 +109,7 @@ export function campRadio(v: StoryView): { pages: StoryPage[]; flags: string[] }
         { speaker: 'Mara Voss', text: `${a.name}. ${how}` },
         {
           speaker: 'Mara Voss',
-          text: 'Apex Vault is west of the salt, and the road isn\'t open yet. Until it is: Dry Creek. Anyone there who trusts you will walk with you. Ask them. Then come back and sleep.',
+          text: 'Apex Vault is on the far shore of the salt. Her road leaves the highway at the west end, south past Dry Creek, and Kade sits on it. Ask Dry Creek first: anyone there who trusts you will walk with you.',
         },
       ],
       flags: [],
@@ -364,8 +375,38 @@ export function journalEntries(v: StoryView): JournalEntry[] {
 }
 
 /** Corner text when no quest is giving orders (the quest runtime normally answers first). */
+/**
+ * Act II's debrief at the fire, after Apex: Mara and Dez on how you got in (talked, the vent, the
+ * splice, the clock; loud or quiet, from the flags Apex keeps), then Ezra, who was listening.
+ */
+export function apexDebrief(v: StoryView): StoryPage[] {
+  const first = v.archetype.name.split(' ')[0];
+  const pages: StoryPage[] = [
+    { speaker: 'Mara Voss', text: `${first}. The water came in at dawn. Pip counted the jugs twice and cried once, which she says was dust. The cistern runs east. Dez has been on the band all night. Dez, tell it.` },
+  ];
+  const how = v.has('apex.demo')
+    ? 'You talked your way in. She gave you a tour. A tour! She posted a clip of you looking unimpressed by her truck, and it\'s the most-liked thing she\'s ever posted. You\'re a meme now. I\'m so proud I could be sick.'
+    : v.has('apex.vent.open')
+      ? 'You went in through a vent. Her vent. She said on air there\'s a podcast about it now. There is. I\'ve listened to both episodes. You\'re described as "a draught".'
+      : v.has('apex.spliced')
+        ? 'You spliced her airlock. Her own door thought you were a delivery. She\'s posted about zero trust eleven times since, and none of them make sense, which is how you know they\'re hers.'
+        : v.has('apex.code')
+          ? 'You read her launch clock and typed it into her own door. She built a lock that counts down, and you waited for it. Somewhere an engineer is laughing into a pillow.'
+          : 'You went through her front door like it owed you water. Which, legally, it did.';
+  pages.push({ speaker: 'Dez Marlow', text: how });
+  pages.push(v.has('apex.loud')
+    ? { speaker: 'Dez Marlow', text: 'And the alarm. Her feed had you live for forty minutes. Kade\'s been on the band since, asking who you are. I told them you\'re a rumour. They wrote it down.' }
+    : { speaker: 'Mara Voss', text: 'And no alarm. She didn\'t know you were in until the tank went quiet. That\'s the kind of story that gets told at fires long after the people in it have stopped.' });
+  pages.push({ speaker: 'Dez Marlow', text: 'One more thing. When her feed went down, something else came up on our channel. Not a voice at first. A list. Every name at this fire, and how much each of us drinks. Then a man said thank you for the water. He said it would make the next part easier.' });
+  pages.push(v.has('q.cam.hello') || v.has('lore.panopticon') || v.has('intel:intel.apex.memo')
+    ? { speaker: 'Mara Voss', text: 'Ezra Seymour. The man in the camera. Vesper sold him faces, and he sold her quiet. North of the salt, eleven hundred cameras, and he calls it the Panopticon. I don\'t know what the next part is. I don\'t like that he does. That\'s Act II. Sleep.' }
+    : { speaker: 'Mara Voss', text: 'He signed off as Ezra. Ezra Seymour, the neighbourhood app, Glimpse. North of the salt, in a place he calls the Panopticon. I don\'t know what the next part is. I don\'t like that he does. That\'s Act II. Sleep.' });
+  return pages;
+}
+
 export function storyObjective(v: StoryView): string {
-  if (v.has('apex.complete')) return 'Apex is busted and the water runs east. Something on the band is calling itself the Panopticon.';
+  if (v.has('act2.debriefed')) return 'Act II is done. Ezra Seymour is north of the salt, in the Panopticon, and he knows your name.';
+  if (v.has('apex.complete')) return 'Apex is busted and the water runs east. Radio Mara from the campfire: the band is talking.';
   if (v.has('debriefed')) return 'Act I is done. Apex Vault is west of the salt. Ask Dry Creek who would come.';
   if (v.has('garage.complete')) return 'Radio Mara from the campfire. She wants the Seed Manifest read out loud.';
   if (!v.has('intel:intel.gas.note')) return 'Read the note on the pumps by the fire. Search the cooler behind them.';

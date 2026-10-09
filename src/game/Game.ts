@@ -919,7 +919,7 @@ export class Game {
     void this.withMinigame('idle', async () => {
       for (;;) {
         const why = await this.ui.camp({
-          radioLabel: debrief ? 'Radio Mara · read the names' : 'Raise Mara on the radio',
+          radioLabel: debrief ? 'Radio Mara · read the names' : s.has('apex.complete') && !s.has('act2.debriefed') ? 'Radio Mara · the water came east' : 'Raise Mara on the radio',
           people: CAMP.filter((m) => m.present(campView())).map((m) => ({ id: m.id, name: m.name, role: m.role })),
           onRest: () => {
             const full = s.skill('survival') >= 5;
