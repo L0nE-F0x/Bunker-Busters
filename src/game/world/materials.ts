@@ -400,7 +400,11 @@ export const floraMaterial = () => memo('flora', () => {
   m.roughnessNode = mix(mix(mix(mix(float(0.92), float(0.97), fur), float(0.72), leaf), float(0.5), cactus), float(0.97), sd.dust);
   m.normalNode = bumpFromHeight(furrow.mul(-0.6).add(fine.r.mul(0.3)).add(fine.a.mul(0.15)), mix(float(0.02), float(0.008), leaf.max(cactus)));
   // a low sun shines through leaves and pads
-  m.emissiveNode = sunRim().mul(float(1).add(leaf.add(cactus.mul(0.5)).mul(2.2)));
+  const glowLeaf = sunRim().mul(float(1).add(leaf.add(cactus.mul(0.5)).mul(2.2)));
+  // and any sun shines through foliage you look at against it (backlit bushes were near-black clumps)
+  const toCam = normalize(cameraPosition.sub(positionWorld));
+  const through = pow(max(dot(toCam.negate(), uRimSunDir), 0), 3).mul(leaf).mul(uDaylight);
+  m.emissiveNode = glowLeaf.add(sd.color.mul(rimColor).mul(through.mul(0.9)));
   return m;
 });
 
