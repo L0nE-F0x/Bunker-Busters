@@ -1461,6 +1461,8 @@ export class Game {
     s.data.stats.deaths = (s.data.stats.deaths ?? 0) + 1;
     s.data.poison = 0;
     this.input.exitLock();
+    // binoculars raised as you fall would still be up at the camp (they only drop for input while not blocked)
+    if (this.gear?.viewing) this.gear.toggleBinos(false);
     // the pack: everything that isn't a weapon or the story stays where you fell
     const lost = !!s.data.pack;
     const keep: { id: string; qty: number }[] = [];
@@ -1746,7 +1748,7 @@ export class Game {
         this.openWorldMap(this.ui.lastMapView ?? undefined);
       },
       travel: travel.options(), travelBlocked: travel.busy ? 'On the road.' : this.travelHost().why(),
-      sub: `Survey sheet · ${this.surveyed()}% surveyed · Day ${(s.data.days ?? 0) + 1} · ${clockText(this.atmo.hour)}`,
+      sub: `Survey sheet · ${this.surveyed()}% surveyed · ${s.dayLabel} · ${clockText(this.atmo.hour)}`,
       onTravel: (id) => void travel.go(id),
     }, () => this.afterModal());
   }
@@ -1789,6 +1791,7 @@ export class Game {
         this.busy = true;
         this.player!.frozen = true;
         this.input.exitLock();
+        if (this.gear?.viewing) this.gear.toggleBinos(false); // an hour's walk, not an hour behind the binoculars
         this.ui.fade(true);
       },
       place: (p, yaw, hours) => {
@@ -1940,8 +1943,6 @@ export class Game {
     for (const site of this.sites) site.update(dt, this.camera.position);
     this.errands?.update(dt, this.camera.position);
     this.stories?.update(dt, this.camera.position);
-    if (this.mode !== 'playing') this.garage.update(dt);
-    this.garage.cull(this.camera.position);
     for (const b of this.bunkers) {
       if (this.mode !== 'playing') b.update(dt);
       b.cull(this.camera.position);
@@ -2101,7 +2102,6 @@ export class Game {
     tg.noise = player.noise * s.archetype.stats.stealth;
     tg.torch = !!this.hands?.flashlightOn;
     tg.reloading = !!this.arms?.reloading;
-    tg.hidden = this.garage.playerInside;
     tg.hidden = this.bunkerInside;
     tg.night = this.atmo.isNight ? 1 : Math.max(0, Math.min(1, (0.15 - this.atmo.sunElevation) / 0.25));
     tg.visibility = 1 - this.weather.intensity * 0.75;
