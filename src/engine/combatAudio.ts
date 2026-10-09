@@ -123,7 +123,9 @@ export class CombatAudio {
 
   /** A metallic ping: a few inharmonic partials, as off a steel plate or a gun's action. */
   private ping(dest: AudioNode, t: number, f: number, peak: number, decay: number) {
-    for (const [m, k] of [[1, 1], [2.76, 0.5], [5.4, 0.25], [8.93, 0.12]]) this.tone(dest, t, 'sine', f * m, peak * k, 0.002, decay / Math.sqrt(m));
+    // partials past Nyquist are inaudible and only clamp (the molotov's glass rings up to 6.4 kHz × 8.93)
+    const top = this.b.ctx.sampleRate * 0.45;
+    for (const [m, k] of [[1, 1], [2.76, 0.5], [5.4, 0.25], [8.93, 0.12]]) if (f * m < top) this.tone(dest, t, 'sine', f * m, peak * k, 0.002, decay / Math.sqrt(m));
   }
 
   // ------------------------------------------------------------------ guns
