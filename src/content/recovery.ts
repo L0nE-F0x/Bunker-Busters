@@ -114,7 +114,7 @@ export const OUTPOSTS: OutpostDef[] = [
     ],
     sentries: [[-8, 9, -0.4]],
     hornet: true,
-    loot: [{ id: 'water', qty: 3 }, { id: 'ammo3030', qty: 10 }, { id: 'battery', qty: 1 }, { id: 'charge', qty: 1 }, { id: 'kade_badge', qty: 2 }],
+    loot: [{ id: 'water', qty: 3 }, { id: 'ammo3030', qty: 10 }, { id: 'battery', qty: 1 }, { id: 'charge', qty: 1 }, { id: 'kade_badge', qty: 2 }, { id: 'molotov', qty: 1 }, { id: 'nootropics', qty: 1 }, { id: 'speaker_badge', qty: 1 }],
   },
 ];
 
