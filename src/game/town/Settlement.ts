@@ -432,6 +432,9 @@ export class Settlement {
         [night, ' Kitchen\'s closed. The coffee isn\'t.'],
       );
       case 'doc': return pick(
+        [this.slot('doc') === 'doc.cut', ' (He keeps his voice down. Wick is asleep, or pretending to be.) Night call. His lungs are better. His manners aren\'t.'],
+        [this.slot('doc') === 'doc.fire', ' Evenings I come out to Sol\'s fire. It\'s cheaper than a waiting room and the patients are already sitting down.'],
+        [this.slot('doc') === 'doc.diner', ' Breakfast. Nia insists. In writing.'],
         [ending === 'broadcast', ' Half the names you read on the radio were my patients. I crossed them off, then I crossed them back on. They\'re alive. That should count.'],
         [ending === 'leverage', ' A ledger in an ammo tin. That\'s a prescription I understand.'],
         [ending === 'deal', ' Twenty jugs a week. Tell Mara to boil them. I don\'t trust water with a logo.'],
@@ -496,6 +499,11 @@ export class Settlement {
         else this.away.add(id);
       }
     }
+  }
+
+  /** The routine slot someone is in right now ('' if none, or no slots). */
+  private slot(id: string) {
+    return this.crowds.map((c) => c.where(id)).find((x) => !!x)?.station ?? '';
   }
 
   private async awayNote(id: string, talk: () => void | Promise<void>) {

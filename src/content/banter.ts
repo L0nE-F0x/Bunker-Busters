@@ -275,6 +275,12 @@ export const BANTER: Banter[] = [
     text: 'Doc\'s out at Sol\'s fire with his clipboard, pretending he isn\'t on shift.',
   },
   {
+    id: 'routine.doccut', speaker: 'self', priority: 2,
+    near: { lm: 'cave', r: 30 },
+    when: (v) => hr(v) < 5 && v.has('q.doc.delivered'),
+    text: 'Doc is up here at Wick\'s fire, at this hour, with his clipboard. Neither of them is admitting it\'s a visit.',
+  },
+  {
     id: 'routine.creekdark', speaker: 'self', priority: 2,
     near: { lm: 'creek', r: 45 },
     when: (v) => hr(v) < 5,

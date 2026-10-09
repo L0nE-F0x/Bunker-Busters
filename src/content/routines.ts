@@ -29,6 +29,8 @@ export const STATIONS: Record<string, Station> = {
   'doc.clinic': { primary: true, open: (c) => between(c.hour, 6, 19) && !(c.has('q.nia.peace') && between(c.hour, 6, 8)) },
   // made peace: breakfast at Nia's counter, before the clinic opens
   'doc.diner': { open: (c) => c.has('q.nia.peace') && between(c.hour, 6, 8) },
+  // Wick took the medkit: the night call is up the wash, at Wick's fire
+  'doc.cut': { open: (c) => c.has('q.doc.delivered') && between(c.hour, 0, 5) },
   'doc.fire': { open: (c) => between(c.hour, 19, 24) },
   'inez.till': { primary: true, open: (c) => between(c.hour, 7, 21) },
   'ren.road': { primary: true, open: (c) => !c.has('q.ren.truth') },
