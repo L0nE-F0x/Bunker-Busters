@@ -144,6 +144,15 @@ export class Throwables {
     if (i >= 0) this.combat.fires.splice(i, 1);
   }
 
+  /** A run ends (death aside: quit to the title): bottles in the air and fuel on the ground go out. */
+  reset() {
+    for (const b of this.flying) { this.physics.world.removeRigidBody(b.body); b.mesh.visible = false; }
+    this.flying = [];
+    for (const f of this.patches) { f.light.intensity = 0; f.fire.group.visible = false; this.dropZone(f.zone); }
+    this.patches = [];
+    this.combat.fires.length = 0;
+  }
+
   update(dt: number) {
     for (const b of [...this.flying]) {
       b.fuse -= dt;

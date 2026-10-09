@@ -882,6 +882,8 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #000; color:
 /* ---------- gear: binoculars, tags (overnight swarm 2) ---------- */
 .binos { position: fixed; inset: 0; opacity: 0; visibility: hidden; transition: opacity 0.18s ease, visibility 0s linear 0.18s; pointer-events: none; }
 .binos.on { opacity: 1; visibility: visible; transition: opacity 0.18s ease; }
+/* the game's crosshair never sits over an eyepiece (the binoculars, the rifle's scope) */
+.binos.on ~ #hud .crosshair, .binos.on ~ #hud .xhair { opacity: 0 !important; }
 .binos svg.mask { position: absolute; inset: 0; width: 100%; height: 100%; }
 .binos-reticle { position: absolute; left: 50%; top: 50%; width: 0; height: 0; }
 .binos-reticle i { position: absolute; background: rgba(243, 233, 216, 0.55); }
