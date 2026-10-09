@@ -215,6 +215,26 @@ export class Story {
     return this.targetMemo.out;
   }
 
+  /** Every open quest whose current step points somewhere on the map (the world map shows them all; the tracked one is the focus). */
+  targets(): { id: string; title: string; step: string; x: number; z: number; focus: boolean }[] {
+    const v = this.view(), focus = this.focusQuest();
+    const out: { id: string; title: string; step: string; x: number; z: number; focus: boolean }[] = [];
+    for (const q of this.active()) {
+      const step = currentStep(q, v);
+      const p = step?.at ? this.placeOf(step.at) : null;
+      if (p) out.push({ id: q.id, title: q.title, step: step!.text, x: p[0], z: p[1], focus: q === focus });
+    }
+    return out;
+  }
+
+  private placeOf(at: string): [number, number] | null {
+    if (at === 'garage') return [GARAGE.location.position[0], GARAGE.location.position[2]];
+    const lm = LANDMARKS.find((l) => l.id === at);
+    if (lm) return [lm.position[0], lm.position[2]];
+    const op = OUTPOSTS.find((o) => o.id === at);
+    return op ? [op.x, op.z] : null;
+  }
+
   private computeTarget(): { x: number; z: number; label: string } | null {
     const q = this.focusQuest();
     if (!q) return null;

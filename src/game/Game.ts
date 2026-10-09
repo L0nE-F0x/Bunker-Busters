@@ -1628,17 +1628,35 @@ export class Game {
   }
 
   /** The world map, with fast travel between the safe places you've found (travel.ts). */
-  private openWorldMap() {
+  private openWorldMap(view?: { cx: number; cz: number; zoom: number }) {
     const s = this.state!, player = this.player!;
     const intel = WORLD_INTEL.filter((i) => s.has(`intel:${i.id}`)).map((i) => ({ title: i.title, body: i.body }));
     const travel = (this.travel ??= new FastTravel(this.travelHost()));
+    // the other open quests' next stops, dimmer; the map can track one (Story.track) and reopens on the same view
+    const markers = this.markers();
+    for (const q of this.story?.targets() ?? []) {
+      if (!q.focus) markers.push({ id: `q:${q.id}`, x: q.x, z: q.z, label: q.title, color: '#ffd27a', kind: 'intel', note: q.step });
+    }
     this.ui.openMap({
       px: player.position.x, pz: player.position.z, heading: this.cam.yaw,
-      markers: this.markers(), intel,
+      markers, intel, view,
+      onTrack: (id) => {
+        this.story?.track(id);
+        this.markerCache = null;
+        this.openWorldMap(this.ui.lastMapView ?? undefined);
+      },
       travel: travel.options(), travelBlocked: travel.busy ? 'On the road.' : this.travelHost().why(),
-      sub: `Survey sheet · Day ${(s.data.days ?? 0) + 1} · ${clockText(this.atmo.hour)}`,
+      sub: `Survey sheet · ${this.surveyed()}% surveyed · Day ${(s.data.days ?? 0) + 1} · ${clockText(this.atmo.hour)}`,
       onTravel: (id) => void travel.go(id),
     }, () => this.afterModal());
+  }
+
+  /** How much of the walkable square the fog of war has given up, in percent. */
+  private surveyed() {
+    const fog = this.map.fog, F = Math.round(Math.sqrt(fog.length)), lo = Math.floor(F * 0.11), hi = Math.ceil(F * 0.89);
+    let seen = 0;
+    for (let j = lo; j < hi; j++) for (let i = lo; i < hi; i++) if (fog[j * F + i] > 100) seen++;
+    return Math.round((seen / ((hi - lo) * (hi - lo))) * 100);
   }
 
   private travelHost(): import('./travel').TravelHost {
@@ -1705,28 +1723,29 @@ export class Game {
     const [gx, , gz] = GARAGE.location.position;
     const nearGarage = this.player ? Math.hypot(this.player.position.x - gx, this.player.position.z - gz) < 90 : false;
     if (s.has('garage.marker') || nearGarage || s.has('garage.complete')) {
-      out.push({ id: 'garage', x: gx, z: gz, label: s.has('garage.complete') ? 'The Garage (busted)' : 'The Garage · Tier 1', color: s.has('garage.complete') ? '#7d725f' : '#ff3a6e', kind: 'bunker' });
+      out.push({ id: 'garage', x: gx, z: gz, label: s.has('garage.complete') ? 'The Garage (busted)' : 'The Garage · Tier 1', color: s.has('garage.complete') ? '#7d725f' : '#ff3a6e', kind: 'bunker',
+        note: s.has('garage.complete') ? 'Tanner\'s garage. The water and the names were his. Now they aren\'t.' : 'Tanner\'s fenced garage off the spur. The camp\'s water is in his cistern; the names are in his vault.' });
     }
     for (const it of WORLD_INTEL) {
       if (s.has(`intel:${it.id}`)) continue;
       const known = it.id === 'intel.gas.note' || this.map.revealedAt(it.position[0], it.position[2]) > 100;
-      if (known) out.push({ id: it.id, x: it.position[0], z: it.position[2], label: 'Intel', color: '#c896ff', kind: 'intel' });
+      if (known) out.push({ id: it.id, x: it.position[0], z: it.position[2], label: 'Intel', color: '#c896ff', kind: 'intel', note: 'Something left here on purpose. Worth reading.' });
     }
     for (const c of WORLD_CACHES) {
       if (s.has(c.id)) continue;
       if (!s.has(`approach:${c.id}`) && this.map.revealedAt(c.x, c.z) < 30) continue;
-      out.push({ id: c.id, x: c.x, z: c.z, label: c.id === 'cache.cooler' ? 'Cooler' : 'Mast cells', color: '#7ec8d4', kind: 'intel' });
+      out.push({ id: c.id, x: c.x, z: c.z, label: c.id === 'cache.cooler' ? 'Cooler' : 'Mast cells', color: '#7ec8d4', kind: 'intel', note: c.approach });
     }
-    if (s.data.pack) out.push({ id: 'pack', x: s.data.pack.position[0], z: s.data.pack.position[2], label: 'Your pack', color: '#ff8a2a', kind: 'intel' });
+    if (s.data.pack) out.push({ id: 'pack', x: s.data.pack.position[0], z: s.data.pack.position[2], label: 'Your pack', color: '#ff8a2a', kind: 'intel', note: 'Everything you dropped when you went down. Kade will find it if you don\'t.' });
     for (const op of OUTPOSTS) {
       if (!s.has(`seen:${op.id}`) && this.map.revealedAt(op.x, op.z) < 40) continue;
       const cleared = s.has(`outpost.${op.id}.cleared`) && (s.data.marks[`cleared.${op.id}`] ?? -1e9) > s.data.stats.playTime - 30 * 60;
-      out.push({ id: `op:${op.id}`, x: op.x, z: op.z, label: cleared ? `${op.name} (cleared)` : op.name, color: cleared ? '#7d725f' : '#ff4a3a', kind: 'bunker' });
+      out.push({ id: `op:${op.id}`, x: op.x, z: op.z, label: cleared ? `${op.name} (cleared)` : op.name, color: cleared ? '#7d725f' : '#ff4a3a', kind: 'bunker', note: cleared ? `${op.blurb} Cleared, for now. Kade restaffs.` : op.blurb });
     }
     const goal = this.story?.target();
-    if (goal) out.push({ id: 'quest', x: goal.x, z: goal.z, label: goal.label, color: '#ffd27a', kind: 'intel' });
+    if (goal) out.push({ id: 'quest', x: goal.x, z: goal.z, label: goal.label, color: '#ffd27a', kind: 'intel', note: this.objective() });
     if (this.player && this.garage.drone.position.distanceTo(this.player.position) < 70 && this.garage.drone.state !== 'disabled') {
-      out.push({ id: 'drone', x: this.garage.drone.position.x, z: this.garage.drone.position.z, label: 'SeedBot', color: this.garage.drone.state === 'alert' ? '#ff3b3b' : '#ffb347', kind: 'drone' });
+      out.push({ id: 'drone', x: this.garage.drone.position.x, z: this.garage.drone.position.z, label: 'SeedBot', color: this.garage.drone.state === 'alert' ? '#ff3b3b' : '#ffb347', kind: 'drone', note: 'Refurbished. Battery health 12%. Still faster than you.' });
     }
     return out;
   }

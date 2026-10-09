@@ -16,7 +16,7 @@ import { LockpickGame } from './Lockpick';
 import { CircuitGame, KeypadGame } from './Circuit';
 import { HackGame, type HackOpts, type HackResult } from './Hack';
 import { Minimap, MapData, type MapMarker } from './Minimap';
-import { buildWorldMap, type WorldMapOpts } from './WorldMap';
+import { buildWorldMap, type WorldMapOpts, type MapViewState } from './WorldMap';
 import { mountUpdateNotice } from './Updater';
 import { isTouch, isIOS, isStandalone, canFullscreen, isFullscreen, enterFullscreen } from '@/engine/device';
 import type { ArmsHud } from '@/game/combat/PlayerArms';
@@ -742,6 +742,8 @@ export class UI implements UIBridge {
   }
 
   /** The world map (WorldMap.ts): survey sheet, fog, markers, fast travel. */
+  /** Where the world map was looking when it last closed. */
+  lastMapView: MapViewState | null = null;
   openMap(o: Omit<WorldMapOpts, 'device' | 'hint' | 'sound'>, onClose: () => void) {
     this.audio.play('ui');
     const dev = device();
@@ -752,7 +754,7 @@ export class UI implements UIBridge {
       : `${kk('forward')}${kk('left')}${kk('back')}${kk('right')} or drag: pan · wheel or <span class="kbd">Q</span><span class="kbd">E</span>: zoom · <span class="kbd">C</span> you · <span class="kbd">[</span><span class="kbd">]</span> places · ${kk('map')} close`;
     let stop = () => {};
     this.openModal((close) => {
-      const r = buildWorldMap(this.map!, { ...o, device: dev, hint, sound: (n) => this.audio.play(n) }, close);
+      const r = buildWorldMap(this.map!, { ...o, device: dev, hint, sound: (n) => this.audio.play(n), keepView: (v) => (this.lastMapView = v) }, close);
       stop = r.stop;
       return r.el;
     }, () => { stop(); onClose(); });

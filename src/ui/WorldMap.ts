@@ -23,6 +23,8 @@ export interface TravelOption {
   here: boolean;
 }
 
+export interface MapViewState { cx: number; cz: number; zoom: number }
+
 export interface WorldMapOpts {
   px: number;
   pz: number;
@@ -39,15 +41,22 @@ export interface WorldMapOpts {
   /** Footer hint HTML for the device in use. */
   hint: string;
   onTravel: (id: string) => void;
+  /** Track an open quest (its id) from the map; the map reopens on the same view. */
+  onTrack?: (questId: string) => void;
+  /** Open on this view instead of centred on you (a reopen after tracking). */
+  view?: MapViewState;
+  /** Told the view on close (so a reopen can keep it). */
+  keepView?: (v: MapViewState) => void;
   sound: (name: 'ui' | 'uiHover' | 'deny') => void;
 }
 
 const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]!);
 
 /** Map marker role for drawing (the marker kinds are shared with the minimap, so ids tell the rest). */
-type Role = 'travel' | 'landmark' | 'bunker' | 'outpost' | 'intel' | 'cache' | 'quest' | 'pack' | 'drone';
+type Role = 'travel' | 'landmark' | 'bunker' | 'outpost' | 'intel' | 'cache' | 'quest' | 'side' | 'pack' | 'drone';
 function roleOf(m: MapMarker, travel: Set<string>): Role {
   if (m.id === 'quest') return 'quest';
+  if (m.id.startsWith('q:')) return 'side';
   if (m.id === 'pack') return 'pack';
   if (m.id === 'drone') return 'drone';
   if (travel.has(m.id)) return 'travel';
@@ -57,13 +66,16 @@ function roleOf(m: MapMarker, travel: Set<string>): Role {
   if (m.kind === 'intel') return 'intel';
   return 'landmark';
 }
-const PRIO: Record<Role, number> = { quest: 0, travel: 1, bunker: 2, pack: 3, landmark: 4, outpost: 5, intel: 6, cache: 7, drone: 8 };
+const PRIO: Record<Role, number> = { quest: 0, travel: 1, bunker: 2, pack: 3, side: 4, landmark: 5, outpost: 6, intel: 7, cache: 8, drone: 9 };
 const TAG: Record<Role, string> = {
-  quest: 'Objective', travel: 'Safe place · fast travel', bunker: 'Bunker', pack: 'Your pack', landmark: 'Landmark',
+  quest: 'Tracked objective', side: 'Open quest · not tracked', travel: 'Safe place · fast travel', bunker: 'Bunker', pack: 'Your pack', landmark: 'Landmark',
   outpost: 'Kade outpost', intel: 'Intel', cache: 'Cache', drone: 'Drone',
 };
 
-type Entry = { m: MapMarker; role: Role };
+/** A marker and where it was last drawn (pins sharing a place fan out around it). */
+type Entry = { m: MapMarker; role: Role; x: number; y: number };
+/** Places stay where they are; pins (objectives, intel, caches, your pack) step aside when they'd cover one. */
+const PLACE = new Set<Role>(['travel', 'landmark', 'bunker', 'outpost']);
 
 const GRID = 8;
 const COLS = 'ABCDEFGH';
@@ -127,6 +139,7 @@ class MapView {
   zoom = 1;
   private fit = 1;
   private dirty = true;
+  private sized = false;
   private raf = 0;
   private alive = true;
   private travelIds: Set<string>;
@@ -145,8 +158,10 @@ class MapView {
     this.travelIds = new Set(o.travel.map((t) => t.id));
     this.cx = o.px;
     this.cz = o.pz;
-    for (const m of o.markers) this.markers.push({ m, role: roleOf(m, this.travelIds) });
+    for (const m of o.markers) this.markers.push({ m, role: roleOf(m, this.travelIds), x: 0, y: 0 });
     this.markers.sort((a, b) => PRIO[a.role] - PRIO[b.role]);
+    // places first (they never move), then the pins in priority order
+    this.markers.sort((a, b) => (PLACE.has(a.role) ? 0 : 1) - (PLACE.has(b.role) ? 0 : 1));
     this.bindPointer();
   }
 
@@ -162,10 +177,13 @@ class MapView {
     this.canvas.width = Math.round(r.width * this.dpr);
     this.canvas.height = Math.round(r.height * this.dpr);
     const fit = Math.min(this.w, this.h) / this.size;
-    const first = this.fit === 1 && this.zoom === 1;
     this.fit = fit;
-    // open at a useful scale: about 420 m across, centred on you
-    if (first) this.zoom = Math.max(fit, Math.min(fit * 6, Math.min(this.w, this.h) / 420));
+    if (!this.sized) {
+      this.sized = true;
+      // open at a useful scale (about 420 m across, centred on you), or where the last map left off
+      if (this.o.view) ({ cx: this.cx, cz: this.cz, zoom: this.zoom } = this.o.view);
+      else this.zoom = Math.max(fit, Math.min(fit * 6, Math.min(this.w, this.h) / 420));
+    }
     this.clamp();
     this.redraw();
   }
@@ -353,7 +371,7 @@ class MapView {
   private pick(sx: number, sy: number, r = 18): MapMarker | null {
     let best: MapMarker | null = null, bd = r;
     for (const k of this.markers) {
-      const d = Math.hypot(this.sx(k.m.x) - sx, this.sy(k.m.z) - sy);
+      const d = Math.hypot(k.x - sx, k.y - sy);
       if (d < bd) { bd = d; best = k.m; }
     }
     return best;
@@ -380,6 +398,7 @@ class MapView {
     ctx.lineWidth = 1;
     ctx.strokeRect(x0 - 0.5, y0 - 0.5, span + 1, span + 1);
     this.gridLabels(x0, y0, span);
+    this.layout();
     this.route();
     this.drawMarkers();
     this.drawPlayer();
@@ -415,10 +434,10 @@ class MapView {
 
   /** A dashed bearing line from you to the tracked objective, with the distance at its far end. */
   private route() {
-    const q = this.markers.find((k) => k.role === 'quest')?.m;
+    const q = this.markers.find((k) => k.role === 'quest');
     if (!q) return;
     const { ctx } = this;
-    const ax = this.sx(this.o.px), ay = this.sy(this.o.pz), bx = this.sx(q.x), by = this.sy(q.z);
+    const ax = this.sx(this.o.px), ay = this.sy(this.o.pz), bx = q.x, by = q.y;
     const len = Math.hypot(bx - ax, by - ay);
     if (len < 30) return;
     const ux = (bx - ax) / len, uy = (by - ay) / len;
@@ -434,6 +453,28 @@ class MapView {
     ctx.restore();
   }
 
+  /** Screen positions for this frame: a pin that would sit on an icon already placed fans out around it. */
+  private layout() {
+    const done: Entry[] = [];
+    const fanned = new Map<Entry, number>();
+    for (const k of this.markers) {
+      k.x = this.sx(k.m.x);
+      k.y = this.sy(k.m.z);
+      if (!PLACE.has(k.role)) {
+        const anchor = done.find((d) => Math.hypot(d.x - k.x, d.y - k.y) < 13);
+        if (anchor) {
+          const n = fanned.get(anchor) ?? 0;
+          fanned.set(anchor, n + 1);
+          const a = -Math.PI / 4 + n * (Math.PI / 3.2);
+          const r = anchor.role === 'travel' ? 21 : 17;
+          k.x = anchor.x + Math.cos(a) * r;
+          k.y = anchor.y + Math.sin(a) * r;
+        }
+      }
+      done.push(k);
+    }
+  }
+
   private drawMarkers() {
     const { ctx } = this;
     const placed: number[][] = [];
@@ -442,7 +483,7 @@ class MapView {
     placed.push([this.sx(this.o.px) - 12, this.sy(this.o.pz) - 12, this.sx(this.o.px) + 12, this.sy(this.o.pz) + 12]);
     const shown: { k: Entry; x: number; y: number }[] = [];
     for (const k of this.markers) {
-      const x = this.sx(k.m.x), y = this.sy(k.m.z);
+      const { x, y } = k;
       if (x < -40 || y < -40 || x > this.w + 40 || y > this.h + 40) continue;
       shown.push({ k, x, y });
       placed.push([x - 9, y - 9, x + 9, y + 9]);
@@ -454,7 +495,7 @@ class MapView {
     }
     for (const { k, x, y } of shown) {
       const sel = k.m === this.selected || k.m === this.hover;
-      const small = k.role === 'intel' || k.role === 'cache' || k.role === 'drone' || k.role === 'outpost';
+      const small = k.role === 'intel' || k.role === 'cache' || k.role === 'drone' || k.role === 'outpost' || k.role === 'side';
       if (small && !deep && !sel) continue;
       this.label(k.role, k.m, x, y, placed, sel);
     }
@@ -484,7 +525,7 @@ class MapView {
       ctx.strokeStyle = 'rgba(10, 7, 5, 0.9)';
       ctx.strokeText(text, lx, ly + 0.5);
       ctx.fillStyle = m.known === false ? 'rgba(200, 186, 160, 0.7)'
-        : role === 'quest' ? '#ffd27a' : role === 'travel' ? '#ffe2b8' : role === 'bunker' || role === 'outpost' ? m.color : '#f3e9d8';
+        : role === 'quest' ? '#ffd27a' : role === 'side' ? 'rgba(255, 220, 160, 0.85)' : role === 'travel' ? '#ffe2b8' : role === 'bunker' || role === 'outpost' ? m.color : '#f3e9d8';
       ctx.fillText(text, lx, ly + 0.5);
       return;
     }
@@ -618,6 +659,18 @@ function icon(ctx: CanvasRenderingContext2D, role: Role, m: MapMarker, x: number
       }
       break;
     }
+    case 'side': {
+      // an open quest you aren't following: the objective ring, hollow and quieter
+      ctx.strokeStyle = ink;
+      ctx.lineWidth = 4.5;
+      ctx.beginPath(); ctx.arc(0, 0, 7, 0, Math.PI * 2); ctx.stroke();
+      ctx.strokeStyle = 'rgba(255, 210, 122, 0.8)';
+      ctx.lineWidth = 1.8;
+      ctx.stroke();
+      ctx.fillStyle = 'rgba(255, 210, 122, 0.8)';
+      ctx.beginPath(); ctx.arc(0, 0, 2, 0, Math.PI * 2); ctx.fill();
+      break;
+    }
     case 'bunker': {
       ctx.beginPath(); ctx.moveTo(0, -9); ctx.lineTo(9, 6.5); ctx.lineTo(-9, 6.5); ctx.closePath();
       ctx.fillStyle = m.color; ctx.strokeStyle = ink; ctx.lineWidth = 2.2;
@@ -661,7 +714,7 @@ function icon(ctx: CanvasRenderingContext2D, role: Role, m: MapMarker, x: number
 
 const LEGEND: [Role, string][] = [
   ['travel', 'Safe place · fast travel'], ['landmark', 'Landmark'], ['bunker', 'Bunker'], ['outpost', 'Kade outpost'],
-  ['quest', 'Tracked objective'], ['intel', 'Intel'], ['cache', 'Cache'], ['pack', 'Your pack'],
+  ['quest', 'Tracked objective'], ['side', 'Other open quest'], ['intel', 'Intel'], ['cache', 'Cache'], ['pack', 'Your pack'],
 ];
 function legendIcon(role: Role) {
   const c = document.createElement('canvas');
@@ -732,9 +785,12 @@ export function buildWorldMap(data: MapData, o: WorldMapOpts, close: () => void)
       <h4>${esc(sel.label)}</h4>
       ${sel.note ? `<p>${esc(sel.note)}</p>` : ''}
       <div class="wmap-dist">${d < 25 ? 'You are here.' : `${distText(d)} ${bearing(sel.x - o.px, sel.z - o.pz)} of you`}</div>
+      ${role === 'side' && o.onTrack ? '<button class="btn primary wmap-track pad-default">Track this quest</button>' : ''}
       ${t ? `<button class="btn primary wmap-go-sel pad-default" ${t.blocked || o.travelBlocked ? 'disabled' : ''}>${t.blocked || o.travelBlocked ? esc(t.blocked ?? o.travelBlocked!) : `Travel · ${esc(t.detail)}`}</button>` : ''}`;
     const b = card.querySelector('.wmap-go-sel') as HTMLElement | null;
     if (b) b.onclick = () => go(sel.id);
+    const tr = card.querySelector('.wmap-track') as HTMLElement | null;
+    if (tr) tr.onclick = () => { o.sound('ui'); close(); o.onTrack!(sel.id.slice(2)); };
   };
   // open on the tracked objective's card if there is one
   const q = o.markers.find((k) => k.id === 'quest');
@@ -761,6 +817,7 @@ export function buildWorldMap(data: MapData, o: WorldMapOpts, close: () => void)
   return {
     el: m,
     stop: () => {
+      o.keepView?.({ cx: view.cx, cz: view.cz, zoom: view.zoom });
       view.stop();
       window.removeEventListener('keydown', onKey, true);
       window.removeEventListener('keyup', onKey, true);
