@@ -105,7 +105,7 @@ export class Atmosphere {
   /** The sun's light (colour × intensity); the light's colour node dims it under drifting cloud shadows. */
   readonly uSunLight = uniform(new THREE.Color());
   /** How much a thick cloud's shadow takes from the sun, 0..1 (0 = no cloud shadows). */
-  readonly uCloudShadow = uniform(0.42);
+  readonly uCloudShadow = uniform(0.45);
   /** Ground sand-flow offset integrated from the wind (terrain storm ribbons). */
   readonly uSandFlow = uniform(new THREE.Vector2());
   readonly uFront = uniform(0);
@@ -222,15 +222,16 @@ export class Atmosphere {
    * The sun's colour at a lit fragment: full sunlight, dimmed where a cumulus stands between this point
    * and the sun. The same kind of field as the sky's cumulus (same cover, same drift), anchored to the
    * world on a plane 1.5 km up and followed along the sun's ray, so the shadows lengthen and slide
-   * with a low sun and race across the flats with the wind. Soft-edged (no detail tap); none at night.
+   * with a low sun and race across the flats with the wind. Soft-edged; none at night or in a storm.
    */
   private cloudShadow = Fn(() => {
     const sd = this.uSunDir;
     const p = positionWorld.xz.add(sd.xz.div(max(sd.y, 0.08)).mul(1500));
-    const cq = p.div(3571).add(this.uCloudDrift.mul(1.3));
+    const cq = p.div(900).add(this.uCloudDrift.mul(1.3));
     const cw = noise(cq.mul(0.25).add(vec2(0.13, 0.71))).g.sub(0.5);
     const th = float(0.82).sub(this.uCloudCover.add(cw.mul(0.6)).mul(0.42));
-    const sh = smoothstep(th.sub(0.03), th.add(0.17), noise(cq).r);
+    const d = noise(cq).r.add(noise(cq.mul(2.7).add(0.41)).g.sub(0.5).mul(0.55));
+    const sh = smoothstep(th.sub(0.02), th.add(0.12), d);
     const k = this.uCloudShadow.mul(smoothstep(-0.02, 0.12, sd.y)).mul(float(1).sub(this.uStorm));
     return (this.uSunLight as N).mul(float(1).sub(sh.mul(k)));
   });
