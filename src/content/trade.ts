@@ -91,6 +91,7 @@ export function buyPrice(id: string, k: number) {
 export function rollStock(day: number): { id: string; qty: number }[] {
   let x = (day * 2654435761 + 1013904223) >>> 0;
   const rnd = () => { x ^= x << 13; x >>>= 0; x ^= x >>> 17; x ^= x << 5; x >>>= 0; return x / 4294967296; };
+  for (let i = 0; i < 8; i++) rnd(); // xorshift's first draws from a small seed are lumpy
   const out: { id: string; qty: number }[] = [];
   for (const l of TILL_STOCK) {
     if (rnd() > l.p) continue;

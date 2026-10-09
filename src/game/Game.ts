@@ -477,6 +477,7 @@ export class Game {
       }),
       choose: (o) => self.withMinigame('idle', () => self.ui.choose(o)),
       converse: (o) => self.withMinigame('idle', () => self.ui.converse(o)),
+      till: (o) => self.withMinigame('idle', () => self.ui.till(o)),
       banner: (a, b, k) => self.ui.banner(a, b, k),
       subtitle: (a, b, v) => self.ui.subtitle(a, b, v),
     };
