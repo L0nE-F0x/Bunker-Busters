@@ -39,6 +39,7 @@ export const CAST: Record<string, CastVoice> = {
   'compliance sentry': { voice: 'af_nova', fx: 'pa', speed: 1.02 },
   seedbot: { voice: 'am_echo', fx: 'bot', speed: 1.1 },
   'kade recovery': { voice: ['am_fenrir', 'am_michael', 'bm_george', 'bm_daniel'], fx: 'radio', speed: 1.05 },
+  'ezra seymour': { voice: 'bm_fable', fx: 'pa', speed: 1.04 },
 };
 
 const ALIAS: Record<string, string> = { mara: 'mara voss' };

@@ -400,6 +400,67 @@ export class Settlement {
     return `Requires Social Engineering ${n}. ${who}${accent}`;
   }
 
+  /**
+   * What's new, said in passing after the hello: the Act I ending, the favours that touched them,
+   * and the hour. One line at most (the first that applies), so a returning visitor hears the town move.
+   */
+  private news(who: 'nia' | 'doc' | 'inez' | 'sol' | 'ren' | 'wick'): string {
+    const s = this.s;
+    const night = this.ctx.atmo.isNight;
+    const ending = s.has('act1.broadcast') ? 'broadcast' : s.has('act1.leverage') ? 'leverage' : s.has('act1.deal') ? 'deal' : '';
+    const pick = (...xs: [boolean, string][]) => xs.find(([ok]) => ok)?.[1] ?? '';
+    switch (who) {
+      case 'nia': return pick(
+        [s.has('q.chat.air'), ' Heard Dez read that founders\' chat on the band. "Water is the new water." I had to sit down. I\'m still sitting down.'],
+        [s.has('q.song.band'), ' Somebody played Rosa\'s song on the radio at sunset. The whole street stopped. Sol pretended he had smoke in his eye.'],
+        [ending === 'broadcast', ' I heard every name on the radio. My cousin\'s on page four. Paid in full. Got the tote bag.'],
+        [ending === 'leverage', ' Mara\'s keeping their ledger in a tin, I hear. Good. Make them pay rent for once.'],
+        [ending === 'deal', ' Twenty jugs a week to Last Chance, I hear. Must be nice. Dry Creek gets the dust.'],
+        [s.favours().pipPool, ' Pip has a pool now? Tell her the diner has a puddle. We could be sister cities.'],
+        [night, ' Kitchen\'s closed. The coffee isn\'t.'],
+      );
+      case 'doc': return pick(
+        [ending === 'broadcast', ' Half the names you read on the radio were my patients. I crossed them off, then I crossed them back on. They\'re alive. That should count.'],
+        [ending === 'leverage', ' A ledger in an ammo tin. That\'s a prescription I understand.'],
+        [ending === 'deal', ' Twenty jugs a week. Tell Mara to boil them. I don\'t trust water with a logo.'],
+        [s.has('q.doc.delivered'), ' Wick\'s cough is down to a rumble. I can hear it from here. It\'s a better rumble.'],
+        [night, ' (He\'s in a cardigan. It\'s a doctor cardigan.)'],
+      );
+      case 'inez': return pick(
+        [s.has('lore.lifeboat') && !s.has('q.chat.air'), ' Somebody\'s selling founder phones on the east band. I\'m not saying it was me. It wasn\'t. I wish it was.'],
+        [ending === 'broadcast', ' Free advertising for every name on that list. Shame it was all bad press.'],
+        [ending === 'leverage', ' Leverage. Finally, somebody at Last Chance understands commerce.'],
+        [ending === 'deal', ' You traded a ledger for twenty jugs. I\'d have got you thirty. Amateurs.'],
+        [night, ' We\'re closed. Unless you\'re buying.'],
+      );
+      case 'sol': return pick(
+        [s.has('q.song.quiet'), ' (He\'s humming. He stops when he sees you, then starts again.)'],
+        [s.has('q.song.band'), ' Heard it on the band at sunset, with the whole street. Thank you for that. I\'ll say it once.'],
+        [ending === 'broadcast', ' Every name on the radio. Took you an hour. Took them three years to earn it.'],
+        [ending === 'deal', ' Twenty jugs. Mm. A lock that opens when she says so is still a lock.'],
+        [night, ' Night\'s for listening.'],
+      );
+      case 'ren': return pick(
+        [ending === 'deal', ' Kade drone went over on Tuesday, toward Last Chance. Twenty jugs, they said. I counted nineteen. It\'s always nineteen.'],
+        [ending === 'broadcast', ' I counted the names when Mara read them. Four hundred and six. I lost count at the senators.'],
+        [ending === 'leverage', ' Watched the free-trial drone go over. It came with a survey. "How likely are you to recommend thirst?"'],
+        [s.has('lore.walkwest'), ' You found someone on the west road, didn\'t you. I counted forty walk out that way, one week. I stopped counting the ones coming back. There was nothing to count.'],
+        [night, ' Night shift. The road\'s even emptier in the dark.'],
+      );
+      case 'wick': return pick(
+        [s.has('lore.panopticon'), ' Something with a blue light flew over the ridge last night, slow, from the north. Like it was reading.'],
+        [ending === 'broadcast', ' Heard you on the radio, reading names. Didn\'t hear mine. Good.'],
+        [!!ending, ' Whatever you did with that ledger, the salt still glows at night. Do better next time.'],
+        [night, ' Fire\'s small on purpose.'],
+      );
+    }
+  }
+
+  /** Where they were the afternoon of the Pivot: one topic each. */
+  private pivotNode(speaker: string, text: string) {
+    return { speaker, text, choices: [{ id: 'back', label: 'Thank you for telling me.', next: 'hello' }] };
+  }
+
   /** "Walk west with me" after Act I. Anyone at standing 2 says yes. */
   private crewChoice(id: 'nia' | 'doc' | 'inez' | 'sol' | 'ren' | 'wick', label = 'Would you walk west with me, to Apex?') {
     if (!this.s.has('debriefed')) return [];
@@ -624,7 +685,7 @@ export class Settlement {
       const plate = s.favours().niaPlate;
       return {
         speaker: 'Nia Pell',
-        text: `${s.rep('nia') >= 2 ? 'There you are. Sit.' : 'You have the radio look. Mara\'s, or just thirsty.'} I cook what shows up. Today that isn't much.${short}`,
+        text: `${s.rep('nia') >= 2 ? 'There you are. Sit.' : 'You have the radio look. Mara\'s, or just thirsty.'} I cook what shows up. Today that isn't much.${short}${this.news('nia')}`,
         choices: [
           { id: 'water', label: 'One bottle, for the camp.', disabled: s.has('creek.nia.water') ? 'She already wrote you down.' : undefined, next: 'hello' },
           ...(q ? [{ id: 'short', label: s.has('q.nia.who') ? 'I know who\'s taking your water.' : 'About your missing water...', next: 'short' }] : []),
@@ -633,6 +694,7 @@ export class Settlement {
           ...(s.count('igniter') && !s.has('q.rider.delivered') ? [{ id: 'igniter', label: 'Delivery for N. Pell. One stove igniter. It\'s running late.', next: 'igniter' }] : []),
           { id: 'who', label: 'Who else is still here?', next: 'who' },
           { id: 'ridge', label: 'Anything up on the ridge?', disabled: this.needSocial(1, 'She doesn\'t give directions to strangers.'), next: 'ridge' },
+          { id: 'pivot', label: 'Where were you, the afternoon of the Pivot?', next: 'pivot' },
           ...this.crewChoice('nia'),
           { id: 'bye', label: 'Keep the light on.' },
         ],
@@ -706,6 +768,9 @@ export class Settlement {
         choices: [{ id: 'ok', label: 'Bring the stove.' }],
       };
     }
+    if (id === 'pivot') {
+      return this.pivotNode('Nia Pell', 'Making soup. The power went, then the phones, then the sky went a colour I didn\'t have a name for. I kept stirring. Soup doesn\'t care what the sky does. Twelve people came in that night and I fed every one of them on credit. That\'s how the ledger started.');
+    }
     if (id === 'who') {
       return {
         speaker: 'Nia Pell',
@@ -772,9 +837,9 @@ export class Settlement {
       const coughQuest = s.has('q:doc.cough') && !s.has('q.doc.kit');
       return {
         speaker: 'Doc Ivers',
-        text: powered
+        text: (powered
           ? (s.rep('doc') >= 2 ? 'My favourite patient. Don\'t let it go to your head, there are only nine of you.' : 'Window\'s on. That means I can see what I\'m doing. Don\'t make me grateful out loud.')
-          : 'If you\'re bleeding, the generator has to agree first. It\'s out the east side. I don\'t speak to it. Also, Wick has a cough I can hear from here, and I can\'t do a thing about it in the dark.',
+          : 'If you\'re bleeding, the generator has to agree first. It\'s out the east side. I don\'t speak to it. Also, Wick has a cough I can hear from here, and I can\'t do a thing about it in the dark.') + this.news('doc'),
         choices: [
           { id: 'heal', label: calls ? 'House call, Doc.' : 'Patch me up.', disabled: healBlock, next: 'hello' },
           ...(!powered ? [{ id: 'cell', label: 'Here, a lithium cell. Rig it yourself.', disabled: s.count('battery') ? undefined : 'You don\'t have a lithium cell.', next: 'hello' }] : []),
@@ -782,10 +847,14 @@ export class Settlement {
           ...(s.has('q:nia.short') && !s.has('q.nia.who') ? [{ id: 'admit', label: 'Nia\'s missing water, Doc.', disabled: soc >= 2 ? undefined : this.needSocial(2, 'He won\'t confess to a stranger.'), next: 'admit' }] : []),
           { id: 'list', label: 'You knew Tanner\'s customers.', disabled: soc >= 2 ? (s.has('creek.doc.list') ? 'You have the list.' : undefined) : this.needSocial(2, 'He doesn\'t share patients with strangers.'), next: 'list' },
           { id: 'creek', label: 'What happened to the creek?', next: 'creek' },
+          { id: 'pivot', label: 'Where were you, the afternoon of the Pivot?', next: 'pivot' },
           ...this.crewChoice('doc'),
           { id: 'bye', label: 'Take care, Doc.' },
         ],
       };
+    }
+    if (id === 'pivot') {
+      return this.pivotNode('Doc Ivers', 'Setting a broken wrist. The lights went, then the X-ray, then the patient\'s phone in the middle of a sentence. I set it by feel. He paid me in a chicken. The chicken is still the most reliable investor Dry Creek ever had.');
     }
     if (id === 'kit') {
       return {
@@ -861,20 +930,24 @@ export class Settlement {
       const owner = s.has('q.inez.inez');
       return {
         speaker: 'Inez Quill',
-        text: owner
+        text: (owner
           ? 'Welcome to the Till. My Till. Legally, in pencil. Browse. Don\'t palm. I can hear a hand.'
           : s.has('q.inez.town')
             ? 'The town\'s Till is open. The town\'s prices went up. Funny how that works.'
-            : 'The Till is open. The sign about the closet is also open, which is a kind of honesty. Don\'t palm the drawer. I can hear a hand.',
+            : 'The Till is open. The sign about the closet is also open, which is a kind of honesty. Don\'t palm the drawer. I can hear a hand.') + this.news('inez'),
         choices: [
           { id: 'trade', label: `${rate} scrap for a bottle.`, disabled: soc >= 2 ? (s.count('scrap') >= rate ? undefined : `Need ${rate} scrap.`) : this.needSocial(2, 'She doesn\'t trade with strangers.'), next: 'hello' },
           ...(s.count('deed') && !owner && !s.has('q.inez.town') ? [{ id: 'deed', label: 'I found the deed to the Till. It\'s yours.', next: 'deeded' }] : []),
           { id: 'closet', label: 'The closet.', disabled: s.has('creek.stair') ? 'You\'ve been up there.' : this.needSocial(3, 'She won\'t discuss the closet with a stranger.'), next: 'closet' },
           { id: 'tickets', label: 'Ever sell anything that actually worked?', next: 'tickets' },
+          { id: 'pivot', label: 'Where were you, the afternoon of the Pivot?', next: 'pivot' },
           ...this.crewChoice('inez'),
           { id: 'bye', label: 'I\'ll look, not touch.' },
         ],
       };
+    }
+    if (id === 'pivot') {
+      return this.pivotNode('Inez Quill', 'Selling the forty-first ticket for the Tube. The card reader said DECLINED, and then everything said declined. First time a machine ever saved a customer. I kept the forty dollars I never charged her. I still feel bad about it. Not that bad.');
     }
     if (id === 'closet') {
       return {
@@ -922,6 +995,8 @@ export class Settlement {
         if (choice === 'night') s.set('q.nia.who');
         if (choice === 'give' && s.removeItem('sol_roll', 1)) s.set('q.sol.returned');
         if (choice === 'lie' && s.count('sol_roll')) s.set('q.sol.kept');
+        if (choice === 'rosa' && s.set('q.song.asked')) s.addXP(XP_REWARDS.talk, 'Rosa Varga');
+        if ((choice === 'song.band' || choice === 'song.quiet') && s.has('q.song.dez') && !s.has('q.song.band') && !s.has('q.song.quiet')) s.set(`q.${choice}`);
         if (choice === 'crew') this.joinCrew('sol');
       },
     });
@@ -933,9 +1008,9 @@ export class Settlement {
       const rollOpen = !s.has('q.sol.returned') && !s.has('q.sol.kept');
       return {
         speaker: 'Sol Varga',
-        text: s.has('q.sol.kept')
+        text: (s.has('q.sol.kept')
           ? 'Fire\'s communal. My roll isn\'t, but here we are.'
-          : 'Fire\'s communal. The news isn\'t. You want locks, or the version where we\'re all fine?',
+          : 'Fire\'s communal. The news isn\'t. You want locks, or the version where we\'re all fine?') + this.news('sol'),
         choices: [
           { id: 'locks', label: 'Locks.', disabled: this.needSocial(1, 'He doesn\'t talk shop with strangers.'), next: 'locks' },
           ...(rollOpen && !s.count('sol_roll') ? [{ id: 'lost', label: 'You look like you lost something.', next: 'lost' }] : []),
@@ -944,10 +1019,40 @@ export class Settlement {
             { id: 'lie', label: 'Room 2 was empty. Sorry.', next: 'lied' },
           ] : []),
           ...(s.has('q:nia.short') && !s.has('q.nia.who') ? [{ id: 'night', label: 'Who walks past your fire at night?', next: 'night' }] : []),
+          ...(s.has('intel:intel.kdry.log') && !s.has('q.song.asked') ? [{ id: 'rosa', label: 'The KDRY station log was signed R. Varga.', next: 'rosa' }] : []),
+          ...(s.has('q.song.dez') && !s.has('q.song.band') && !s.has('q.song.quiet') ? [
+            { id: 'song.band', label: 'Rosa\'s song. Dez will play it on the open band at sunset. Listen.', next: 'songband' },
+            { id: 'song.quiet', label: 'It was "Still Here", June Hollow. Here are the words.', next: 'songquiet' },
+          ] : []),
+          { id: 'pivot', label: 'Where were you, the afternoon of the Pivot?', next: 'pivot' },
           ...this.crewChoice('sol'),
           { id: 'fine', label: 'The fine version.' },
         ],
       };
+    }
+    if (id === 'rosa') {
+      return {
+        speaker: 'Sol Varga',
+        text: 'Rosa. My wife. She ran KDRY out of the back of the feed store. The afternoon of the Pivot she stayed on the air until the generator quit, talking to whoever was left. She played one song at the end. I was out on a call, opening somebody\'s car. I never heard which song. Thirty years of doors, and that\'s the one I\'d pick.',
+        choices: [{ id: 'ok', label: 'I\'ll find out which song.', next: 'hello' }],
+      };
+    }
+    if (id === 'songband') {
+      return {
+        speaker: 'Sol Varga',
+        text: 'At sunset. On the band. (He\'s quiet a long time. Then the radio on Nia\'s counter starts, piano first, and the street stops.) ...She\'d have liked that. A whole valley listening. She always said the audience was whoever was left.',
+        choices: [{ id: 'ok', label: 'Whoever was left.' }],
+      };
+    }
+    if (id === 'songquiet') {
+      return {
+        speaker: 'Sol Varga',
+        text: '"Still Here." (He reads the words twice and folds them into his pick roll.) Mm. I think I knew it. I think I hummed it for three years and didn\'t know why. Thank you. Don\'t tell the street I cried. I didn\'t cry. The fire\'s smoky.',
+        choices: [{ id: 'ok', label: 'The fire\'s very smoky.' }],
+      };
+    }
+    if (id === 'pivot') {
+      return this.pivotNode('Sol Varga', 'Out on a call. A woman locked out of her car at the feed store, keys on the seat. I had it open in a minute. Then nothing opened again: not the pumps, not the bank, not the phone in my pocket. Rosa was on the radio that afternoon. KDRY. I didn\'t hear her. I was busy with a door.');
     }
     if (id === 'locks') {
       return {
@@ -1020,17 +1125,21 @@ export class Settlement {
     if (id === 'hello') {
       return {
         speaker: 'Ren Oka',
-        text: s.has('q.ren.truth')
+        text: (s.has('q.ren.truth')
           ? 'I\'m leaving for Last Chance in the morning. Mara says they need somebody who can count a road. I can count a road.'
-          : 'We\'re a pause. The highway thinks it\'s a place. It isn\'t. Sit long enough and the wash starts to look like a pantry.',
+          : 'We\'re a pause. The highway thinks it\'s a place. It isn\'t. Sit long enough and the wash starts to look like a pantry.') + this.news('ren'),
         choices: [
           ...(s.has('site.drivein.done') && !told ? [{ id: 'ending', label: 'I found out how the keynote ended.', next: 'ending' }] : []),
           { id: 'drive', label: 'What did you do before the pause?', next: 'drive' },
           { id: 'pantry', label: 'Show me the pantry.', disabled: sv >= 2 ? (s.has('creek.ren.ration') ? 'You already ate their spare.' : undefined) : 'Requires Survival 2. You don\'t look like you know a pantry from a ditch.', next: 'hello' },
+          { id: 'pivot', label: 'Where were you, the afternoon of the Pivot?', next: 'pivot' },
           ...this.crewChoice('ren'),
           { id: 'sit', label: 'I\'ll sit.' },
         ],
       };
+    }
+    if (id === 'pivot') {
+      return this.pivotNode('Ren Oka', 'In the booth at the Starlite, threading the reel for the keynote. "One more thing," he said, and I walked out, because there\'s always one more thing. Behind me the screen went white and stayed white. Nobody else came out. I\'ve been counting things ever since. It keeps the white out.');
     }
     if (id === 'drive') {
       return {
@@ -1118,9 +1227,9 @@ export class Settlement {
       const docErrand = s.has('q.doc.kit') && !s.has('q.doc.delivered') && !s.has('q.doc.kept');
       return {
         speaker: 'Wick',
-        text: s.has('q.wick.left')
+        text: (s.has('q.wick.left')
           ? 'You again. The seep\'s yours too. Don\'t tell anybody, they\'ll want a view.'
-          : 'You found the cut. Most people find the highway and call that a life. The fire is mine. The view is nobody\'s, which is why it\'s still here.',
+          : 'You found the cut. Most people find the highway and call that a life. The fire is mine. The view is nobody\'s, which is why it\'s still here.') + this.news('wick'),
         choices: [
           ...(docErrand ? [
             { id: 'kit', label: 'Doc sent this. From the town. (give a medkit)', disabled: s.count('medkit') ? undefined : 'You don\'t have a medkit any more.', next: 'kitted' },
@@ -1133,10 +1242,14 @@ export class Settlement {
           ...(!s.has('cave.pocket') ? [{ id: 'fall', label: 'The rocks in the side passage.', next: 'fall' }] : []),
           ...(!s.has('wick.survey') ? [{ id: 'survey', label: 'Anything else bothering you?', next: 'survey' }] : []),
           { id: 'vesper', label: 'A woman with rocket money.', disabled: this.needSocial(1, 'He doesn\'t gossip with strangers.'), next: 'vesper' },
+          { id: 'pivot', label: 'Where were you, the afternoon of the Pivot?', next: 'pivot' },
           ...this.crewChoice('wick'),
           { id: 'bye', label: 'I\'ll leave the fire.' },
         ],
       };
+    }
+    if (id === 'pivot') {
+      return this.pivotNode('Wick', 'Up here, same as now. I watched the lights go out down the valley in order, west to east, like somebody walking through a house at bedtime. The Garage\'s neon went last. Of course it did. Then a song came up from Dry Creek on somebody\'s radio, and then nothing came up at all.');
     }
     if (id === 'view') {
       return {

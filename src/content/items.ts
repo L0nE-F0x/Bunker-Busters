@@ -143,6 +143,12 @@ const defs: ItemDef[] = [
     description: 'The Survey Camp\'s field book. Ridge seep: 0.4 L/hr, class DATA ASSET. Resident: one, male, loud. Recommended action: relocation package (tote bag).',
     flavor: 'Every page is initialled V.K. in a different pen.',
   },
+  // --- The founders' favours: Class of Tomorrow ---
+  {
+    id: 'pip_letter', name: 'Pip\'s Envelope', category: 'intel', weight: 0, stack: 1, value: 0, icon: 'intel',
+    description: 'From the Kade Kids time capsule: TO PIP OKAFOR, AGE 23. DO NOT OPEN UNTIL 2046. The flap is only tucked in.',
+    flavor: 'Eleven-year-olds don\'t lick envelopes.',
+  },
   // --- Sites: The Exit Strategy, Starlite Drive-In ---
   {
     id: 'exit_pass', name: 'EXIT Platinum Pass', category: 'loot', weight: 0.05, stack: 1, value: 80, icon: 'intel',

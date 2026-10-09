@@ -1,0 +1,393 @@
+import * as THREE from 'three/webgpu';
+import type { GameContext, Interactable } from '../context';
+import type { Landmarks } from '../world/Landmarks';
+import type { GameState } from '../State';
+import { MeshBatch, DistanceLod, shadowProxy } from '../world/kit';
+import { glow, plainStandard, rustyMetal, wood, concrete, desertRock } from '../world/materials';
+import { rockGeometry } from '../world/Props';
+import { loreMaterial, loreQuad } from '../world/loreAtlas';
+import { STORY_SPOTS } from '@/content/quests';
+import { rumourTonight } from '@/content/camp';
+
+const V = (x: number, y: number, z: number) => new THREE.Vector3(x, y, z);
+const _e = new THREE.Euler();
+const _q = new THREE.Quaternion();
+const T = (g: THREE.BufferGeometry, x: number, y: number, z: number, rx = 0, ry = 0, rz = 0) =>
+  g.applyMatrix4(new THREE.Matrix4().compose(V(x, y, z), _q.setFromEuler(_e.set(rx, ry, rz, 'YXZ')), V(1, 1, 1)));
+function rod(a: THREE.Vector3, b: THREE.Vector3, r: number, seg = 6) {
+  const g = new THREE.CylinderGeometry(r, r, a.distanceTo(b), seg, 1);
+  const q = new THREE.Quaternion().setFromUnitVectors(V(0, 1, 0), b.clone().sub(a).normalize());
+  return g.applyMatrix4(new THREE.Matrix4().compose(a.clone().add(b).multiplyScalar(0.5), q, V(1, 1, 1)));
+}
+/** A thing built in its own frame (origin on the ground, yaw), placed in the world. */
+function placed(g: THREE.Object3D, x: number, y: number, z: number, yaw: number) {
+  g.position.set(x, y, z);
+  g.rotation.y = yaw;
+  g.updateMatrix();
+  return g;
+}
+
+/**
+ * The props the founders' favours need (content/quests.ts: Class of Tomorrow, Seen), and the camp
+ * choices those favours and Read Receipts add:
+ * - the old Kade Kids Academy, west of Dry Creek: a bent rocket sign, the plaque, the time capsule
+ * - Glimpse's camera on a pole by the road at Last Chance (blue light; cut, looped or watching)
+ * - Glimpse's relay mast on the rise south-east of camp, where you decide what the watcher sees
+ * - Pip's chalk pool on the forecourt, once she has her letter
+ * Everything is in the scene from boot (hidden parts too) for the shader warm-up; each piece hides
+ * past ~170 m. Printed faces share the lore atlas (world/loreAtlas.ts).
+ */
+export class Stories {
+  readonly group = new THREE.Group();
+  readonly interactables: Interactable[] = [];
+  /** Feet positions for the harness. */
+  readonly spots: Record<string, THREE.Vector3> = {};
+  private lods: DistanceLod[] = [];
+  private t = 0;
+  private synced: GameState | null = null;
+  private capsuleShut: THREE.Object3D;
+  private capsuleOpen: THREE.Object3D;
+  private camLed: { value: number };
+  private relayLed: { value: number };
+  private lunchbox: THREE.Object3D;
+  private cutCable: THREE.Object3D;
+  private pool: THREE.Object3D;
+  private capsuleAt: THREE.Vector3;
+
+  constructor(private ctx: GameContext, landmarks: Landmarks, place: (x: number, z: number) => [number, number]) {
+    this.group.name = 'stories';
+    landmarks.group.add(this.group);
+    const hf = ctx.hf;
+    const steel = rustyMetal({ base: '#6a6d70', rust: 0.45, metalness: 0.7 });
+    const dark = plainStandard('#232527', 0.55, 0.2);
+    const paper = loreMaterial();
+    const white = plainStandard('#e8ebee', 0.35, 0.1);
+
+    // ---------------------------------------------------------------- Kade Kids Academy: the sign and the capsule
+    {
+      const [x, z] = place(...STORY_SPOTS.capsule);
+      const y = hf.heightAt(x, z);
+      const yaw = 0.9;
+      const mb = new MeshBatch();
+      const post = rustyMetal({ base: '#2f9be8', rust: 0.55, metalness: 0.6 });
+      // two posts, one bent: the sign hangs off it at an angle, still smiling
+      mb.add(post, T(new THREE.CylinderGeometry(0.07, 0.08, 3.2, 10), -1.7, 1.6, 0));
+      mb.add(post, rod(V(1.7, 0, 0), V(1.75, 1.7, 0.05), 0.075, 10), rod(V(1.75, 1.7, 0.05), V(1.2, 2.6, 0.5), 0.07, 10));
+      const signM = new THREE.Matrix4().compose(V(0.1, 2.35, 0.2), new THREE.Quaternion().setFromEuler(new THREE.Euler(0.12, 0.08, -0.22)), V(1, 1, 1));
+      mb.add(paper, loreQuad('kadeKids', 3.4, 1.7).applyMatrix4(signM));
+      mb.add(post, new THREE.BoxGeometry(3.5, 1.8, 0.05).translate(0, 0, -0.03).applyMatrix4(signM));
+      // the plaque on a little concrete plinth, and the mound it marks
+      const plinth = concrete('#a39a8c');
+      mb.add(plinth, T(new THREE.BoxGeometry(0.7, 0.5, 0.35), 0.3, 0.2, 2.4, 0, 0.2, 0));
+      mb.add(paper, T(loreQuad('plaque', 0.6, 0.3), 0.3, 0.42, 2.4 + 0.178, -0.35, 0.2, 0));
+      // broken concrete where the school was, and a toppled rocket cut-out
+      const rock = desertRock();
+      for (const [sx, sz, s] of [[-3, -1.5, 0.6], [-4.2, 0.8, 0.45], [3.6, -2.2, 0.7], [4.8, 1.4, 0.4], [-2.4, 3.6, 0.5]] as const) {
+        mb.add(plinth, T(new THREE.BoxGeometry(s * 1.6, s * 0.4, s * 1.1), sx, s * 0.12, sz, 0.1, sx * 0.7, 0.08));
+      }
+      mb.add(rock, T(rockGeometry(71, 1).scale(0.5, 0.25, 0.4), -1.2, 0.05, 2.9));
+      mb.add(white, T(new THREE.CylinderGeometry(0.22, 0.22, 2.2, 12), -3.4, 0.22, 2.6, 0, 0.4, Math.PI / 2 - 0.08));
+      mb.add(plainStandard('#d23a2a', 0.45), T(new THREE.ConeGeometry(0.22, 0.6, 12), -3.4 + Math.cos(0.4) * 1.4, 0.22, 2.6 - Math.sin(0.4) * 1.4, 0, 0.4, -Math.PI / 2 - 0.08));
+      const near = mb.build('kadekids');
+      shadowProxy(near);
+      const site = placed(new THREE.Group(), x, y, z, yaw);
+      site.add(near);
+      // the capsule: a mound with the cap showing, then a hole with the tube lying open beside it
+      const shut = new MeshBatch();
+      shut.add(rock, T(rockGeometry(73, 1).scale(0.75, 0.22, 0.6), 0.3, 0.0, 3.25));
+      shut.add(steel, T(new THREE.CylinderGeometry(0.16, 0.16, 0.06, 14), 0.25, 0.14, 3.2, 0.25, 0, 0.1));
+      this.capsuleShut = shut.build('capsule-shut');
+      const open = new MeshBatch();
+      open.add(plainStandard('#3a2a1c', 0.95), T(new THREE.CylinderGeometry(0.42, 0.3, 0.05, 16), 0.3, 0.005, 3.25));
+      open.add(rock, T(rockGeometry(74, 1).scale(0.5, 0.18, 0.35), 1.0, 0.0, 3.4));
+      open.add(steel, T(new THREE.CylinderGeometry(0.16, 0.16, 0.7, 14, 1, true), 0.95, 0.17, 2.85, 0, 1.2, Math.PI / 2));
+      open.add(steel, T(new THREE.CylinderGeometry(0.16, 0.16, 0.04, 14), 1.4, 0.16, 2.6, 0.3, 1.2, Math.PI / 2 - 0.4));
+      open.add(paper, T(loreQuad('letter', 0.14, 0.18), 0.6, 0.012, 3.0, -Math.PI / 2, 0.5, 0));
+      open.add(paper, T(loreQuad('letter', 0.14, 0.18), 0.48, 0.013, 2.85, -Math.PI / 2, -0.3, 0));
+      this.capsuleOpen = open.build('capsule-open');
+      this.capsuleOpen.visible = false;
+      site.add(this.capsuleShut, this.capsuleOpen);
+      this.group.add(site);
+      const c = new THREE.Vector3(x, y, z);
+      this.capsuleAt = c;
+      this.lods.push(new DistanceLod(c, 6, site, null, 170));
+      ctx.physics.addBox(V(0.3, 0.2, 2.4).applyMatrix4(site.matrix), { x: 0.35, y: 0.25, z: 0.18 }, yaw + 0.2);
+      ctx.physics.addCylinder(V(-1.7, 1.6, 0).applyMatrix4(site.matrix), 1.6, 0.09);
+      this.spots.capsule = V(0.3, 0, 4.6).applyMatrix4(site.matrix).setY(hf.heightAt(x, z));
+      this.interactables.push({
+        id: 'story.capsule', pos: V(0.3, 0.3, 3.25).applyMatrix4(site.matrix), radius: 2.0,
+        visible: () => !this.s?.has('q.capsule.dug'),
+        primary: { label: 'Dig up the time capsule', available: () => true, run: () => this.digCapsule() },
+      });
+    }
+
+    // ---------------------------------------------------------------- Glimpse's camera on a pole by the road
+    {
+      const [x, z] = place(...STORY_SPOTS.glimpsecam);
+      const y = hf.heightAt(x, z);
+      const yaw = 2.6; // the lens looks at the forecourt
+      const mb = new MeshBatch();
+      mb.add(wood('#5d4630'), T(new THREE.CylinderGeometry(0.09, 0.11, 3.6, 9), 0, 1.8, 0));
+      mb.add(steel, T(new THREE.BoxGeometry(0.06, 0.06, 0.4), 0, 3.25, 0.2)); // the arm
+      mb.add(white, T(new THREE.BoxGeometry(0.16, 0.14, 0.3), 0, 3.2, 0.45, 0.25, 0, 0)); // the camera
+      mb.add(dark, T(new THREE.CylinderGeometry(0.05, 0.05, 0.03, 12), 0, 3.16, 0.61, Math.PI / 2 + 0.25, 0, 0)); // lens
+      mb.add(paper, T(loreQuad('sticker', 0.1, 0.1), 0.081, 3.21, 0.43, 0.25, Math.PI / 2, 0));
+      // a small solar panel above, and the uplink antenna aimed south-east at the relay
+      mb.add(dark, T(new THREE.BoxGeometry(0.45, 0.02, 0.32), 0, 3.62, 0, -0.5, 0, 0));
+      mb.add(plainStandard('#1c2b4a', 0.2, 0.6), T(new THREE.BoxGeometry(0.42, 0.005, 0.29), 0, 3.635, -0.005, -0.5, 0, 0));
+      mb.add(steel, rod(V(0, 3.0, -0.1), V(0.2, 3.5, -0.45), 0.01, 4));
+      const led = glow('#3fa8ff', 6);
+      this.camLed = led.intensity as unknown as { value: number };
+      mb.add(led.material, T(new THREE.SphereGeometry(0.014, 8, 6), 0.05, 3.29, 0.6));
+      const near = mb.build('glimpse-cam');
+      shadowProxy(near);
+      // Dez's loop: a red lunchbox strapped to the pole, a cable up to the camera
+      const lb = new MeshBatch();
+      lb.add(plainStandard('#c23b2a', 0.5), T(new THREE.BoxGeometry(0.3, 0.18, 0.18), 0, 1.5, 0.17));
+      lb.add(dark, T(new THREE.BoxGeometry(0.32, 0.025, 0.24), 0, 1.5, 0.12), new THREE.TubeGeometry(new THREE.CatmullRomCurve3([V(0.1, 1.6, 0.18), V(0.14, 2.3, 0.12), V(0.06, 3.1, 0.2), V(0, 3.18, 0.32)]), 10, 0.01, 4));
+      this.lunchbox = lb.build('glimpse-loop');
+      this.lunchbox.visible = false;
+      // cut: the uplink cable hangs loose off the camera
+      const cut = new MeshBatch();
+      cut.add(dark, new THREE.TubeGeometry(new THREE.CatmullRomCurve3([V(0, 3.12, 0.4), V(0.05, 2.7, 0.5), V(0.02, 2.2, 0.42), V(0.1, 1.9, 0.5)]), 10, 0.012, 4));
+      this.cutCable = cut.build('glimpse-cut');
+      this.cutCable.visible = false;
+      const g = placed(new THREE.Group(), x, y, z, yaw);
+      g.add(near, this.lunchbox, this.cutCable);
+      this.group.add(g);
+      this.lods.push(new DistanceLod(V(x, y, z), 1, g, null, 170));
+      ctx.physics.addCylinder(V(x, y + 1.8, z), 1.8, 0.11);
+      this.spots.glimpsecam = V(0, 0, 2.2).applyMatrix4(g.matrix).setY(y);
+      this.interactables.push({
+        id: 'story.glimpsecam', pos: V(x, y + 1.5, z), radius: 2.6,
+        visible: () => !!this.s && !this.s.has('q.cam.seen'),
+        primary: { label: 'Look at the camera', available: () => true, run: () => this.lookCamera() },
+      });
+    }
+
+    // ---------------------------------------------------------------- Glimpse's relay mast on the rise
+    {
+      const [x, z] = place(...STORY_SPOTS.glimpserelay);
+      const y = hf.heightAt(x, z);
+      const yaw = -0.7;
+      const mb = new MeshBatch();
+      // a galvanised mast in a concrete pad, guyed three ways, a cabinet at its foot
+      mb.add(concrete('#a39a8c'), T(new THREE.BoxGeometry(1.4, 0.25, 1.4), 0, 0.05, 0));
+      mb.add(steel, T(new THREE.CylinderGeometry(0.06, 0.08, 5.2, 8), 0, 2.7, 0));
+      for (let k = 0; k < 3; k++) {
+        const a = (k / 3) * Math.PI * 2 + 0.3;
+        mb.add(dark, rod(V(0, 4.6, 0), V(Math.cos(a) * 3.2, 0.05, Math.sin(a) * 3.2), 0.008, 3));
+        mb.add(steel, T(new THREE.CylinderGeometry(0.03, 0.03, 0.4, 6), Math.cos(a) * 3.2, 0.1, Math.sin(a) * 3.2));
+      }
+      mb.add(white, T(new THREE.BoxGeometry(0.6, 0.85, 0.38), 0.55, 0.62, 0.3, 0, 0.3, 0)); // the cabinet
+      mb.add(paper, T(loreQuad('sticker', 0.24, 0.24), 0.55 + Math.sin(0.3) * 0.192, 0.75, 0.3 + Math.cos(0.3) * 0.192, 0, 0.3, 0));
+      mb.add(dark, T(new THREE.BoxGeometry(0.16, 0.1, 0.02), 0.55 + Math.sin(0.3) * 0.2, 0.42, 0.3 + Math.cos(0.3) * 0.2, 0, 0.3, 0)); // speaker grille
+      // two dishes: one back at the camp, one north, at nothing you can see
+      mb.add(white, T(new THREE.SphereGeometry(0.4, 14, 6, 0, Math.PI * 2, 0, 0.9), 0, 4.3, 0.2, Math.PI / 2 - 0.1, 2.9, 0));
+      mb.add(white, T(new THREE.SphereGeometry(0.32, 14, 6, 0, Math.PI * 2, 0, 0.9), 0.1, 3.6, -0.15, Math.PI / 2 - 0.05, 0.5, 0));
+      mb.add(dark, T(new THREE.BoxGeometry(1.1, 0.03, 0.7), 0, 5.0, 0, -0.55, 0.4, 0));
+      mb.add(plainStandard('#1c2b4a', 0.2, 0.6), T(new THREE.BoxGeometry(1.05, 0.01, 0.66), 0, 5.02, 0.0, -0.55, 0.4, 0));
+      const led = glow('#3fa8ff', 6);
+      this.relayLed = led.intensity as unknown as { value: number };
+      mb.add(led.material, T(new THREE.SphereGeometry(0.02, 8, 6), 0.55 + Math.sin(0.3) * 0.2, 0.98, 0.3 + Math.cos(0.3) * 0.2));
+      const near = mb.build('glimpse-relay');
+      shadowProxy(near);
+      const g = placed(new THREE.Group(), x, y, z, yaw);
+      g.add(near);
+      this.group.add(g);
+      this.lods.push(new DistanceLod(V(x, y, z), 3, g, null, 170));
+      ctx.physics.addCylinder(V(x, y + 2.7, z), 2.6, 0.1);
+      ctx.physics.addBox(V(0.55, 0.62, 0.3).applyMatrix4(g.matrix), { x: 0.3, y: 0.42, z: 0.19 }, yaw + 0.3);
+      this.spots.glimpserelay = V(0.9, 0, 1.6).applyMatrix4(g.matrix).setY(y);
+      this.interactables.push({
+        id: 'story.relay', pos: V(0.55, 0.9, 0.3).applyMatrix4(g.matrix), radius: 2.2,
+        visible: () => !!this.s && !this.s.has('q.cam.cut') && !this.s.has('q.cam.loop') && !this.s.has('q.cam.hello'),
+        primary: { label: 'Open the relay cabinet', available: () => true, run: () => this.atRelay() },
+      });
+    }
+
+    // ---------------------------------------------------------------- Pip's pool, in chalk on the forecourt
+    {
+      // on the forecourt slab (its top is 0.2 m over the gas station's frame, like the fire), between
+      // the logs and the pumps, square to the station
+      const o = landmarks.campPoint(0, 0, 0);
+      const ax = landmarks.campPoint(1, 0, 0).sub(o).normalize();
+      const p = landmarks.campPoint(-3.6, 0, 7.6);
+      const yaw = Math.atan2(ax.x, ax.z) + Math.PI / 2; // the lettering faces the logs
+      const mb = new MeshBatch();
+      mb.add(paper, T(loreQuad('chalkPool', 2.4, 1.2), 0, 0, 0, -Math.PI / 2, 0, 0));
+      this.pool = mb.build('pip-pool', false, true);
+      placed(this.pool, p.x, landmarks.campPosition.y + 0.008, p.z, yaw);
+      this.pool.visible = false;
+      this.group.add(this.pool);
+      this.spots.pool = landmarks.campPoint(-3.6, 0, 4.6);
+    }
+  }
+
+  private get s() { return this.ctx.state; }
+
+  private toast(text: string, kind: 'info' | 'good' | 'bad' = 'info') {
+    this.s.events.emit('toast', { text, kind });
+  }
+
+  // ------------------------------------------------------------------ Class of Tomorrow
+  private async digCapsule() {
+    const s = this.s;
+    if (s.has('q.capsule.dug')) return;
+    this.ctx.audio.play('thud', { pos: this.ctx.player.position, intensity: 0.3 });
+    await this.ctx.ui.choose({
+      speaker: 'Time capsule',
+      text:
+        'It isn\'t deep. Kade buried it to be found. A steel tube with a rocket decal, sealed with a Kade Holdings sticker. Inside: twenty-two envelopes in children\'s handwriting, a Kade Kids lanyard, ' +
+        'and a letter on Kade letterhead. "To the children of 2046: by the time you read this, Dry Creek\'s aquifer will be fully monetised, and so, in a sense, will you. Congratulations on your Kade citizenship. Please recycle this capsule." ' +
+        'One envelope says TO PIP OKAFOR, AGE 23. DO NOT OPEN UNTIL 2046.',
+      choices: [{ id: 'ok', label: 'Take Pip\'s envelope. Leave the rest for 2046.' }],
+    });
+    if (!s.set('q.capsule.dug')) return;
+    s.set('pip.capsule');
+    s.addItem('pip_letter', 1, false, true);
+    s.addXP(35, 'The time capsule');
+    this.ctx.audio.play('pickup');
+    this.capsuleShut.visible = false;
+    this.capsuleOpen.visible = true;
+    const peek = await this.ctx.ui.choose({
+      speaker: 'Pip\'s envelope',
+      text: 'The flap is only tucked in. Eleven-year-olds don\'t lick envelopes. It would be easy.',
+      choices: [
+        { id: 'read', label: 'Read it.' },
+        { id: 'seal', label: 'Leave it sealed. It\'s hers.' },
+      ],
+    });
+    if (peek === 'read' && s.set('q.capsule.read')) {
+      await this.ctx.ui.choose({
+        speaker: 'Pip\'s letter',
+        text: '"Dear future me. I hope you have a pool. I hope Mara is still on the radio. I hope the creek comes back, because the man from Kade said it would come back better. If it didn\'t, I\'m sorry I believed him. I was eleven. Love, Pip. P.S. Count everything."',
+        choices: [{ id: 'ok', label: 'Fold it back the way it was. It won\'t be.' }],
+      });
+    }
+  }
+
+  // ------------------------------------------------------------------ Seen
+  private async lookCamera() {
+    const s = this.s;
+    await this.ctx.ui.choose({
+      speaker: 'Camera on the pole',
+      text:
+        'GLIMPSE NEIGHBOURHOOD WATCH · UNIT 0414. A white box with a blue light, a solar panel the size of a tray, and a sticker: SMILE, YOU\'RE ALREADY TAGGED. ' +
+        'The lens is on the forecourt: the pumps, the fire, the logs where everyone sits. Status light: UPLOADING. A little antenna points south-east, at a mast on the rise.',
+      choices: [{ id: 'ok', label: 'Follow the antenna.' }],
+    });
+    if (!s.set('q.cam.seen')) return;
+    s.set('hollis.camera');
+    s.addXP(15, 'Glimpse unit 0414');
+  }
+
+  private async atRelay() {
+    const s = this.s;
+    if (s.has('q.cam.cut') || s.has('q.cam.loop') || s.has('q.cam.hello')) return;
+    const elec = s.skill('electronics');
+    const loopWhy = elec >= 2 ? undefined : s.count('battery') ? undefined : 'Requires Electronics 2, or a lithium cell to run Dez\'s trick off.';
+    const pick = await this.ctx.ui.choose({
+      speaker: 'Glimpse relay',
+      text:
+        'A white cabinet at the foot of the mast, unlocked, because who would come out here. Inside: a router with forty-one feeds on it. One is labelled LAST CHANCE (FORECOURT). ' +
+        'The others are camps you\'ve heard on the radio. Viewers on the forecourt feed, right now: 1. There\'s a speaker grille, and a button marked TALK.',
+      choices: [
+        { id: 'cut', label: 'Pull the forecourt feed. Pull it hard.' },
+        { id: 'loop', label: 'Loop ten minutes of an empty forecourt, forever.', disabled: loopWhy },
+        { id: 'hello', label: 'Press TALK.' },
+        { id: 'later', label: 'Not yet.' },
+      ],
+    });
+    if (pick === 'cut' && s.set('q.cam.cut')) {
+      this.ctx.audio.play('thud', { pos: this.ctx.player.position, intensity: 0.4 });
+      s.addXP(30, 'Unplugged');
+      this.toast('The forecourt feed goes black on the router. Back at camp, a blue light stops blinking.', 'good');
+      this.applyCam();
+    } else if (pick === 'loop' && !loopWhy && s.set('q.cam.loop')) {
+      if (elec < 2) s.removeItem('battery', 1);
+      this.ctx.audio.play('unlock', { pos: this.ctx.player.position });
+      s.addXP(40, 'Looped');
+      this.toast('Ten minutes of an empty forecourt at dusk, on repeat. Whoever watches is watching a picture now.', 'good');
+      setTimeout(() => this.ctx.ui.subtitle('Dez Marlow · radio', 'Is that a loop? Did you loop them? I\'m coming up there with a lunchbox. That pole deserves a lunchbox.'), 1600);
+      this.applyCam();
+    } else if (pick === 'hello' && s.set('q.cam.hello')) {
+      s.addXP(40, 'Said hello');
+      this.ctx.audio.play('click', { pos: this.ctx.player.position });
+      const EZRA: Record<string, { speaker: string; text: string; choices: { id: string; label: string; next?: string }[] }> = {
+        e1: {
+          speaker: 'Ezra Seymour · relay',
+          text: 'Oh! Hi. Wow. Nobody ever talks to the relays. Hi! You\'re the one from the gas station. You drink one point four bottles a day and you favour your left foot. That\'s not creepy. That\'s care.',
+          choices: [{ id: 'who', label: 'Who is this?', next: 'e2' }],
+        },
+        e2: {
+          speaker: 'Ezra Seymour · relay',
+          text: 'I\'m Ezra. Glimpse? The neighbourhood app? I\'m north of the salt now, in a place I call the Panopticon. Eleven hundred cameras. Every one of them is pointed at somebody I care about. Which is everybody. Which is the point.',
+          choices: [{ id: 'stop', label: 'Stop watching the camp.', next: 'e3' }],
+        },
+        e3: {
+          speaker: 'Ezra Seymour · relay',
+          text: 'Don\'t come looking for me. I mean, you can. I\'ll know when you\'re close. I always know. Say hi to Hollis. He waves at the camera every morning. He thinks it\'s a sign. It kind of is.',
+          choices: [{ id: 'bye', label: 'Let go of the button.' }],
+        },
+      };
+      await this.ctx.ui.converse({ start: 'e1', node: (id) => EZRA[id] ?? null, onChoice: () => {} });
+      this.applyCam();
+    }
+  }
+
+  private applyCam() {
+    const s = this.s;
+    this.cutCable.visible = s.has('q.cam.cut');
+    this.lunchbox.visible = s.has('q.cam.loop');
+  }
+
+  // ------------------------------------------------------------------ camp choices (Game.campTalk)
+  /** Effects of the camp lines these favours add (content/camp.ts). */
+  campChoice(choice: string) {
+    const s = this.s;
+    if (!s) return;
+    if (choice === 'lifeboat.ask') s.set('dez.lifeboat');
+    if ((choice === 'chat.air' || choice === 'chat.mara' || choice === 'chat.pip') && !s.has('q.chat.air') && !s.has('q.chat.mara') && !s.has('q.chat.pip')) {
+      s.set(`q.${choice}`);
+    }
+    if (choice === 'school') s.set('pip.capsule');
+    if ((choice === 'letter.sealed' || choice === 'letter.peeked' || choice === 'letter.mara') && s.has('q.capsule.dug')
+      && !s.has('q.capsule.sealed') && !s.has('q.capsule.peeked') && !s.has('q.capsule.mara')) {
+      if (choice === 'letter.sealed' && s.has('q.capsule.read')) return;
+      s.removeItem('pip_letter', 1);
+      s.set(`q.capsule.${choice.slice(7)}`);
+      this.pool.visible = true;
+    }
+    if (choice === 'rumour') {
+      // Dez's pick of the night: the pickup it points at goes on the map
+      const r = rumourTonight({ has: (f) => s.has(f), count: (i) => s.count(i), rep: (p) => s.rep(p), name: s.archetype.name, rests: s.data.rests });
+      if (r?.intel && s.set(`rumour.${r.intel}`)) setTimeout(() => this.toast('Marked on your map: what the band was talking about.', 'info'), 400);
+    }
+    if (choice === 'song.hollis' && s.has('q.song.asked')) s.set('q.song.hollis');
+    if (choice === 'song.dez' && s.has('q.song.hollis')) s.set('q.song.dez');
+    if (choice === 'blink') s.set('hollis.camera');
+    if (choice === 'cam.told' && (s.has('q.cam.cut') || s.has('q.cam.loop') || s.has('q.cam.hello'))) s.set('q.cam.told');
+  }
+
+  update(dt: number, cam: THREE.Vector3) {
+    for (const l of this.lods) l.update(cam);
+    const s = this.s;
+    if (s && this.synced !== s) {
+      // a new or loaded run: put the world back the way it was left
+      this.synced = s;
+      const dug = s.has('q.capsule.dug');
+      this.capsuleShut.visible = !dug;
+      this.capsuleOpen.visible = dug;
+      this.pool.visible = s.favours().pipPool;
+      this.applyCam();
+    }
+    if (s && !s.has('seen:capsule') && Math.hypot(cam.x - this.capsuleAt.x, cam.z - this.capsuleAt.z) < 22) s.set('seen:capsule');
+    this.t += dt;
+    // the camera blinks blue while it uploads (dark once cut); the relay's light follows its feed
+    const ph = this.t % 2.2;
+    const watching = !s?.has('q.cam.cut');
+    this.camLed.value = watching ? (ph < 0.12 ? 9 : 0.5) : 0;
+    this.relayLed.value = watching ? ((this.t + 0.7) % 1.1 < 0.1 ? 9 : 0.8) : (this.t % 3 < 0.1 ? 4 : 0.1);
+  }
+}

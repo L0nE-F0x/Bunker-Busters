@@ -37,6 +37,8 @@ export const PEOPLE: PersonDef[] = [
     bio: 'Ran the county\'s water before the Pivot. Runs Last Chance\'s radio, rations and patience now. Dry, kind, and tired in a way that sounds like a joke until you listen.',
     known: (v) => v.has('briefed'),
     about: [
+      { who: 'ezra', line: 'A man who watches everything is either the worst person in the valley or the only witness.', when: (v) => v.has('q.cam.hello') || v.has('q.chat.mara') },
+      { who: 'pip', line: 'She hoped she\'d have a pool. I held the chalk.', when: (v) => v.has('q.capsule.mara') },
       { who: 'tanner', line: 'He\'s not a monster. He\'s a middleman. That\'s worse. There are more of them.' },
       { who: 'vesper', line: 'She talks like a product launch and plans like a dam.', when: (v) => v.has('debriefed') || v.has('tanner.kade') },
       { who: 'pip', line: 'Pip counts the jugs so I don\'t have to look.' },
@@ -53,6 +55,8 @@ export const PEOPLE: PersonDef[] = [
     bio: 'Drove long-haul for thirty years. Keeps the neon sign alive off a solar panel Tanner\'s contractor walked away from. Believes in the sign more than in most people, and is usually right to.',
     known: (v) => v.has('briefed'),
     about: [
+      { who: 'ezra', line: 'Three years that camera watched me fix a sign. Hope he learned something.', when: (v) => v.has('q.cam.told') },
+      { who: 'sol', line: 'Never met him. I heard his wife sing a man off the road once. Well. Play a song. Same thing.', when: (v) => v.has('q.song.hollis') },
       { who: 'mara', line: 'She signed something once. She\'s been paying for it in jugs ever since.', when: (v) => v.has('lore.permit') || v.has('debriefed') },
       { who: 'mara', line: 'Best dispatcher I ever had, and she never once lied about the weather.' },
       { who: 'pip', line: 'Kid\'s sharper than the knife I gave her.' },
@@ -69,6 +73,8 @@ export const PEOPLE: PersonDef[] = [
     bio: 'Keeps the camp\'s water ledger in a notebook with a unicorn on the cover. Counts everything twice. Asks the questions the adults are too tired to.',
     known: (v) => v.has('briefed'),
     about: [
+      { who: 'mara', line: 'Mara held the chalk. She\'s bad at ladders.', when: (v) => v.has('q.capsule.mara') },
+      { who: 'vesper', line: 'She\'s in THE OTHER COLUMN. Page one.', when: (v) => v.has('q.chat.pip') },
       { who: 'mara', line: 'Mara says "later" when she means "no water".' },
       { who: 'dez', line: 'Dez says he can fix anything. He can\'t fix the tap.' },
       { who: 'tanner', line: 'If I met Tanner I\'d just ask him why. Just why.' },
@@ -85,6 +91,8 @@ export const PEOPLE: PersonDef[] = [
     bio: 'Built the camp radio out of a karaoke machine and spite. Distrusts founders, satellites, and anyone who says "ecosystem". Swears Vesper Kade listens on our band. Is right.',
     known: (v) => v.has('briefed'),
     about: [
+      { who: 'vesper', line: 'Since I read the chat on air she doesn\'t breathe between songs anymore. She holds it.', when: (v) => v.has('q.chat.air') },
+      { who: 'ezra', line: 'Ezra named the Pivot. Ezra. Named. The Pivot. I need to go and sit in the car.', when: (v) => v.has('lore.pivotname') },
       { who: 'vesper', line: 'She\'s on our band. I can hear her breathing between songs.' },
       { who: 'tanner', line: 'His drone\'s firmware reads like a cry for help.' },
       { who: 'mara', line: 'Only boss I ever had who said sorry and meant it.' },
@@ -151,6 +159,7 @@ export const PEOPLE: PersonDef[] = [
     bio: 'Thirty years a locksmith. Keeps the street fire now and knows every tired lock in town. Locked himself out of his own motel room, and would prefer that not come up.',
     known: (v) => v.has('creek.talk.sol'),
     about: [
+      { who: 'hollis', line: 'The trucker heard her. On the road, that afternoon. Somebody heard her. Mm.', when: (v) => v.has('q.song.hollis') },
       { who: 'inez', line: 'Inez locks rooms she says are empty. I could open them. I respect her too much.' },
       { who: 'doc', line: 'Doc walks past my fire at night with a jug. I don\'t ask. I notice.', when: (v) => !v.has('q.nia.told') && !v.has('q.nia.peace') },
       { who: 'doc', line: 'Doc and Nia are talking again. The street\'s quieter. I miss the drama.' },
@@ -222,6 +231,22 @@ export const PEOPLE: PersonDef[] = [
       'You\'re a user. Users are fine. Users are the point.',
       'You\'re interesting. I hate that. It\'s a compliment.',
       'You\'d make a great partner. That\'s the scariest thing I\'ve said this year.',
+    ],
+  },
+  {
+    id: 'ezra', accent: '#6f9cff', name: 'Ezra Seymour', role: 'Founder, Glimpse', place: 'The Panopticon, north of the salt',
+    bio: 'Built Glimpse, the neighbourhood app that never forgot a face, then a bunker with eleven hundred cameras in it. Named the Pivot. Watches every camp he can reach, because he cares, which is the problem.',
+    known: (v) => v.has('q.cam.hello') || v.has('lore.panopticon'),
+    about: [
+      { who: 'vesper', line: 'Vesper thinks she owns the water. I own the footage of her owning the water. Guess which one lasts.' },
+      { who: 'tanner', line: 'Tanner\'s doorbell camera is a Glimpse. He talks to it. Every night. I don\'t reply. I want to.' },
+      { who: 'hollis', line: 'He waves at the camera every morning. I wave back. He can\'t see it. That\'s the relationship.', when: (v) => v.has('q.cam.hello') },
+    ],
+    ofYou: [
+      'You cut my feed. I still have the backups. I always have the backups.',
+      'You\'re a face in the crowd. The crowd is very small now. I see you.',
+      'You\'re trending. In a demographic of one. Me.',
+      'If you ever want to see everything, you know where the door is. I\'ll know when you knock.',
     ],
   },
   {

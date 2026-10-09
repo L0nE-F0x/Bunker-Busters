@@ -1,4 +1,5 @@
 import type { PersonId, SkillId } from './types';
+import { LORE_SERIES } from './world';
 
 /**
  * Quests are data. Every step completes from game flags (and, rarely, items), so the same
@@ -654,7 +655,216 @@ export const QUESTS: QuestDef[] = [
     ],
     wrap: { speaker: 'Wick', text: 'Orange tape. On my ridge. Like it was a present.' },
   },
+
+  // ------------------------------------------------------------------ the founders, from the outside
+  // Props and interactions: sites/stories.ts (the capsule, the camera, the relay, Pip's pool).
+  // Talk: content/camp.ts (Dez, Pip, Hollis). The chat pages are WORLD_INTEL (series 'lifeboat').
+  {
+    id: 'dez.lifeboat',
+    kind: 'side',
+    title: 'Read Receipts',
+    giver: 'dez',
+    where: 'The whole valley → Last Chance',
+    blurb:
+      'A founders\' group chat called LIFEBOAT is still trying to sync on the Compact\'s band, at three every morning, in pieces. Every phone, watch and tablet that died out here kept its last page. Dez wants all eight. He has never wanted anything more, including the karaoke machine.',
+    start: (v) => v.has('briefed') && (v.has('dez.lifeboat') || LIFEBOAT_PAGES.some((id) => v.has(`intel:${id}`))),
+    steps: [
+      {
+        id: 'one', text: 'Find a page of the LIFEBOAT chat', at: 'lifeboat',
+        hint: 'Dez triangulates the next one at three in the morning: it\'s on your map. Founders dropped their devices where they ran.',
+        done: (v) => lifeboatCount(v) >= 1,
+      },
+      {
+        id: 'half', text: 'Find four pages', at: 'lifeboat',
+        hint: 'The jet, the drive-in, Kade\'s sites, the Tube. The map marks the nearest one Dez can hear.',
+        done: (v) => lifeboatCount(v) >= 4,
+      },
+      {
+        id: 'all', text: 'Find all eight pages', at: 'lifeboat',
+        hint: 'The last ones went far: the west road, the far side of the highway, under the Spire.',
+        done: (v) => lifeboatCount(v) >= 8,
+      },
+      {
+        id: 'dez', text: 'Decide with Dez what the chat is for', at: 'gas',
+        hint: 'At the camp fire. Dez has cleared a whole shelf for it.',
+        done: (v) => any(v, 'q.chat.air', 'q.chat.mara', 'q.chat.pip'),
+      },
+    ],
+    outcomes: [
+      {
+        flag: 'q.chat.air',
+        label: 'You let Dez read it on the open net.',
+        text: 'Dez read all eight pages on the open band, and did the voices. Every camp heard the founders name the Pivot like a product. Vesper\'s carrier went quiet for a whole day, which Dez counts as a scream.',
+        reward: { xp: 150, items: [{ id: 'emp', qty: 1 }, { id: 'battery', qty: 2 }], rep: { compact: 2, dez: 2, vesper: -1 } },
+      },
+      {
+        flag: 'q.chat.mara',
+        label: 'You gave the chat to Mara.',
+        text: 'Mara read it twice and put it in the ammo tin with the rest of the evidence. "Eleven hundred cameras," she said. "Somebody up north has watched every camp for three years. That\'s not a threat. That\'s a witness."',
+        reward: { xp: 140, items: [{ id: 'medkit', qty: 1 }, { id: 'water', qty: 2 }], rep: { mara: 2, compact: 1 } },
+      },
+      {
+        flag: 'q.chat.pip',
+        label: 'You gave the chat to Pip, for the ledger.',
+        text: 'Pip copied every line into the back of the ledger under a heading in capitals: THE OTHER COLUMN. "When there\'s a trial," she says, "I\'m reading it out." Nobody at the fire doubts her.',
+        reward: { xp: 140, items: [{ id: 'ration', qty: 2 }, { id: 'noisemaker', qty: 1 }], rep: { pip: 2, compact: 1 } },
+      },
+    ],
+    wrap: { speaker: 'Dez Marlow', text: 'Eight pages. Seven founders. One group chat. And not one of them ever said "us".' },
+  },
+  {
+    id: 'pip.capsule',
+    kind: 'side',
+    title: 'Class of Tomorrow',
+    giver: 'pip',
+    where: 'Last Chance → the old school, west of Dry Creek',
+    blurb:
+      'Mara traded Dry Creek\'s aquifer for a school with a rocket on the sign. Pip went there, for eleven days. The first week, the class buried a time capsule, sponsored by Kade Holdings, to be opened in 2046. Pip would like her letter back now. She wrote something stupid in it and she wants to know how stupid.',
+    start: (v) => v.has('pip.capsule'),
+    steps: [
+      {
+        id: 'site', text: 'Find what\'s left of Kade Kids Academy', at: 'capsule',
+        hint: 'West of Dry Creek, short of the highway. A rocket on a sign, bent over. The school is a crater now.',
+        done: (v) => any(v, 'seen:capsule', 'q.capsule.dug'),
+      },
+      {
+        id: 'dig', text: 'Dig up the time capsule', at: 'capsule',
+        hint: 'Under the plaque. It isn\'t deep. Kade buried it to be found.',
+        done: (v) => v.has('q.capsule.dug'),
+      },
+      {
+        id: 'give', text: 'Get Pip her letter', at: 'gas',
+        hint: 'At the camp fire. Sealed, or not. Or let Mara be the one to hand it over.',
+        done: (v) => any(v, 'q.capsule.sealed', 'q.capsule.peeked', 'q.capsule.mara'),
+      },
+    ],
+    outcomes: [
+      {
+        flag: 'q.capsule.sealed',
+        label: 'You gave Pip her letter, sealed.',
+        text: 'Pip read it behind the pumps, alone. "Dear future me, I hope you have a pool." Then she drew one in chalk on the forecourt, two metres long, with a ladder. Nobody is allowed to walk on it. Nobody does.',
+        reward: { xp: 90, items: [{ id: 'ration', qty: 1 }, { id: 'lockpick', qty: 2 }], rep: { pip: 2, compact: 1 } },
+      },
+      {
+        flag: 'q.capsule.peeked',
+        label: 'You read Pip\'s letter first, and told her.',
+        text: 'You read it before she did, and said so. Pip looked at you for a long time. "At least you said." She drew the pool anyway, and wrote you into the ledger in a column she won\'t name.',
+        reward: { xp: 60, items: [{ id: 'ration', qty: 1 }], rep: { pip: 1 } },
+      },
+      {
+        flag: 'q.capsule.mara',
+        label: 'You let Mara give Pip the letter.',
+        text: 'Mara walked it over to Pip herself, and they sat behind the pumps for an hour. Afterwards Pip drew a pool on the forecourt and Mara held the chalk. Mara has stopped saying "later" when she means "no water".',
+        reward: { xp: 100, items: [{ id: 'water', qty: 2 }], rep: { mara: 2, pip: 1, compact: 1 } },
+      },
+    ],
+    wrap: { speaker: 'Pip Okafor', text: 'I put "pool" in the good column. It doesn\'t hold water. That\'s fine. Nothing does.' },
+  },
+  {
+    id: 'hollis.camera',
+    kind: 'side',
+    title: 'Seen',
+    giver: 'hollis',
+    where: 'Last Chance → the relay on the rise',
+    blurb:
+      'There\'s a little camera on a pole by the road, past the pumps. Blue light. It has been blinking at Hollis for three years, and Hollis doesn\'t like things that blink at him unless they\'re signs. Somebody is watching the camp. He\'d like to know who, and he\'d like them to stop.',
+    start: (v) => v.has('briefed') && any(v, 'hollis.camera', 'lore.glimpse', 'q.cam.seen'),
+    steps: [
+      {
+        id: 'cam', text: 'Take a look at the camera by the road', at: 'glimpsecam',
+        hint: 'On a pole on the camp side of the highway, east of the pumps. It blinks blue.',
+        done: (v) => any(v, 'q.cam.seen', 'q.cam.cut', 'q.cam.loop', 'q.cam.hello'),
+      },
+      {
+        id: 'relay', text: 'Find where it uploads to', at: 'glimpserelay',
+        hint: 'Its little antenna points south-east, at a solar mast on the rise toward the Survey Camp. Decide there what whoever watches gets to see.',
+        done: (v) => any(v, 'q.cam.cut', 'q.cam.loop', 'q.cam.hello'),
+      },
+      {
+        id: 'tell', text: 'Tell Hollis', at: 'gas',
+        hint: 'At the camp fire.',
+        done: (v) => v.has('q.cam.told'),
+      },
+    ],
+    outcomes: [
+      {
+        flag: 'q.cam.cut',
+        label: 'You cut the uplink.',
+        text: 'The blue light went out at three in the morning. Hollis noticed first: he says the forecourt sounds different unwatched. He sleeps through the night now, and the sign stays on for everybody, including the people it isn\'t recording.',
+        reward: { xp: 90, items: [{ id: 'ammo38', qty: 8 }, { id: 'scrap', qty: 3 }], rep: { hollis: 2 } },
+      },
+      {
+        flag: 'q.cam.loop',
+        label: 'You looped the feed.',
+        text: 'Somewhere north of the salt, a screen shows an empty forecourt at dusk, forever. The blue light still blinks, and Dez\'s lunchbox hangs off the pole under it. Whoever watches the camp is watching a picture of it.',
+        reward: { xp: 110, items: [{ id: 'emp', qty: 1 }, { id: 'battery', qty: 1 }], rep: { hollis: 1, dez: 1, compact: 1 } },
+      },
+      {
+        flag: 'q.cam.hello',
+        label: 'You said hello to whoever was watching.',
+        text: 'Ezra Seymour answered. He knew your water ration and which foot you favour. He lives north of the salt, in something he calls the Panopticon, and he says he\'ll know when you\'re close. The blue light still blinks. Now you know whose eye it is.',
+        reward: { xp: 120, items: [{ id: 'battery', qty: 2 }], rep: { ezra: 2 } },
+      },
+    ],
+    wrap: { speaker: 'Hollis Grange', text: 'Three years that thing watched me fix a sign. Hope it learned something.' },
+  },
+  {
+    id: 'sol.song',
+    kind: 'side',
+    title: 'Still Here',
+    giver: 'sol',
+    where: 'Dry Creek → Last Chance → Dry Creek',
+    blurb:
+      'KDRY\'s log was signed R. Varga. Rosa Varga ran the station out of the back of the feed store, and the afternoon of the Pivot she stayed on the air until the generator quit. She played one song at the end. Sol was out on a call, opening somebody\'s car. He never heard which song.',
+    start: (v) => v.has('q.song.asked'),
+    steps: [
+      {
+        id: 'hollis', text: 'Ask Hollis what he heard on the radio that afternoon', at: 'gas',
+        hint: 'Hollis was on the road the afternoon of the Pivot, with the radio on. Ask him at the camp fire.',
+        done: (v) => any(v, 'q.song.hollis', 'q.song.band', 'q.song.quiet'),
+      },
+      {
+        id: 'dez', text: 'Ask Dez to find the song', at: 'gas',
+        hint: 'Dez\'s karaoke machine has every song. Tell him what Hollis heard.',
+        done: (v) => any(v, 'q.song.dez', 'q.song.band', 'q.song.quiet'),
+      },
+      {
+        id: 'sol', text: 'Tell Sol', at: 'creek',
+        hint: 'Sol keeps the street fire in Dry Creek. Give him the name, or let the whole valley hear it the way Rosa played it.',
+        done: (v) => any(v, 'q.song.band', 'q.song.quiet'),
+      },
+    ],
+    outcomes: [
+      {
+        flag: 'q.song.band',
+        label: 'Dez played it on the open band at sunset.',
+        text: 'Dez put "Still Here" on every frequency the karaoke machine could reach, at sunset, the way Rosa did. In Dry Creek the street stopped to listen. Sol stood by his fire and didn\'t sing. Everyone else did.',
+        reward: { xp: 90, items: [{ id: 'lockpick', qty: 3 }], rep: { sol: 2, creek: 1, compact: 1 } },
+      },
+      {
+        flag: 'q.song.quiet',
+        label: 'You told Sol the song, just him.',
+        text: 'You gave him the name, and the words Dez wrote on the back of a Kade lanyard. Sol keeps them in his pick roll. He hums it at the fire when he thinks nobody\'s listening. Everybody\'s listening.',
+        reward: { xp: 80, items: [{ id: 'lockpick', qty: 2 }, { id: 'ration', qty: 1 }], rep: { sol: 3 } },
+      },
+    ],
+    wrap: { speaker: 'Sol Varga', text: 'Rosa always said the last song is for whoever is still here. Mm. That\'s us, then.' },
+  },
 ];
+
+/** The founders' chat, in reading order (content/world.ts WORLD_INTEL, series 'lifeboat'). */
+export const LIFEBOAT_PAGES = LORE_SERIES.lifeboat.ids;
+export const lifeboatCount = (v: { has: (f: string) => boolean }) => LIFEBOAT_PAGES.filter((id) => v.has(`intel:${id}`)).length;
+
+/**
+ * Map targets for steps that aren't landmarks or outposts: [x, z]. `lifeboat` is resolved by the
+ * runtime to the first chat page you haven't read.
+ */
+export const STORY_SPOTS: Record<string, [number, number]> = {
+  capsule: [-306, 4],
+  glimpsecam: [-121, 126],
+  glimpserelay: [-74, 178],
+};
 
 /** The Survey Says stakes (sites/errands.ts places them). */
 export const STAKES = ['q.wick.stake.a', 'q.wick.stake.b', 'q.wick.stake.c'];
@@ -698,5 +908,9 @@ export function favours(v: { has: (f: string) => boolean }) {
     renAtCamp: v.has('q.ren.truth'),
     /** Dez calls Kade road patrols on the radio when they clock in near you. */
     dezEars: v.has('q.dez.ears'),
+    /** Pip's chalk pool is on the forecourt. */
+    pipPool: v.has('q.capsule.sealed') || v.has('q.capsule.peeked') || v.has('q.capsule.mara'),
+    /** Ezra Seymour knows your voice, and says so now and then. */
+    ezraWatching: v.has('q.cam.hello'),
   };
 }

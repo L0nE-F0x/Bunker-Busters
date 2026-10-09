@@ -35,6 +35,7 @@ import { HumanSkins } from './combat/humanSkin';
 import { Garage } from './bunker/Garage';
 import { Settlement } from './town/Settlement';
 import { buildSites, Errands, type Site } from './sites';
+import { Stories } from './sites/stories';
 import { Player } from './player/Player';
 import { FirstPersonCamera } from './player/FirstPersonCamera';
 import { Hands, HAND_LOOKS, torchLight } from './player/Hands';
@@ -125,6 +126,8 @@ export class Game {
   scavenge!: Scavenge;
   /** Props and camp effects for the road favours (sites/errands.ts). */
   errands!: Errands;
+  /** Props and camp effects for the founders' favours (sites/stories.ts). */
+  stories!: Stories;
   private humanSkins: HumanSkins | null = null;
   sites: Site[] = [];
   map!: MapData;
@@ -336,6 +339,8 @@ export class Game {
     this.interactables.push(...this.scavenge.interactables);
     this.errands = new Errands(this.ctx, this.landmarks, (x, z) => this.clearSpot(x, z));
     this.interactables.push(...this.errands.interactables);
+    this.stories = new Stories(this.ctx, this.landmarks, (x, z) => this.clearSpot(x, z));
+    this.interactables.push(...this.stories.interactables);
     if (!SKIP.has('env')) this.buildEnvironment();
     if (SKIP.has('garage')) this.scene.remove(this.garage.b.group, this.garage.drone.group);
     if (SKIP.has('ui')) document.getElementById('ui')!.style.display = 'none';
@@ -636,7 +641,7 @@ export class Game {
         z = cz - lx * Math.sin(r) + lz * Math.cos(r);
         y = this.hf.heightAt(cx, cz) + 0.45;
       }
-      const prop = buildIntelProp(it.id, { crate: !gas });
+      const prop = buildIntelProp(it.id, { crate: !gas, prop: it.prop });
       const g = prop.group;
       g.position.set(x, y, z);
       g.rotation.y = ((Math.sin(x * 12.9898 + z * 78.233) * 43758.5453) % 1) * Math.PI * 2;
@@ -645,7 +650,7 @@ export class Game {
       this.intelMeshes.set(it.id, g);
       this.interactables.push({
         id: it.id,
-        pos: g.position.clone().setY(g.position.y + (it.id === 'intel.highway.greg' ? 1.3 : gas ? 0.1 : 0.35)),
+        pos: g.position.clone().setY(g.position.y + (it.id === 'intel.highway.greg' || it.prop === 'flyer' ? 1.3 : it.prop === 'notice' ? 0.9 : gas ? 0.1 : 0.35)),
         radius: 2.4,
         visible: () => !this.state?.has(`intel:${it.id}`),
         primary: {
@@ -774,6 +779,7 @@ export class Game {
       talking: () => this.ui.subtitleBusy,
       armed: () => !!this.arms?.equipped && this.arms.equipped !== 'crowbar',
       night: () => this.atmo.isNight,
+      has: (f) => !!this.state?.has(f),
       see: (a, b) => this.combat.clearLine(a, b, this.combat.target.collider),
       say: (speaker, text, pos) => this.ui.subtitle(speaker, text, { pos: pos.clone() }),
     };
@@ -879,7 +885,7 @@ export class Game {
     const s = this.state!;
     const member = CAMP.find((m) => m.id === id);
     if (!member) return;
-    const view = (): CampView => ({ has: (f) => s.has(f), count: (i) => s.count(i), rep: (p) => s.rep(p), name: s.archetype.name });
+    const view = (): CampView => ({ has: (f) => s.has(f), count: (i) => s.count(i), rep: (p) => s.rep(p), name: s.archetype.name, night: this.atmo.isNight, rests: s.data.rests });
     await this.ui.converse({
       start: 'hello',
       node: (n) => member.node(n, view()),
@@ -895,6 +901,7 @@ export class Game {
           this.audio.play('uiConfirm');
         }
         this.errands.campChoice(choice);
+        this.stories.campChoice(choice);
         if (choice === 'emp' && s.count('battery') >= 1 && s.count('scrap') >= 2) {
           s.removeItem('battery', 1);
           s.removeItem('scrap', 2);
@@ -1631,7 +1638,7 @@ export class Game {
     }
     for (const it of WORLD_INTEL) {
       if (s.has(`intel:${it.id}`)) continue;
-      const known = it.id === 'intel.gas.note' || this.map.revealedAt(it.position[0], it.position[2]) > 100;
+      const known = it.id === 'intel.gas.note' || s.has(`rumour.${it.id}`) || this.map.revealedAt(it.position[0], it.position[2]) > 100;
       if (known) out.push({ id: it.id, x: it.position[0], z: it.position[2], label: 'Intel', color: '#c896ff', kind: 'intel' });
     }
     for (const c of WORLD_CACHES) {
@@ -1723,6 +1730,7 @@ export class Game {
     if (this.player && this.mode === 'playing') this.scavenge?.update(dt, this.player.position);
     for (const site of this.sites) site.update(dt, this.camera.position);
     this.errands?.update(dt, this.camera.position);
+    this.stories?.update(dt, this.camera.position);
     if (this.mode !== 'playing') this.garage.update(dt);
     this.garage.cull(this.camera.position);
     this.props.update(dt, focusPos, this.atmo.wind);
@@ -1747,6 +1755,9 @@ export class Game {
     for (const ip of this.intelProps) {
       if (!ip.g.visible) continue;
       const d = ip.g.position.distanceTo(this.camera.position);
+      // a note or a phone is sub-pixel long before this: stop drawing it (and its shadow)
+      const show = d < 170;
+      if (ip.g.children[0] && ip.g.children[0].visible !== show) for (const c of ip.g.children) c.visible = show;
       ip.prop.glint.t.value = ((this.t / 3.2 + ip.phase) % 1);
       ip.prop.glint.k.value = d > 70 ? 0 : Math.min(1, 1.6 - d / 45) * (this.atmo.isNight ? 1.4 : 1);
       if (ip.prop.blink) ip.prop.blink.value = (this.t % 1.4) < 0.5 ? 8 : 0.2;

@@ -69,6 +69,7 @@ export type PersonId =
   | 'mara' | 'hollis' | 'pip' | 'dez'
   | 'nia' | 'doc' | 'inez' | 'sol' | 'ren' | 'wick'
   | 'tanner' | 'vesper'
+  | 'ezra'
   | 'creek' | 'compact';
 
 export type SolutionKind = 'stealth' | 'hack' | 'force' | 'social' | 'lockpick';
@@ -107,6 +108,10 @@ export interface IntelItem {
   /** Stuff in the same pile as the paper. */
   loot?: { id: string; qty: number }[];
   xp: number;
+  /** A collectible run it belongs to (content/world.ts LORE_SERIES); the journal shows it in order. */
+  series?: string;
+  /** The thing lying in the world (world/intelProps.ts). Older entries are keyed by id instead. */
+  prop?: string;
 }
 
 export interface Bunker {

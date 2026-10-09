@@ -18,6 +18,8 @@ export interface BarkHost {
   /** The player has a gun out. */
   armed(): boolean;
   night(): boolean;
+  /** A story flag (lines that react to what you've done). */
+  has?(flag: string): boolean;
   /** Clear line from a head to the player's eye (walls swallow greetings). */
   see(from: THREE.Vector3, to: THREE.Vector3): boolean;
   /** Say it: a positional voice and a subtitle. */
@@ -73,10 +75,14 @@ export class TownBarks {
   }
 
   private line(p: Person, kind: BarkKind) {
-    const of = p.lines.filter((l) => l.kind === kind);
-    if (!of.length) return null;
+    // lines about what you've done (content/townBarks.ts `when`) take every other turn while they apply
+    const has = this.host?.has?.bind(this.host);
+    const news = has ? p.lines.filter((l) => l.kind === kind && l.when && l.when(has)) : [];
+    const of = p.lines.filter((l) => l.kind === kind && !l.when);
     const n = p.said[kind] ?? 0;
     p.said[kind] = n + 1;
+    if (news.length && (n % 2 === 0 || !of.length)) return news[(p.start + (n >> 1)) % news.length];
+    if (!of.length) return null;
     return of[(p.start + n) % of.length];
   }
 

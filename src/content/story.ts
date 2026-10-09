@@ -59,6 +59,34 @@ export function briefingFor(a: ArchetypeDef): StoryPage[] {
  */
 export function campRadio(v: StoryView): { pages: StoryPage[]; flags: string[] } {
   const a = v.archetype;
+  // the founders' favours, when there's news Mara would have heard: one call each
+  if (v.has('q.chat.mara') && !v.has('mara.chat')) {
+    return {
+      pages: [
+        { speaker: 'Mara Voss', text: 'I read the chat. Twice. "The county signed it in an afternoon." It was an afternoon. It was a Tuesday. I had a sandwich.' },
+        { speaker: 'Mara Voss', text: 'It\'s in the ammo tin with the ledger. If there\'s ever a court again, it goes in first. And Ezra. Eleven hundred cameras. He watched all of it. A man who sees everything is either the worst person in the valley, or the only witness. Possibly both.' },
+      ],
+      flags: ['mara.chat'],
+    };
+  }
+  if (v.has('q.capsule.mara') && !v.has('mara.capsule')) {
+    return {
+      pages: [
+        { speaker: 'Mara Voss', text: 'She hoped she\'d have a pool. That\'s what was in it. I signed away a creek and an eleven-year-old hoped for a pool.' },
+        { speaker: 'Mara Voss', text: 'I held the chalk. That\'s all I\'m going to say about it on an open channel. Thank you for letting me be the one. Mara, out.' },
+      ],
+      flags: ['mara.capsule'],
+    };
+  }
+  if (v.has('q.cam.hello') && !v.has('mara.ezra')) {
+    return {
+      pages: [
+        { speaker: 'Mara Voss', text: 'Hollis says you talked to the camera. To a man called Ezra. Who knows how much we drink.' },
+        { speaker: 'Mara Voss', text: 'Fine. Then he knows how little. Write his name down next to Vesper\'s. North of the salt. One door at a time.' },
+      ],
+      flags: ['mara.ezra'],
+    };
+  }
   if (v.has('debriefed')) {
     const how = v.has('act1.broadcast')
       ? 'Every camp on the band is angry at the same person. That has never happened before. I\'m trying to enjoy it.'
@@ -296,6 +324,28 @@ export function journalEntries(v: StoryView): JournalEntry[] {
   add('seen:wellhead', 'Where the creek went', 'South-west of Dry Creek, the aquifer comes up through a Kade wellhead into a tank with her name on it, then west down the pipe. The creek didn\'t dry up. It was moved. Juno was right, and the proof is guarded by five rifles, two sentries and a minefield.');
   add('outpost.wellhead.cleared', 'Opened the tap', 'You took the wellhead. The tank is still Kade\'s, and Kade will send more people; Kade always sends more people. But for a while the water under Dry Creek was nobody\'s, which is the closest thing to everybody\'s it has been in years.');
   add('cave.wick.vesper', 'She stood where you stood', 'Wick says Vesper Kade called the Garage a prototype with bad unit economics. He told her the prototype had his cousin\'s water. She painted her initials in a pocket of the rock and left.');
+  // the founders, from the outside (WORLD_INTEL's lore pickups and the four favours that hang off them)
+  add('lore.lifeboat', '#LIFEBOAT', 'A group chat the founders kept before the Pivot: Vesper Kade, Hunter Vale, Ezra Seymour, Prudence Ashby, Orrin, Kit, and Tanner, who kept rejoining. Every device that died out here kept its last page. Dez hears them try to sync at three in the morning.');
+  add('lore.pivotname', 'Everybody forgives a pivot', 'They named it before it happened. "Collapse" was bad for the brand. "Transition" tested badly. Ezra said "Pivot". Tanner reacted with a rocket.');
+  add('lore.panopticon', 'Eleven hundred cameras', 'Ezra Seymour built Glimpse, the neighbourhood app that never forgot a face, and then a bunker he calls the Panopticon, north of the salt. Every camera in it is pointed at somebody. Prudence Ashby built the Alignment Spire. Kit built a Fortress with a moat of coolant. Apex is only the next door.');
+  add('lore.spire', 'The wrong spire', 'Careful Labs left a notice at the 5G tower for anyone looking for the Alignment Spire: you are at the wrong spire, please don\'t look for the right one. Its doors ask ethics questions. Its turrets apologise first.');
+  add('lore.walkwest', 'The walk west', 'People walked west toward Apex on Bunkr.ly receipts, because the line moves faster if you\'re already standing in it. Marcus, waitlist 88,301, sat down on the west road with his water in a tote bag. The salt is very white.');
+  add('lore.kdry', 'KDRY 1340 AM', 'Dry Creek\'s radio station stayed on the air the afternoon of the Pivot, reading the numbers, warning about the sky, talking to whoever was left. Kade cancelled its 2:30 spot. The operator played the song anyway. The log is signed R. Varga.');
+  add('lore.kadekids', 'Kade Kids Academy', 'The school Mara traded the creek for. Rocket backpacks, lifetime refillable bottles, a fountain you weren\'t allowed to drink from. The brochure promised "100% managed water" by 2046. The school is a crater now.');
+  add('q.capsule.dug', 'Class of Tomorrow', 'Kade buried the time capsule to be found: twenty-two envelopes, a lanyard, and a letter to the children of 2046 congratulating them on their Kade citizenship. One envelope said TO PIP OKAFOR, AGE 23.');
+  add('q.cam.seen', 'Unit 0414', 'A Glimpse camera on a pole by the camp road, blinking blue, uploading the forecourt to a relay on the rise. Three years of Hollis fixing a sign, Pip counting jugs, and everyone eating beans.');
+  add('q.cam.hello', 'Ezra Seymour', 'He answered the relay on the first press. He knew your water ration and which foot you favour. He lives north of the salt in the Panopticon, and he\'ll know when you\'re close. He always knows.');
+  add('q.song.asked', 'Rosa Varga', 'Sol\'s wife ran KDRY out of the back of the feed store and stayed on the air until the generator quit. She played one song at the end, "for whoever is still here". Sol was out opening someone\'s car. He never heard which song.');
+  if (v.has('q.chat.air') || v.has('q.chat.mara') || v.has('q.chat.pip')) {
+    out.push({
+      title: '#LIFEBOAT, reassembled',
+      body: v.has('q.chat.air')
+        ? 'All eight pages, read on the open band by Dez, with voices. Every camp heard the founders name the end of the world like a product. Vesper\'s carrier went quiet for a day.'
+        : v.has('q.chat.mara')
+          ? 'All eight pages, in Mara\'s ammo tin with the ledger. Evidence, she calls it. Ezra watched every camp for three years. That makes him a witness.'
+          : 'All eight pages, copied into the back of Pip\'s ledger under THE OTHER COLUMN. When there\'s a trial, Pip is reading it out.',
+    });
+  }
   return out.reverse();
 }
 
