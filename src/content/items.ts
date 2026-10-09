@@ -297,6 +297,13 @@ export function restoreBlock(s: GearView, id: 'vest' | 'canteen'): string | unde
   if (id === 'canteen' && canteenSips(s) >= CANTEEN_SIPS) return 'It\'s full';
   return undefined;
 }
+/** Hotbar slot `i`: its item, or the gear that does the same job when you're out (water → canteen, medkit → bandage). */
+export function hotbarItem(i: number, s: GearView): { id: string; q: number } {
+  const id = HOTBAR_ITEMS[i];
+  if (id === 'water' && !s.count('water') && s.count('canteen')) return { id: 'canteen', q: canteenSips(s) };
+  if (id === 'medkit' && !s.count('medkit') && s.count('bandage')) return { id: 'bandage', q: s.count('bandage') };
+  return { id, q: s.count(id) };
+}
 /** A live line for the kit panel (plates, sips), or ''. */
 export function itemStatus(id: string, s: GearView): string {
   if (id === 'vest') { const p = Math.round(vestPlates(s)); return p > 0 ? `Plates ${p} / ${VEST_PLATES}` : 'Plates spent: re-plate it at the fire'; }

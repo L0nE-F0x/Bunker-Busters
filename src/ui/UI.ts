@@ -1,7 +1,7 @@
 import './styles.css';
 import { ICONS, EYE_ICON } from './icons';
 import type { Vector3 } from 'three/webgpu';
-import { ITEMS, HOTBAR_ITEMS, itemStatus, USE_LABEL } from '@/content/items';
+import { ITEMS, HOTBAR_ITEMS, itemStatus, USE_LABEL, hotbarItem } from '@/content/items';
 import { openTill, type TillOpts } from './Trader';
 import { SKILLS, SKILL_ORDER, focusesFor, capstonesFor } from '@/content/skills';
 import { ARCHETYPES } from '@/content/archetypes';
@@ -382,8 +382,8 @@ export class UI implements UIBridge {
 
   refreshHotbar() {
     if (!this.state) return;
-    this.els.hotbar.innerHTML = HOTBAR_ITEMS.map((id, i) => {
-      const q = this.state!.count(id);
+    this.els.hotbar.innerHTML = HOTBAR_ITEMS.map((_, i) => {
+      const { id, q } = hotbarItem(i, this.state!);
       const a = `hotbar${i + 1}` as Action;
       const k = device() === 'pad' && binds.pad(a) ? padName(binds.pad(a)) : keyLabel(binds.keys(a)[0] ?? '');
       return `<div class="slot ${q ? '' : 'empty'}" data-key="act:${a}"><span class="k">${k}</span>${ICONS[ITEMS[id].icon]}<span class="q">${q}</span></div>`;

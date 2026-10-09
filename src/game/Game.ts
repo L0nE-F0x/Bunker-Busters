@@ -49,7 +49,7 @@ import { Story } from './Story';
 import { RECIPES, RECIPE_GROUPS, type Recipe } from '@/content/craft';
 import { SKILLS } from '@/content/skills';
 import { GARAGE } from '@/content/bunkers/garage';
-import { ITEMS, HOTBAR_ITEMS, KEEP_ON_DEATH } from '@/content/items';
+import { ITEMS, HOTBAR_ITEMS, KEEP_ON_DEATH, hotbarItem } from '@/content/items';
 import { KadeTerminals } from './combat/terminals';
 import { OUTPOSTS } from '@/content/recovery';
 import { XP_REWARDS, fallFactor, empRadius } from '@/content/progression';
@@ -1880,7 +1880,7 @@ export class Game {
         this.input.exitLock();
       }
       HOTBAR_ITEMS.forEach((id, i) => {
-        if (input.actPressed(`hotbar${i + 1}` as 'hotbar1')) this.useItem(id);
+        if (input.actPressed(`hotbar${i + 1}` as 'hotbar1')) this.useItem(hotbarItem(i, s).id || id);
       });
     }
 
