@@ -277,6 +277,7 @@ export class NpcActor {
     else {
       this.base = clip;
       this.spread(clip);
+      this.varT = rand(12, 30); // and it holds a while, whatever started it
     }
     this.fade = 0;
     this.fadeDur = rand(0.8, 1.2);
