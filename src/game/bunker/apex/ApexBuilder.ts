@@ -74,6 +74,8 @@ export class ApexBuilder implements BunkerShell {
   feed!: LiveScreen;
   /** The launch clock (outside over the door and inside over the airlock: one canvas). */
   clock!: LiveScreen;
+  /** The meme of the day: a digital poster frame by the airlock that changes with every breach. */
+  meme!: LiveScreen;
   lights!: { hangar: VirtualLight[]; hall: VirtualLight; room: VirtualLight; flood: VirtualLight; rocket: VirtualLight };
   /** Glow slots Apex animates (intensity handles). */
   readonly slots: Record<'strip' | 'hallStrip' | 'roomStrip' | 'flood' | 'beacon' | 'aviation' | 'screens' | 'leds' | 'keypad', { value: number }> = {} as never;
@@ -573,7 +575,13 @@ export class ApexBuilder implements BunkerShell {
     }
     this.col(-20.2, 0.5, 0.9, 1, 0.5, 1);
     this.col(-5.9, 0.45, -4.85, 1.1, 0.45, 0.55);
-    const posters: [string, number, number][] = [['pFree', -19, 0], ['pPart', -15.4, 0], ['pHard', -6.4, 0], ['pPoll', -3, 0], ['pStonks', 0.4, 0]];
+    const posters: [string, number, number][] = [['pFree', -19, 0], ['pPart', -16.2, 0], ['pHard', -6.4, 0], ['pPoll', -3, 0], ['pStonks', 0.4, 0]];
+    this.meme = new LiveScreen(256, 384, () => {});
+    this.meme.glow.value = 1.1;
+    const memeMesh = new THREE.Mesh(new THREE.PlaneGeometry(1.3, 1.95), this.meme.material);
+    memeMesh.position.set(-13.3, 2.3, z0 + 0.1);
+    b.add(m.black, box(1.46, 2.12, 0.08, -13.3, 2.3, z0 + 0.04));
+    this.group.add(memeMesh);
     for (const [n, x] of posters) b.add(m.print, apexPrint(n, 1.4, 2.1, M(x, 2.2, z0 + 0.02)));
     b.add(m.print, apexPrint('pLaunch', 1.4, 2.1, M(x1 - 0.02, 2.2, 7.5, -Math.PI / 2)));
     b.add(m.print, apexPrint('pHR', 1.4, 2.1, M(x1 - 0.02, 2.2, 4.5, -Math.PI / 2)));

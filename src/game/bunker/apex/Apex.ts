@@ -28,8 +28,10 @@ export class Apex extends Bunker<ApexBuilder> {
     super(ctx, APEX, (origin) => new ApexBuilder(ctx.physics, origin, (x, z) => ctx.hf.heightAt(x, z)));
     this.b.feed.paint = (c, w, h) => this.paintFeed(c, w, h);
     this.b.clock.paint = (c, w, h) => this.paintClock(c, w, h);
+    this.b.meme.paint = (c, w, h) => this.paintMeme(c, w, h);
     this.b.feed.repaint();
     this.b.clock.repaint();
+    this.b.meme.repaint();
     this.init();
     // the merch crate her drone drops with the exit ambush
     this.interactables.push({
@@ -209,6 +211,66 @@ export class Apex extends Bunker<ApexBuilder> {
     c.fillText('↻ reposted by 41 bots', 260, h - 36);
   }
 
+  /** The meme of the day (the frame by the airlock): top text, a crude picture, bottom text. */
+  private paintMeme(c: CanvasRenderingContext2D, w: number, h: number) {
+    const st = this.ctx.state as GameContext['state'] | null;
+    const has = (f: string) => !!st?.has(f);
+    const [top, bottom, pic, bg] = has(F.complete) ? ['PIVOTING', 'to: the sun', 'rocket', '#2a1630']
+      : has(F.vault) ? ['THIS IS FINE', 'the cistern was a metaphor', 'drop', '#3a1a12']
+      : has(F.lasers) ? ['LASERS: BETA', 'you: unpaid QA', 'beams', '#1a1020']
+      : has(F.cameras) ? ['NO CAMERAS', 'no crime. probably', 'camera', '#101a24']
+      : has(F.airlock) ? ['ZERO TRUST', 'zero water', 'lock', '#0e1a16']
+      : has(F.hangar) ? ['DOORS ARE A', 'social construct', 'door', '#1c1c22']
+      : ['WATER IS A FEATURE', 'premium tier only', 'drop', '#0f2236'];
+    const g = c.createLinearGradient(0, 0, 0, h);
+    g.addColorStop(0, bg);
+    g.addColorStop(1, '#050507');
+    c.fillStyle = g;
+    c.fillRect(0, 0, w, h);
+    // the picture, in her brand's flat white
+    c.save();
+    c.translate(w / 2, h / 2);
+    c.fillStyle = '#e8e8f0';
+    c.strokeStyle = '#e8e8f0';
+    c.lineWidth = 8;
+    if (pic === 'rocket') {
+      c.fillRect(-16, -60, 32, 110);
+      c.beginPath(); c.moveTo(-16, -60); c.quadraticCurveTo(0, -105, 16, -60); c.fill();
+      c.fillStyle = '#ff8a2a';
+      c.beginPath(); c.moveTo(-14, 52); c.lineTo(0, 100); c.lineTo(14, 52); c.fill();
+    } else if (pic === 'drop') {
+      c.beginPath(); c.moveTo(0, -70); c.quadraticCurveTo(52, 10, 0, 60); c.quadraticCurveTo(-52, 10, 0, -70); c.fill();
+      c.fillStyle = '#ff5a2a';
+      for (const x of [-60, 60]) { c.beginPath(); c.moveTo(x, 70); c.quadraticCurveTo(x + 14, 30, x, 0); c.quadraticCurveTo(x - 14, 30, x, 70); c.fill(); }
+    } else if (pic === 'beams') {
+      c.strokeStyle = '#ff3a2a';
+      for (const y of [-40, 0, 40]) { c.beginPath(); c.moveTo(-90, y); c.lineTo(90, y); c.stroke(); }
+    } else if (pic === 'camera') {
+      c.fillRect(-50, -26, 80, 52);
+      c.beginPath(); c.moveTo(30, -12); c.lineTo(62, -30); c.lineTo(62, 30); c.lineTo(30, 12); c.fill();
+      c.strokeStyle = '#ff3a2a'; c.beginPath(); c.moveTo(-80, 60); c.lineTo(80, -60); c.stroke();
+    } else if (pic === 'lock') {
+      c.fillRect(-46, -10, 92, 70);
+      c.beginPath(); c.arc(0, -10, 34, Math.PI, 0); c.stroke();
+    } else {
+      c.strokeRect(-46, -80, 92, 150);
+      c.beginPath(); c.arc(30, 0, 6, 0, Math.PI * 2); c.fill();
+    }
+    c.restore();
+    // top and bottom text, meme-style (white, black outline)
+    const text = (t: string, y: number, size: number) => {
+      c.font = `900 ${size}px "Big Shoulders Stencil Display", Impact, sans-serif`;
+      c.textAlign = 'center';
+      const sc = Math.min(1, (w - 20) / c.measureText(t).width);
+      c.save(); c.translate(w / 2, y); c.scale(sc, 1);
+      c.lineWidth = 6; c.strokeStyle = '#000'; c.strokeText(t, 0, 0);
+      c.fillStyle = '#fff'; c.fillText(t, 0, 0);
+      c.restore();
+    };
+    text(top, 58, 50);
+    text(bottom.toUpperCase(), h - 26, 30);
+  }
+
   // ------------------------------------------------------------------ Vesper on the intercom
   private view(): VesperView {
     return {
@@ -267,6 +329,7 @@ export class Apex extends Bunker<ApexBuilder> {
       const first = this.post < 0;
       this.post = post;
       this.b.feed.repaint();
+      this.b.meme.repaint();
       if (!first && near) this.s.events.emit('toast', { text: `@vesper: "${VESPER_POSTS[post].text}"  ♥ ${VESPER_POSTS[post].likes}`, kind: 'info' });
     }
     // the clock repaints once a game minute, only while you can read it
