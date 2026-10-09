@@ -1933,8 +1933,6 @@ export class Game {
     for (const site of this.sites) site.update(dt, this.camera.position);
     this.errands?.update(dt, this.camera.position);
     this.stories?.update(dt, this.camera.position);
-    if (this.mode !== 'playing') this.garage.update(dt);
-    this.garage.cull(this.camera.position);
     for (const b of this.bunkers) {
       if (this.mode !== 'playing') b.update(dt);
       b.cull(this.camera.position);
@@ -2094,7 +2092,6 @@ export class Game {
     tg.noise = player.noise * s.archetype.stats.stealth;
     tg.torch = !!this.hands?.flashlightOn;
     tg.reloading = !!this.arms?.reloading;
-    tg.hidden = this.garage.playerInside;
     tg.hidden = this.bunkerInside;
     tg.night = this.atmo.isNight ? 1 : Math.max(0, Math.min(1, (0.15 - this.atmo.sunElevation) / 0.25));
     tg.visibility = 1 - this.weather.intensity * 0.75;
