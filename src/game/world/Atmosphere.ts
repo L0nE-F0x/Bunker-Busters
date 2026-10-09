@@ -98,6 +98,10 @@ export class Atmosphere {
   readonly uStorm = uniform(0);
   /** Cirrus drift integrated on the CPU (wind × time would jump whenever the wind changes). */
   readonly uCloudDrift = uniform(new THREE.Vector2());
+  /** Cumulus cover 0..1 (wanders slowly; `cloudCover` overrides it when set). */
+  readonly uCloudCover = uniform(0.45);
+  /** Debug / scripted: pin the cumulus cover (null = let it wander). */
+  cloudCover: number | null = null;
   /** Ground sand-flow offset integrated from the wind (terrain storm ribbons). */
   readonly uSandFlow = uniform(new THREE.Vector2());
   readonly uFront = uniform(0);
@@ -141,7 +145,7 @@ export class Atmosphere {
     // e.g. the far city whenever the sun stood still (paused clock, storm fronts in screenshots).
     for (const u of [this.uSunDir, this.uMoonDir, this.uZenith, this.uHorizon, this.uHaze, this.uSunColor, this.uFogDensity,
       this.uFogFalloff, this.uFogBase, this.uNight, this.uDust, this.uWind, this.uStorm, this.uCloudDrift, this.uFront,
-      this.uUpwind, this.uStormColor, this.uSandFlow, this.uFlash, this.uGust] as N[]) u.setGroup(renderGroup);
+      this.uUpwind, this.uStormColor, this.uSandFlow, this.uFlash, this.uGust, this.uCloudCover] as N[]) u.setGroup(renderGroup);
     this.sun = new THREE.DirectionalLight(0xffffff, 4);
     this.sun.castShadow = true;
     const s = this.sun.shadow;
@@ -280,17 +284,47 @@ export class Atmosphere {
       const cuv = rd.xz.div(max(h, 0.04).add(0.12)).toVar();
       const drift = this.uCloudDrift;
       const streak = vec2(cuv.x.mul(0.9).add(drift.x), cuv.y.mul(2.6).add(drift.y));
-      const n1 = noise(streak.mul(0.12)).r.sub(0.5);
+      const n1 = noise(streak.mul(0.24)).r.sub(0.5);
       const n2 = noise(cuv.mul(0.45).add(drift.mul(1.7))).g.sub(0.5);
       const cn = n1.add(n2.mul(0.45));
-      const cloud = smoothstep(-0.06, 0.28, cn).mul(smoothstep(0.0, 0.18, h)).toVar();
+      const cirrus = smoothstep(0.02, 0.3, cn).mul(smoothstep(0.0, 0.18, h)).mul(0.5).toVar();
       const dens = smoothstep(0.12, 0.42, cn);
       const lit = pow(max(mu, 0), 3);
       const skyLit = mix(this.uHorizon, this.uZenith, 0.45);
+      // the clouds stand high: they keep the sun a few minutes after the ground has lost it
+      const cloudSun = smoothstep(-0.13, 0.01, this.uSunDir.y);
       const dayCol = mix(this.uSunColor.mul(float(0.95).add(lit.mul(2.4))), skyLit.mul(1.05), dens.mul(0.5));
       const nightCol = skyLit.mul(1.5).add(vec3(0.05, 0.06, 0.09).mul(this.uNight));
-      const cloudCol = mix(nightCol, dayCol, sunVis);
-      col.assign(mix(col, cloudCol, cloud.mul(0.72).mul(clear).mul(clear)));
+      const cloudCol = mix(nightCol, dayCol, cloudSun);
+      col.assign(mix(col, cloudCol, cirrus.mul(clear).mul(clear)));
+
+      // fair-weather cumulus on a lower plane: a warped fBm field cut at the cover threshold, lit by a
+      // second tap toward the sun (the sun-facing flanks bright, the far side and thick cores in their
+      // own shade), a silver lining where thin edges stand against the sun, sky-lit grey-blue bases,
+      // and toward the horizon they flatten into bands and melt into the haze
+      const sunFlat = vec2(this.uSunDir.x, this.uSunDir.z).add(vec2(1e-4, 0)).normalize();
+      const cq = rd.xz.div(max(h, 0).add(0.1)).mul(0.42).add(drift.mul(1.3)).toVar();
+      const cw = noise(cq.mul(0.25).add(vec2(0.13, 0.71))).g.sub(0.5);
+      const cover = this.uCloudCover.add(cw.mul(0.6));
+      const cdens = (p: N) => noise(p).r.add(noise(p.mul(2.7).add(0.41)).g.sub(0.5).mul(0.55));
+      const cp = cq.add(vec2(cw, cw.negate()).mul(0.12));
+      const dC = cdens(cp);
+      const dS = cdens(cp.add(sunFlat.mul(0.06)));
+      const th = float(0.82).sub(cover.mul(0.42));
+      const cum = smoothstep(th, th.add(0.13), dC).mul(smoothstep(0.015, 0.14, h)).toVar();
+      const core = smoothstep(th.add(0.04), th.add(0.26), dC);
+      // a high sun shades the cloud's far side; a low one slides light in under the whole deck
+      const shadeK = mix(float(0.3), float(0.78), smoothstep(0.04, 0.45, this.uSunDir.y));
+      const shade = smoothstep(th.sub(0.04), th.add(0.2), dS).mul(shadeK);
+      const silver = pow(max(mu, 0), 7).mul(float(1).sub(core)).mul(2.2);
+      const ambient = mix(this.uHorizon, this.uZenith, 0.55).mul(mix(float(1.0), float(0.5), core));
+      // overhead under a high sun you look at the flat grey bases; the bright tops only show at the rims
+      const bases = core.mul(smoothstep(0.08, 0.5, h)).mul(smoothstep(0.1, 0.5, this.uSunDir.y)).mul(0.6);
+      const cuSun = this.uSunColor.mul(float(1).sub(shade).mul(float(1.1).sub(core.mul(0.35))).mul(float(1).sub(bases)).add(silver).add(lit.mul(0.5))).mul(cloudSun);
+      const cuMoon = vec3(0.09, 0.1, 0.13).mul(float(1).sub(shade.mul(0.6))).mul(this.uNight);
+      const cuCol = mix(ambient.add(cuSun).add(cuMoon), hz, smoothstep(0.22, 0.0, h).mul(0.75));
+      col.assign(mix(col, cuCol, cum.mul(0.96).mul(clear).mul(clear)));
+      const cloud = max(cirrus, cum);
 
       // night sky: a detailed milky way (bright core, mottled glow, dark dust lanes, a warm galactic
       // centre), round anti-aliased stars with a real magnitude spread, and a crisp cratered moon
@@ -500,6 +534,8 @@ export class Atmosphere {
     const sf = this.uSandFlow.value as THREE.Vector2;
     // wraps every 14*256 m: a whole number of atlas tiles along the stretched axis
     sf.set((sf.x + this.windDir.x * this.windStrength * dt * 4) % 3584, (sf.y + this.windDir.y * this.windStrength * dt * 4) % 3584);
+    // cumulus come and go over tens of minutes: some skies nearly clear, some a broken deck
+    this.uCloudCover.value = this.cloudCover ?? 0.42 + 0.3 * Math.sin(this.dustTimer * 0.0017 + 1.3) * Math.sin(this.dustTimer * 0.0041 + 0.4);
     const cd = this.uCloudDrift.value as THREE.Vector2;
     const cw = Math.min(this.windStrength, 1.5) * dt * 0.004;
     cd.set((cd.x + this.windDir.x * cw) % 200, (cd.y + this.windDir.y * cw) % 200); // 200: whole atlas tiles for every tap
