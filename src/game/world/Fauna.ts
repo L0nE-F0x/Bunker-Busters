@@ -454,6 +454,8 @@ const _wz = new THREE.Vector3(), _wz2 = new THREE.Vector3();
 
 class Raven {
   state: 'perch' | 'fly' | 'gone' = 'gone';
+  /** A shot nearby: off the perch now. */
+  startle = false;
   pos = new THREE.Vector3();
   vel = new THREE.Vector3();
   yaw = 0;
@@ -486,8 +488,9 @@ class Raven {
     const d = Math.hypot(this.pos.x - c.player.x, this.pos.z - c.player.z);
     if (this.state === 'perch') {
       this.b.visible = d < 160;
-      if (d < (c.sprinting ? 16 : 10)) {
+      if (d < (c.sprinting ? 16 : 10) || this.startle) {
         // spooked: up and away from you
+        this.startle = false;
         this.state = 'fly';
         const away = V(this.pos.x - c.player.x, 0, this.pos.z - c.player.z).normalize();
         away.applyAxisAngle(V(0, 1, 0), rnd(-0.6, 0.6));
@@ -547,6 +550,7 @@ function openSpot(c: Ctx, d0: number, d1: number, clear = 4) {
 
 class Rabbit {
   state: 'gone' | 'idle' | 'hop' | 'flee' = 'gone';
+  startle = false;
   pos = new THREE.Vector3();
   yaw = 0;
   wait = rnd(3, 20);
@@ -581,7 +585,8 @@ class Rabbit {
     }
     const d = Math.hypot(this.pos.x - c.player.x, this.pos.z - c.player.z);
     this.b.visible = d < 120;
-    if (this.state !== 'flee' && d < (c.sprinting ? 22 : 13)) {
+    if (this.state !== 'flee' && (d < (c.sprinting ? 22 : 13) || this.startle)) {
+      this.startle = false;
       this.state = 'flee';
       this.hops = 0;
       if (d < 30) c.audio?.play('scurry', { pos: this.pos, intensity: 1 });
@@ -629,6 +634,7 @@ class Rabbit {
 
 class Lizard {
   state: 'gone' | 'still' | 'dash' = 'gone';
+  startle = false;
   pos = new THREE.Vector3();
   yaw = 0;
   wait = rnd(1, 6);
@@ -652,7 +658,8 @@ class Lizard {
     if (d > 45) { this.state = 'gone'; this.wait = rnd(2, 10); return; }
     if (this.state === 'still') {
       this.wait -= c.dt;
-      if (d < 3.5 || this.wait <= 0) {
+      if (d < 3.5 || this.wait <= 0 || this.startle) {
+        this.startle = false;
         this.state = 'dash';
         this.run = rnd(0.3, 0.9);
         this.yaw = d < 3.5 ? Math.atan2(this.pos.x - c.player.x, this.pos.z - c.player.z) + rnd(-0.7, 0.7) : this.yaw + rnd(-2, 2);
@@ -1584,7 +1591,10 @@ class Coyotes implements HostileProvider {
   /** Where they are (debug). */
   get where() { return this.pack[0].pos; }
   hostiles(): Hostile[] { return []; }
+  /** Every shot or blast (Fauna startles the birds and the small things with it). */
+  onShot: ((pos: THREE.Vector3, radius: number) => void) | null = null;
   hear(pos: THREE.Vector3, radius: number, kind: NoiseKind) {
+    if (kind === 'gunshot' || kind === 'explosion') this.onShot?.(pos, radius);
     if (this.state === 'gone' || this.state === 'flee') return;
     if ((kind === 'gunshot' || kind === 'explosion') && this.pack[0].pos.distanceTo(pos) < Math.min(radius, 160)) this.flee();
   }
@@ -1756,6 +1766,15 @@ export class Fauna {
     for (let k = 0; k < 4; k++) this.scorpions.push(new Scorpion(make(scorp.R), scorp, wrecks));
     this.critters = new Critters(this.snakes, this.scorpions);
     this.pack.onDown = (at) => this.addCarcass(at);
+    // a shot scatters the desert: ravens off their perches, jackrabbits bolting, lizards gone, the
+    // vultures on a kill lifting off
+    this.coyotes.onShot = (p, r) => {
+      const near = (q: THREE.Vector3, k: number) => Math.hypot(q.x - p.x, q.z - p.z) < Math.min(r, k);
+      for (const x of this.ravens) if (x.state === 'perch' && near(x.pos, 110)) x.startle = true;
+      for (const x of this.rabbits) if (x.state !== 'gone' && near(x.pos, 70)) x.startle = true;
+      for (const x of this.lizards) if (x.state === 'still' && near(x.pos, 25)) x.startle = true;
+      for (const x of this.vultures) if (near(x.pos, 140)) x.spook = 4;
+    };
     for (const bf of butterflies) this.butterflies.push(new Butterfly(make(bf.R), bf));
     const g = new THREE.BufferGeometry();
     g.setAttribute('position', new THREE.BufferAttribute(this.P, 3));
