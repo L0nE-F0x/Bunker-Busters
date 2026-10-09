@@ -261,7 +261,7 @@ function diner(S: Site, H: Hooks) {
   for (const x of [-17.6, -16.2]) P.box(chrome, 0.1, 0.13, 0.07, x, FY + 1.12, ccz);
   for (const x of [-18.2, -17.2, -15.4]) P.cyl(M.enamel(), 0.045, 0.04, 0.09, x + rnd() * 0.2, FY + 1.1, ccz - 0.12 + rnd() * 0.1, 9);
   P.cyl(M.glassDark(), 0.08, 0.09, 0.16, -16.9, FY + 1.13, ccz - 0.1, 10).cyl(M.black(), 0.06, 0.08, 0.05, -16.9, FY + 1.23, ccz - 0.1, 10);
-  H.npc({ id: 'nia', look: LOOKS.nia, pose: 'counter', x: -16.2, y: FY, z: -9.05, yaw: 0, surface: 1.05, notice: 6 });
+  H.npc({ id: 'nia', look: LOOKS.nia, pose: 'counter', x: -16.2, y: FY, z: -9.05, yaw: 0, surface: 1.05, notice: 6, station: 'nia.diner' });
   H.spot('nia', -16.2, FY + 1.05, -9.05);
   S.col(-16.2, FY + 0.85, -9.05, 0.3, 0.85, 0.22);
 
@@ -441,7 +441,7 @@ function clinic(S: Site, H: Hooks): CreekLive {
     D.wire(plainStandard('#c8d8d0', 0.3), V(0.12, 1.53, 0), V(-0.5, 0.75, -0.55), 0.35, 0.005, 10);
   }
   // Doc, with his clipboard
-  H.npc({ id: 'doc', look: LOOKS.doc, pose: 'clipboard', x: -0.9, y: FY, z: -8.5, yaw: 0.35, notice: 6 });
+  H.npc({ id: 'doc', look: LOOKS.doc, pose: 'clipboard', x: -0.9, y: FY, z: -8.5, yaw: 0.35, notice: 6, station: 'doc.clinic' });
   H.spot('doc', -0.9, FY + 1.05, -8.5);
   S.col(-0.9, FY + 0.9, -8.5, 0.28, 0.9, 0.25);
   // exam table, cabinet, sink and mirror, desk, scale, eye chart
@@ -652,7 +652,7 @@ function till(S: Site, H: Hooks) {
   for (const s of [-1, 1]) P.cyl(M.brass(), 0.08, 0.06, 0.03, 19.3 + s * 0.18, FY + 1.22, cz, 8);
   P.box(M.leatherBrown(), 0.32, 0.05, 0.24, 18.5, FY + 1.05, cz + 0.05, 0.15).box(M.paper(), 0.3, 0.03, 0.22, 18.5, FY + 1.08, cz + 0.05, 0.15);
   P.put(M.glassDark(), new THREE.CylinderGeometry(0.12, 0.12, 0.3, 12), 20.0, FY + 1.18, cz);
-  H.npc({ id: 'inez', look: LOOKS.inez, pose: 'tend', x: 18.6, y: FY, z: -8.3, yaw: 0, surface: 1.0, notice: 6 });
+  H.npc({ id: 'inez', look: LOOKS.inez, pose: 'tend', x: 18.6, y: FY, z: -8.3, yaw: 0, surface: 1.0, notice: 6, station: 'inez.till' });
   H.spot('inez', 18.6, FY + 1.05, -8.3);
   S.col(18.6, FY + 0.85, -8.3, 0.28, 0.85, 0.22);
   // shelving: behind the counter on the partition, and the west wall
@@ -1039,7 +1039,10 @@ function fireCircle(S: Site, H: Hooks) {
   H.npc({ id: 'sol', look: LOOKS.sol, pose: 'warm', x: sol.x, y: 0, z: sol.z, yaw: sy, seat: 0.44, notice: 5 });
   H.spot('sol', sol.x, 1.05, sol.z);
   crate(P, ren.x - Math.sin(ry2) * 0.02, 0, ren.z - Math.cos(ry2) * 0.02, 0.48, 0.4, 0.42, ry2, M.woodPale(), true);
-  H.npc({ id: 'ren', look: LOOKS.ren, pose: 'mug', x: ren.x, y: 0, z: ren.z, yaw: ry2, seat: 0.42, notice: 5 });
+  H.npc({ id: 'ren', look: LOOKS.ren, pose: 'mug', x: ren.x, y: 0, z: ren.z, yaw: ry2, seat: 0.42, notice: 5, station: 'ren.road' });
+  // evenings, Doc comes out to the street fire, clipboard and all (content/routines.ts)
+  const doc = { x: -1.75, z: 0.75 };
+  H.npc({ id: 'doc', look: LOOKS.doc, pose: 'clipboard', x: doc.x, y: 0, z: doc.z, yaw: face(doc.x, doc.z), notice: 6, station: 'doc.fire', alt: true });
   H.spot('ren', ren.x, 1.05, ren.z);
   S.col(sol.x + Math.sin(sy) * 0.25, 0.6, sol.z + Math.cos(sy) * 0.25, 0.3, 0.6, 0.3, sy);
   S.col(ren.x + Math.sin(ry2) * 0.25, 0.6, ren.z + Math.cos(ry2) * 0.25, 0.3, 0.6, 0.3, ry2);

@@ -31,6 +31,7 @@ import { Scavenge } from './world/Scavenge';
 import { NpcModels } from './world/npcSkin';
 import { updateShownMatrices, viewCull } from './world/kit';
 import { NpcCrowd } from './world/npc';
+import { routineOpen } from '@/content/routines';
 import { HumanSkins } from './combat/humanSkin';
 import { Garage } from './bunker/Garage';
 import { Settlement } from './town/Settlement';
@@ -320,6 +321,8 @@ export class Game {
     // the Meshy townsfolk (before the warm-up; ?procnpc keeps the procedural figures)
     const bunkerMsg = 'Building a doomsday bunker (pre-revenue)';
     NpcCrowd.models = await models(NpcModels.load(), 0.7, 0.78, bunkerMsg);
+    // routines (content/routines.ts): who is in which seat or spot, by the hour and the story
+    NpcCrowd.schedule = (st) => routineOpen(st, { playing: this.mode === 'playing', hour: this.atmo.hour, has: (f) => !!this.state?.has(f) });
     this.landmarks.addCampPeople();
     this.settlement = new Settlement(this.ctx, this.landmarks);
     if (!SKIP.has('sites')) this.sites = buildSites(this.ctx, this.landmarks);

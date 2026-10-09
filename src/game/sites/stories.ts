@@ -1,6 +1,6 @@
 import * as THREE from 'three/webgpu';
 import type { GameContext, Interactable } from '../context';
-import type { Landmarks } from '../world/Landmarks';
+import { Landmarks } from '../world/Landmarks';
 import type { GameState } from '../State';
 import { MeshBatch, DistanceLod, shadowProxy } from '../world/kit';
 import { glow, plainStandard, rustyMetal, wood, concrete, desertRock } from '../world/materials';
@@ -221,6 +221,31 @@ export class Stories {
       this.pool.visible = false;
       this.group.add(this.pool);
       this.spots.pool = landmarks.campPoint(-3.6, 0, 4.6);
+
+      // the routine seats (content/routines.ts, Landmarks.CAMP_SEATS): Hollis's watch crate and Ren's
+      // lookout crate at the road edge of the slab, Pip's crate by her pool; a jerrycan by the watch,
+      // a mug on the lookout's crate lid. Their tops are 0.62 over the frame, like the logs.
+      const fy = Math.atan2(ax.x, ax.z) - Math.PI / 2; // camp space's yaw in the world
+      const cb = new MeshBatch();
+      const slats = wood('#8a6a44');
+      for (const [key, [cx, cz, yaw]] of Object.entries(Landmarks.CAMP_SEATS)) {
+        const w = landmarks.campPoint(cx, 0, cz);
+        // the seat point is where the hips sit: the crate sits under it, a little behind
+        const back = 0.08;
+        const px = w.x - Math.sin(fy + yaw) * back, pz = w.z - Math.cos(fy + yaw) * back;
+        const top = landmarks.campPosition.y;
+        cb.add(slats, T(new THREE.BoxGeometry(0.5, 0.42, 0.44), px, top + 0.21, pz, 0, fy + yaw, 0));
+        cb.add(dark, T(new THREE.BoxGeometry(0.52, 0.03, 0.46), px, top + 0.15, pz, 0, fy + yaw, 0));
+        ctx.physics.addBox(V(px, top + 0.21, pz), { x: 0.25, y: 0.21, z: 0.22 }, fy + yaw);
+        if (key === 'watch') {
+          const j = V(px + Math.cos(fy + yaw) * 0.6, top, pz - Math.sin(fy + yaw) * 0.6);
+          cb.add(plainStandard('#8a2a1e', 0.55, 0.3), T(new THREE.BoxGeometry(0.17, 0.34, 0.28), j.x, j.y + 0.17, j.z, 0, fy + yaw + 0.4, 0));
+        }
+      }
+      const crates = cb.build('camp-routine-crates');
+      shadowProxy(crates);
+      this.group.add(crates);
+      this.lods.push(new DistanceLod(landmarks.campPosition.clone(), 20, crates, null, 170));
     }
   }
 

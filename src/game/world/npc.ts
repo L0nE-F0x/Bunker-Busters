@@ -69,6 +69,13 @@ export interface NpcDef {
   surface?: number;
   /** how far (m) the figure notices you */
   notice?: number;
+  /**
+   * A routine slot (content/routines.ts): a modelled figure with one is shown only while
+   * `NpcCrowd.schedule(station)` says so. One person can have several slots (same id, one present
+   * at a time). `alt` slots are dropped for the procedural fallback, which stays where it was built.
+   */
+  station?: string;
+  alt?: boolean;
 }
 
 interface Figure {
@@ -103,6 +110,8 @@ interface Figure {
   nb: Figure[];
   lastSrc: string;
   lastT: number;
+  /** In this slot right now (routines); a figure without a station always is. */
+  present: boolean;
 }
 
 const MAX = 16;
@@ -440,6 +449,8 @@ const _npcC = new THREE.Vector3();
 export class NpcCrowd {
   /** Meshy townsfolk, loaded before any crowd is built (null: everyone procedural). */
   static models: NpcModels | null = null;
+  /** Who is in which routine slot right now (content/routines.ts via Game); null: everyone everywhere. */
+  static schedule: ((station: string) => boolean) | null = null;
   /** The crowd: the procedural figures' one mesh, plus a model per named person who has one. */
   readonly mesh = new THREE.Group();
   private figs: Figure[] = [];
@@ -450,9 +461,11 @@ export class NpcCrowd {
   private inv = new THREE.Matrix4();
 
   constructor(defs: NpcDef[], name = 'npcs') {
+    const models = NpcCrowd.models;
+    // a second routine slot needs the model; the procedural figure stays put in its first
+    defs = defs.filter((d) => !d.alt || !!models?.has(d.id));
     if (defs.length > MAX) throw new Error('too many npcs in one crowd');
     const sink = new Sink();
-    const models = NpcCrowd.models;
     let procedural = 0;
     for (let i = 0; i < MAX; i++) { this.uA.push(new THREE.Vector4()); this.uB.push(new THREE.Vector4()); }
     defs.forEach((def, i) => {
@@ -467,7 +480,7 @@ export class NpcCrowd {
         def, neck, hipY, yaw: 0, look: 0, nod: 0, idle: phase * 7,
         r: (def.notice ?? 5.5) + (Math.random() * 2 - 1), near: false, mode: 'idle', wait: 0,
         react: 0.15 + Math.random() * 0.45, speed: 2.5 + Math.random() * 2.5,
-        tYaw: 0, tNod: 0, sacT: 0, sacY: 0, sacN: 0, nb: [], lastSrc: '', lastT: -99,
+        tYaw: 0, tNod: 0, sacT: 0, sacY: 0, sacN: 0, nb: [], lastSrc: '', lastT: -99, present: true,
       };
       if (modelled) {
         const actor = models!.make(def.id, seated, hipY)!;
@@ -488,8 +501,8 @@ export class NpcCrowd {
       if (!a) continue;
       f.nb = this.figs.filter((g) => g !== f && g.actor && Math.hypot(g.def.x - f.def.x, g.def.z - f.def.z) < 4.5);
       const coord: ClipCoord = {
-        playing: () => f.nb.map((g) => g.actor!.playing),
-        may: (src) => !f.nb.some((g) => g.lastSrc === src && this.t - g.lastT < 3),
+        playing: () => f.nb.filter((g) => g.present).map((g) => g.actor!.playing),
+        may: (src) => !f.nb.some((g) => g.present && g.lastSrc === src && this.t - g.lastT < 3),
         started: (src) => { f.lastSrc = src; f.lastT = this.t; },
       };
       a.coord = coord;
@@ -510,11 +523,30 @@ export class NpcCrowd {
     return this.figs.find((f) => f.def.id === id)?.neck.clone();
   }
 
-  /** Each figure's id and where its head is (world space). */
-  heads(): { id: string; pos: THREE.Vector3 }[] {
+  /** Each figure's id and where its head is (world space): the ones in their slot now, or `all`. */
+  heads(all = false): { id: string; pos: THREE.Vector3 }[] {
     this.mesh.updateWorldMatrix(true, false);
-    return this.figs.map((f) => ({ id: f.def.id, pos: f.neck.clone().setY(f.neck.y + 0.12).applyMatrix4(this.mesh.matrixWorld) }));
+    return this.figs.filter((f) => all || f.present).map((f) => ({ id: f.def.id, pos: f.neck.clone().setY(f.neck.y + 0.12).applyMatrix4(this.mesh.matrixWorld) }));
   }
+
+  /** The routine slot `id` is in right now (null: nowhere in this crowd), with its neck in world space. */
+  where(id: string): { station: string; neck: THREE.Vector3 } | null {
+    const f = this.figs.find((g) => g.def.id === id && g.present);
+    if (!f) return null;
+    this.mesh.updateWorldMatrix(true, false);
+    return { station: f.def.station ?? '', neck: f.neck.clone().applyMatrix4(this.mesh.matrixWorld) };
+  }
+
+  /** Re-ask the schedule now (a loaded run, a skipped night). */
+  reschedule() {
+    const sch = NpcCrowd.schedule;
+    for (const f of this.figs) {
+      f.present = !f.def.station || !f.actor || !sch || sch(f.def.station);
+      if (f.actor && !f.present) f.actor.root.visible = false;
+    }
+    this.schedT = 0.5;
+  }
+  private schedT = 0;
 
   /** Something went bang at `world`: everyone in the crowd snaps round to it for `secs`. */
   startle(world: THREE.Vector3, secs = 3.5) {
@@ -529,6 +561,8 @@ export class NpcCrowd {
   update(dt: number, cam: THREE.Vector3) {
     this.t += dt;
     this.alarmT = Math.max(0, this.alarmT - dt);
+    // routines: who is in which slot, twice a second (cheap; done even while the crowd is out of view)
+    if ((this.schedT -= dt) <= 0) this.reschedule();
     // nothing to do while the town is out of view (its near set hidden by distance)
     for (let o: THREE.Object3D | null = this.mesh; o; o = o.parent) if (!o.visible) return;
     this.mesh.updateWorldMatrix(true, false);
@@ -538,6 +572,7 @@ export class NpcCrowd {
     const pl = this.local.copy(cam).applyMatrix4(this.inv);
     const c = startled ? this.alarmAt : pl;
     this.figs.forEach((f, i) => {
+      if (!f.present) return; // elsewhere on their routine (the model was hidden by reschedule)
       // within talking range: each by its own radius, leaving a little further out than entering
       const dPl = Math.hypot(pl.x - f.neck.x, pl.z - f.neck.z);
       if (dPl < f.r) f.near = true;

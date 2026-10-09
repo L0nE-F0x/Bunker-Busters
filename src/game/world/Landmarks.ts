@@ -3,6 +3,12 @@ import { NpcCrowd, type NpcDef, type NpcLook } from './npc';
 
 /** Placeholder look for the camp people (their procedural figure is only posed, never drawn). */
 const CAMP_LOOK: NpcLook = { skin: '#a87a5c', hair: '#2a1a12', hairStyle: 'short', shirt: '#6a5a46', pants: '#3c362e' };
+/** Routine seats at Last Chance, camp space [x, z, yaw]: the night watch and the lookout sit past either end of the store, facing the highway behind it (−z); Pip faces her pool. */
+const CAMP_SEATS = {
+  watch: [-9.6, -10.0, Math.PI - 0.45],
+  lookout: [9.6, -10.2, Math.PI + 0.45],
+  pool: [-1.7, 9.5, Math.atan2(-3.6 + 1.7, 7.6 - 9.5)],
+} as const satisfies Record<string, readonly [number, number, number]>;
 import type { AmbientKind } from '@/engine/audio';
 import type { Heightfield } from './Heightfield';
 import type { Physics } from '@/engine/physics';
@@ -441,6 +447,9 @@ export class Landmarks {
    * figures exist for them, so without the models the camp stays as it was). Built after the
    * townsfolk models load, before the shader warm-up.
    */
+  /** Where people wait and watch, all yawned: [x, z, yaw] in camp space (the routine seats). */
+  static readonly CAMP_SEATS = CAMP_SEATS;
+
   addCampPeople() {
     if (!this.campNear || !NpcCrowd.models) return;
     // camp space (the gas station's frame): fire at (−8, 5); log A along x at z 6.4 (north of the
@@ -451,11 +460,19 @@ export class Landmarks {
       const yaw = Math.atan2(fire.x - x, fire.z - z);
       return { id, look: CAMP_LOOK, pose: 'warm', x, y: 0, z, yaw, seat: 0.62, notice };
     };
+    // routines (content/routines.ts): Hollis keeps the night watch on a crate at the road edge of the
+    // slab, Pip spends midday by her chalk pool once she has it, Ren keeps the lookout crate after the
+    // drive-in. Crates: sites/stories.ts. A crate's top is 0.62 over the frame, like the logs.
+    const at = (d: NpcDef, x: number, z: number, yaw: number, station: string, extra: Partial<NpcDef> = {}): NpcDef =>
+      ({ ...d, x, z, yaw, station, alt: true, ...extra });
     const defs = [
       seat('mara', -9.5, 6.5, 7.5),
-      seat('pip', -8.3, 6.25),
-      seat('hollis', -6.8, 4.65),
+      { ...seat('pip', -8.3, 6.25), station: 'pip.log' },
+      { ...seat('hollis', -6.8, 4.65), station: 'hollis.log' },
       seat('dez', -6.8, 3.45),
+      at(seat('hollis', 0, 0), CAMP_SEATS.watch[0], CAMP_SEATS.watch[1], CAMP_SEATS.watch[2], 'hollis.watch', { notice: 6 }),
+      at(seat('pip', 0, 0), CAMP_SEATS.pool[0], CAMP_SEATS.pool[1], CAMP_SEATS.pool[2], 'pip.pool', { notice: 6 }),
+      at(seat('ren', 0, 0), CAMP_SEATS.lookout[0], CAMP_SEATS.lookout[1], CAMP_SEATS.lookout[2], 'ren.camp', { pose: 'mug', notice: 6 }),
     ].filter((d) => NpcCrowd.models!.has(d.id));
     if (!defs.length) return;
     this.campCrowd = new NpcCrowd(defs, 'camp-people');
