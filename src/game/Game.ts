@@ -35,6 +35,7 @@ import { HumanSkins } from './combat/humanSkin';
 import { Garage } from './bunker/Garage';
 import { Settlement } from './town/Settlement';
 import { buildSites, Errands, type Site } from './sites';
+import { Stories } from './sites/stories';
 import { Player } from './player/Player';
 import { FirstPersonCamera } from './player/FirstPersonCamera';
 import { Hands, HAND_LOOKS, torchLight } from './player/Hands';
@@ -125,6 +126,8 @@ export class Game {
   scavenge!: Scavenge;
   /** Props and camp effects for the road favours (sites/errands.ts). */
   errands!: Errands;
+  /** Props and camp effects for the founders' favours (sites/stories.ts). */
+  stories!: Stories;
   private humanSkins: HumanSkins | null = null;
   sites: Site[] = [];
   map!: MapData;
@@ -336,6 +339,8 @@ export class Game {
     this.interactables.push(...this.scavenge.interactables);
     this.errands = new Errands(this.ctx, this.landmarks, (x, z) => this.clearSpot(x, z));
     this.interactables.push(...this.errands.interactables);
+    this.stories = new Stories(this.ctx, this.landmarks, (x, z) => this.clearSpot(x, z));
+    this.interactables.push(...this.stories.interactables);
     if (!SKIP.has('env')) this.buildEnvironment();
     if (SKIP.has('garage')) this.scene.remove(this.garage.b.group, this.garage.drone.group);
     if (SKIP.has('ui')) document.getElementById('ui')!.style.display = 'none';
@@ -879,7 +884,7 @@ export class Game {
     const s = this.state!;
     const member = CAMP.find((m) => m.id === id);
     if (!member) return;
-    const view = (): CampView => ({ has: (f) => s.has(f), count: (i) => s.count(i), rep: (p) => s.rep(p), name: s.archetype.name });
+    const view = (): CampView => ({ has: (f) => s.has(f), count: (i) => s.count(i), rep: (p) => s.rep(p), name: s.archetype.name, night: this.atmo.isNight, rests: s.data.rests });
     await this.ui.converse({
       start: 'hello',
       node: (n) => member.node(n, view()),
@@ -895,6 +900,7 @@ export class Game {
           this.audio.play('uiConfirm');
         }
         this.errands.campChoice(choice);
+        this.stories.campChoice(choice);
         if (choice === 'emp' && s.count('battery') >= 1 && s.count('scrap') >= 2) {
           s.removeItem('battery', 1);
           s.removeItem('scrap', 2);
@@ -1631,7 +1637,7 @@ export class Game {
     }
     for (const it of WORLD_INTEL) {
       if (s.has(`intel:${it.id}`)) continue;
-      const known = it.id === 'intel.gas.note' || this.map.revealedAt(it.position[0], it.position[2]) > 100;
+      const known = it.id === 'intel.gas.note' || s.has(`rumour.${it.id}`) || this.map.revealedAt(it.position[0], it.position[2]) > 100;
       if (known) out.push({ id: it.id, x: it.position[0], z: it.position[2], label: 'Intel', color: '#c896ff', kind: 'intel' });
     }
     for (const c of WORLD_CACHES) {
@@ -1723,6 +1729,7 @@ export class Game {
     if (this.player && this.mode === 'playing') this.scavenge?.update(dt, this.player.position);
     for (const site of this.sites) site.update(dt, this.camera.position);
     this.errands?.update(dt, this.camera.position);
+    this.stories?.update(dt, this.camera.position);
     if (this.mode !== 'playing') this.garage.update(dt);
     this.garage.cull(this.camera.position);
     this.props.update(dt, focusPos, this.atmo.wind);

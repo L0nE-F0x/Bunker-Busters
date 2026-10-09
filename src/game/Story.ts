@@ -1,11 +1,11 @@
 import type { GameState } from './State';
 import type { AudioEngine } from '@/engine/audio';
 import type { UI } from '@/ui/UI';
-import { QUESTS, QUEST, questComplete, questOutcome, currentStep, type QuestDef, type QuestView, type QuestReward } from '@/content/quests';
+import { QUESTS, QUEST, questComplete, questOutcome, currentStep, LIFEBOAT_PAGES, lifeboatCount, STORY_SPOTS, type QuestDef, type QuestView, type QuestReward } from '@/content/quests';
 import { BANTER, type BanterView } from '@/content/banter';
 import { PERSON, standingTier, STANDING_WORD, shortName } from '@/content/people';
 import { storyObjective } from '@/content/story';
-import { LANDMARKS } from '@/content/world';
+import { LANDMARKS, WORLD_INTEL } from '@/content/world';
 import { ITEMS } from '@/content/items';
 import { GARAGE } from '@/content/bunkers/garage';
 import { OUTPOSTS } from '@/content/recovery';
@@ -28,6 +28,8 @@ export class Story {
   private lastLabel = '';
   private quiet = false;
   private offs: (() => void)[] = [];
+  /** #LIFEBOAT pages found, as of the last walk. */
+  private pages = 0;
 
   constructor(private state: GameState, private ui: UI, private audio: AudioEngine) {
     const ev = state.events;
@@ -92,6 +94,12 @@ export class Story {
     const v = this.view();
     const migrated = silent && s.has('migrated.v3') && !s.has('migrated.v3.synced');
     let caughtUp = 0, caughtXp = 0;
+    // the chat's pages are a collection: count them out loud as they come in
+    const pages = lifeboatCount(v);
+    if (!silent && pages > this.pages && pages > 0) {
+      this.ui.toast(pages === LIFEBOAT_PAGES.length ? '#LIFEBOAT · all eight pages. Dez is going to lose his mind.' : `#LIFEBOAT · page ${pages} of ${LIFEBOAT_PAGES.length}`, 'info');
+    }
+    this.pages = pages;
     for (const q of QUESTS) {
       const started = s.has(`q:${q.id}`);
       if (!started) {
@@ -219,6 +227,13 @@ export class Story {
     const step = currentStep(q, this.view());
     if (!step?.at) return null;
     if (step.at === 'garage') return { x: GARAGE.location.position[0], z: GARAGE.location.position[2], label: q.title };
+    if (step.at === 'lifeboat') {
+      // Dez triangulates the 3 a.m. sync: the first page in reading order you haven't found
+      const next = LIFEBOAT_PAGES.map((id) => WORLD_INTEL.find((i) => i.id === id)).find((i) => i && !this.state.has(`intel:${i.id}`));
+      return next ? { x: next.position[0], z: next.position[2], label: `${q.title} · page ${LIFEBOAT_PAGES.indexOf(next.id) + 1}` } : null;
+    }
+    const spot = STORY_SPOTS[step.at];
+    if (spot) return { x: spot[0], z: spot[1], label: q.title };
     const lm = LANDMARKS.find((l) => l.id === step.at);
     if (lm) return { x: lm.position[0], z: lm.position[2], label: q.title };
     const op = OUTPOSTS.find((o) => o.id === step.at);
