@@ -33,6 +33,20 @@ export class Apex extends Bunker<ApexBuilder> {
     this.init();
   }
 
+  private loops = false;
+
+  /** The battery bank hums, the feed buzzes, the cistern drips, the corridor's vents breathe. */
+  override startAudio() {
+    super.startAudio();
+    if (this.loops) return;
+    this.loops = true;
+    const a = this.ctx.audio, b = this.b;
+    a.loop('hum', b.w(5.9, 1.4, 6));
+    a.loop('neon', b.w(-10, 8.2, 14.4));
+    a.loop('drip', b.w(-10, 0.4, -26.6));
+    a.loop('wind-hollow', b.w(-10, 2.5, -15));
+  }
+
   get hangarBox() {
     return this.b.hangarBox;
   }

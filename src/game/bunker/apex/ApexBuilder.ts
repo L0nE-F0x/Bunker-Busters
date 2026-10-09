@@ -3,6 +3,8 @@ import { uniform, vec3 } from 'three/tsl';
 import type { Physics } from '@/engine/physics';
 import { box, cyl, beam, place, MeshBatch, DistanceLod, shadowProxy, wire, grime } from '../../world/kit';
 import { printPaint } from '../../world/printAtlas';
+import { surfaces, type Surface } from '@/engine/surface';
+import { SALT_FLAT } from '@/content/world';
 import { concrete, plainStandard, rustyMetal, desertRock, GlowPalette, fabric, wood, carGlass } from '../../world/materials';
 import { GlowSprites } from '../../world/effects';
 import { VirtualLight } from '../../world/lights';
@@ -134,6 +136,12 @@ export class ApexBuilder implements BunkerShell {
     this.buildBlock(b, inner, M_);
     this.buildSalt(b, M_);
     this.buildLights();
+    // footsteps: concrete on the apron, in the hangar and the vault; steel in the duct; the salt crunches
+    const z = (x0: number, z0: number, x1: number, z1: number, kind: Surface) => surfaces.zone(this.w(x0, -2, z0), this.w(x1, 8, z1), kind);
+    z(APEX_GROUNDS.x0 + 2, -6, APEX_GROUNDS.x1 - 2, 29, 'concrete');
+    z(APEX_BLOCK.x0, APEX_BLOCK.z0, APEX_BLOCK.x1, APEX_BLOCK.z1, 'concrete');
+    z(APEX_BLOCK.cx1 + 0.2, -18.1, APEX_BLOCK.x1 + 0.4, -16.9, 'metal');
+    surfaces.zone({ x: SALT_FLAT.x - SALT_FLAT.r * 0.7, y: -1e3, z: SALT_FLAT.z - SALT_FLAT.r * 0.7 }, { x: SALT_FLAT.x + SALT_FLAT.r * 0.7, y: 1e3, z: SALT_FLAT.z + SALT_FLAT.r * 0.7 }, 'gravel');
 
     // far: the whole site flattened to one draw (the booster and the tower read from the salt)
     this.far = b.buildFar('apex-far', { minSize: 0.8 });
