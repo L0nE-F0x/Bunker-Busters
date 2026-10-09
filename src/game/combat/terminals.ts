@@ -8,6 +8,7 @@ import { OUTPOSTS } from '@/content/recovery';
 import { DAEMONS, REQUISITION, TERMINAL_DIFFICULTY, type DaemonDef } from '@/content/hacks';
 import { AMMO_FOR, AMMO_HANDFUL } from '@/content/scavenge';
 import { ITEMS } from '@/content/items';
+import { actionWord } from '@/engine/bindings';
 
 export interface TerminalHost {
   recovery: Recovery;
@@ -133,7 +134,7 @@ export class KadeTerminals {
         let n = 0;
         for (const o of OUTPOSTS) if (s.set(`seen:${o.id}`)) n++;
         this.h.audio.play('intel');
-        this.h.toast(n ? `Roster dumped. ${n} more Kade camp${n > 1 ? 's' : ''} on your map (M).` : 'Roster dumped. You knew every camp on it already.', 'good');
+        this.h.toast(n ? `Roster dumped. ${n} more Kade camp${n > 1 ? 's' : ''} on your map${actionWord('map') ? ` (${actionWord('map')})` : ''}.` : 'Roster dumped. You knew every camp on it already.', 'good');
         break;
       }
       case 'ids': {

@@ -242,6 +242,11 @@ export class Heightfield {
     return best;
   }
 
+  /** X of the dry wash's centreline at a given z (the world map draws the creek bed from it). */
+  washX(z: number) {
+    return (z * 0.06 + 25) / 0.18 - this.noise.fbm(z * 0.004, 3.3, 3) * 90;
+  }
+
   /** Height function extended beyond the playable square (for the far-terrain ring). */
   farHeight(x: number, z: number) {
     return this.rawHeight(x, z);

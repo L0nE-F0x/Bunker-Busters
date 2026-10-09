@@ -9,7 +9,7 @@ import { Physics } from '@/engine/physics';
 import { modelProgress } from '@/engine/models';
 import { Input } from '@/engine/input';
 import { pad } from '@/engine/gamepad';
-import { binds } from '@/engine/bindings';
+import { binds, actionWord, type Action } from '@/engine/bindings';
 import { PadNav } from '@/ui/PadNav';
 import { AudioEngine, type LoopHandle } from '@/engine/audio';
 import { Acoustics, isSoft } from '@/engine/surface';
@@ -48,6 +48,8 @@ import { SPAWN, WORLD_INTEL, LANDMARKS } from '@/content/world';
 import { WORLD_CACHES, briefingFor, debriefFor, campRadio, epilogueFor, DEBRIEF_CHOICE, type DebriefChoice } from '@/content/story';
 import { CAMP, type CampView } from '@/content/camp';
 import { Story } from './Story';
+import { FastTravel, clockText } from './travel';
+import { travelCard } from '@/ui/WorldMap';
 import { RECIPES, type Recipe } from '@/content/craft';
 import { RECIPE_GROUPS } from '@/content/craft';
 import { SKILLS } from '@/content/skills';
@@ -93,6 +95,14 @@ interface Grenade { mesh: THREE.Object3D; body: RigidBody; fuse: number; lastVel
 type RigidBody = ReturnType<Physics['world']['createRigidBody']>;
 
 /** Owns the scene, world, player and the top-level state machine (title → select → play). */
+/** The first-gun tutorial line, in the controls actually bound (keys, or the pad when one is in use). */
+function armsHelp() {
+  const w = (a: Action) => actionWord(a);
+  const pad = document.documentElement.classList.contains('pad');
+  const swap = pad ? `${w('prevWeapon')} / ${w('nextWeapon')}` : `${w('lastWeapon')} / wheel`;
+  return `Armed. ${w('fire')} fire · ${w('aim')} aim · ${w('reload')} reload · ${swap} swap · ${w('holster')} holster · ${w('melee')} melee.`;
+}
+
 export class Game {
   scene = new THREE.Scene();
   camera = new THREE.PerspectiveCamera(55, innerWidth / innerHeight, 0.1, 6000);
@@ -130,6 +140,7 @@ export class Game {
   settlement!: Settlement;
   /** Hostiles hunting the player (last frame's `combat.awareness()`; the music's fight stem). */
   private huntedBy = 0;
+  private travel: FastTravel | null = null;
   scavenge!: Scavenge;
   /** Props and camp effects for the road favours (sites/errands.ts). */
   errands!: Errands;
@@ -318,6 +329,7 @@ export class Game {
     this.fauna.camFwd = new THREE.Vector3();
     await step(0.62, 'Charting the wasteland');
     this.map = new MapData(this.hf);
+    this.map.startChart();
     this.cam = new FirstPersonCamera(this.camera);
     this.applyView();
     this.camera.near = 0.05;
@@ -1164,7 +1176,7 @@ export class Game {
       void this.ui.pages(briefingFor(state.archetype)).then(() => {
         state.set('briefed');
         state.set('intro');
-        if (state.set('tut.arms')) setTimeout(() => this.ui.toast(isTouch ? 'Armed: FIRE, AIM, RELOAD and SWAP sit over the jump button.' : 'Armed. LMB fire · RMB aim · R reload · Q / wheel swap · X holster · V melee.', 'info'), 4000);
+        if (state.set('tut.arms')) setTimeout(() => this.ui.toast(isTouch ? 'Armed: FIRE, AIM, RELOAD and SWAP sit over the jump button.' : armsHelp(), 'info'), 4000);
         if (this.player) this.player.frozen = false;
         this.busy = false;
         this.input.requestLock();
@@ -1687,6 +1699,89 @@ export class Game {
     return best;
   }
 
+  /** The world map, with fast travel between the safe places you've found (travel.ts). */
+  private openWorldMap(view?: { cx: number; cz: number; zoom: number }) {
+    const s = this.state!, player = this.player!;
+    const intel = WORLD_INTEL.filter((i) => s.has(`intel:${i.id}`)).map((i) => ({ title: i.title, body: i.body }));
+    const travel = (this.travel ??= new FastTravel(this.travelHost()));
+    // the other open quests' next stops, dimmer; the map can track one (Story.track) and reopens on the same view
+    const markers = this.markers();
+    for (const q of this.story?.targets() ?? []) {
+      if (!q.focus) markers.push({ id: `q:${q.id}`, x: q.x, z: q.z, label: q.title, color: '#ffd27a', kind: 'intel', note: q.step });
+    }
+    this.ui.openMap({
+      px: player.position.x, pz: player.position.z, heading: this.cam.yaw,
+      markers, intel, view,
+      onTrack: (id) => {
+        this.story?.track(id);
+        this.markerCache = null;
+        this.openWorldMap(this.ui.lastMapView ?? undefined);
+      },
+      travel: travel.options(), travelBlocked: travel.busy ? 'On the road.' : this.travelHost().why(),
+      sub: `Survey sheet · ${this.surveyed()}% surveyed · Day ${(s.data.days ?? 0) + 1} · ${clockText(this.atmo.hour)}`,
+      onTravel: (id) => void travel.go(id),
+    }, () => this.afterModal());
+  }
+
+  /** How much of the walkable square the fog of war has given up, in percent. */
+  private surveyed() {
+    const fog = this.map.fog, F = Math.round(Math.sqrt(fog.length)), lo = Math.floor(F * 0.11), hi = Math.ceil(F * 0.89);
+    let seen = 0;
+    for (let j = lo; j < hi; j++) for (let i = lo; i < hi; i++) if (fog[j * F + i] > 100) seen++;
+    return Math.round((seen / ((hi - lo) * (hi - lo))) * 100);
+  }
+
+  private travelHost(): import('./travel').TravelHost {
+    const self = this;
+    return {
+      get state() { return self.state!; },
+      hf: this.hf,
+      physics: this.physics,
+      pos: () => this.player!.position,
+      speedMult: () => this.player!.speedMult,
+      dayMinutes: () => this.atmo.dayLengthMinutes,
+      hour: () => this.atmo.hour,
+      why: () => {
+        const s = this.state!;
+        if (this.busy || this.dying || !this.player) return 'Not now.';
+        if (this.huntedBy > 0) return 'Something is hunting you. Lose it first.';
+        if (this.garage.alarm > 0 || this.garage.drone.state === 'alert') return 'Not with an alarm going.';
+        if (this.garage.playerInside) return 'Not from inside a man\'s bunker. Walk out the way you came.';
+        if ((s.data.poison ?? 0) > 0) return 'Venom first. Walk it off and it walks you off a cliff.';
+        if (this.combat.heat > 0.35) return 'Too loud out here. Let the shooting settle first.';
+        return null;
+      },
+      hostileNear: (x, z, r) => {
+        for (const pr of this.combat.providers) for (const h of pr.hostiles()) {
+          if (h.alive && Math.hypot(h.center.x - x, h.center.z - z) < r) return true;
+        }
+        return false;
+      },
+      begin: () => {
+        this.busy = true;
+        this.player!.frozen = true;
+        this.input.exitLock();
+        this.ui.fade(true);
+      },
+      place: (p, yaw, hours) => {
+        this.player!.teleport(p);
+        this.cam.snap(yaw, -0.04);
+        this.atmo.hour = (this.atmo.hour + hours) % 24;
+        this.envTimer = 0;
+        this.revealTimer = 0;
+      },
+      card: (c) => travelCard(c),
+      end: () => {
+        this.ui.fade(false);
+        this.player!.frozen = false;
+        this.busy = false;
+        this.input.requestLock();
+        this.save(true);
+      },
+      toast: (t) => this.ui.toast(t, 'bad'),
+    };
+  }
+
   /** HUD markers, rebuilt at most every 50 ms: only the 20 Hz minimap reads them per frame. */
   private hudMarkers(now: number) {
     if (!this.markerCache || now - this.markerAt >= 50) { this.markerCache = this.markers(); this.markerAt = now; }
@@ -1695,33 +1790,35 @@ export class Game {
 
   private markers(): MapMarker[] {
     const s = this.state!;
-    const out: MapMarker[] = LANDMARK_MARKERS.filter((m) => m.id !== 'cave' || s.has('cave.known') || s.has('seen:cave'));
+    const out: MapMarker[] = LANDMARK_MARKERS.filter((m) => m.id !== 'cave' || s.has('cave.known') || s.has('seen:cave'))
+      .map((m) => (m.id === 'gas' || s.has(`seen:${m.id}`) ? m : { ...m, known: false }));
     const [gx, , gz] = GARAGE.location.position;
     const nearGarage = this.player ? Math.hypot(this.player.position.x - gx, this.player.position.z - gz) < 90 : false;
     if (s.has('garage.marker') || nearGarage || s.has('garage.complete')) {
-      out.push({ id: 'garage', x: gx, z: gz, label: s.has('garage.complete') ? 'The Garage (busted)' : 'The Garage · Tier 1', color: s.has('garage.complete') ? '#7d725f' : '#ff3a6e', kind: 'bunker' });
+      out.push({ id: 'garage', x: gx, z: gz, label: s.has('garage.complete') ? 'The Garage (busted)' : 'The Garage · Tier 1', color: s.has('garage.complete') ? '#7d725f' : '#ff3a6e', kind: 'bunker',
+        note: s.has('garage.complete') ? 'Tanner\'s garage. The water and the names were his. Now they aren\'t.' : 'Tanner\'s fenced garage off the spur. The camp\'s water is in his cistern; the names are in his vault.' });
     }
     for (const it of WORLD_INTEL) {
       if (s.has(`intel:${it.id}`)) continue;
       const known = it.id === 'intel.gas.note' || s.has(`rumour.${it.id}`) || this.map.revealedAt(it.position[0], it.position[2]) > 100;
-      if (known) out.push({ id: it.id, x: it.position[0], z: it.position[2], label: 'Intel', color: '#c896ff', kind: 'intel' });
+      if (known) out.push({ id: it.id, x: it.position[0], z: it.position[2], label: 'Intel', color: '#c896ff', kind: 'intel', note: 'Something left here on purpose. Worth reading.' });
     }
     for (const c of WORLD_CACHES) {
       if (s.has(c.id)) continue;
       if (!s.has(`approach:${c.id}`) && this.map.revealedAt(c.x, c.z) < 30) continue;
-      out.push({ id: c.id, x: c.x, z: c.z, label: c.id === 'cache.cooler' ? 'Cooler' : 'Mast cells', color: '#7ec8d4', kind: 'intel' });
+      out.push({ id: c.id, x: c.x, z: c.z, label: c.id === 'cache.cooler' ? 'Cooler' : 'Mast cells', color: '#7ec8d4', kind: 'intel', note: c.approach });
     }
-    if (s.data.pack) out.push({ id: 'pack', x: s.data.pack.position[0], z: s.data.pack.position[2], label: 'Your pack', color: '#ff8a2a', kind: 'intel' });
+    if (s.data.pack) out.push({ id: 'pack', x: s.data.pack.position[0], z: s.data.pack.position[2], label: 'Your pack', color: '#ff8a2a', kind: 'intel', note: 'Everything you dropped when you went down. Kade will find it if you don\'t.' });
     for (const op of OUTPOSTS) {
       if (!s.has(`seen:${op.id}`) && !s.has(`rumour.${op.id}`) && this.map.revealedAt(op.x, op.z) < 40) continue;
       const cleared = s.has(`outpost.${op.id}.cleared`) && (s.data.marks[`cleared.${op.id}`] ?? -1e9) > s.data.stats.playTime - 30 * 60;
-      out.push({ id: `op:${op.id}`, x: op.x, z: op.z, label: cleared ? `${op.name} (cleared)` : op.name, color: cleared ? '#7d725f' : '#ff4a3a', kind: 'bunker' });
+      out.push({ id: `op:${op.id}`, x: op.x, z: op.z, label: cleared ? `${op.name} (cleared)` : op.name, color: cleared ? '#7d725f' : '#ff4a3a', kind: 'bunker', note: cleared ? `${op.blurb} Cleared, for now. Kade restaffs.` : op.blurb });
     }
     if (this.gear) out.push(...this.gear.tagMarkers());
     const goal = this.story?.target();
-    if (goal) out.push({ id: 'quest', x: goal.x, z: goal.z, label: goal.label, color: '#ffd27a', kind: 'intel' });
+    if (goal) out.push({ id: 'quest', x: goal.x, z: goal.z, label: goal.label, color: '#ffd27a', kind: 'intel', note: this.objective() });
     if (this.player && this.garage.drone.position.distanceTo(this.player.position) < 70 && this.garage.drone.state !== 'disabled') {
-      out.push({ id: 'drone', x: this.garage.drone.position.x, z: this.garage.drone.position.z, label: 'SeedBot', color: this.garage.drone.state === 'alert' ? '#ff3b3b' : '#ffb347', kind: 'drone' });
+      out.push({ id: 'drone', x: this.garage.drone.position.x, z: this.garage.drone.position.z, label: 'SeedBot', color: this.garage.drone.state === 'alert' ? '#ff3b3b' : '#ffb347', kind: 'drone', note: 'Refurbished. Battery health 12%. Still faster than you.' });
     }
     return out;
   }
@@ -1930,13 +2027,12 @@ export class Game {
         this.input.exitLock();
         const firstKit = !s.has('tut.kit');
         this.ui.openInventory((id) => this.useItem(id), () => {
-          if (firstKit && s.set('tut.kit')) this.ui.toast('Skills live on their own tab (K). Each one branches twice: a focus at rank 2, a capstone at rank 4.', 'info');
+          if (firstKit && s.set('tut.kit')) this.ui.toast(`Skills live on their own tab${actionWord('skills') ? ` (${actionWord('skills')})` : ''}. Each one branches twice: a focus at rank 2, a capstone at rank 4.`, 'info');
           this.afterModal();
         }, tab, this.story);
       } else if (input.actPressed('map')) {
         this.input.exitLock();
-        const intel = WORLD_INTEL.filter((i) => s.has(`intel:${i.id}`)).map((i) => ({ title: i.title, body: i.body }));
-        this.ui.openMap(player.position.x, player.position.z, player.yaw, this.markers(), intel, () => this.afterModal());
+        this.openWorldMap();
       } else if (input.pressed('Escape')) {
         this.input.exitLock();
       }

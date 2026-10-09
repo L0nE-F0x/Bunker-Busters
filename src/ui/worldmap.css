@@ -1,0 +1,60 @@
+/* ---------- world map (WorldMap.ts) + travel card ----------
+   No filter / backdrop-filter / blend modes: WebKitGTK redraws those on the CPU every frame. */
+.modal.wmap { width: min(1560px, 97vw); height: min(960px, 94vh); max-height: none; }
+.wmap-body { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 18px; padding: 14px 18px; overflow: hidden; min-height: 0; }
+.wmap-stage { position: relative; min-height: 0; min-width: 0; border: 1px solid var(--line); background: #0b0806; overflow: hidden; }
+.wmap-canvas { position: absolute; left: 0; top: 0; width: 100%; height: 100%; display: block; cursor: grab; touch-action: none; }
+.wmap-side { overflow-y: auto; min-height: 0; display: flex; flex-direction: column; gap: 10px; padding-right: 6px; touch-action: pan-y; }
+.wmap-side > * { flex-shrink: 0; }
+.wmap-side > .label { margin-top: 6px; }
+.wmap-card { padding: 12px 14px; background: rgba(255, 255, 255, 0.035); border-left: 2px solid var(--amber); min-height: 96px; }
+.wmap-card h4 { margin: 4px 0 6px; font-family: var(--display); font-size: 26px; letter-spacing: 0.03em; line-height: 1; color: var(--ink); }
+.wmap-card p { margin: 0 0 8px; font-size: 13px; line-height: 1.45; color: var(--ink-dim); }
+.wmap-card .btn { width: 100%; margin-top: 6px; font-size: 12px; padding: 9px 12px; }
+.wmap-hintline { margin-top: 6px !important; }
+.wmap-tag { font-family: var(--mono); font-size: 10px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--ink-faint); }
+.wmap-tag.travel { color: var(--amber-hot); }
+.wmap-tag.quest { color: #ffd27a; }
+.wmap-tag.bunker, .wmap-tag.outpost { color: #ff6a5a; }
+.wmap-tag.intel { color: #c896ff; }
+.wmap-tag.cache { color: #7ec8d4; }
+.wmap-dist { font-family: var(--mono); font-size: 12px; color: var(--teal); letter-spacing: 0.04em; }
+.wmap-warn { font-size: 12px; color: #ff8f7a; line-height: 1.4; padding: 6px 10px; border-left: 2px solid #ff5a3a; background: rgba(255, 70, 40, 0.07); }
+.wmap-travel { display: flex; flex-direction: column; gap: 6px; }
+.wmap-go { display: flex; flex-direction: column; gap: 2px; width: 100%; padding: 8px 12px; font-size: 13px; }
+.wmap-go small { font-size: 11px; font-weight: 500; letter-spacing: 0.02em; text-transform: none; color: var(--ink-dim); }
+.wmap-go:disabled { opacity: 0.55; cursor: default; }
+.wmap-legend { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 8px; font-size: 12px; color: var(--ink-dim); }
+.wmap-legend .it { display: flex; align-items: center; gap: 6px; }
+.wmap-legend canvas { width: 26px; height: 26px; flex: none; }
+.wmap .intel-list { margin-top: 0; }
+
+/* phones and short windows: the sheet gets the room, the side column narrows */
+@media (max-width: 760px), (max-height: 560px) {
+  .modal.wmap { width: 100vw; height: 100vh; height: 100dvh; }
+  .modal.wmap header { padding: 6px 12px; gap: 12px; }
+  .modal.wmap header h3 { font-size: 24px; }
+  .modal.wmap footer { display: none; }
+  .wmap-body { grid-template-columns: minmax(0, 1fr) 230px; gap: 8px; padding: 6px 8px; }
+  .wmap-card { min-height: 0; padding: 8px 10px; }
+  .wmap-card h4 { font-size: 20px; }
+  .wmap-card p { font-size: 12px; }
+  .wmap-legend { display: none; }
+  .wmap-legend-label { display: none; }
+}
+@media (max-width: 600px) and (orientation: portrait) {
+  .wmap-body { grid-template-columns: 1fr; grid-template-rows: minmax(0, 1.4fr) minmax(0, 1fr); }
+}
+
+/* the walk, under the fade */
+.travel-card { position: fixed; inset: 0; z-index: 41; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; opacity: 0; transition: opacity 0.6s ease; pointer-events: none; padding: 0 20px; text-align: center; }
+.travel-card.on { opacity: 1; }
+.tc-route { display: flex; align-items: center; gap: 14px; font-family: var(--mono); font-size: 12px; letter-spacing: 0.22em; text-transform: uppercase; color: var(--ink-dim); }
+.tc-route i { display: block; width: 140px; height: 0; border-top: 2px dotted var(--amber); position: relative; }
+.tc-route i::after { content: ''; position: absolute; right: -4px; top: -6px; width: 9px; height: 9px; border-radius: 50%; background: var(--amber-hot); }
+.tc-name { font-family: var(--display); font-weight: 900; font-size: clamp(42px, 8vw, 84px); letter-spacing: 0.04em; line-height: 0.95; color: var(--ink); }
+.tc-blurb { max-width: 560px; font-size: 15px; line-height: 1.5; color: var(--ink-dim); }
+.tc-stats { display: flex; gap: 38px; margin-top: 10px; }
+.tc-stats span { display: flex; flex-direction: column; gap: 4px; font-size: 18px; font-weight: 600; color: var(--ink); }
+.tc-stats small { font-family: var(--mono); font-size: 10px; font-weight: 600; letter-spacing: 0.22em; text-transform: uppercase; color: var(--amber); }
+@media (max-width: 600px) { .tc-stats { gap: 18px; } .tc-stats span { font-size: 15px; } }

@@ -17,12 +17,13 @@ import type { LockResult, TalkChoiceView, UIBridge } from '@/game/context';
 import { LockpickGame } from './Lockpick';
 import { CircuitGame, KeypadGame } from './Circuit';
 import { HackGame, type HackOpts, type HackResult } from './Hack';
-import { Minimap, MapData, drawWorldMap, type MapMarker } from './Minimap';
+import { Minimap, MapData, type MapMarker } from './Minimap';
+import { buildWorldMap, type WorldMapOpts, type MapViewState } from './WorldMap';
 import { mountUpdateNotice } from './Updater';
 import { isTouch, isIOS, isStandalone, canFullscreen, isFullscreen, enterFullscreen } from '@/engine/device';
 import type { ArmsHud } from '@/game/combat/PlayerArms';
 import { DIFFICULTY } from '@/content/weapons';
-import { binds, actionGlyph, actionKey, kbdGlyph, keyLabel, padName, type Action } from '@/engine/bindings';
+import { binds, actionGlyph, actionKey, actionWord, kbdGlyph, keyLabel, padName, type Action } from '@/engine/bindings';
 import { openControls } from './ControlsView';
 
 /** Which device's glyphs to show (html.pad is set by Input when a controller was used last). */
@@ -31,6 +32,8 @@ const device = () => (isTouch ? 'touch' : document.documentElement.classList.con
 const kk = (a: Action) => kbdGlyph(binds.keys(a)[0] ?? '');
 /** HUD prompt keys (Game sends 'E', 'F', 'LMB') → the action they stand for. */
 const PROMPT_ACT: Record<string, Action> = { E: 'interact', F: 'alt', LMB: 'fire' };
+/** "(F)" / "(E)" written into content → the control bound on the device in use (touch: its USE / ALT buttons). */
+const proseKeys = (s: string) => (s.indexOf('(') < 0 ? s : s.replace(/\((E|F)\)/g, (_, k: string) => `(${isTouch ? (k === 'E' ? 'USE' : 'ALT') : actionWord(PROMPT_ACT[k])})`));
 
 const esc = (s: string) => s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]!));
 
@@ -361,7 +364,7 @@ export class UI implements UIBridge {
 
   toast(text: string, kind: 'info' | 'good' | 'bad' | 'xp' = 'info') {
     this.claimItems(text);
-    const t = h('div', `toast ${kind}`, text);
+    const t = h('div', `toast ${kind}`, proseKeys(text));
     this.els.toasts?.appendChild(t);
     setTimeout(() => t.remove(), 4800);
     while ((this.els.toasts?.children.length ?? 0) > 6) this.els.toasts.firstChild?.remove();
@@ -482,8 +485,8 @@ export class UI implements UIBridge {
     // on touch the prompts are buttons themselves (data-key → TouchControls)
     const dev = device();
     const html = f.prompt.map((p) => isTouch
-      ? `<div class="p ${p.na ? 'na' : ''}" data-key="act:${PROMPT_ACT[p.key] ?? p.key}"><span class="kbd">${p.key === 'E' ? 'USE' : 'ALT'}</span>${p.label}${p.na ? `<small>${p.na}</small>` : ''}</div>`
-      : `<div class="p ${p.na ? 'na' : ''}">${PROMPT_ACT[p.key] ? actionGlyph(PROMPT_ACT[p.key], dev) : `<span class="kbd">${p.key}</span>`}${p.label}${p.na ? `<small>${p.na}</small>` : ''}</div>`).join('');
+      ? `<div class="p ${p.na ? 'na' : ''}" data-key="act:${PROMPT_ACT[p.key] ?? p.key}"><span class="kbd">${p.key === 'E' ? 'USE' : 'ALT'}</span>${p.label}${p.na ? `<small>${proseKeys(p.na)}</small>` : ''}</div>`
+      : `<div class="p ${p.na ? 'na' : ''}">${PROMPT_ACT[p.key] ? actionGlyph(PROMPT_ACT[p.key], dev) : `<span class="kbd">${p.key}</span>`}${p.label}${p.na ? `<small>${proseKeys(p.na)}</small>` : ''}</div>`).join('');
     if (pr.dataset.html !== html) { pr.innerHTML = html; pr.dataset.html = html; }
     // stance
     this.els.stance.querySelector('.crouch')!.classList.toggle('on', f.crouch);
@@ -706,7 +709,7 @@ export class UI implements UIBridge {
               <div>
                 <div class="panel info">${sel ? `
                   <div class="cat">${sel.category}</div><h4>${esc(sel.name)}</h4>
-                  <p>${esc(sel.description)}</p>${itemStatus(sel.id, s) ? `<p class="gear-status">${esc(itemStatus(sel.id, s))}</p>` : ''}${sel.flavor ? `<p class="flavor">${esc(sel.flavor)}</p>` : ''}
+                  <p>${esc(proseKeys(sel.description))}</p>${itemStatus(sel.id, s) ? `<p class="gear-status">${esc(itemStatus(sel.id, s))}</p>` : ''}${sel.flavor ? `<p class="flavor">${esc(sel.flavor)}</p>` : ''}
                   <div class="stats"><span>WT ${sel.weight}kg</span><span>VALUE ${sel.value}</span><span>×${s.count(sel.id)}</span></div>
                   <div class="rowbtns">${sel.usable ? `<button class="btn use">${USE_LABEL[sel.id] ?? 'Use'}</button>` : sel.category === 'weapon' ? '<button class="btn use">Equip</button>' : ''}<button class="btn drop">Drop 1</button><button class="btn drop-all">Drop stack</button></div>` : '<p>Empty pockets. The camp can fix that, or the highway can.</p>'}
                 </div>
@@ -740,30 +743,23 @@ export class UI implements UIBridge {
     });
   }
 
-  openMap(px: number, pz: number, yaw: number, markers: MapMarker[], intel: { title: string; body: string }[], onClose: () => void) {
+  /** The world map (WorldMap.ts): survey sheet, fog, markers, fast travel. */
+  /** Where the world map was looking when it last closed. */
+  lastMapView: MapViewState | null = null;
+  openMap(o: Omit<WorldMapOpts, 'device' | 'hint' | 'sound'>, onClose: () => void) {
     this.audio.play('ui');
-    this.openModal(() => {
-      const m = h('div', 'panel modal interactive');
-      m.innerHTML = `<div class="scan"></div>
-        <header><h3>WASTELAND</h3><div class="label">Survey map · fog of war</div></header>
-        <div class="body mapwrap">
-          <canvas width="1200" height="1200"></canvas>
-          <div>
-            <div class="legend">
-              <div class="it"><span class="dot" style="background:#3ff2e0"></span>You</div>
-              <div class="it"><span class="dot" style="background:#ff8a2a"></span>Camp (rest & save)</div>
-              <div class="it"><span class="dot" style="background:#f3e9d8"></span>Landmark</div>
-              <div class="it"><span class="dot" style="background:#ff3a6e"></span>Bunker</div>
-              <div class="it"><span class="dot" style="background:#c896ff"></span>Intel</div>
-            </div>
-            <div class="label" style="margin-top:20px">INTEL GATHERED</div>
-            <div class="intel-list">${intel.length ? intel.map((i) => `<div class="intel-item"><b>${i.title}</b><span>${i.body}</span></div>`).join('') : '<div class="intel-item"><span>Nothing yet. Rumour has it the old gas station has a note pinned up.</span></div>'}</div>
-          </div>
-        </div>
-        <footer><span class="kb">${device() === 'pad' ? `${actionGlyph('map', 'pad')} / <span class="pg face f1">${padName('P1')}</span> close` : `${kk('map')} close`}</span></footer>`;
-      drawWorldMap(m.querySelector('canvas')!, this.map!, px, pz, yaw, markers);
-      return m;
-    }, onClose);
+    const dev = device();
+    const pill = (c: string) => `<span class="pg pill">${padName(c)}</span>`;
+    const face = (c: string, i: number) => `<span class="pg face f${i}">${padName(c)}</span>`;
+    const hint = dev === 'pad'
+      ? `Left stick pan · right stick zoom · ${pill('P4')} ${pill('P5')} places · ${face('P3', 3)} you · ${face('P2', 2)} travel · ${actionGlyph('map', 'pad')} / ${face('P1', 1)} close`
+      : `${kk('forward')}${kk('left')}${kk('back')}${kk('right')} or drag: pan · wheel or <span class="kbd">Q</span><span class="kbd">E</span>: zoom · <span class="kbd">C</span> you · <span class="kbd">[</span><span class="kbd">]</span> places · ${kk('map')} close`;
+    let stop = () => {};
+    this.openModal((close) => {
+      const r = buildWorldMap(this.map!, { ...o, device: dev, hint, sound: (n) => this.audio.play(n), keepView: (v) => (this.lastMapView = v) }, close);
+      stop = r.stop;
+      return r.el;
+    }, () => { stop(); onClose(); });
   }
 
   showIntel(title: string, body: string, reveal: string, onClose: () => void) {
