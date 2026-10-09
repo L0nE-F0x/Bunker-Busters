@@ -88,6 +88,7 @@ export class Gear {
   private t = 0;
   private markT = 0;
   private liveT = 0;
+  private unsub: (() => void) | null = null;
   private shownDist: number[] = [];
   private dom: GearDom;
   private plateWarned = false;
@@ -117,7 +118,7 @@ export class Gear {
     this.dom.binos.classList.remove('on');
     this.dom.binos.querySelector('.binos-label .kbd')!.textContent = actionKey('binoculars');
     // first pickups: say which key does what (the keys are rebindable, so ask the binds)
-    state.events.on('item', ({ id }) => {
+    this.unsub = state.events.on('item', ({ id }) => {
       const hint: Record<string, string> = {
         binoculars: `Binoculars: ${actionKey('binoculars')} to raise them. Hold a hostile in the middle to tag it.`,
         molotov: `Molotov: ${actionKey('throw')} to light and throw one.`,
@@ -414,6 +415,7 @@ export class Gear {
     for (const m of this.dom.marks) m.style.display = 'none';
     if (this.pills) for (const e of Object.values(this.pills)) e.remove();
     this.pills = null;
+    this.unsub?.();
   }
 }
 
