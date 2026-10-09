@@ -1,7 +1,17 @@
 import type { Heightfield } from '@/game/world/Heightfield';
 import { LANDMARKS } from '@/content/world';
+import { renderChart, finishChart, chartInput, CHART_N } from './mapChart';
 
-export interface MapMarker { id: string; x: number; z: number; label: string; color: string; kind: 'camp' | 'landmark' | 'bunker' | 'intel' | 'drone' }
+export interface MapMarker {
+  id: string; x: number; z: number; label: string; color: string; kind: 'camp' | 'landmark' | 'bunker' | 'intel' | 'drone';
+  /** false: on the sheet by rumour only (not visited yet). */
+  known?: boolean;
+  /** A line for the world map's info card. */
+  note?: string;
+}
+
+/** Off the minimap's range these still sit on its rim; everything else just drops off (less clutter). */
+const RIM = (m: MapMarker) => m.id === 'quest' || m.id === 'pack' || m.id === 'garage' || m.kind === 'camp';
 
 const FOG_RES = 128;
 
@@ -22,6 +32,51 @@ export class MapData {
 
   get size() {
     return this.hf.size;
+  }
+
+  private _chart: HTMLCanvasElement | null = null;
+  private chartPx: Uint8ClampedArray | null = null;
+  /** What the minimap draws: the survey sheet once it's ready, the quick boot render until then. */
+  get sheet() {
+    return this._chart ?? this.terrain;
+  }
+  private worker: Worker | null = null;
+
+  /**
+   * Rasterise the world map's sheet in a worker while the game boots (~0.3 s of work off the main
+   * thread). The pixels wait until the map first opens; if the worker can't run, the first open
+   * draws the sheet itself.
+   */
+  startChart() {
+    if (this._chart || this.worker || this.chartPx) return;
+    try {
+      const w = new Worker(new URL('./chartWorker.ts', import.meta.url), { type: 'module' });
+      w.onmessage = (e: MessageEvent<{ px: Uint8ClampedArray; ms: number }>) => {
+        // still booting: finishing the sheet here (~20 ms) lets the minimap use it from the start
+        const t0 = performance.now();
+        this._chart = finishChart(e.data.px, CHART_N, this.hf);
+        this.version++;
+        console.log(`[map] chart ${CHART_N}² rasterised in a worker in ${e.data.ms.toFixed(0)} ms, finished in ${(performance.now() - t0).toFixed(0)} ms`);
+        w.terminate();
+        this.worker = null;
+      };
+      w.onerror = () => { w.terminate(); this.worker = null; };
+      const input = chartInput(this.hf);
+      w.postMessage(input, [input.heights.buffer]);
+      this.worker = w;
+    } catch {
+      this.worker = null;
+    }
+  }
+
+  /** The world map's survey sheet (see mapChart.ts). */
+  get chart() {
+    if (!this._chart) {
+      if (this.chartPx) this._chart = finishChart(this.chartPx, CHART_N, this.hf);
+      else { this.worker?.terminate(); this.worker = null; this._chart = renderChart(this.hf); }
+      this.chartPx = null;
+    }
+    return this._chart;
   }
 
   private renderTerrain() {
@@ -235,7 +290,11 @@ export class Minimap {
     ctx.rotate(heading);
     const ox = -(px / data.size + 0.5) * mapPx, oz = -(pz / data.size + 0.5) * mapPx;
     ctx.globalAlpha = 0.95;
-    ctx.drawImage(data.terrain, ox, oz, mapPx, mapPx);
+    // only the part of the sheet under the dial (a big source scaled whole is slow in a CPU canvas)
+    const sheet = data.sheet, k = sheet.width / data.size, half = data.size / 2;
+    const sx0 = Math.max(0, (px - this.range * 1.05 + half) * k), sz0 = Math.max(0, (pz - this.range * 1.05 + half) * k);
+    const sx1 = Math.min(sheet.width, (px + this.range * 1.05 + half) * k), sz1 = Math.min(sheet.height, (pz + this.range * 1.05 + half) * k);
+    if (sx1 > sx0 && sz1 > sz0) ctx.drawImage(sheet, sx0, sz0, sx1 - sx0, sz1 - sz0, ox + (sx0 / k) * scale, oz + (sz0 / k) * scale, ((sx1 - sx0) / k) * scale, ((sz1 - sz0) / k) * scale);
     ctx.imageSmoothingEnabled = true;
     ctx.drawImage(data.fogImage, ox, oz, mapPx, mapPx);
     ctx.globalAlpha = 1;
@@ -243,7 +302,10 @@ export class Minimap {
       const mx = (m.x - px) * scale, mz = (m.z - pz) * scale;
       const d = Math.hypot(mx, mz);
       let x = mx, y = mz;
-      if (d > R - 14) { x = (mx / d) * (R - 14); y = (mz / d) * (R - 14); }
+      if (d > R - 14) {
+        if (!RIM(m)) continue;
+        x = (mx / d) * (R - 14); y = (mz / d) * (R - 14);
+      }
       const spr = this.cached(`m:${m.kind}:${m.color}`, () => sprite(SPRITE, (c) => drawMarker(c, m, 0, 0, 1.4, false)));
       ctx.save();
       ctx.translate(x, y);
@@ -305,47 +367,6 @@ function hashStr(s: string) {
   return h;
 }
 
-/** Full-screen map. */
-export function drawWorldMap(canvas: HTMLCanvasElement, data: MapData, px: number, pz: number, yaw: number, markers: MapMarker[]) {
-  const ctx = canvas.getContext('2d')!;
-  const S = canvas.width;
-  ctx.clearRect(0, 0, S, S);
-  ctx.drawImage(data.terrain, 0, 0, S, S);
-  ctx.imageSmoothingEnabled = true;
-  ctx.drawImage(data.fogImage, 0, 0, S, S);
-  const toPx = (x: number) => (x / data.size + 0.5) * S;
-  // labels that would land on one another (the quest goal on its town, say) step down a line
-  const k0 = S / 600;
-  ctx.font = `600 ${12 * k0}px "Chakra Petch", sans-serif`;
-  const placed: { x0: number; x1: number; y0: number; y1: number }[] = [];
-  for (const m of markers) {
-    const x = toPx(m.x), y = toPx(m.z);
-    const w = ctx.measureText(m.label).width;
-    let dy = 0;
-    for (let tries = 0; tries < 4; tries++) {
-      const r = { x0: x + 12 * k0, x1: x + 12 * k0 + w, y0: y - 8 * k0 + dy, y1: y + 6 * k0 + dy };
-      if (!placed.some((p) => r.x0 < p.x1 && r.x1 > p.x0 && r.y0 < p.y1 && r.y1 > p.y0)) { placed.push(r); break; }
-      dy += 14 * k0;
-    }
-    drawMarker(ctx, m, x, y, k0, true, dy);
-  }
-  ctx.save();
-  ctx.translate(toPx(px), toPx(pz));
-  ctx.rotate(-yaw + Math.PI);
-  ctx.fillStyle = '#3ff2e0';
-  ctx.shadowColor = '#3ff2e0';
-  ctx.shadowBlur = 18;
-  const k = S / 600;
-  ctx.beginPath();
-  ctx.moveTo(0, -14 * k); ctx.lineTo(10 * k, 10 * k); ctx.lineTo(0, 5 * k); ctx.lineTo(-10 * k, 10 * k); ctx.closePath();
-  ctx.fill();
-  ctx.restore();
-  // compass
-  ctx.font = `700 ${16 * k}px "JetBrains Mono", monospace`;
-  ctx.fillStyle = '#ffb347';
-  ctx.fillText('N', S - 34 * k, 30 * k);
-}
-
 export const LANDMARK_MARKERS: MapMarker[] = LANDMARKS.map((l) => ({
-  id: l.id, x: l.position[0], z: l.position[2], label: l.name, color: l.camp ? '#ff8a2a' : '#f3e9d8', kind: l.camp ? 'camp' : 'landmark',
+  id: l.id, x: l.position[0], z: l.position[2], label: l.name, color: l.camp ? '#ff8a2a' : '#f3e9d8', kind: l.camp ? 'camp' : 'landmark', note: l.blurb,
 }));

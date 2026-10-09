@@ -15,7 +15,8 @@ import type { LockResult, TalkChoiceView, UIBridge } from '@/game/context';
 import { LockpickGame } from './Lockpick';
 import { CircuitGame, KeypadGame } from './Circuit';
 import { HackGame, type HackOpts, type HackResult } from './Hack';
-import { Minimap, MapData, drawWorldMap, type MapMarker } from './Minimap';
+import { Minimap, MapData, type MapMarker } from './Minimap';
+import { buildWorldMap, type WorldMapOpts } from './WorldMap';
 import { mountUpdateNotice } from './Updater';
 import { isTouch, isIOS, isStandalone, canFullscreen, isFullscreen, enterFullscreen } from '@/engine/device';
 import type { ArmsHud } from '@/game/combat/PlayerArms';
@@ -738,30 +739,21 @@ export class UI implements UIBridge {
     });
   }
 
-  openMap(px: number, pz: number, yaw: number, markers: MapMarker[], intel: { title: string; body: string }[], onClose: () => void) {
+  /** The world map (WorldMap.ts): survey sheet, fog, markers, fast travel. */
+  openMap(o: Omit<WorldMapOpts, 'device' | 'hint' | 'sound'>, onClose: () => void) {
     this.audio.play('ui');
-    this.openModal(() => {
-      const m = h('div', 'panel modal interactive');
-      m.innerHTML = `<div class="scan"></div>
-        <header><h3>WASTELAND</h3><div class="label">Survey map · fog of war</div></header>
-        <div class="body mapwrap">
-          <canvas width="1200" height="1200"></canvas>
-          <div>
-            <div class="legend">
-              <div class="it"><span class="dot" style="background:#3ff2e0"></span>You</div>
-              <div class="it"><span class="dot" style="background:#ff8a2a"></span>Camp (rest & save)</div>
-              <div class="it"><span class="dot" style="background:#f3e9d8"></span>Landmark</div>
-              <div class="it"><span class="dot" style="background:#ff3a6e"></span>Bunker</div>
-              <div class="it"><span class="dot" style="background:#c896ff"></span>Intel</div>
-            </div>
-            <div class="label" style="margin-top:20px">INTEL GATHERED</div>
-            <div class="intel-list">${intel.length ? intel.map((i) => `<div class="intel-item"><b>${i.title}</b><span>${i.body}</span></div>`).join('') : '<div class="intel-item"><span>Nothing yet. Rumour has it the old gas station has a note pinned up.</span></div>'}</div>
-          </div>
-        </div>
-        <footer><span class="kb">${device() === 'pad' ? `${actionGlyph('map', 'pad')} / <span class="pg face f1">${padName('P1')}</span> close` : `${kk('map')} close`}</span></footer>`;
-      drawWorldMap(m.querySelector('canvas')!, this.map!, px, pz, yaw, markers);
-      return m;
-    }, onClose);
+    const dev = device();
+    const pill = (c: string) => `<span class="pg pill">${padName(c)}</span>`;
+    const face = (c: string, i: number) => `<span class="pg face f${i}">${padName(c)}</span>`;
+    const hint = dev === 'pad'
+      ? `Left stick pan · right stick zoom · ${pill('P4')} ${pill('P5')} places · ${face('P3', 3)} you · ${face('P2', 2)} travel · ${actionGlyph('map', 'pad')} / ${face('P1', 1)} close`
+      : `${kk('forward')}${kk('left')}${kk('back')}${kk('right')} or drag: pan · wheel or <span class="kbd">Q</span><span class="kbd">E</span>: zoom · <span class="kbd">C</span> you · <span class="kbd">[</span><span class="kbd">]</span> places · ${kk('map')} close`;
+    let stop = () => {};
+    this.openModal((close) => {
+      const r = buildWorldMap(this.map!, { ...o, device: dev, hint, sound: (n) => this.audio.play(n) }, close);
+      stop = r.stop;
+      return r.el;
+    }, () => { stop(); onClose(); });
   }
 
   showIntel(title: string, body: string, reveal: string, onClose: () => void) {

@@ -63,6 +63,9 @@ export class PadNav {
     if (!c) { this.onIdle?.(f); return; }
     const mg = this.kind(c);
     if (mg) { this.minigame(mg, f); return; }
+    // the world map takes the sticks and bumpers first (pan, zoom, step between places)
+    const map = c.querySelector<HTMLElement & { padMap?: (f: NavFrame) => NavFrame }>('.wmap');
+    if (map?.padMap) f = map.padMap(f);
     this.menu(c, f);
   }
 

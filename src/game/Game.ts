@@ -46,6 +46,8 @@ import { SPAWN, WORLD_INTEL, LANDMARKS } from '@/content/world';
 import { WORLD_CACHES, briefingFor, debriefFor, campRadio, epilogueFor, DEBRIEF_CHOICE, type DebriefChoice } from '@/content/story';
 import { CAMP, type CampView } from '@/content/camp';
 import { Story } from './Story';
+import { FastTravel, clockText } from './travel';
+import { travelCard } from '@/ui/WorldMap';
 import { RECIPES, type Recipe } from '@/content/craft';
 import { SKILLS } from '@/content/skills';
 import { GARAGE } from '@/content/bunkers/garage';
@@ -122,6 +124,7 @@ export class Game {
   settlement!: Settlement;
   /** Hostiles hunting the player (last frame's `combat.awareness()`; the music's fight stem). */
   private huntedBy = 0;
+  private travel: FastTravel | null = null;
   scavenge!: Scavenge;
   /** Props and camp effects for the road favours (sites/errands.ts). */
   errands!: Errands;
@@ -297,6 +300,7 @@ export class Game {
     this.fauna.camFwd = new THREE.Vector3();
     await step(0.62, 'Charting the wasteland');
     this.map = new MapData(this.hf);
+    this.map.startChart();
     this.cam = new FirstPersonCamera(this.camera);
     this.applyView();
     this.camera.near = 0.05;
@@ -1615,6 +1619,71 @@ export class Game {
     return best;
   }
 
+  /** The world map, with fast travel between the safe places you've found (travel.ts). */
+  private openWorldMap() {
+    const s = this.state!, player = this.player!;
+    const intel = WORLD_INTEL.filter((i) => s.has(`intel:${i.id}`)).map((i) => ({ title: i.title, body: i.body }));
+    const travel = (this.travel ??= new FastTravel(this.travelHost()));
+    this.ui.openMap({
+      px: player.position.x, pz: player.position.z, heading: this.cam.yaw,
+      markers: this.markers(), intel,
+      travel: travel.options(), travelBlocked: travel.busy ? 'On the road.' : this.travelHost().why(),
+      sub: `Survey sheet · Day ${(s.data.days ?? 0) + 1} · ${clockText(this.atmo.hour)}`,
+      onTravel: (id) => void travel.go(id),
+    }, () => this.afterModal());
+  }
+
+  private travelHost(): import('./travel').TravelHost {
+    const self = this;
+    return {
+      get state() { return self.state!; },
+      hf: this.hf,
+      physics: this.physics,
+      pos: () => this.player!.position,
+      speedMult: () => this.player!.speedMult,
+      dayMinutes: () => this.atmo.dayLengthMinutes,
+      hour: () => this.atmo.hour,
+      why: () => {
+        const s = this.state!;
+        if (this.busy || this.dying || !this.player) return 'Not now.';
+        if (this.huntedBy > 0) return 'Something is hunting you. Lose it first.';
+        if (this.garage.alarm > 0 || this.garage.drone.state === 'alert') return 'Not with an alarm going.';
+        if (this.garage.playerInside) return 'Not from inside a man\'s bunker. Walk out the way you came.';
+        if ((s.data.poison ?? 0) > 0) return 'Venom first. Walk it off and it walks you off a cliff.';
+        if (this.combat.heat > 0.35) return 'Too loud out here. Let the shooting settle first.';
+        return null;
+      },
+      hostileNear: (x, z, r) => {
+        for (const pr of this.combat.providers) for (const h of pr.hostiles()) {
+          if (h.alive && Math.hypot(h.center.x - x, h.center.z - z) < r) return true;
+        }
+        return false;
+      },
+      begin: () => {
+        this.busy = true;
+        this.player!.frozen = true;
+        this.input.exitLock();
+        this.ui.fade(true);
+      },
+      place: (p, yaw, hours) => {
+        this.player!.teleport(p);
+        this.cam.snap(yaw, -0.04);
+        this.atmo.hour = (this.atmo.hour + hours) % 24;
+        this.envTimer = 0;
+        this.revealTimer = 0;
+      },
+      card: (c) => travelCard(this.ui.root, c),
+      end: () => {
+        this.ui.fade(false);
+        this.player!.frozen = false;
+        this.busy = false;
+        this.input.requestLock();
+        this.save(true);
+      },
+      toast: (t) => this.ui.toast(t, 'bad'),
+    };
+  }
+
   /** HUD markers, rebuilt at most every 50 ms: only the 20 Hz minimap reads them per frame. */
   private hudMarkers(now: number) {
     if (!this.markerCache || now - this.markerAt >= 50) { this.markerCache = this.markers(); this.markerAt = now; }
@@ -1623,7 +1692,8 @@ export class Game {
 
   private markers(): MapMarker[] {
     const s = this.state!;
-    const out: MapMarker[] = LANDMARK_MARKERS.filter((m) => m.id !== 'cave' || s.has('cave.known') || s.has('seen:cave'));
+    const out: MapMarker[] = LANDMARK_MARKERS.filter((m) => m.id !== 'cave' || s.has('cave.known') || s.has('seen:cave'))
+      .map((m) => (m.id === 'gas' || s.has(`seen:${m.id}`) ? m : { ...m, known: false }));
     const [gx, , gz] = GARAGE.location.position;
     const nearGarage = this.player ? Math.hypot(this.player.position.x - gx, this.player.position.z - gz) < 90 : false;
     if (s.has('garage.marker') || nearGarage || s.has('garage.complete')) {
@@ -1850,8 +1920,7 @@ export class Game {
         }, tab, this.story);
       } else if (input.actPressed('map')) {
         this.input.exitLock();
-        const intel = WORLD_INTEL.filter((i) => s.has(`intel:${i.id}`)).map((i) => ({ title: i.title, body: i.body }));
-        this.ui.openMap(player.position.x, player.position.z, player.yaw, this.markers(), intel, () => this.afterModal());
+        this.openWorldMap();
       } else if (input.pressed('Escape')) {
         this.input.exitLock();
       }
