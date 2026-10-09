@@ -4,6 +4,7 @@ import type { AudioEngine } from '@/engine/audio';
 import type { Heightfield } from '../world/Heightfield';
 import { VirtualLight } from '../world/lights';
 import { plainStandard } from '../world/materials';
+import { Fire } from '../world/effects';
 import type { Combat, Hostile } from './Combat';
 
 /**
@@ -25,7 +26,7 @@ const BURN = 9;
 const BURN_PLAYER = 5;
 
 interface Bottle { mesh: THREE.Group; body: ReturnType<Physics['world']['createRigidBody']>; fuse: number; lastVel: THREE.Vector3; armed: number }
-interface Patch { p: THREE.Vector3; t: number; tick: number; crackle: number; light: VirtualLight; emit: number }
+interface Patch { p: THREE.Vector3; t: number; tick: number; crackle: number; light: VirtualLight; emit: number; fire: Fire }
 
 const _v = new THREE.Vector3(), _w = new THREE.Vector3(), _up = new THREE.Vector3(0, 1, 0);
 /** Fuel smoke is black, not the pale dust a gun or a blast kicks up. */
@@ -37,11 +38,22 @@ export class Throwables {
   private flying: Bottle[] = [];
   private patches: Patch[] = [];
   private lights = [new VirtualLight(0xff8a3a, 0, 14, 2), new VirtualLight(0xff8a3a, 0, 14, 2)];
+  /** The camp fire's flame cards (the same program, so nothing new compiles), one per light: the body
+   *  of the blaze that reads by day, where the additive tongues wash out. Stones, logs, embers hidden. */
+  private fires: Fire[] = [];
   private lightI = 0;
 
   constructor(private physics: Physics, private hf: Heightfield, private combat: Combat, private audio: AudioEngine) {
     this.group.name = 'throwables';
     for (const l of this.lights) l.priority = 9;
+    for (let i = 0; i < this.lights.length; i++) {
+      const f = new Fire(1.1, 0);
+      f.light.intensity = 0; // never updated: the patch's own light flickers instead
+      for (const c of f.group.children.slice(1)) c.visible = false; // embers, stones, logs
+      f.group.visible = false;
+      this.fires.push(f);
+      this.group.add(f.group);
+    }
     for (let i = 0; i < 3; i++) {
       const b = bottleMesh();
       b.visible = false;
@@ -116,12 +128,18 @@ export class Throwables {
       this.combat.marks.add('dirt', _v.copy(p).addScaledVector(_up, 0.1), _up, null, 8.5);
       this.combat.marks.add('dirt', _v.set(p.x + (Math.random() - 0.5) * 0.8, p.y, p.z + (Math.random() - 0.5) * 0.8).addScaledVector(_up, 0.11), _up, null, 6);
     }
-    const light = this.lights[this.lightI++ % this.lights.length];
+    const slot = this.lightI++ % this.lights.length;
+    const light = this.lights[slot];
+    const fire = this.fires[slot];
     const prev = this.patches.find((q) => q.light === light);
     if (prev) this.patches.splice(this.patches.indexOf(prev), 1);
     light.position.copy(p).setY(y + 0.8);
     light.intensity = 30;
-    this.patches.push({ p, t: 0, tick: 0, crackle: 0, light, emit: 0 });
+    fire.group.position.copy(p);
+    fire.group.rotation.y = Math.random() * Math.PI;
+    fire.group.scale.set(1, 0.05, 1);
+    fire.group.visible = true;
+    this.patches.push({ p, t: 0, tick: 0, crackle: 0, light, emit: 0, fire });
   }
 
   update(dt: number) {
@@ -142,20 +160,27 @@ export class Throwables {
       const life = 1 - f.t / FIRE_S;
       if (life <= 0) {
         f.light.intensity = 0;
+        f.fire.group.visible = false;
         this.patches.splice(this.patches.indexOf(f), 1);
         continue;
       }
       const k = Math.min(1, life * 2.2);
-      // by day the sun washes additive flame out; push it (the night eye is adapted, it stays dim)
-      const day = 1 + 0.7 * THREE.MathUtils.clamp(this.combat.atmo.sunElevation * 3, 0, 1);
+      // the blaze: flares up in a third of a second, wide and low (a puddle, not a bonfire), then
+      // sinks with the fuel; a slow breathing so it never looks like a card
+      const up = Math.min(1, f.t / 0.35);
+      const breathe = 1 + Math.sin(f.t * 5.3) * 0.06 + Math.sin(f.t * 11.7) * 0.04;
+      f.fire.group.scale.set(1 + 0.25 * k, Math.max(0.05, up * (0.3 + 0.5 * k) * breathe), 1 + 0.25 * k);
       // tongues of flame over the whole puddle (a steady rate, not per frame), thinning as the fuel goes:
-      // small, short-lived and dim each, so overlapping tongues read as fire and not a white blob
-      f.emit += dt * (14 + 22 * k);
+      // small, short-lived and dim each, so overlapping tongues read as fire and not a white blob. By
+      // day the fireball sprites start pale and wash to white on bright sand, so the flame cards carry
+      // the shape and the tongues thin to a few licks at the edge
+      const day = THREE.MathUtils.clamp(this.combat.atmo.sunElevation * 3, 0, 1);
+      f.emit += dt * (14 + 22 * k) * (1 - 0.7 * day);
       for (; f.emit >= 1; f.emit--) {
         const a = Math.random() * Math.PI * 2, rr = Math.sqrt(Math.random()) * FIRE_R * (0.55 + 0.45 * k);
         _v.set(f.p.x + Math.cos(a) * rr, f.p.y + 0.1, f.p.z + Math.sin(a) * rr);
         const edge = rr / FIRE_R;
-        this.combat.flames.emit(0, _v, 1, _w.set(0, 0.9 + Math.random() * 0.9 * (1 - edge * 0.5), 0), 0.18, (0.2 + 0.22 * k) * (1.15 - edge * 0.4), 0.45 + Math.random() * 0.3, 1.5, 1.25 * day);
+        this.combat.flames.emit(0, _v, 1, _w.set(0, 0.9 + Math.random() * 0.9 * (1 - edge * 0.5), 0), 0.18, (0.2 + 0.22 * k) * (1.15 - edge * 0.4), 0.45 + Math.random() * 0.3, 1.5, 1.25);
       }
       if (Math.random() < dt * 6) this.combat.debris.emit('smoke', _v.set(f.p.x, f.p.y + 1, f.p.z), 1, _w.set(0, 1.4, 0), 0.6, 0.8 * k, SOOT, 1.4);
       f.light.intensity = (16 + Math.sin(f.t * 23) * 3 + Math.sin(f.t * 9.7) * 4) * k;
