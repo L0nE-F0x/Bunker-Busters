@@ -172,7 +172,9 @@ export class ApexBuilder implements BunkerShell {
       rubber: plainStandard('#151515', 0.9, 0),
       panel: plainStandard('#1b2a44', 0.22, 0.6),
       frame: plainStandard('#b0b4b8', 0.4, 0.8),
-      roof: rustyMetal({ base: '#c9ccd0', rust: 0.06, metalness: 0.85, roughness: 0.32 }),
+      roof: plainStandard('#c4c8cc', 0.34, 0.85),
+      // the arch seen from under it (the roof shell is one-sided)
+      liner: plainStandard('#7d8287', 0.7, 0.4, { side: THREE.BackSide }),
       side: plainStandard('#cfd2d5', 0.36, 0.78),
       batten: plainStandard('#9fa4a9', 0.4, 0.85),
       lattice: rustyMetal({ base: '#55585c', rust: 0.35, metalness: 0.7 }),
@@ -418,11 +420,14 @@ export class ApexBuilder implements BunkerShell {
       s.lineTo(span / 2, 0);
       return new THREE.ShapeGeometry(s, 1).translate(cx, y0, 0);
     };
-    for (const z of [z0 - 0.1, z1 - 0.1]) b.add(m.side, arch(h).translate(0, 0, z), arch(h).rotateY(Math.PI).translate(2 * cx, 0, 2 * z));
+    // the back gable is the vault block's concrete carried up under the arch; the front is cladding
+    for (const [z, mat] of [[z0 - 0.1, m.wallC], [z1 - 0.1, m.side]] as [number, THREE.Material][]) b.add(mat, arch(h).translate(0, 0, z), arch(h).rotateY(Math.PI).translate(2 * cx, 0, 2 * z));
     const roofG = new THREE.CylinderGeometry(1, 1, z1 - z0 + 0.6, 40, 1, true, -Math.PI / 2, Math.PI);
     roofG.rotateX(-Math.PI / 2);
     roofG.scale(span / 2 + 0.15, rise + 0.1, 1);
+    const linerG = roofG.clone();
     b.add(m.roof, place(roofG, cx, h, (z0 + z1) / 2));
+    b.add(m.liner, place(linerG, cx, h, (z0 + z1) / 2, 0, 0, 0, 0.985, 0.97, 1));
     for (let z = z0 + 2; z < z1; z += 4) {
       const rib = new THREE.TorusGeometry(1, 0.012, 4, 40, Math.PI);
       rib.scale(span / 2 - 0.1, rise - 0.1, 1);
@@ -582,7 +587,7 @@ export class ApexBuilder implements BunkerShell {
     d.add(m.darkC, box(x1 - x0, 0.1, vaultZ - z0, (x0 + x1) / 2, 0.05, (z0 + vaultZ) / 2));
     // the earth cap over the whole block, rocks bedded in it, solar on its back, a dish on top
     const cap = new THREE.SphereGeometry(1, 28, 12, 0, Math.PI * 2, 0, Math.PI / 2);
-    b.add(m.rock, place(cap, (x0 + x1) / 2, room + 0.5, (z0 + z1) / 2 - 1, 0, 0, 0, 9.6, 4.6, 16.6));
+    b.add(m.rock, place(cap, (x0 + x1) / 2, room + 0.5, (z0 + z1) / 2 - 1.5, 0, 0, 0, 9.6, 4.6, 15.4));
     for (const [x, z, s, y] of [[-17, -10, 1.6, 6.4], [-3, -14, 1.9, 6.6], [-15, -30, 2.2, 7], [-6, -33, 1.5, 6.6], [-19, -22, 1.3, 6]] as [number, number, number, number][]) {
       b.add(m.rock, place(rockGeometry(x * 7 + z, 1), x, y, z, 0, x, 0, s));
     }

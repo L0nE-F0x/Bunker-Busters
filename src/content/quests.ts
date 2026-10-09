@@ -148,13 +148,13 @@ export const QUESTS: QuestDef[] = [
     giver: 'mara',
     where: 'West of the salt',
     blurb:
-      'Apex Vault is west of the salt flats, and it holds what is left of the valley\'s water. The road isn\'t open yet. Until it is, find out who would walk it with you.',
+      'Apex Vault is on the far shore of the salt, at the foot of the range, and it holds what is left of the valley\'s water. Vesper Kade is on the other end of every camera there, live. Find out who would walk west with you, then find her road.',
     start: (v) => v.has('debriefed'),
     steps: [
       {
         id: 'crew', text: 'Ask Dry Creek who would come west', at: 'creek',
         hint: 'Anyone who trusts you (standing 2 or more) will say yes. Finish their favours first.',
-        done: (v) => CREW.some((f) => v.has(f)),
+        done: (v) => CREW.some((f) => v.has(f)) || v.has('apex.complete'),
       },
       {
         id: 'crew2', text: 'Find a second pair of hands', optional: true, at: 'creek',
@@ -162,11 +162,41 @@ export const QUESTS: QuestDef[] = [
         done: (v) => CREW.filter((f) => v.has(f)).length >= 2,
       },
       {
-        id: 'road', text: 'Reach Apex Vault, west of the salt', locked: true,
-        hint: 'Not on this map yet. Act II is coming.',
-        done: () => false,
+        id: 'road', text: 'Reach Apex Vault, west of the salt', at: 'apex',
+        hint: 'Her road leaves the highway at its west end and runs south past Dry Creek, along the salt. Kade keeps a gatehouse on it. Look for the rocket.',
+        done: (v) => any(v, 'seen:apex', 'apex.hangar.open', 'apex.airlock.open', 'apex.complete'),
+      },
+      {
+        id: 'code', text: 'Learn how the airlock code works', optional: true, at: 'apex',
+        hint: 'A shift note near the end of her road, or ask Vesper on the intercom like it\'s a feature request (Social 5). Or skip the code: SPLICE the airlock at Electronics 3.',
+        done: (v) => any(v, 'apex.code', 'apex.airlock.open', 'apex.complete'),
+      },
+      {
+        id: 'hangar', text: 'Get into the hangar', at: 'apex',
+        hint: 'Pick the five pins, short the door controller (Electronics 2), blow it (Demolition 3), or buzz Vesper on the intercom and give her a reason. The camera over the door sweeps the apron.',
+        done: (v) => any(v, 'apex.hangar.open', 'apex.airlock.open', 'apex.vault.open', 'apex.complete'),
+      },
+      {
+        id: 'airlock', text: 'Get through the airlock', at: 'apex',
+        hint: 'The code is the launch clock over the door, hours and minutes, and it counts down. Or splice the controller: door, cameras and lasers in one go.',
+        done: (v) => any(v, 'apex.airlock.open', 'apex.vault.open', 'apex.complete'),
+      },
+      {
+        id: 'vault', text: 'Open the Cistern Room', at: 'apex',
+        hint: 'Down the launch corridor: jump the low beams, crouch the high one, or kill the breaker by the inner door. Then six pins, or a big charge (Demolition 5).',
+        done: (v) => any(v, 'apex.vault.open', 'apex.complete'),
+      },
+      {
+        id: 'loot', text: 'Take the water', at: 'apex',
+        hint: 'The cistern tap and both lockers. The water comes with you even if the pack complains.',
+        done: (v) => v.has('apex.complete'),
       },
     ],
+    reward: { xp: 400, items: [{ id: 'water', qty: 4 }, { id: 'charge', qty: 1 }, { id: 'medkit', qty: 1 }], rep: { compact: 2, creek: 2, mara: 1, vesper: -3 } },
+    wrap: {
+      speaker: 'Mara Voss',
+      text: 'The cistern runs east tonight. Vesper\'s feed says she\'s "pivoting". One more thing. Dez caught a signal on the band: a building on the old coast with no windows and a lot of antennas. They call it the Panopticon. It read our names back to us before we said them.',
+    },
   },
 
   // ------------------------------------------------------------------ Dry Creek

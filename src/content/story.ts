@@ -295,12 +295,19 @@ export function journalEntries(v: StoryView): JournalEntry[] {
   add('seen:pipeline', 'The line west', 'A pipe on stands runs west out of Pipeline Camp 3, and the skid beside it hums. Painted on the casing: WATER IS A SERVICE. A Hornet drone circles the pad at night. The ground round it is mined.');
   add('seen:wellhead', 'Where the creek went', 'South-west of Dry Creek, the aquifer comes up through a Kade wellhead into a tank with her name on it, then west down the pipe. The creek didn\'t dry up. It was moved. Juno was right, and the proof is guarded by five rifles, two sentries and a minefield.');
   add('outpost.wellhead.cleared', 'Opened the tap', 'You took the wellhead. The tank is still Kade\'s, and Kade will send more people; Kade always sends more people. But for a while the water under Dry Creek was nobody\'s, which is the closest thing to everybody\'s it has been in years.');
+  add('intel:intel.salt.waybill', 'Her road', 'A Kade waybill on the salt: forty jugs a week down a private road to Apex Vault, off the highway\'s west end and along the shore. The driver walked. The truck stayed. Vesper posted about it.');
+  add('seen:apex', 'Apex Vault', 'A launch site at the foot of the range on the salt\'s west shore: a stainless booster held up by a tower, a hangar with her feed over the door, and a vault dug into the hill. Every camera there is live. She is always watching, and always posting.');
+  add('apex.code', 'The launch clock', 'The airlock code is the countdown over the door, hours and minutes to her launch. It is never the same twice. She calls that zero trust. Her guards call it their knees.');
+  add('apex.demo', 'A fan, on tour', 'You told Vesper you were a fan and she let you into the hangar for content. Somewhere there is a clip of you looking unimpressed by a truck.');
+  add('apex.complete', 'The Cistern Room', 'A tank with her name on it, the valley\'s water inside, and a framed poll on the wall: should the camps get water? 88% said lol. The tap still works. The cistern runs east.');
+  add('q:act2:done', 'The Panopticon', 'Dez caught it on the band after Apex: a building on the old coast with no windows and a lot of antennas. Somebody who sold the world a feed kept a copy of it. It read our names back before we said them.');
   add('cave.wick.vesper', 'She stood where you stood', 'Wick says Vesper Kade called the Garage a prototype with bad unit economics. He told her the prototype had his cousin\'s water. She painted her initials in a pocket of the rock and left.');
   return out.reverse();
 }
 
 /** Corner text when no quest is giving orders (the quest runtime normally answers first). */
 export function storyObjective(v: StoryView): string {
+  if (v.has('apex.complete')) return 'Apex is busted and the water runs east. Something on the band is calling itself the Panopticon.';
   if (v.has('debriefed')) return 'Act I is done. Apex Vault is west of the salt. Ask Dry Creek who would come.';
   if (v.has('garage.complete')) return 'Radio Mara from the campfire. She wants the Seed Manifest read out loud.';
   if (!v.has('intel:intel.gas.note')) return 'Read the note on the pumps by the fire. Search the cooler behind them.';
