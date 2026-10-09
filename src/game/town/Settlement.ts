@@ -986,7 +986,9 @@ export class Settlement {
       const owner = s.has('q.inez.inez');
       return {
         speaker: 'Inez Quill',
-        text: (owner
+        text: this.away.has('inez')
+          ? 'Closed. You knocked. I came down the stair in my good shawl for this, so it had better be commerce.'
+          : (owner
           ? 'Welcome to the Till. My Till. Legally, in pencil. Browse. Don\'t palm. I can hear a hand.'
           : s.has('q.inez.town')
             ? 'The town\'s Till is open. The town\'s prices went up. Funny how that works.'

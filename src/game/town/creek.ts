@@ -263,6 +263,8 @@ function diner(S: Site, H: Hooks) {
   P.cyl(M.glassDark(), 0.08, 0.09, 0.16, -16.9, FY + 1.13, ccz - 0.1, 10).cyl(M.black(), 0.06, 0.08, 0.05, -16.9, FY + 1.23, ccz - 0.1, 10);
   H.npc({ id: 'nia', look: LOOKS.nia, pose: 'counter', x: -16.2, y: FY, z: -9.05, yaw: 0, surface: 1.05, notice: 6, station: 'nia.diner' });
   H.spot('nia', -16.2, FY + 1.05, -9.05);
+  // once Nia and Doc have made peace, he takes breakfast at her counter before the clinic opens (content/routines.ts)
+  H.npc({ id: 'doc', look: LOOKS.doc, pose: 'clipboard', x: -15.0, y: FY, z: -6.85, yaw: Math.PI + 0.25, notice: 5, station: 'doc.diner', alt: true });
   S.col(-16.2, FY + 0.85, -9.05, 0.3, 0.85, 0.22);
 
   // ---- back bar: cabinets, griddle, coffee urn, shelf of cups, the menu board

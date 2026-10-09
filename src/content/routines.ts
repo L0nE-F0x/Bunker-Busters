@@ -26,7 +26,9 @@ export const STATIONS: Record<string, Station> = {
   // Dry Creek: the diner stays lit late; the doctor works days, warms up at the street fire, and
   // takes the night calls; the Till keeps shop hours; Ren counts the road until Last Chance needs a lookout
   'nia.diner': { primary: true, open: (c) => between(c.hour, 5, 24) },
-  'doc.clinic': { primary: true, open: (c) => between(c.hour, 6, 19) },
+  'doc.clinic': { primary: true, open: (c) => between(c.hour, 6, 19) && !(c.has('q.nia.peace') && between(c.hour, 6, 8)) },
+  // made peace: breakfast at Nia's counter, before the clinic opens
+  'doc.diner': { open: (c) => c.has('q.nia.peace') && between(c.hour, 6, 8) },
   'doc.fire': { open: (c) => between(c.hour, 19, 24) },
   'inez.till': { primary: true, open: (c) => between(c.hour, 7, 21) },
   'ren.road': { primary: true, open: (c) => !c.has('q.ren.truth') },
