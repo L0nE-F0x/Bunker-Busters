@@ -201,7 +201,7 @@ if (only === 'all' || only === 'play') {
   check('B closes the kit and play resumes', !back.modal && back.locked, JSON.stringify(back));
   // hold View: map
   await btn(BACK, 700, 600);
-  check('hold View opens the map', await ev(`!!document.querySelector('.mapwrap')`));
+  check('hold View opens the map', await ev(`!!document.querySelector('.wmap')`));
   await btn(B, 80, 600);
   // Start: pause, navigate to Settings, change a slider, open Controls
   await btn(START, 80, 600);
