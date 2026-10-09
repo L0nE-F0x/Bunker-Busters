@@ -213,6 +213,59 @@ function settleTextureFlips() {
 }
 
 /**
+ * WebGL2: uniform-buffer names that don't make every program unique. Three names each buffer node's
+ * uniform block after the node's id (`NodeBuffer_217926 { mat4 buffer217926[33]; }`), so two
+ * materials with the same graph and an equally sized buffer (two glow-halo sets, two rigs with the
+ * same skeleton, two instanced batches of one size) still get different GLSL and a program each:
+ * ~45 of the 242 programs at boot differed only by those numbers. The block is renamed after its
+ * type and size (`NodeBuffer_vec4x24_0`), the index only climbing when one program holds two
+ * alike. The block's binding point comes from its place in the bind group, not its name, so
+ * programs shared this way bind each material's own buffer. Names are per build (each build makes
+ * its own buffer binding: three's "shared" buffer data is never stored), and the block is emitted at
+ * the end of the same build, so a node's name in one program never leaks into another.
+ */
+function stableBufferNames(renderer: THREE.WebGPURenderer) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const be = (renderer as any).backend;
+  if (!be?.isWebGLBackend || typeof be.createNodeBuilder !== 'function') return;
+  const create = be.createNodeBuilder;
+  let patched = false;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  be.createNodeBuilder = function (...args: any[]) {
+    const builder = create.apply(this, args);
+    if (!patched) {
+      patched = true;
+      const proto = Object.getPrototypeOf(builder);
+      const own = proto.getUniformFromNode;
+      if (typeof own === 'function' && typeof proto.getDataFromNode === 'function') {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        proto.getUniformFromNode = function (node: any, type: string, shaderStage: string, name: string | null = null) {
+          const uniformNode = own.call(this, node, type, shaderStage, name);
+          if (type !== 'buffer') return uniformNode;
+          const buf = this.getDataFromNode(node, shaderStage, this.globalCache).uniformGPU;
+          if (!buf || typeof node.name !== 'string' || !/^NodeBuffer_/.test(node.name)) return uniformNode;
+          // this builder's name for the node (both stages, every call: three resets it each time)
+          const names: Map<unknown, string> = (this._bbNames ??= new Map<unknown, string>());
+          let nm = names.get(node);
+          if (nm === undefined) {
+            const key = `NodeBuffer_${String(node.bufferType).replace(/[^A-Za-z0-9]/g, '')}x${node.bufferCount | 0}_`;
+            const taken = new Set(names.values());
+            let k = 0;
+            while (taken.has(key + k)) k++;
+            nm = key + k;
+            names.set(node, nm);
+          }
+          node.name = buf.name = nm;
+          uniformNode.name = `nb${nm.slice(10)}`; // the array inside the block, unique with it
+          return uniformNode;
+        };
+      }
+    }
+    return builder;
+  };
+}
+
+/**
  * The scene's environment cache key (lights, shadows, environment map, fog) once per frame, not
  * once per render call. Every render object checks it each pass to see whether its program is still
  * valid, and three recomputes it on every render call by walking the whole lights and fog node
@@ -296,6 +349,7 @@ export async function createRenderer(canvas: HTMLCanvasElement) {
   coalesceUniformUploads(renderer);
   if (!qs.has('noflipfix')) settleTextureFlips(); // (?noflipfix: A/B)
   if (!qs.has('nokeymemo')) frameCacheKeys(renderer); // (?nokeymemo: A/B)
+  if (!qs.has('nobufnames')) stableBufferNames(renderer); // (?nobufnames: A/B)
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFShadowMap;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
