@@ -1,5 +1,6 @@
 import { isMobile } from '@/engine/device';
-import { ITEMS, restoreBlock } from '@/content/items';
+import { ITEMS } from '@/content/items';
+import { restoreBlock } from '@/content/items';
 import { ARCHETYPES } from '@/content/archetypes';
 import { SKILLS, emptySkills, FOCUSES, CAPSTONES, SKILL_ORDER, FOCUS_RANK, CAPSTONE_RANK } from '@/content/skills';
 import { RECIPES, type Recipe } from '@/content/craft';

@@ -10,7 +10,8 @@ import { VirtualLight } from '../world/lights';
 import { Tracers, Debris, Flames } from './fx';
 import { Marks, Brass } from './marks';
 import type { WeaponId } from '@/content/weapons';
-import { DIFFICULTY, WEAPONS, type Difficulty } from '@/content/weapons';
+import { DIFFICULTY, type Difficulty } from '@/content/weapons';
+import { WEAPONS } from '@/content/weapons';
 
 /**
  * The fight layer. Everything that can be shot, bitten or blown up registers here through a

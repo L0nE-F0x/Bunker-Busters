@@ -46,10 +46,11 @@ import { SPAWN, WORLD_INTEL, LANDMARKS } from '@/content/world';
 import { WORLD_CACHES, briefingFor, debriefFor, campRadio, epilogueFor, DEBRIEF_CHOICE, type DebriefChoice } from '@/content/story';
 import { CAMP, type CampView } from '@/content/camp';
 import { Story } from './Story';
-import { RECIPES, RECIPE_GROUPS, type Recipe } from '@/content/craft';
+import { RECIPES, type Recipe } from '@/content/craft';
+import { RECIPE_GROUPS } from '@/content/craft';
 import { SKILLS } from '@/content/skills';
 import { GARAGE } from '@/content/bunkers/garage';
-import { ITEMS, HOTBAR_ITEMS, KEEP_ON_DEATH, hotbarItem } from '@/content/items';
+import { ITEMS, HOTBAR_ITEMS, KEEP_ON_DEATH } from '@/content/items';
 import { KadeTerminals } from './combat/terminals';
 import { OUTPOSTS } from '@/content/recovery';
 import { XP_REWARDS, fallFactor, empRadius } from '@/content/progression';
@@ -58,8 +59,8 @@ import { Combat, sphereRay, type HurtKind, type Hostile } from './combat/Combat'
 import { PlayerArms } from './combat/PlayerArms';
 import { Throwables } from './combat/Throwables';
 import { Gear } from './player/Gear';
-import { restoreBlock } from '@/content/items';
-import { modBlock } from '@/content/weapons';
+import { modBlock, WEAPONS, type WeaponId } from '@/content/weapons';
+import { hotbarItem, restoreBlock } from '@/content/items';
 import { Recovery } from './combat/Recovery';
 import { Machines } from './combat/Machines';
 import { MenuDirector } from './MenuDirector';
@@ -1456,6 +1457,8 @@ export class Game {
     if (!s.count(id)) { this.audio.play('deny'); return; }
     if (this.hands?.busy) return;
     if (this.gear?.use(id)) { this.ui.refreshHotbar(); return; }
+    // the Kit's Equip on a weapon (handy on a phone, and for finding a new gun)
+    if (ITEMS[id]?.category === 'weapon' && WEAPONS[id as WeaponId]) { this.arms?.equip(id as WeaponId); return; }
     if (id === 'emp') {
       if (this.hands && this.mode === 'playing' && !this.ui.modalOpen) this.hands.throwEmp(() => this.throwEmp());
       else this.throwEmp();
