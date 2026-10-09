@@ -115,8 +115,9 @@ export class Terrain {
   }
 
   private buildFar(material: THREE.Material) {
-    // polar ring from the playable edge out to the horizon
-    const rings = 40, segs = 160;
+    // polar ring from the playable edge out to the horizon. Fine enough (≈6 m around at 600 m) that
+    // the ridges read as rock, not as 30 m triangles: one draw, ~100k triangles.
+    const rings = 96, segs = 512;
     const inner = this.hf.size * 0.47, outer = 3600;
     const pos: number[] = [];
     const idx: number[] = [];

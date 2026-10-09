@@ -3,6 +3,8 @@ import { WORLD_SIZE, WORLD_SEED, HIGHWAY, SIDE_ROADS, LANDMARKS, CAVE_TRAIL } fr
 import { GARAGE } from '@/content/bunkers/garage';
 import { OUTPOSTS } from '@/content/recovery';
 
+const CUT_XZ = ((c) => [c?.position[0] ?? 48, c?.position[2] ?? 352])(LANDMARKS.find((l) => l.kind === 'cave'));
+
 export interface FlattenZone { x: number; z: number; r: number; falloff: number; target?: number }
 
 function distToSegment(px: number, pz: number, ax: number, az: number, bx: number, bz: number) {
@@ -105,7 +107,26 @@ export class Heightfield {
     const r = Math.max(Math.abs(x), Math.abs(z));
     const edge = smoothstep(this.size * 0.39, this.size * 0.5, r);
     h += edge * (45 + n.ridged(x * 0.005, z * 0.005, 4) * 55 + n.fbm(x * 0.01, z * 0.01, 3) * 12);
+    // the range reads as canyon country (tablelands and benches), not needle peaks; The Cut's ridge stays as built
+    h = lerp(h, this.canyon(h, x, z), smoothstep(0.2, 0.7, edge) * smoothstep(70, 120, Math.hypot(x - CUT_XZ[0], z - CUT_XZ[1])));
     return h;
+  }
+
+  /**
+   * Canyon country for the bounding range: heights are capped by a slowly wandering ceiling (flat-topped
+   * mesas and buttes with a soft shoulder, ~50–110 m), then cut into broad terraces (steep risers, flat
+   * benches every ~22 m) so the terrain's strata shader paints cliff bands instead of ridged spikes.
+   */
+  private canyon(h: number, x: number, z: number) {
+    const n = this.noise2;
+    const cap = 80 + n.fbm(x * 0.0011 + 3.1, z * 0.0011 - 1.7, 2) * 64;
+    const k = 9;
+    const capped = h - Math.log1p(Math.exp((h - cap) / k)) * k; // soft min(h, cap)
+    const off = n.fbm(x * 0.004 + 7.7, z * 0.004 - 2.3, 2) * 6;
+    const s = (capped + off) / 22;
+    const f = Math.floor(s);
+    const ter = (f + smoothstep(0.18, 0.62, s - f)) * 22 - off;
+    return lerp(capped, ter, 0.75);
   }
 
   private generate() {
