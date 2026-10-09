@@ -725,7 +725,7 @@ function mats() {
     skinDark: rustyMetal({ base: '#8f8c86', rust: 0.25, metalness: 0.5, roughness: 0.5 }),
     heat: rustyMetal({ base: '#2c2a28', rust: 0.15, metalness: 0.3, roughness: 0.75 }),
     heatDark: rustyMetal({ base: '#1e1d1c', rust: 0.1, metalness: 0.5, roughness: 0.6 }),
-    bell: rustyMetal({ base: '#4a3a30', rust: 0.35, metalness: 0.85, roughness: 0.45 }),
+    bell: rustyMetal({ base: '#3b3735', rust: 0.12, metalness: 0.85, roughness: 0.4 }),
     pipe: rustyMetal({ base: '#7d7a74', rust: 0.3, metalness: 0.8, roughness: 0.4 }),
     steel: rustyMetal({ base: '#a3a39d', rust: 0.25, metalness: 0.8, roughness: 0.4 }),
     carbon: plainStandard('#202124', 0.55, 0.1),

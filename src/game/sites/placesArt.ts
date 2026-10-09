@@ -16,7 +16,7 @@ type N = any;
 type Draw = (c: CanvasRenderingContext2D, w: number, h: number, r: () => number) => void;
 interface Region { u0: number; u1: number; v0: number; v1: number }
 
-const W = 2048, H = 1536, PAD = 4;
+const W = 2048, H = 2048, PAD = 4;
 const DRAW: Record<string, [number, number, Draw]> = {};
 
 export function artPaint(name: string, w: number, h: number, draw: Draw) {
@@ -381,4 +381,75 @@ artPaint('wlOverhead', 640, 128, (c, w, h, r) => {
   stencil(c, 'THANK YOU FOR YOUR PATIENCE', w / 2, 82, 50, '#3a2a2a', 'center', 800, F_UI);
   grime(c, w, h, 1.5, 31);
   blast(c, w, h, r, 500, 4);
+});
+
+// ================================================================ Photon Park (solar.ts)
+artPaint('ppSign', 640, 320, (c, w, h, r) => {
+  const g = c.createLinearGradient(0, 0, w, h);
+  g.addColorStop(0, '#f4efe2');
+  g.addColorStop(1, '#e2dccb');
+  c.fillStyle = g;
+  c.fillRect(0, 0, w, h);
+  // the logo: a sun that is also a power button
+  c.strokeStyle = '#f2a51c';
+  c.lineWidth = 16;
+  c.beginPath(); c.arc(110, 140, 62, -Math.PI * 0.32, Math.PI * 1.32); c.stroke();
+  c.beginPath(); c.moveTo(110, 66); c.lineTo(110, 140); c.stroke();
+  for (let i = 0; i < 10; i++) {
+    const a = (i / 10) * Math.PI * 2;
+    c.lineWidth = 6;
+    c.beginPath(); c.moveTo(110 + Math.cos(a) * 86, 140 + Math.sin(a) * 86); c.lineTo(110 + Math.cos(a) * 104, 140 + Math.sin(a) * 104); c.stroke();
+  }
+  stencil(c, 'PHOTON', 400, 112, 92, '#1f3550', 'center', 900);
+  stencil(c, 'PARK', 400, 196, 92, '#1f3550', 'center', 900);
+  c.fillStyle = '#1f3550';
+  c.fillRect(0, 248, w, 72);
+  c.font = `600 26px ${F_UI}`;
+  c.fillStyle = '#f4efe2';
+  c.textAlign = 'center';
+  c.fillText('POWERING EVERAFTER  ·  100% SUN, 0% COMPROMISE', w / 2, 294);
+  grime(c, w, h, 1.3, 41);
+  blast(c, w, h, r, 700, 3);
+});
+artPaint('ppHut', 448, 128, (c, w, h, r) => {
+  c.fillStyle = '#f2c21c';
+  c.fillRect(0, 0, w, h);
+  c.fillStyle = '#1b1a1d';
+  for (let x = -h; x < w; x += 44) { c.beginPath(); c.moveTo(x, h); c.lineTo(x + 22, h); c.lineTo(x + 22 + h * 0.4, h - 22); c.lineTo(x + h * 0.4, h - 22); c.fill(); }
+  stencil(c, 'INVERTER 2', w / 2, 52, 44, '#1b1a1d', 'center', 800, F_UI);
+  c.font = `700 20px ${F_MONO}`;
+  c.fillStyle = '#1b1a1d';
+  c.textAlign = 'center';
+  c.fillText('1,500 V DC · AUTHORISED SHINE UNITS ONLY', w / 2, 86);
+  grime(c, w, h, 1.2, 8);
+  blast(c, w, h, r, 300, 3);
+});
+artPaint('ppScreen', 320, 176, (c, w, h) => {
+  c.fillStyle = '#05101a';
+  c.fillRect(0, 0, w, h);
+  c.fillStyle = '#7fd8ff';
+  c.font = `700 20px ${F_MONO}`;
+  c.textAlign = 'left';
+  c.fillText('PHOTON PARK · FLEET', 14, 30);
+  c.fillText('SHINE UNITS   4/5 OK', 14, 62);
+  c.fillText('CLEANED TODAY 4,096', 14, 90);
+  c.fillStyle = '#ffcf5a';
+  c.fillText('EXPORT  EVERAFTER', 14, 122);
+  c.fillText('CONTRACT  ACTIVE', 14, 150);
+});
+artPaint('ppMarker', 160, 224, (c, w, h, r) => {
+  c.fillStyle = '#e8641e';
+  c.fillRect(0, 0, w, h);
+  c.fillStyle = '#1b1a1d';
+  c.font = `800 28px ${F_UI}`;
+  c.textAlign = 'center';
+  c.fillText('WARNING', w / 2, 40);
+  c.font = `700 19px ${F_UI}`;
+  c.fillText('BURIED HV', w / 2, 82);
+  c.fillText('CABLE', w / 2, 106);
+  c.fillText('EVERAFTER →', w / 2, 144);
+  c.font = `600 15px ${F_MONO}`;
+  c.fillText('DO NOT DIG', w / 2, 186);
+  grime(c, w, h, 1.4, 13);
+  blast(c, w, h, r, 200, 3);
 });

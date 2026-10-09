@@ -8,6 +8,7 @@ import { TubeSite } from './tube';
 import { CourierSite } from './courier';
 import { BoosterSite } from './booster';
 import { WaitlistSite } from './waitlist';
+import { SolarSite } from './solar';
 
 export type { Site } from './Site';
 export { Errands } from './errands';
@@ -22,5 +23,6 @@ export function buildSites(ctx: GameContext, landmarks: Landmarks): Site[] {
     new CourierSite(ctx, landmarks),
     new BoosterSite(ctx, landmarks),
     new WaitlistSite(ctx, landmarks),
+    new SolarSite(ctx, landmarks),
   ];
 }

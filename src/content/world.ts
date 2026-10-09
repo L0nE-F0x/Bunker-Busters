@@ -68,6 +68,11 @@ export const LANDMARKS: LandmarkDef[] = [
     blurb: 'Four thousand people queued for a bunker that seats by appointment. The appointments never opened.',
     flatten: { r: 42, falloff: 14 },
   },
+  {
+    id: 'solar', name: 'Photon Park', kind: 'site', position: [-205, 0, 310], rotation: 0,
+    blurb: 'Seven rows of glass, four robots wiping them, and a customer who stopped paying when the world ended.',
+    flatten: { r: 40, falloff: 14 },
+  },
 ];
 
 /**

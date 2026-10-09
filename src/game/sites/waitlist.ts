@@ -11,6 +11,7 @@ import { XP_REWARDS } from '@/content/progression';
 import { Site } from './Site';
 import { SiteKit, mat4, rng, uSiteFlicker, uSiteNight, v3, xf } from './jetKit';
 import { Bucket, TAG_COUNT, artGlow, artMaterial, artQuad } from './placesArt';
+import { SOLAR_FLAGS } from './solar';
 
 /** Story flags (see Site.ts). `site.waitlist.done` = the service hatch is open and its log read. */
 const F = {
@@ -549,7 +550,11 @@ export class WaitlistSite extends Site {
     this.interactables.push({
       id: 'waitlist.service', pos: W(this.keypadAt), radius: 1.5,
       visible: () => !this.s?.has(F.done),
-      primary: { label: 'Enter the service code', available: () => true, run: () => this.serviceKeypad() },
+      primary: {
+        get label() { return site.dark ? 'Pull the service door open' : 'Enter the service code'; },
+        available: () => true,
+        run: () => (this.dark ? this.openService('No power, no maglock. The door swings out on its own weight.') : this.serviceKeypad()),
+      },
       secondary: {
         label: 'Short the keypad',
         available: () => (this.s.skill('electronics') >= 2 ? true : 'Requires Electronics 2'),
@@ -632,8 +637,16 @@ export class WaitlistSite extends Site {
     });
   }
 
+  /** Photon Park's breaker is thrown: Everafter is on its backup cell, and its locks fail open. */
+  private get dark() { return !!this.ctx.state?.has(SOLAR_FLAGS.cut); }
+
   private async concierge() {
     const s = this.s;
+    if (this.dark) {
+      this.ctx.audio.play('click');
+      this.ctx.ui.subtitle('EVERAFTER · Concierge', 'Everafter is experiencing a brief power interruption. Your patience is a core Everafter value.');
+      return;
+    }
     if (s.set(F.concierge)) s.addXP(10, 'Concierge');
     await this.ctx.ui.converse({
       start: 'hello',
@@ -712,8 +725,9 @@ export class WaitlistSite extends Site {
     this.hatch.rotation.y = -this.hatchOpen;
     this.hatchCol.setEnabled(this.hatchOpen < 0.4);
     const night = this.ctx.atmo.uNight.value as number;
-    // the board ticks over every so often (to 0001 again: the joke is in the hardware)
-    const glitch = Math.sin(this.t * 0.7) * Math.sin(this.t * 3.1) > 0.97 ? 0.15 : 1;
+    // the board ticks over every so often (to 0001 again: the joke is in the hardware); dark if Photon Park is cut
+    const dark = this.dark;
+    const glitch = dark ? 0 : Math.sin(this.t * 0.7) * Math.sin(this.t * 3.1) > 0.97 ? 0.15 : 1;
     this.boardLight.intensity = night * 14 * glitch;
     // the fire: low coals that breathe, somebody fed it today
     const fl = 0.75 + 0.15 * Math.sin(this.t * 7.3) + 0.1 * Math.sin(this.t * 13.1 + 1);
@@ -728,8 +742,8 @@ export class WaitlistSite extends Site {
     this.kit.halos.channels[3] = night * fl * 0.9;
     this.farHalo.channels[1] = (0.2 + night) * glitch;
     this.farHalo.channels[2] = night * fl * 0.8;
-    this.button.value = 1 + Math.sin(this.t * 2) * 0.8 + night * 2;
-    this.keyLed.value = open ? 0 : 1 + night * 3;
+    this.button.value = dark ? 0 : 1 + Math.sin(this.t * 2) * 0.8 + night * 2;
+    this.keyLed.value = open || dark ? 0 : 1 + night * 3;
     if (this.near.visible) {
       uSiteNight.value = night;
       uSiteFlicker.value = glitch;
