@@ -383,6 +383,42 @@ artPaint('wlOverhead', 640, 128, (c, w, h, r) => {
   blast(c, w, h, r, 500, 4);
 });
 
+// ================================================================ the highway's leftovers (world/roadside.ts)
+artPaint('rsCheck', 512, 256, (c, w, h, r) => {
+  c.fillStyle = '#ece6d8';
+  c.fillRect(0, 0, w, h);
+  c.fillStyle = '#d8641e';
+  c.fillRect(0, 0, w, 64);
+  stencil(c, 'KADE CHECKPOINT', w / 2, 46, 42, '#1b1a1d', 'center', 800, F_UI);
+  c.font = `700 30px ${F_UI}`;
+  c.fillStyle = '#1b1a1d';
+  c.textAlign = 'center';
+  c.fillText('HAVE YOUR WAITLIST', w / 2, 118);
+  c.fillText('NUMBER READY', w / 2, 154);
+  c.font = `500 20px ${F_MONO}`;
+  c.fillText('WATER IS A SERVICE · SMILE FOR THE CAMERA', w / 2, 210);
+  grime(c, w, h, 1.2, 51);
+  blast(c, w, h, r, 500, 3);
+  // somebody's answer, in spray paint
+  c.save();
+  c.translate(w * 0.62, h * 0.72);
+  c.rotate(-0.12);
+  c.fillStyle = 'rgba(30,30,32,0.85)';
+  c.font = `900 38px ${F_DISPLAY}`;
+  c.fillText('4,013', 0, 0);
+  c.restore();
+});
+const HITCH: [string, string, string][] = [['rsHitchA', 'APEX', 'OR BUST'], ['rsHitchB', 'WILL WORK', 'FOR WATER'], ['rsHitchC', 'EVERAFTER?', '#2,207 · ANY RIDE']];
+for (const [name, a, b] of HITCH) {
+  artPaint(name, 256, 176, (c, w, h, r) => {
+    cardboard(c, w, h, r);
+    scrawl(c, a, w / 2, 76, 46, (r() - 0.5) * 0.08);
+    scrawl(c, b, w / 2, 136, b.length > 10 ? 24 : 40, (r() - 0.5) * 0.08, '#5a1b12');
+    grime(c, w, h, 1.3, 61);
+  });
+}
+export const HITCH_SIGNS = HITCH.map((x) => x[0]);
+
 // ================================================================ Photon Park (solar.ts)
 artPaint('ppSign', 640, 320, (c, w, h, r) => {
   const g = c.createLinearGradient(0, 0, w, h);

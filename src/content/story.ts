@@ -302,7 +302,7 @@ export function journalEntries(v: StoryView): JournalEntry[] {
   add('seen:waitlist', 'Waitlist City', 'A bunker called Everafter, set into the mountain at the head of the north-east basin, and four thousand people who queued for it. NOW SERVING 0001. Somebody still feeds the fire.');
   add('site.waitlist.done', 'Twelve residents', 'The service door opens on the grand-opening date. Behind it, Kade jugs: forty a week, by drone, for twelve people inside. The line outside was never going to move.');
   add('seen:solar', 'Photon Park', 'A solar farm in the north-west basin that still powers Everafter. Its cleaning robots never stopped. Nobody has paid the bill since the Pivot.');
-  add('site.solar.cut', 'Pulled the plug', 'You threw Photon Park\'s main breaker. Everafter is on its backup cell, and its locks fail open. The robots kept cleaning.');
+  add('site.solar.done', 'Pulled the plug', 'You threw Photon Park\'s main breaker. Everafter is on its backup cell, and its locks fail open. The robots kept cleaning.');
   return out.reverse();
 }
 
