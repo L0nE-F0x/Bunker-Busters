@@ -49,6 +49,20 @@ const WORLD = [
   ['combat', `(() => { const g = window.game; g.hands.root.visible = true; g.weather.storm(0, true); g.combat.difficulty = 'story'; setInterval(() => { g.state.data.health = 100; g.post.damage.value = 0; }, 16); g.state.addItem('rifle', 1, true, true); g.state.addItem('ammo3030', 30, true, true); g.state.data.arms.mags.rifle = 7; g.arms.equip('rifle'); const p = g.player.position.clone(); p.x = -60; p.z = 40; p.y = g.hf.heightAt(p.x, p.z) + 0.2; g.player.teleport(p); g.cam.snap(0.6, -0.04); g.atmo.hour = 17.45; g.envTimer = 0; setTimeout(() => g.recovery.summon(g.player.position, g.cam.yaw, 14, 4, true), 400); })()`, 3400],
 ];
 
+// Free camera in world space (from a running game): eye/target x, z, height above the ground at each
+const free = (eye, at, fov, hour, cover = 0.55) => `(() => {
+  const g = window.game; g.arms?.equip?.(null, true); g.hands.root.visible = false; g.mode = 'cine'; g.weather.storm(0, true); g.atmo.hour = ${hour}; g.atmo.paused = true; g.atmo.cloudCover = ${cover}; g.envTimer = 0;
+  const c = g.camera; const [ex, eh, ez] = ${JSON.stringify(eye)}, [ax, ah, az] = ${JSON.stringify(at)};
+  c.position.set(ex, g.hf.heightAt(ex, ez) + eh, ez); c.fov = ${fov}; c.updateProjectionMatrix();
+  c.lookAt(ax, g.hf.heightAt(ax, az) + ah, az);
+})()`;
+// the new places: Apex Vault's rocket over the salt at golden hour, Waitlist City in its basin
+// (free-camera shots go last in WORLD: they leave the game in 'cine')
+WORLD.push(
+  ['place-apex', free([-284, 1.6, -204], [-366, 12, -126], 50, 17.55)], // framed for the site's 21:9 crop
+  ['place-waitlist', free([352, 2.2, 286], [300, 6, 312], 58, 16.9)],
+);
+
 const b = await launch();
 async function session(url, steps) {
   const p = await b.newPage({ viewport: { width: 1920, height: 1080 } });
