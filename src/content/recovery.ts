@@ -116,6 +116,13 @@ export const BODY_LOOT: { id: string; qty: [number, number]; p: number }[] = [
   { id: 'antivenom', qty: [1, 1], p: 0.06 },
 ];
 
+/** What a specialist carries on top: the breacher's spare shells and plate scrap, the marksman's .30-30 and rangefinder cell, the grenadier's charges. */
+export const KIT_LOOT: Record<HumanKit, { id: string; qty: [number, number]; p: number }[]> = {
+  marksman: [{ id: 'ammo3030', qty: [4, 8], p: 1 }, { id: 'battery', qty: [1, 1], p: 0.35 }, { id: 'water', qty: [1, 1], p: 0.5 }],
+  heavy: [{ id: 'shells', qty: [4, 8], p: 1 }, { id: 'scrap', qty: [2, 4], p: 0.9 }, { id: 'medkit', qty: [1, 1], p: 0.25 }],
+  grenadier: [{ id: 'charge', qty: [1, 1], p: 0.6 }, { id: 'noisemaker', qty: [1, 2], p: 0.45 }],
+};
+
 /** Bark lines by situation. Corporate to the end. */
 export const BARKS: Record<string, string[]> = {
   spot: [
@@ -181,7 +188,7 @@ export const BARKS: Record<string, string[]> = {
     'Somebody\'s in the wire. Eyes open. Both of them.',
   ],
   radio: [
-    'Recovery, this is the yard. We have a trespasser, requesting bodies.',
+    'Recovery, this is Field. We have a trespasser, requesting bodies.',
     'Calling it in! Somebody pick up!',
     'Base, we need backup. Bring the good waivers.',
   ],

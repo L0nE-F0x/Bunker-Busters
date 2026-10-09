@@ -450,6 +450,7 @@ class Vulture {
   }
 }
 const _vv = new THREE.Vector3();
+const _wz = new THREE.Vector3(), _wz2 = new THREE.Vector3();
 
 class Raven {
   state: 'perch' | 'fly' | 'gone' = 'gone';
@@ -1190,6 +1191,25 @@ class Pack implements HostileProvider {
       this.morale -= 0.15;
     }
   }
+  /**
+   * One of your rounds cracked past a wolf: it flinches away from it, a coiled lunge breaks off (the
+   * nerve goes before the leap), and the pack's nerve frays a little.
+   */
+  whizz(o: THREE.Vector3, dir: THREE.Vector3, len: number, hit: Hostile | null) {
+    for (const w of this.wolves) {
+      if (!w.out || !w.alive || w === hit) continue;
+      const c = w.center;
+      const along = clamp(_wz.subVectors(c, o).dot(dir), 0, len);
+      if (along < 2) continue;
+      const miss = _wz2.copy(o).addScaledVector(dir, along).distanceTo(c);
+      if (miss > 2) continue;
+      w.hitT = 0.2;
+      w.hitSide = _wz.subVectors(c, o).cross(dir).y > 0 ? 1 : -1;
+      this.morale -= 0.025;
+      if (w.role === 'lunge' && w.windup > 0) { w.role = 'retreat'; w.roleT = 0; this.audio?.combat?.voice('snarl', c, 1.1, 0.7); }
+    }
+  }
+
   onWolfHurt(w: Wolf, at: THREE.Vector3, d: Damage) {
     this.morale -= 0.12;
     w.role = 'retreat';

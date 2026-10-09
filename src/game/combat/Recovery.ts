@@ -9,7 +9,7 @@ import { Fn, uniform, uv, vec3, vec4, float, exp, abs, length } from 'three/tsl'
 import type { HumanSkins } from './humanSkin';
 import { buildOutpost, type OutpostBuild, type CoverPoint } from './Outposts';
 import { capsuleRay, sphereRay, type Combat, type Hostile, type HostileProvider, type NoiseKind, type RayHit, type Damage } from './Combat';
-import { OUTPOSTS, BARKS, BODY_LOOT, type OutpostDef, type CrewRole } from '@/content/recovery';
+import { OUTPOSTS, BARKS, BODY_LOOT, KIT_LOOT, type OutpostDef, type CrewRole } from '@/content/recovery';
 import { HIGHWAY } from '@/content/world';
 import { ITEMS } from '@/content/items';
 import { distToPolyline } from '../world/Heightfield';
@@ -730,7 +730,11 @@ export class Recovery implements HostileProvider {
     const gunItem = m.h.weapon;
     if (!this.host.owns(gunItem)) items.push({ id: gunItem, qty: 1 });
     for (const l of BODY_LOOT) if (Math.random() < l.p) items.push({ id: l.id, qty: Math.round(rnd(l.qty[0], l.qty[1])) });
-    const lines = this.host.give(items);
+    if (m.kit) for (const l of KIT_LOOT[m.kit]) if (Math.random() < l.p) items.push({ id: l.id, qty: Math.round(rnd(l.qty[0], l.qty[1])) });
+    // one line per item (the gun's rounds and a specialist's spares add up)
+    const merged: { id: string; qty: number }[] = [];
+    for (const it of items) { const o = merged.find((x) => x.id === it.id); if (o) o.qty += it.qty; else merged.push({ ...it }); }
+    const lines = this.host.give(merged);
     this.host.toast(lines.length ? lines.join(' · ') : 'Nothing worth carrying.', lines.length ? 'good' : 'info');
     this.host.audio.play('pickup');
     const i = this.host.interactables.findIndex((x) => x.id === `body:${m.h.slot}:-1`);

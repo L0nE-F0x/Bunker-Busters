@@ -1081,6 +1081,13 @@ export class Game {
       onHurt: (amt, from, kind) => this.playerHurt(amt, from, kind),
       onHit: (k) => { this.ui.hitmark(k); this.audio.combat?.hitmark(k); if (k === 'kill') state.data.stats.kills = (state.data.stats.kills ?? 0) + 1; },
       trauma: (k) => { this.cam.addTrauma(k); this.input.rumble(k, k * 0.6, 160 + k * 240); },
+      // a round snapping past: the head flinches away from it (suppression narrows the view, below)
+      onNearMiss: (from, k) => {
+        if (!this.player) return;
+        const bearing = Math.atan2(from.x - this.player.position.x, from.z - this.player.position.z) - (this.cam.yaw + Math.PI);
+        this.cam.punch(bearing, 0.02 + 0.035 * k);
+        this.hands?.jolt(0.08 + 0.12 * k);
+      },
     };
     // hands, everything they can hold, and the shadow body compile on the first frame, under the fade
     this.warmNext = { roots: [this.camera, this.player.model.root], stage: () => this.hands?.stageItems() };
@@ -1762,7 +1769,7 @@ export class Game {
     this.post.damage.value = damp(this.post.damage.value as number, 0, 2.5, dt);
     this.post.menuShade.value = damp(this.post.menuShade.value as number, this.mode === 'title' || this.mode === 'charselect' ? 1 : 0, 3, dt);
     this.post.emp.value = damp(this.post.emp.value as number, 0, 1.2, dt);
-    if (this.mode !== 'playing') this.post.lowHp.value = 0;
+    if (this.mode !== 'playing') { this.post.lowHp.value = 0; this.post.vignette.value = 0.32; this.post.aberration.value = 0.0007; }
     const alertTarget = this.mode === 'playing' && this.garage.drone.state === 'alert' ? 0.8 : this.mode === 'playing' ? this.garage.drone.detection * 0.4 : 0;
     this.post.alert.value = damp(this.post.alert.value as number, alertTarget, 4, dt);
     const tension = this.mode === 'playing' ? Math.max(this.garage.drone.detection, this.garage.alarm > 0 ? 1 : 0, this.combat.heat) : 0;
@@ -2015,6 +2022,10 @@ export class Game {
     if (this.audio.combat?.heartbeat(dt, lowK)) this.hbPhase = 0;
     const throb = Math.exp(-this.hbPhase * 7) + 0.6 * Math.exp(-Math.max(0, this.hbPhase - 0.19) * 9) * (this.hbPhase > 0.19 ? 1 : 0);
     this.post.lowHp.value = damp(this.post.lowHp.value as number, lowK * (0.65 + 0.35 * Math.min(1, throb)), 6, dt);
+    // under fire: rounds cracking close narrow the view and smear its edges for a moment
+    const supp = blocked ? 0 : this.combat.suppression;
+    this.post.vignette.value = 0.32 + supp * 0.5;
+    this.post.aberration.value = 0.0007 + supp * 0.0014;
 
     // death is a debt, not a nap: you wake at the fire hours later, and your pack is where you fell
     if (s.data.health <= 0 && !this.busy) this.die();
