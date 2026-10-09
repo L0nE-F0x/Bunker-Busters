@@ -99,6 +99,13 @@ export const APEX: Bunker = {
       { item: 'kade_badge', qty: [1, 2], chance: 0.6 },
       { item: 'ration', qty: [2, 3], chance: 0.8 },
       { item: 'scrap', qty: [4, 9], chance: 1 },
+      // the Seed's own crew lockers: what the founders packed for the end of the world
+      { item: 'gpu', qty: [1, 2], chance: 0.7 },
+      { item: 'seed_plate', qty: [1, 2], chance: 0.6 },
+      { item: 'vest', qty: [1, 1], chance: 0.5 },
+      { item: 'nootropics', qty: [1, 2], chance: 0.5 },
+      { item: 'mezcal', qty: [1, 1], chance: 0.5 },
+      { item: 'visor', qty: [1, 1], chance: 0.35 },
     ],
     xp: 600,
   },
