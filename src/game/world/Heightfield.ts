@@ -107,8 +107,9 @@ export class Heightfield {
     const r = Math.max(Math.abs(x), Math.abs(z));
     const edge = smoothstep(this.size * 0.39, this.size * 0.5, r);
     h += edge * (45 + n.ridged(x * 0.005, z * 0.005, 4) * 55 + n.fbm(x * 0.01, z * 0.01, 3) * 12);
-    // the range reads as canyon country (tablelands and benches), not needle peaks; The Cut's ridge stays as built
-    h = lerp(h, this.canyon(h, x, z), smoothstep(0.2, 0.7, edge) * smoothstep(70, 120, Math.hypot(x - CUT_XZ[0], z - CUT_XZ[1])));
+    // the range reads as canyon country (tablelands and benches), not needle peaks; The Cut's ridge stays
+    // as built, and anything low out there (a basin, a flat) stays flat
+    h = lerp(h, this.canyon(h, x, z), smoothstep(0.2, 0.7, edge) * smoothstep(18, 36, h) * smoothstep(70, 120, Math.hypot(x - CUT_XZ[0], z - CUT_XZ[1])));
     return h;
   }
 
