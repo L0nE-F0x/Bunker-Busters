@@ -2,8 +2,9 @@ import * as THREE from 'three/webgpu';
 import type { GameContext, Interactable } from '../context';
 import { Landmarks } from '../world/Landmarks';
 import type { GameState } from '../State';
-import { MeshBatch, DistanceLod, shadowProxy } from '../world/kit';
-import { glow, plainStandard, rustyMetal, wood, concrete, desertRock } from '../world/materials';
+import { MeshBatch, DistanceLod, shadowProxy, Frame } from '../world/kit';
+import { glow, plainStandard, rustyMetal, wood, concrete, desertRock, fabric } from '../world/materials';
+import { LANDMARKS } from '@/content/world';
 import { rockGeometry } from '../world/Props';
 import { loreMaterial, loreQuad } from '../world/loreAtlas';
 import { STORY_SPOTS } from '@/content/quests';
@@ -247,7 +248,51 @@ export class Stories {
       this.group.add(crates);
       this.lods.push(new DistanceLod(landmarks.campPosition.clone(), 20, crates, null, 170));
     }
+    this.keeps = this.keepsakes();
   }
+
+  /**
+   * Keepsakes at Dry Creek's street fire (the creek site's frame; town/creek.ts fireCircle): after
+   * Still Here, a transistor radio on a crate by Sol's log; after Rider 9's delivery, the plate Nia
+   * sets out for him every night on an upturned bucket by Ren's crate, under a cloth.
+   */
+  private keepsakes() {
+    const lm = LANDMARKS.find((l) => l.id === 'creek')!;
+    const hf = this.ctx.hf;
+    const f = new Frame(lm.position[0], hf.heightAt(lm.position[0], lm.position[2]), lm.position[2], lm.rotation);
+    const at = (x: number, z: number) => { const p = f.p(x, 0, z); p.y = hf.heightAt(p.x, p.z); return p; };
+    const make = (name: string, x: number, z: number, yaw: number, build: (mb: MeshBatch) => void) => {
+      const mb = new MeshBatch();
+      build(mb);
+      const g = mb.build(name);
+      const p = at(x, z);
+      placed(g, p.x, p.y, p.z, f.yaw + yaw);
+      g.visible = false;
+      const wrap = new THREE.Group();
+      wrap.add(g);
+      this.group.add(wrap);
+      this.lods.push(new DistanceLod(p, 1, wrap, null, 140));
+      return g;
+    };
+    const radio = make('rosa-radio', -2.95, 1.75, 0.6, (mb) => {
+      mb.add(wood('#7a5a36'), T(new THREE.BoxGeometry(0.42, 0.34, 0.34), 0, 0.17, 0));
+      mb.add(plainStandard('#3d6b8a', 0.5, 0.2), T(new THREE.BoxGeometry(0.26, 0.15, 0.08), 0, 0.42, 0));
+      mb.add(rustyMetal({ base: '#6a6d70', rust: 0.45, metalness: 0.7 }), T(new THREE.BoxGeometry(0.15, 0.09, 0.006), -0.04, 0.42, 0.042));
+      mb.add(plainStandard('#d8c9a0', 0.6), T(new THREE.CylinderGeometry(0.022, 0.022, 0.012, 10), 0.08, 0.44, 0.042, Math.PI / 2, 0, 0)); // the dial
+      mb.add(rustyMetal({ base: '#6a6d70', rust: 0.45, metalness: 0.7 }), rod(V(0.1, 0.5, -0.02), V(0.32, 0.92, -0.1), 0.004, 4));
+      // the words Dez wrote, on the back of a Kade lanyard card, propped against it
+      mb.add(plainStandard('#efe9da', 0.8), T(new THREE.BoxGeometry(0.09, 0.12, 0.004), -0.14, 0.4, 0.06, -0.25, 0.2, 0));
+    });
+    const plate = make('nine-plate', 2.35, 4.0, -0.4, (mb) => {
+      mb.add(rustyMetal({ base: '#8a8f92', rust: 0.35, metalness: 0.6 }), T(new THREE.CylinderGeometry(0.15, 0.13, 0.36, 12), 0, 0.18, 0));
+      mb.add(plainStandard('#e8e2d2', 0.4), T(new THREE.CylinderGeometry(0.13, 0.1, 0.02, 16), 0, 0.37, 0));
+      mb.add(fabric('#b8402e', 0.9), T(new THREE.SphereGeometry(0.11, 12, 6, 0, Math.PI * 2, 0, 1.2).scale(1, 0.55, 1), 0, 0.375, 0));
+      mb.add(plainStandard('#c9a24a', 0.5, 0.4), T(new THREE.BoxGeometry(0.012, 0.004, 0.13), 0.12, 0.382, 0.03, 0, 0.5, 0)); // a fork
+    });
+    return { radio, plate };
+  }
+  private keeps: { radio: THREE.Object3D; plate: THREE.Object3D } | null = null;
+  private keepT = 0;
 
   private get s() { return this.ctx.state; }
 
@@ -408,6 +453,15 @@ export class Stories {
       this.applyCam();
     }
     if (s && !s.has('seen:capsule') && Math.hypot(cam.x - this.capsuleAt.x, cam.z - this.capsuleAt.z) < 22) s.set('seen:capsule');
+    // keepsakes and the pool follow the flags (they change in conversation, mid-run)
+    if (s && this.keeps && (this.keepT -= dt) <= 0) {
+      this.keepT = 0.5;
+      const radio = s.has('q.song.band') || s.has('q.song.quiet');
+      if (this.keeps.radio.userData.on !== radio) { this.keeps.radio.userData.on = radio; this.keeps.radio.visible = radio; }
+      const plate = s.has('q.rider.delivered');
+      if (this.keeps.plate.userData.on !== plate) { this.keeps.plate.userData.on = plate; this.keeps.plate.visible = plate; }
+      if (s.favours().pipPool && !this.pool.visible) this.pool.visible = true;
+    }
     this.t += dt;
     // the camera blinks blue while it uploads (dark once cut); the relay's light follows its feed
     const ph = this.t % 2.2;
