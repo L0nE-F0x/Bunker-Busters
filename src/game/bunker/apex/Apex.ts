@@ -311,6 +311,7 @@ export class Apex extends Bunker<ApexBuilder> {
 
   // ------------------------------------------------------------------ SPLICE
   protected override onDaemon(id: string) {
+    if (id === 'airlock') this.s.set('apex.spliced');
     super.onDaemon(id);
     if (id === 'cameras') this.taunt(VESPER.cameras.text);
   }
@@ -365,6 +366,8 @@ export class Apex extends Bunker<ApexBuilder> {
   override triggerAlarm(at: THREE.Vector3 | null, reason: string) {
     super.triggerAlarm(at, reason);
     this.rang = true;
+    // the camp hears about it later (Act II's debrief: loud or quiet)
+    if (!this.complete) this.s.set('apex.loud');
     const pad = this.entry('airlock').primary;
     if (pad.kind === 'keypad' && reason === pad.lockoutReason) this.taunt(VESPER.lockout.text);
     this.onAlarm?.(at ?? this.b.points.airlock);
