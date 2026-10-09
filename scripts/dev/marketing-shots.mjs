@@ -60,6 +60,8 @@ const free = (eye, at, fov, hour, cover = 0.55) => `(() => {
 // (free-camera shots go last in WORLD: they leave the game in 'cine')
 WORLD.push(
   ['place-apex', free([-284, 1.6, -204], [-366, 12, -126], 50, 17.55)], // framed for the site's 21:9 crop
+  // the jet down in the gouge under the cliff, low gold sun across the berms
+  ['place-jet', free([-279, 1.4, 233], [-302, 4.5, 258], 54, 17.45)],
   ['place-waitlist', free([352, 2.2, 286], [300, 6, 312], 58, 16.9)],
 );
 
