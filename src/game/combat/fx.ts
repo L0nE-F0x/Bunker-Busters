@@ -108,7 +108,7 @@ export class Tracers {
 }
 
 /** Kinds of debris particle (spawn presets). */
-export type DebrisKind = 'blood' | 'mist' | 'dirt' | 'dust' | 'chunk' | 'smoke' | 'oil';
+export type DebrisKind = 'blood' | 'mist' | 'dirt' | 'dust' | 'chunk' | 'smoke' | 'oil' | 'screen';
 
 const PRESET: Record<DebrisKind, { col: [number, number, number]; a: number; life: number; grav: number; drag: number; grow: number }> = {
   blood: { col: [0.22, 0.015, 0.01], a: 0.95, life: 0.9, grav: 1, drag: 0.6, grow: 0.2 },
@@ -118,11 +118,12 @@ const PRESET: Record<DebrisKind, { col: [number, number, number]; a: number; lif
   chunk: { col: [0.16, 0.14, 0.12], a: 1, life: 1.4, grav: 1, drag: 0.2, grow: 0 },
   smoke: { col: [0.2, 0.19, 0.18], a: 0.55, life: 4.5, grav: -0.12, drag: 1.4, grow: 1.1 },
   oil: { col: [0.05, 0.05, 0.05], a: 0.8, life: 2.6, grav: -0.08, drag: 1.2, grow: 0.9 },
+  // a smoke screen: thick, pale, slow to rise and slow to thin
+  screen: { col: [0.62, 0.62, 0.6], a: 0.8, life: 8.5, grav: -0.02, drag: 1.7, grow: 0.34 },
 };
 
 export class Debris {
   readonly sprite: THREE.Sprite;
-  private readonly N = 256;
   private a: THREE.InstancedBufferAttribute; // pos, t0
   private b: THREE.InstancedBufferAttribute; // vel, size
   private c: THREE.InstancedBufferAttribute; // rgb, alpha
@@ -133,8 +134,8 @@ export class Debris {
   private uTime = uniform(0);
   private uWind = uniform(new THREE.Vector3());
 
-  constructor(private atmo: Atmosphere) {
-    const N = this.N;
+  /** `N`: the ring's size (a smoke screen keeps its own, so blood and dirt can't overwrite it). */
+  constructor(private atmo: Atmosphere, private readonly N = 256) {
     // static usage: three re-uploads a DynamicDrawUsage attribute on every draw; these upload on emit
     const mk = (fill = 0) => new THREE.InstancedBufferAttribute(new Float32Array(N * 4).fill(fill), 4);
     this.a = mk(-1e4); this.b = mk(); this.c = mk(); this.d = mk(1);

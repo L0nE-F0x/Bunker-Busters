@@ -41,6 +41,8 @@ export interface OutpostBuild {
   center: THREE.Vector3;
   /** The field office's door lamp (lit at night while the outpost is manned). */
   nightGlow: { value: number };
+  /** The overwatch tower's deck (world, standing height) and the way it faces, if the site has one. */
+  perch?: { pos: THREE.Vector3; yaw: number };
 }
 
 // ------------------------------------------------------------------ printed art (world/printAtlas.ts)
@@ -444,6 +446,63 @@ export function buildOutpost(def: OutpostDef, physics: Physics, hf: Heightfield)
     water(6.5, 1, -0.3, 2);
   }
 
+  // --- overwatch tower: a scaffold with a plank deck, a sandbag parapet facing out, rails and a
+  // ladder at the back. The marksman holds it; the deck and parapet are solid (you can walk under).
+  let perch: OutpostBuild['perch'];
+  if (def.perch) {
+    const [px, pz, pyaw] = def.perch;
+    const D = 2.6;
+    const c = Math.cos(pyaw), sn = Math.sin(pyaw);
+    const at = (g: THREE.BufferGeometry, tx: number, ty: number, tz: number, rx = 0, rz = 0) => place(g, px + tx * c + tz * sn, ty, pz - tx * sn + tz * c, pyaw, rx, rz);
+    const deck = wood('#6e5134');
+    for (const [x, z] of [[-0.95, -0.95], [0.95, -0.95], [-0.95, 0.95], [0.95, 0.95]]) {
+      mb.add(steel, at(new THREE.CylinderGeometry(0.055, 0.07, D + 1.05, 8), x, (D + 1.05) / 2, z));
+      mb.add(steel, at(new THREE.BoxGeometry(0.22, 0.04, 0.22), x, 0.02, z)); // foot plates
+    }
+    // cross braces on the two sides and the back
+    const brace = Math.hypot(1.9, D - 0.3), tilt = Math.atan2(1.9, D - 0.3);
+    for (const s of [-1, 1]) {
+      mb.add(steel, at(new THREE.CylinderGeometry(0.025, 0.025, brace, 5), s * 0.95, D / 2, 0, s * tilt, 0));
+      mb.add(steel, at(new THREE.CylinderGeometry(0.025, 0.025, brace, 5), s * 0.95, D / 2, 0, -s * tilt, 0));
+    }
+    mb.add(steel, at(new THREE.CylinderGeometry(0.025, 0.025, brace, 5), 0, D / 2, -0.95, 0, tilt));
+    // deck planks, a steel frame
+    for (let i = 0; i < 7; i++) mb.add(deck, at(new THREE.BoxGeometry(2.1, 0.06, 0.29), 0, D, -0.9 + i * 0.3, 0, 0));
+    mb.add(steel, at(new THREE.BoxGeometry(2.14, 0.08, 2.14), 0, D - 0.07, 0));
+    // sandbag parapet along the front and the front half of each side
+    for (let course = 0; course < 3; course++) {
+      const y = D + 0.1 + course * 0.17;
+      for (let i = 0; i < 4; i++) {
+        const x = -0.78 + i * 0.52 + (course % 2) * 0.12;
+        const g = new THREE.CapsuleGeometry(0.14, 0.3, 3, 8).rotateZ(Math.PI / 2).scale(1, 0.62, 1.05);
+        mb.add((i + course) % 3 ? bag : bagDark, at(g, Math.min(0.8, x), y, 0.85));
+      }
+      for (const sx of [-1, 1]) for (let i = 0; i < 2; i++) {
+        const g = new THREE.CapsuleGeometry(0.14, 0.3, 3, 8).rotateZ(Math.PI / 2).scale(1, 0.62, 1.05).rotateY(Math.PI / 2);
+        mb.add((i + course + 1) % 3 ? bag : bagDark, at(g, sx * 0.85, y, 0.3 - i * 0.5));
+      }
+    }
+    // rails round the back, a ladder up the back
+    mb.add(steel, at(new THREE.CylinderGeometry(0.03, 0.03, 1.9, 6).rotateZ(Math.PI / 2), 0, D + 1.0, -0.95));
+    for (const s of [-1, 1]) mb.add(steel, at(new THREE.CylinderGeometry(0.03, 0.03, 1.0, 6).rotateX(Math.PI / 2), s * 0.95, D + 1.0, -0.45));
+    for (const s of [-1, 1]) mb.add(steel, at(new THREE.CylinderGeometry(0.025, 0.025, D + 0.9, 6), s * 0.24, (D + 0.9) / 2, -1.22, -0.12, 0));
+    for (let i = 1; i < 9; i++) mb.add(steel, at(new THREE.CylinderGeometry(0.018, 0.018, 0.5, 5).rotateZ(Math.PI / 2), 0, i * 0.32, -1.21 + i * 0.32 * 0.12));
+    // Kade red on the parapet front: a stencilled board
+    mb.add(kadeRed, at(new THREE.BoxGeometry(1.0, 0.3, 0.03), 0, D - 0.3, 1.0));
+    const ptAt = (tx: number, tz: number) => f.p(px + tx * c + tz * sn, 0, pz - tx * sn + tz * c);
+    const solidAt = (tx: number, ty: number, tz: number, hx: number, hy: number, hz: number) => {
+      const w = ptAt(tx, tz);
+      physics.addBox({ x: w.x, y: hf.heightAt(w.x, w.z) + ty, z: w.z }, { x: hx, y: hy, z: hz }, def.rot + pyaw);
+    };
+    solidAt(0, D - 0.05, 0, 1.07, 0.07, 1.07);
+    solidAt(0, D + 0.32, 0.85, 1.0, 0.3, 0.17);
+    for (const sx of [-1, 1]) solidAt(sx * 0.85, D + 0.32, 0.05, 0.17, 0.3, 0.55);
+    for (const [x, z] of [[-0.95, -0.95], [0.95, -0.95], [-0.95, 0.95], [0.95, 0.95]]) solidAt(x, (D - 0.1) / 2, z, 0.07, (D - 0.1) / 2, 0.07);
+    const top = ptAt(0, 0.15);
+    top.y = hf.heightAt(top.x, top.z) + D + 0.03;
+    perch = { pos: top, yaw: def.rot + pyaw };
+  }
+
   const far = mb.buildFar(`outpost:${def.id}:far`, { minSize: 0.6 });
   const near = mb.build(`outpost:${def.id}`);
   // the banner and every printed face: one mesh, near set only (the far stand-in is a silhouette)
@@ -457,7 +516,7 @@ export function buildOutpost(def: OutpostDef, physics: Physics, hf: Heightfield)
   shadowProxy(near, [], `outpost:${def.id}:shadow`);
   const center = f.p(0, 0, 0).setY(y0);
   const lod = new DistanceLod(center, def.r, near, far, 150, 700);
-  return { def, frame: f, group, lod, cover, locker, terminal, light, fire, center, nightGlow: doorLamp.intensity as unknown as { value: number } };
+  return { def, frame: f, group, lod, cover, locker, terminal, light, fire, center, nightGlow: doorLamp.intensity as unknown as { value: number }, perch };
 }
 
 const xz = (v: THREE.Vector3): [number, number] => [v.x, v.z];

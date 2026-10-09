@@ -31,6 +31,12 @@ export const BONE = {
 const NB = 16;
 
 export type HumanWeapon = 'rifle' | 'shotgun' | 'revolver';
+/**
+ * A specialist's kit, layered over the base contractor (drawn by the crowd mesh even over the Meshy
+ * bodies): a marksman's scoped rifle and scarf, a breacher's plates, pauldrons and face shield, a
+ * grenadier's bandolier of red compliance charges and a smoke satchel.
+ */
+export type HumanKit = 'marksman' | 'heavy' | 'grenadier';
 
 export interface HumanLook {
   vest: string;
@@ -45,6 +51,7 @@ export interface HumanLook {
   weapon: HumanWeapon;
   pack?: boolean;
   leader?: boolean;
+  kit?: HumanKit;
 }
 
 // ------------------------------------------------------------------ geometry sink
@@ -89,7 +96,7 @@ function buildPerson(out: Sink, L: HumanLook, base: number, gunOnly = false) {
   const w = L.build;
   const at = (b: number) => { out.bone = base + b; };
   // with the Meshy bodies (humanSkin.ts) this mesh draws only the guns
-  if (gunOnly) { at(BONE.weapon); buildWeapon(out, L.weapon); return; }
+  if (gunOnly) { at(BONE.weapon); buildWeapon(out, L.weapon); buildKit(out, L, base, true); return; }
   // --- hips: pelvis, belt, pouches, holster
   at(BONE.hips);
   out.add(lathe([[0.001, -0.15], [0.12, -0.14], [0.175, -0.06], [0.178, 0.03], [0.16, 0.1], [0.001, 0.1]]), S(1.12 * w, 1, 0.82), L.pants, 0.95);
@@ -169,6 +176,83 @@ function buildPerson(out: Sink, L: HumanLook, base: number, gunOnly = false) {
   // --- weapon (bone at the grip, barrel −Z)
   at(BONE.weapon);
   buildWeapon(out, L.weapon);
+  buildKit(out, L, base, false);
+}
+
+/** Where the marksman's scope's objective sits (weapon bone space): the glint. */
+export const SCOPE_LENS = new THREE.Vector3(0, 0.112, -0.27);
+
+/**
+ * A specialist's kit over the body. Bone-local like the body; `meshy`: sized for the Meshy body (a
+ * little bigger than the procedural torso, which it otherwise sits on).
+ */
+function buildKit(out: Sink, L: HumanLook, base: number, meshy: boolean) {
+  if (!L.kit) return;
+  const at = (b: number) => { out.bone = base + b; };
+  const w = L.build;
+  // chest depth: the Meshy torso is deeper than the procedural lathe
+  const dz = meshy ? 0.03 : 0;
+  const steel = '#3c3f44';
+  if (L.kit === 'marksman') {
+    // a scope on the rifle: tube, rings, bells, a dark lens
+    at(BONE.weapon);
+    out.add(new THREE.CylinderGeometry(0.019, 0.019, 0.2, 10).rotateX(Math.PI / 2), T(0, 0.112, -0.12), '#1e2023', 0.4, 0.6, 0, 3);
+    out.add(new THREE.CylinderGeometry(0.027, 0.02, 0.06, 12).rotateX(Math.PI / 2), T(0, 0.112, -0.24), '#1e2023', 0.4, 0.6, 0, 3);
+    out.add(new THREE.CylinderGeometry(0.023, 0.019, 0.04, 10).rotateX(Math.PI / 2), T(0, 0.112, -0.005), '#1e2023', 0.4, 0.6, 0, 3);
+    out.add(new THREE.CylinderGeometry(0.024, 0.024, 0.004, 12).rotateX(Math.PI / 2), T(0, 0.112, -0.271), '#0a1418', 0.05, 0.9, 0.6, 2);
+    for (const z of [-0.07, -0.17]) out.add(rbox(0.03, 0.05, 0.02), T(0, 0.085, z), steel, 0.4, 0.7, 0, 3);
+    // a long barrel and a bipod folded under it
+    out.add(new THREE.CylinderGeometry(0.012, 0.012, 0.16, 8).rotateX(Math.PI / 2), T(0, 0.064, -0.74), steel, 0.35, 0.8, 0, 3);
+    for (const s of [-1, 1]) out.add(new THREE.CylinderGeometry(0.006, 0.006, 0.22, 5).rotateX(Math.PI / 2), T(s * 0.012, 0.02, -0.5), steel, 0.4, 0.7, 0, 3);
+    // a sand scarf round the neck, tails down the back
+    at(BONE.chest);
+    out.add(new THREE.TorusGeometry(meshy ? 0.085 : 0.1, meshy ? 0.034 : 0.045, 7, 14), mul(T(0, meshy ? 0.47 : 0.45, -0.005), R(Math.PI / 2 + 0.15, 0, 0), S(1.1 * w, 1, 0.9)), '#b49a6c', 0.98);
+    out.add(rbox(0.12, 0.2, 0.025), mul(T(0, 0.34, -0.17 - dz), R(0.15, 0, 0)), '#a88d60', 0.98);
+    return;
+  }
+  // the Meshy torso sits a little higher on the chest frame than the procedural lathe
+  const oy = meshy ? 0.07 : 0;
+  if (L.kit === 'heavy') {
+    // plate carrier: front and back plates over the vest, the KADE patch, hi-vis tape, shell pouches
+    at(BONE.chest);
+    const plate = '#2f3331', tape = '#d8dcd8';
+    const fz = 0.155 * (0.72 + (w - 1) * 0.4) / 0.72 + (meshy ? -0.025 : 0);
+    const pw = (meshy ? 0.27 : 0.31) * w;
+    out.add(new THREE.BoxGeometry(pw, 0.33, 0.045, 2, 2, 1), mul(T(0, 0.27 + oy, fz), R(-0.06, 0, 0)), plate, 0.55, 0.35, 0, 3);
+    out.add(new THREE.BoxGeometry(pw, 0.35, 0.045, 2, 2, 1), mul(T(0, 0.27 + oy, -fz - (meshy ? -0.02 : -0.01)), R(0.05, 0, 0)), plate, 0.55, 0.35, 0, 3);
+    if (!meshy) out.add(new THREE.CylinderGeometry(0.205, 0.2, 0.12, 16, 1, true), mul(T(0, 0.13, 0), S(1.2 * w, 1, 0.78 + (w - 1) * 0.4)), '#2a2c2a', 0.8, 0, 0, 6);
+    for (const s of [-1, 1]) out.add(rbox(0.025, 0.05, fz * 2), T(s * pw * 0.42, 0.4 + oy, -0.01), '#2a2c2a', 0.8, 0, 0, 6); // shoulder straps
+    out.add(rbox(pw * 0.96, 0.03, 0.006), mul(T(0, 0.35 + oy, fz + 0.026), R(-0.06, 0, 0)), tape, 0.35, 0, 0, 4);
+    out.add(rbox(0.09, 0.05, 0.006), mul(T(0, 0.25 + oy, fz + 0.026), R(-0.06, 0, 0)), '#c8202a', 0.6, 0, 0, 2);
+    for (let i = 0; i < 3; i++) out.add(rbox(0.065, 0.08, 0.04), mul(T((i - 1) * 0.08 * w, 0.17 + oy, fz + 0.035), R(-0.06, 0, 0)), '#3a3d36', 0.85); // shell pouches
+    // pauldrons over each shoulder
+    for (const ua of [BONE.uArmL, BONE.uArmR]) {
+      at(ua);
+      out.add(new THREE.SphereGeometry(0.1, 12, 6, 0, Math.PI * 2, 0, Math.PI * 0.5), mul(T(0, -0.04, 0), S(1.05, 0.7, 1.1)), plate, 0.55, 0.35, 0, 3);
+    }
+    // a face shield hung from the hat brim: smoked polycarbonate (it mirrors the sky), a steel rim
+    at(BONE.head);
+    const fy = meshy ? 0.13 : 0.15, fr = meshy ? 0.135 : 0.13, arc = 1.7;
+    out.add(new THREE.CylinderGeometry(fr, fr * 0.9, 0.16, 20, 1, true, -arc / 2, arc), mul(T(0, fy, 0.01), S(0.95, 1, 1)), '#3a4a54', 0.05, 0.85, 0, 2);
+    out.add(new THREE.TorusGeometry(fr + 0.003, 0.007, 5, 20, arc), mul(T(0, fy + 0.08, 0.01), R(Math.PI / 2, 0, -Math.PI / 2 - arc / 2), S(0.95, 1, 1)), steel, 0.4, 0.7, 0, 3);
+    return;
+  }
+  // grenadier: a bandolier of red compliance charges across the chest, a smoke satchel on the hip
+  at(BONE.chest);
+  const strap = '#3a3328';
+  const fz = 0.165 + (w - 1) * 0.05 + dz;
+  const tilt = 0.7;
+  out.add(rbox(0.055, 0.5, 0.012), mul(T(0, 0.28 + oy, fz - 0.005), R(-0.05, 0, tilt)), strap, 0.9, 0, 0, 6);
+  out.add(rbox(0.055, 0.5, 0.012), mul(T(0, 0.28 + oy, -fz + 0.01 - dz), R(0.05, 0, -tilt)), strap, 0.9, 0, 0, 6);
+  for (let i = 0; i < 4; i++) {
+    const t = (i - 1.5) * 0.095;
+    const x = -Math.sin(tilt) * t, y = 0.28 + oy + Math.cos(tilt) * t;
+    out.add(new THREE.CylinderGeometry(0.028, 0.028, 0.07, 10), mul(T(x, y, fz + 0.026), R(-0.05, 0, tilt)), '#b02a22', 0.45, 0.4, 0, 3);
+    out.add(new THREE.CylinderGeometry(0.029, 0.029, 0.014, 10), mul(T(x, y, fz + 0.026), R(-0.05, 0, tilt), T(0, 0.032, 0)), '#e8e4da', 0.5, 0, 0, 2);
+  }
+  at(BONE.hips);
+  out.add(rbox(0.12, 0.16, 0.09), T(-0.2 * w, -0.02, 0.02), '#4a4a3a', 0.9, 0, 0, 6);
+  for (let i = 0; i < 2; i++) out.add(new THREE.CylinderGeometry(0.026, 0.026, 0.085, 10), T(-0.2 * w + (i - 0.5) * 0.055, 0.09, 0.02), '#6d7258', 0.6, 0.3, 0, 3);
 }
 
 /** The contractor's gun: simpler cousins of the player's. */
@@ -291,6 +375,8 @@ export class Human {
   recoil = 0;
   /** Head turn while idle/listening (radians). */
   look = 0;
+  /** Standing on something that isn't the terrain (a marksman's tower deck): its height, or null. */
+  floor: number | null = null;
   active = false;
   dead = false;
   ragdoll: Ragdoll | null = null;
@@ -336,7 +422,7 @@ export class Human {
     if (this.ragdoll) { this.ragdoll.sync(this.mats); this.updateDerived(); return; }
     const L = this.look_;
     const H = L.height;
-    const gy = hf.heightAt(this.pos.x, this.pos.z);
+    const gy = this.floor ?? hf.heightAt(this.pos.x, this.pos.z);
     this.pos.y = gy;
     const speed = Math.hypot(this.vel.x, this.vel.z);
     this.speedS += (speed - this.speedS) * Math.min(1, dt * 8);
@@ -422,7 +508,7 @@ export class Human {
       const lift = Math.max(0, Math.cos(ph + off)) * (0.07 + run * 0.12) * walk;
       const foot = (side > 0 ? J.ftL : J.ftR).copy(this.pos).addScaledVector(left, side * (0.11 + cr * 0.06)).addScaledVector(md, s * stride * 0.22 * walk);
       if (cr > 0.3) foot.addScaledVector(f, side > 0 ? 0.18 * cr : -0.12 * cr);
-      foot.y = hf.heightAt(foot.x, foot.z) + 0.085 + lift;
+      foot.y = (this.floor ?? hf.heightAt(foot.x, foot.z)) + 0.085 + lift;
       const knee = ik(hip, foot, legL, shinL, _pole.copy(f).addScaledVector(left, side * 0.15), side > 0 ? J.knL : J.knR);
       frameTo(this.mats[side > 0 ? BONE.thighL : BONE.thighR], hip, _tmp.subVectors(hip, knee), f, H);
       frameTo(this.mats[side > 0 ? BONE.shinL : BONE.shinR], knee, _tmp.subVectors(knee, foot), f, H);

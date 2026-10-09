@@ -56,7 +56,7 @@ import { XP_REWARDS, fallFactor, empRadius } from '@/content/progression';
 import { damp } from '@/engine/noise';
 import { Combat, sphereRay, type HurtKind, type Hostile } from './combat/Combat';
 import { PlayerArms } from './combat/PlayerArms';
-import { Recovery } from './combat/Recovery';
+import { Recovery, CREW_SLOTS } from './combat/Recovery';
 import { Machines } from './combat/Machines';
 import { MenuDirector } from './MenuDirector';
 
@@ -321,7 +321,7 @@ export class Game {
     this.settlement = new Settlement(this.ctx, this.landmarks);
     if (!SKIP.has('sites')) this.sites = buildSites(this.ctx, this.landmarks);
     // the Meshy contractors (before the warm-up; ?prochuman keeps the procedural bodies)
-    this.humanSkins = new URLSearchParams(location.search).has('prochuman') ? null : await models(HumanSkins.load(10, [0]), 0.7, 0.78, bunkerMsg);
+    this.humanSkins = new URLSearchParams(location.search).has('prochuman') ? null : await models(HumanSkins.load(CREW_SLOTS, [0]), 0.7, 0.78, bunkerMsg);
     this.buildRecovery();
     this.buildIntel();
     // stashes and searchable wrecks (not quests: just the desert being generous)

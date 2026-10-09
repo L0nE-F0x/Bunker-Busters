@@ -133,6 +133,13 @@ const BUILDERS: Record<string, () => THREE.Object3D> = {
       { ...base, weapon: 'revolver', build: 0.93, height: 0.96 },
       { ...base, helmet: '#e05a1a', leader: true, uniform: '#2c3038' },
     ];
+    // &kits: the specialists (marksman, breacher, grenadier) beside a plain rifleman
+    if (qs.has('kits')) {
+      looks[0] = { ...base, kit: 'marksman', uniform: '#3e4238' };
+      looks[1] = { ...base, vest: '#e66a1e', weapon: 'shotgun', build: 1.18, kit: 'heavy' };
+      looks[2] = { ...base, weapon: 'revolver', kit: 'grenadier', vest: '#d9c22a' };
+      looks[3] = { ...base };
+    }
     const c = new HumanCrowd(looks, humanSkins);
     c.lineup(new THREE.Vector3(0, 0, 0), hf);
     const pose = qs.get('pose');
