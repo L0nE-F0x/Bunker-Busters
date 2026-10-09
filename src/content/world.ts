@@ -140,4 +140,253 @@ export const WORLD_INTEL: IntelItem[] = [
     revealLines: ['Tanner isn\'t hoarding the water. He\'s paying rent with it, to Kade Holdings.'],
     xp: 40,
   },
+
+  // ---------------------------------------------------------------- #LIFEBOAT: the founders' group chat
+  // Eight pages, one per device that died out here with its last sync. Read Receipts (quests.ts) runs
+  // on them; the journal's Intel tab puts them back in order. Handles: vesper (Kade Holdings, Apex
+  // Vault), hunter (Ascend, the jet), ezra (Glimpse, the Panopticon), prudence (Careful, the Alignment
+  // Spire), orrin (cloud, the Cathedral), kit (chips, the Fortress), and tanner, who keeps rejoining.
+  {
+    id: 'intel.chat.1', series: 'lifeboat', prop: 'phone',
+    title: 'Cracked Phone — #LIFEBOAT, page 1 of 8',
+    body: chat(
+      '~vesper created the group LIFEBOAT.',
+      '~vesper added hunter, ezra, prudence, orrin and kit.',
+      '~tanner joined using an invite link.',
+      '~vesper removed tanner.',
+      '~tanner joined using an invite link.',
+      'vesper: Rules. No plus-ones. No screenshots. No lawyers.',
+      'ezra: I screenshot everything. It\'s the whole company.',
+      'vesper: Then no lawyers.',
+    ),
+    position: [-268, 0, 232],
+    reveals: ['lore.lifeboat'],
+    revealLines: ['A founders\' group chat, in pieces. Whoever owned this phone flew out of here in a hurry. Dez would want to hear about this.'],
+    xp: 30,
+  },
+  {
+    id: 'intel.chat.2', series: 'lifeboat', prop: 'tablet',
+    title: 'Rugged Tablet — #LIFEBOAT, page 2 of 8',
+    body: chat(
+      'prudence: Our model gives the grid eleven weeks. We published a paper about it.',
+      'hunter: Can we sell the paper?',
+      'prudence: Nobody read the paper. Nobody reads the papers.',
+      'orrin: I can deliver anything to any bunker in two days. Not after week nine.',
+      'kit: Chips are the new water.',
+      'vesper: Water is the new water. Buy water.',
+    ),
+    position: [-64, 0, -108],
+    reveals: ['lore.lifeboat'],
+    xp: 30,
+  },
+  {
+    id: 'intel.chat.3', series: 'lifeboat', prop: 'tablet',
+    title: 'Site Manager\'s Tablet — #LIFEBOAT, page 3 of 8',
+    body: chat(
+      'vesper: Closed on four aquifers today. The Dry Creek one came with a school attached.',
+      'hunter: You bought a school?',
+      'vesper: I gave them a school. Rocket on the sign. They gave me a creek. The county signed it in an afternoon.',
+      'ezra: Want a heat map of who gets thirsty first? I have everyone\'s location. Always.',
+      'vesper: I already have it, Ezra. It\'s called a map.',
+    ),
+    position: [-212, 0, -138],
+    reveals: ['lore.lifeboat'],
+    revealLines: ['"The county signed it in an afternoon." The county was Mara.'],
+    xp: 30,
+  },
+  {
+    id: 'intel.chat.4', series: 'lifeboat', prop: 'case',
+    title: 'Briefcase Laptop — #LIFEBOAT, page 4 of 8',
+    body: chat(
+      'hunter: We can\'t call it a collapse. Collapse is bad for the brand.',
+      'prudence: "Transition"?',
+      'orrin: "Sunset."',
+      'ezra: "Pivot." Everybody forgives a pivot.',
+      'vesper: The Pivot. Done. Tanner, stop reacting with the rocket.',
+      '~tanner reacted with a rocket.',
+    ),
+    position: [252, 0, -64],
+    reveals: ['lore.lifeboat', 'lore.pivotname'],
+    revealLines: ['They named it before it happened. Like a product.'],
+    xp: 30,
+  },
+  {
+    id: 'intel.chat.5', series: 'lifeboat', prop: 'printout',
+    title: 'Server Printout — #LIFEBOAT, page 5 of 8',
+    body: chat(
+      'hunter: EXIT is live. Platinum gets an actual seat on an actual plane.',
+      'vesper: Apex has 212 seats. Forty are ours. The rest are a waitlist.',
+      'tanner: can I resell the waitlist',
+      'vesper: ...',
+      'vesper: Yes, actually. Pay me in water.',
+      'tanner: BUNKR.LY IS BACK',
+    ),
+    position: [262, 0, -228],
+    reveals: ['lore.lifeboat'],
+    revealLines: ['So that\'s where Bunkr.ly came from. Vesper sold Tanner the waitlist, and Tanner sold it to everyone else.'],
+    xp: 30,
+  },
+  {
+    id: 'intel.chat.6', series: 'lifeboat', prop: 'pod',
+    title: 'Seat-Back Screen — #LIFEBOAT, page 6 of 8',
+    body: chat(
+      'prudence: The Spire is finished. Every door asks an ethics question before it opens. The turrets apologise first.',
+      'kit: The Fortress has nine months of chips and a moat full of coolant.',
+      'ezra: The Panopticon has eleven hundred cameras. Every one of them is pointed at one of you.',
+      'ezra: Relax. It\'s a feature.',
+      'hunter: Mine has wings.',
+      'vesper: Yours has a pilot who\'s software, Hunter.',
+    ),
+    position: [296, 0, 142],
+    reveals: ['lore.lifeboat', 'lore.panopticon'],
+    revealLines: ['The Panopticon. The Alignment Spire. The Fortress. Every founder built a door. Apex is only the next one.'],
+    xp: 30,
+  },
+  {
+    id: 'intel.chat.7', series: 'lifeboat', prop: 'watch',
+    title: 'Smartwatch — #LIFEBOAT, page 7 of 8',
+    body: chat(
+      'prudence: Grid at four percent. It\'s today.',
+      'ezra: I can see the whole highway from here. Everyone is in the same traffic jam. It\'s beautiful. It\'s one big group chat.',
+      'hunter: wheels up. don\'t wait for me',
+      'vesper: Nobody was waiting, Hunter.',
+      'orrin: Deliveries paused. Indefinitely. Leave a review.',
+      'tanner: guys the door won\'t open. is there a code',
+    ),
+    position: [-352, 0, 40],
+    reveals: ['lore.lifeboat'],
+    xp: 30,
+  },
+  {
+    id: 'intel.chat.8', series: 'lifeboat', prop: 'drone',
+    title: 'Drone Memory Card — #LIFEBOAT, page 8 of 8',
+    body: chat(
+      '~Day 31.',
+      'prudence: Please stop forwarding your camera feeds to the Spire. Our doors have started asking us questions.',
+      'ezra: You\'re all on my cameras. I\'m on mine too. I watch myself sleep. It\'s very calming.',
+      'vesper: Hunter?',
+      'vesper: Hunter.',
+      '~hunter is unavailable.',
+      'tanner: is anyone still taking resellers',
+      '~vesper removed tanner.',
+      'ezra: I saw that.',
+    ),
+    position: [138, 0, 160],
+    reveals: ['lore.lifeboat', 'lore.panopticon'],
+    revealLines: ['A Glimpse drone. It flew a beat over the valley until the battery quit. Somebody north of the salt was watching through it.'],
+    xp: 30,
+  },
+
+  // ---------------------------------------------------------------- the valley's other paperwork
+  {
+    id: 'intel.kade.poster', prop: 'poster',
+    title: 'Break-Room Poster — Kade Recovery',
+    body:
+      'WELCOME, RECOVERY ASSOCIATE! You recover what was always ours. ' +
+      'OUR VALUES: Ownership. Hydration. Ownership. ' +
+      'REMEMBER: Your smile is part of the uniform (see lanyard). Water you find is Kade water you haven\'t logged yet. ' +
+      'Repossessed pianos are not break-room furniture. Grief is a benefit, available after twelve months. ' +
+      '<i>People Ops, Kade Holdings. Water is a service.</i>',
+    position: [240, 0, -130],
+    revealLines: ['Somebody has drawn a moustache on the smiling associate. The moustache is the most human thing at Pipeline Camp 3.'],
+    xp: 30,
+  },
+  {
+    id: 'intel.glimpse.flyer', prop: 'flyer',
+    title: 'Laminated Flyer — Glimpse Neighbourhood Watch',
+    body:
+      'GLIMPSE NEIGHBOURHOOD WATCH. This stretch of road is protected by four friendly cameras. ' +
+      'Smile! You\'re already tagged. Not you? Glimpse is never wrong. ' +
+      'Glimpse remembers, so you don\'t have to. ' +
+      '<i>Ezra Seymour, founder: "Privacy was a phase. Safety is forever."</i> ' +
+      'In pencil, along the bottom: <i>the one by the gas station still blinks.</i>',
+    position: [66, 0, 74],
+    reveals: ['lore.glimpse'],
+    revealLines: ['A camera by the gas station. That\'s the camp.'],
+    xp: 30,
+  },
+  {
+    id: 'intel.careful.notice', prop: 'notice',
+    title: 'Notice in a Sleeve — Careful Labs Field Team',
+    body:
+      'CAREFUL LABS · FIELD TEAM. If you are reading this at the 5G tower, you are at the wrong spire. ' +
+      'Please do not look for the Alignment Spire. It is safe, helpful and very sorry, and it would prefer not to meet you. ' +
+      'Each of its doors asks one question about ethics. Its turrets apologise first. ' +
+      'We thought about this for a long time, so you don\'t have to. <i>Dr. P. Ashby.</i> ' +
+      'Underneath, in marker: <i>who put "turret" and "apologise" in the same sentence</i>',
+    position: [186, 0, 212],
+    reveals: ['lore.spire'],
+    revealLines: ['The Alignment Spire. Another door, somewhere past this one.'],
+    xp: 30,
+  },
+  {
+    id: 'intel.west.letter', prop: 'remains',
+    title: 'Letter in a Zip Bag — The Walk West',
+    body:
+      'To whoever finds me. I had a seat. Bunkr.ly confirmation 4471-B, Apex Vault, Economy Plus. ' +
+      'They said the line moves faster if you\'re already standing in it. I have been standing in it for nine days. ' +
+      'The salt is very white. Tell my sister I went early to get us good spots. ' +
+      'If you see a man called Tanner, tell him the tote bag was nice. It really was. I carried my water in it. <i>Marcus, waitlist 88,301.</i>',
+    position: [-366, 0, 26],
+    reveals: ['lore.walkwest'],
+    revealLines: ['People walked west on Bunkr.ly receipts. Some of them sat down on the way.'],
+    loot: [{ id: 'water', qty: 1 }, { id: 'scrap', qty: 2 }],
+    xp: 40,
+  },
+  {
+    id: 'intel.tanner.update', prop: 'update',
+    title: 'Investor Update #161 — Bunkr.ly',
+    body:
+      'Hi friends! HIGHLIGHTS: SeedBot reached 12% battery (up from 11%!). We are post-apocalypse and pre-revenue, which is a great place to be. ' +
+      'LOWLIGHTS: a camp. ' +
+      'WAITLIST: position 4,012 (up from 4,009, a sign of a healthy, liquid line). ' +
+      'ASKS: water; a warm intro to Vesper; a lawyer who accepts jugs. ' +
+      'As always: build the future, then sit in it. <i>Tanner</i>',
+    position: [110, 0, -38],
+    revealLines: ['He still sends these. Every Monday. Nobody has opened one in three years.'],
+    xp: 30,
+  },
+  {
+    id: 'intel.kdry.log', prop: 'radio',
+    title: 'Station Log — KDRY 1340 AM, the afternoon of',
+    body:
+      '14:02 Markets halted. Read the numbers anyway. ' +
+      '14:09 Grid frequency dropping. Lights doing a thing. ' +
+      '14:20 Sky an unusual colour. Advised listeners to stay indoors. ' +
+      '14:31 Advertiser (Kade Holdings) cancelled the 2:30 spot. ' +
+      '14:32 Played the song anyway. ' +
+      '14:40 Phones down. Talking to whoever is left. ' +
+      '15:15 A man came in asking what a "pivot" is. Said I\'d heard the word on a call. ' +
+      '17:50 Generator still on. Nobody listening, probably. I\'m a professional. Signing off after the song. <i>R. Varga</i>',
+    position: [-224, 0, -14],
+    reveals: ['lore.kdry'],
+    revealLines: ['R. Varga. Sol\'s name is Varga.'],
+    xp: 35,
+  },
+  {
+    id: 'intel.kade.kids', prop: 'brochure',
+    title: 'Brochure — Kade Kids Academy',
+    body:
+      'KADE KIDS ACADEMY, Dry Creek. A school built on the future! Every student receives a rocket backpack and a lifetime refillable bottle ' +
+      '(refill at any Kade Spring™, terms apply). This year\'s time capsule opens in 2046, when Dry Creek will be a thriving Kade community with 100% managed water. ' +
+      'Ask about our Parent Ambassador program! <i>A gift from Kade Holdings, in partnership with the County Water Division.</i>',
+    position: [-300, 0, 14],
+    reveals: ['lore.kadekids'],
+    revealLines: ['"100% managed water." They printed it on the brochure.'],
+    xp: 30,
+  },
 ];
+
+/** The collectible run: the founders' group chat, page by page. */
+export const LORE_SERIES: Record<string, { title: string; ids: string[] }> = {
+  lifeboat: { title: '#LIFEBOAT', ids: ['intel.chat.1', 'intel.chat.2', 'intel.chat.3', 'intel.chat.4', 'intel.chat.5', 'intel.chat.6', 'intel.chat.7', 'intel.chat.8'] },
+};
+
+/** A chat transcript as the reader shows it: `handle: text`, or `~` for a system line. */
+function chat(...lines: string[]) {
+  return lines.map((l) => {
+    if (l.startsWith('~')) return `<i>${l.slice(1)}</i>`;
+    const i = l.indexOf(': ');
+    return `<b>${l.slice(0, i)}</b> ${l.slice(i + 2)}`;
+  }).join('<br>');
+}

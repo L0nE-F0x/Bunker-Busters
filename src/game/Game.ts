@@ -636,7 +636,7 @@ export class Game {
         z = cz - lx * Math.sin(r) + lz * Math.cos(r);
         y = this.hf.heightAt(cx, cz) + 0.45;
       }
-      const prop = buildIntelProp(it.id, { crate: !gas });
+      const prop = buildIntelProp(it.id, { crate: !gas, prop: it.prop });
       const g = prop.group;
       g.position.set(x, y, z);
       g.rotation.y = ((Math.sin(x * 12.9898 + z * 78.233) * 43758.5453) % 1) * Math.PI * 2;
@@ -645,7 +645,7 @@ export class Game {
       this.intelMeshes.set(it.id, g);
       this.interactables.push({
         id: it.id,
-        pos: g.position.clone().setY(g.position.y + (it.id === 'intel.highway.greg' ? 1.3 : gas ? 0.1 : 0.35)),
+        pos: g.position.clone().setY(g.position.y + (it.id === 'intel.highway.greg' || it.prop === 'flyer' ? 1.3 : it.prop === 'notice' ? 0.9 : gas ? 0.1 : 0.35)),
         radius: 2.4,
         visible: () => !this.state?.has(`intel:${it.id}`),
         primary: {
@@ -1747,6 +1747,9 @@ export class Game {
     for (const ip of this.intelProps) {
       if (!ip.g.visible) continue;
       const d = ip.g.position.distanceTo(this.camera.position);
+      // a note or a phone is sub-pixel long before this: stop drawing it (and its shadow)
+      const show = d < 170;
+      if (ip.g.children[0] && ip.g.children[0].visible !== show) for (const c of ip.g.children) c.visible = show;
       ip.prop.glint.t.value = ((this.t / 3.2 + ip.phase) % 1);
       ip.prop.glint.k.value = d > 70 ? 0 : Math.min(1, 1.6 - d / 45) * (this.atmo.isNight ? 1.4 : 1);
       if (ip.prop.blink) ip.prop.blink.value = (this.t % 1.4) < 0.5 ? 8 : 0.2;
