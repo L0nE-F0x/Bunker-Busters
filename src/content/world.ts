@@ -58,6 +58,11 @@ export const LANDMARKS: LandmarkDef[] = [
     blurb: 'A delivery 1,281 days late and still, technically, in progress.',
     flatten: { r: 9, falloff: 16 },
   },
+  {
+    id: 'booster', name: 'The Longshot', kind: 'site', position: [130, 0, -300], rotation: 0.3,
+    blurb: 'Kade\'s reusable rocket, reused once. It landed, in the sense that it is on the land.',
+    flatten: { r: 34, falloff: 18 },
+  },
 ];
 
 /**
