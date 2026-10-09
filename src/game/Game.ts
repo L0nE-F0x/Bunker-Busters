@@ -1456,6 +1456,8 @@ export class Game {
     s.data.stats.deaths = (s.data.stats.deaths ?? 0) + 1;
     s.data.poison = 0;
     this.input.exitLock();
+    // binoculars raised as you fall would still be up at the camp (they only drop for input while not blocked)
+    if (this.gear?.viewing) this.gear.toggleBinos(false);
     // the pack: everything that isn't a weapon or the story stays where you fell
     const lost = !!s.data.pack;
     const keep: { id: string; qty: number }[] = [];
