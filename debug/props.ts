@@ -17,6 +17,7 @@ import { HumanCrowd, type HumanLook, type HitZone } from '@/game/combat/Humans';
 import { HumanSkins } from '@/game/combat/humanSkin';
 import { WolfSkins } from '@/game/world/wolfSkin';
 import { NpcModels } from '@/game/world/npcSkin';
+import { mittFrame } from '@/game/world/limbTwist';
 
 const qs = new URLSearchParams(location.search);
 const num = (k: string, d: number) => Number(qs.get(k) ?? d);
@@ -67,7 +68,7 @@ const humanSkins = qs.get('what') === 'human' && qs.has('meshy') ? await HumanSk
 // the Meshy wolf: what=wolf&leap=0.5 | &low=1 | &roll=0.3&look=0.8 | &amp=0.85&phase=1 | &dead=1.2
 const wolfSkins = qs.get('what') === 'wolf' ? await WolfSkins.load(3) : null;
 // the Meshy townsfolk: what=npc&id=inez&clip=idle&t=3 | &ids=ren,pip (side by side, &gap=1.1)
-//   &seat=0.44 sits them on a block that high | &look=0.5&nod=0.2 head turn
+//   &seat=0.44 sits them on a block that high | &look=0.5&nod=0.2 head turn | &raw (no wrist fixes)
 const npcIds = qs.get('what') === 'npc' ? (qs.get('ids') ?? qs.get('id') ?? 'inez').split(',') : [];
 const npcModels = npcIds.length ? await NpcModels.load(npcIds) : null;
 const BUILDERS: Record<string, () => THREE.Object3D> = {
@@ -157,12 +158,34 @@ const BUILDERS: Record<string, () => THREE.Object3D> = {
     npcIds.forEach((id, i) => {
       const a = npcModels?.make(id, seat !== null, (seat ?? 0) + 0.1);
       if (!a) return console.warn('[lab] no model for', id);
+      a.raw = qs.has('raw'); // &raw: the clips as built (no wrist spreading, no hand fixes)
       a.root.position.x = (i - (npcIds.length - 1) / 2) * num('gap', 1.1);
       const clip = qs.get('clip') ?? 'idle';
-      if (!a.pin(clip, num('t', 0))) console.warn(`[lab] ${id} has no ${clip}: ${a.roles().join(', ')}`);
       g.add(a.root);
       g.updateMatrixWorld(true);
-      a.update(0, false, num('look', 0), num('nod', 0));
+      // &axes: the mitts' frames, measured at bind (red: wrist → fingers, green: out of the palm) and
+      // each forearm's line (yellow: elbow → wrist joint). clip=bind leaves the rig in its bind pose.
+      const mitts = qs.has('axes') ? (['Left', 'Right'] as const).map((sd) => ({ sd, m: mittFrame(a.body, a.bone(sd + 'Hand')!, new THREE.Vector3(0, -1, 0)) })) : [];
+      if (clip !== 'bind') {
+        if (!a.pin(clip, num('t', 0))) console.warn(`[lab] ${id} has no ${clip}: ${a.roles().join(', ')}`);
+        a.update(0, false, num('look', 0), num('nod', 0));
+        if (!a.raw) console.log(`[lab] ${id} ${clip}@${num('t', 0)} wrist roll: ${a.wristRoll()}`);
+      }
+      g.updateMatrixWorld(true);
+      for (const { sd, m } of mitts) {
+        if (!m) continue;
+        const h = a.bone(sd + 'Hand')!, fa = a.bone(sd + 'ForeArm')!;
+        const w = (v: THREE.Vector3) => v.clone().applyMatrix4(h.matrixWorld);
+        const line = (pts: THREE.Vector3[], color: string) => {
+          const l = new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), new THREE.LineBasicNodeMaterial({ color, depthTest: false }));
+          l.renderOrder = 9;
+          scene.add(l);
+        };
+        const c = w(m.c);
+        line([w(new THREE.Vector3()), w(m.c.clone().addScaledVector(m.long, 14))], '#ff2020');
+        line([c, w(m.c.clone().addScaledVector(m.palm, 10))], '#20ff40');
+        line([fa.getWorldPosition(new THREE.Vector3()), h.getWorldPosition(new THREE.Vector3())], '#ffe020');
+      }
       if (seat !== null) {
         const block = new THREE.Mesh(new THREE.BoxGeometry(0.45, seat, 0.4), new THREE.MeshStandardNodeMaterial({ color: '#6b5a48', roughness: 1 }));
         block.position.set(a.root.position.x, seat / 2, 0);

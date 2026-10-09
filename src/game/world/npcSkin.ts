@@ -2,6 +2,7 @@ import * as THREE from 'three/webgpu';
 import { loadGLB } from '@/engine/models';
 import { clone as cloneSkinned } from 'three/addons/utils/SkeletonUtils.js';
 import { boundSkinned } from './kit';
+import { WristTwist } from './limbTwist';
 
 /**
  * The named townsfolk as Meshy models (scripts/models/build-npcs.sh → build-glb.mjs: rig + clips
@@ -31,6 +32,13 @@ export const NPC_PROPS: Record<string, { file: string; pos: [number, number, num
 };
 /** Seated people who chat among themselves now and then: their `near` clips join the idle pool. */
 const CHATS = new Set(['sol', 'mara', 'hollis', 'dez']);
+/**
+ * Per person and role, a last correction to a hand (axis in the Hand bone's own frame, degrees),
+ * after the wrist twist is spread. Only where a close-up shows a miss (prop lab what=npc).
+ */
+const HAND_FIX: Record<string, Record<string, { L?: [number, number, number, number]; R?: [number, number, number, number] }>> = {};
+/** Share of a hand's roll about the forearm that the forearm takes, and what the hand may keep (°). */
+const TWIST = { k: 0.55, twist: 50, swing: 70 };
 
 interface Track { bone: string; rot?: THREE.Interpolant; pos?: THREE.Interpolant }
 interface Clip {
@@ -54,6 +62,8 @@ interface Template {
   near: Clip[];
   ins: Clip[];
   bind: Map<string, { q: THREE.Quaternion; p: THREE.Vector3 }>;
+  /** Wrist twist spreading, per side. */
+  wrist: { side: 'Left' | 'Right'; w: WristTwist }[];
   prop?: THREE.Object3D;
 }
 
@@ -163,7 +173,11 @@ function template(id: string, scene: THREE.Object3D, anims: THREE.AnimationClip[
   const idle = list.filter((c) => c.name.startsWith('idle'));
   const near = list.filter((c) => c.name.startsWith('near'));
   if (!idle.length) idle.push(list[0]);
-  return { id, scene, clips, list, idle, near, ins: list.filter((c) => c.once), bind };
+  const wrist = (['Left', 'Right'] as const).flatMap((side) => {
+    const h = bind.get(side + 'Hand');
+    return h && bind.has(side + 'ForeArm') ? [{ side, w: new WristTwist(h.q, h.p) }] : [];
+  });
+  return { id, scene, clips, list, idle, near, ins: list.filter((c) => c.once), bind, wrist };
 }
 
 /** Blend `clip` at time `t` into the bones with weight `w` (`reset`: start from the bind pose). */
@@ -202,8 +216,13 @@ export class NpcActor {
   private insT = rand(15, 40);
   private chat: boolean;
   private anchor: THREE.Vector3;
-  /** The prop lab's frozen pose (no clocks, no switching). */
+  /** The prop lab's frozen pose (no clocks, no switching, no breathing). */
   private pinned = false;
+  /** The prop lab: the clips exactly as built (no wrist spreading, no hand fixes). */
+  raw = false;
+  /** Life on top of the clips: breathing (period, depth, phase) and, standing, a slow weight shift. */
+  private breath = { w: (2 * Math.PI) / rand(3.5, 5), a: rand(1.2, 2) * (Math.PI / 180), ph: rand(0, 7) };
+  private shift: { w: number; a: number; ph: number } | null;
 
   constructor(private T: Template, seated: boolean, hipY: number) {
     this.model = cloneSkinned(T.scene);
@@ -215,6 +234,7 @@ export class NpcActor {
     if (T.prop && this.B.Head) this.B.Head.add(T.prop.clone(true));
     this.clock = Float64Array.from(T.list, (c) => (c.once ? 0 : Math.random() * c.dur));
     this.chat = seated && CHATS.has(T.id);
+    this.shift = seated ? null : { w: 2 * Math.PI * rand(0.06, 0.12), a: rand(1.1, 1.6) * (Math.PI / 180), ph: rand(0, 7) };
     this.cur = this.base = this.pick(T.idle, null);
     // hips stay where the idle clip puts them; seated people sink onto the game's seat
     this.anchor = (T.clips.get('idle') ?? T.idle[0]).hips.clone();
@@ -294,6 +314,16 @@ export class NpcActor {
     return true;
   }
 
+  /** A bone by name (the prop lab draws on them). */
+  bone(name: string): THREE.Bone | undefined {
+    return this.B[name];
+  }
+
+  /** The body's skinned mesh (the prop lab). */
+  get body() {
+    return this.skinned[0];
+  }
+
   /** Role names this person has (the prop lab). */
   roles() {
     return [...this.T.clips.keys()];
@@ -302,6 +332,11 @@ export class NpcActor {
   /** The motion it's playing and how far through it (0..1): neighbours compare these. */
   get playing() {
     return { src: this.cur.src, at: this.clock[this.cur.i] / this.cur.dur };
+  }
+
+  /** Each wrist's roll about its forearm (°) as the clip had it, before it was spread (the prop lab). */
+  wristRoll() {
+    return this.T.wrist.map(({ side, w }) => `${side} ${Math.round(w.lastTwist * 180 / Math.PI)}°`).join(', ');
   }
 
   /** What's playing and where (tests): role, motion, clip time, tempo. */
@@ -332,18 +367,43 @@ export class NpcActor {
       this.prev = null;
       sample(this.B, this.T.bind, this.cur, this.clock[this.cur.i], 1, true);
     }
+    // the wrists: the clip's forearm roll spread into the forearm (no twist bones), then any fix
+    if (!this.raw) this.wrists();
     // keep the hips over the same spot whatever the clip (seated clips sit in different places)
     const off = _v2.copy(this.anchor).sub(this.cur.hips);
     if (this.prev && f < 1) off.lerp(_v.copy(this.anchor).sub(this.prev.hips), 1 - f);
     this.model.position.set(off.x, 0, off.z);
     this.root.updateMatrixWorld(true);
-    // the head (and a little of the neck) turns toward the player
-    const H = this.B.Head, N = this.B.neck;
+    // everything below turns bones about world axes from the body (the rig's bone axes differ)
+    this.root.getWorldQuaternion(_q2);
+    const lat = _v.set(-1, 0, 0).applyQuaternion(_q2); // + lifts the chin
+    const B = this.B;
+    if (!this.pinned) {
+      // breathing: the chest rises and falls; the neck takes it back so the head stays level
+      const br = Math.sin(this.time * this.breath.w + this.breath.ph) * this.breath.a;
+      if (B.Spine02) this.turn(B.Spine02, lat, br * 0.5);
+      if (B.Spine01) this.turn(B.Spine01, lat, br * 0.5);
+      if (B.neck) this.turn(B.neck, lat, -br * 0.5);
+      // standing: the weight drifts from foot to foot (the pelvis tips, the legs and chest stay)
+      const sh = this.shift;
+      if (sh && B.Hips) {
+        const fwd = _v2.set(0, 0, 1).applyQuaternion(_q2);
+        const r = Math.sin(this.time * sh.w + sh.ph) * sh.a;
+        this.turn(B.Hips, fwd, r);
+        if (B.LeftUpLeg) this.turn(B.LeftUpLeg, fwd, -r);
+        if (B.RightUpLeg) this.turn(B.RightUpLeg, fwd, -r);
+        if (B.Spine02) this.turn(B.Spine02, fwd, -r * 0.8);
+      }
+    }
+    // the head turns toward the player; a bigger turn takes more neck, and then the chest
+    const H = B.Head, N = B.neck;
     if (H || N) {
-      this.root.getWorldQuaternion(_q2);
-      const lat = _v.set(-1, 0, 0).applyQuaternion(_q2); // + lifts the chin
-      if (N) { this.turn(N, UP, look * 0.4); this.turn(N, lat, -nod * 0.4); }
-      if (H) { this.turn(H, UP, look * 0.6); this.turn(H, lat, -nod * 0.6); }
+      const big = THREE.MathUtils.smoothstep(Math.abs(look), 0.35, 1.0);
+      const chest = B.Spine ? 0.14 * THREE.MathUtils.smoothstep(Math.abs(look), 0.55, 1.05) : 0;
+      const neck = N ? 0.3 + 0.2 * big : 0;
+      if (chest) this.turn(B.Spine, UP, look * chest);
+      if (N) { this.turn(N, UP, look * neck); this.turn(N, lat, -nod * 0.4); }
+      if (H) { this.turn(H, UP, look * (1 - neck - chest)); this.turn(H, lat, -nod * (N ? 0.6 : 1)); }
     }
     // a sphere round the hips holds the pose (seated or standing), so both passes can cull it
     const hips = this.B.Hips;
@@ -384,6 +444,18 @@ export class NpcActor {
         if (alt && alt !== this.cur && alt.src !== p.clip.src) p.clip = alt;
         else p.at = this.time + rand(0.4, 1.5);
       }
+    }
+  }
+
+  /** Spread each wrist's roll into its forearm, then apply this role's hand fix. */
+  private wrists() {
+    const fix = HAND_FIX[this.T.id]?.[this.cur.name];
+    for (const { side, w } of this.T.wrist) {
+      const fa = this.B[side + 'ForeArm'], h = this.B[side + 'Hand'];
+      if (!fa || !h) continue;
+      w.apply(fa.quaternion, h.quaternion, TWIST.k, TWIST.twist, TWIST.swing);
+      const f = fix?.[side === 'Left' ? 'L' : 'R'];
+      if (f) h.quaternion.multiply(_q.setFromAxisAngle(_v.set(f[0], f[1], f[2]).normalize(), f[3] * (Math.PI / 180)));
     }
   }
 

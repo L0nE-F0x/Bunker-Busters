@@ -8,7 +8,10 @@ if (!qs.length) qs.push('what=car');
 const b = await launch();
 const p = await b.newPage({ viewport: { width: 960, height: 600 } });
 p.on('pageerror', (e) => console.log('[pageerror]', e.message));
-p.on('console', (m) => { if (m.type() === 'error' && !/GL Driver/.test(m.text())) console.log('[console.error]', m.text().slice(0, 300)); });
+p.on('console', (m) => {
+  if (m.type() === 'error' && !/GL Driver/.test(m.text())) console.log('[console.error]', m.text().slice(0, 300));
+  else if (m.text().startsWith('[lab]')) console.log(m.text());
+});
 const shots = [];
 for (const q of qs) {
   await p.goto((process.env.DEV_ORIGIN ?? 'http://localhost:5173') + '/debug/props.html?' + q);
