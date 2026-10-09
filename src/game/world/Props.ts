@@ -1,6 +1,6 @@
 import * as THREE from 'three/webgpu';
 import {
-  vec2, vec3, float, positionWorld, mix, sin, normalWorld, texture, floor, step, uv, time, fract, abs,
+  vec2, vec3, float, positionWorld, mix, sin, normalWorld, texture, floor, step, uv, time, fract, abs, smoothstep,
 } from 'three/tsl';
 import { Simplex2, mulberry32 } from '@/engine/noise';
 import type { Heightfield } from './Heightfield';
@@ -625,18 +625,36 @@ export class Props {
     const mat = new THREE.MeshStandardNodeMaterial({ roughness: 1, metalness: 0 });
     const p = positionWorld;
     const tone = noise(p.xz.div(300)).r;
-    mat.colorNode = mix(vec3(0.07, 0.065, 0.06), vec3(0.14, 0.12, 0.1), tone);
+    // facades: curtain-wall glass in bands between concrete spandrels (a band every ~4 floors, so it
+    // reads at 2 km instead of aliasing), dark blown-out holes, grime streaking down from the roofs.
+    // The glass is smooth and a little metallic, so it takes the sky and catches a low sun.
+    const along = p.x.add(p.z);
+    const side = step(abs(normalWorld.y), 0.5);
+    const band = smoothstep(0.62, 0.7, fract(p.y.div(15.5)));
+    const mull = smoothstep(0.8, 0.9, fract(along.div(11)));
+    const glass = float(1).sub(band.max(mull)).mul(side).mul(step(uv().x, 1.5));
+    const holes = smoothstep(0.62, 0.7, noise(vec2(along.div(140), p.y.div(110)).add(0.37)).g).mul(side);
+    const grime = noise(vec2(along.div(26), p.y.div(420))).r;
+    const concrete = mix(vec3(0.12, 0.11, 0.1), vec3(0.24, 0.21, 0.18), tone).mul(float(0.75).add(grime.mul(0.5)));
+    const glassCol = mix(vec3(0.05, 0.065, 0.08), vec3(0.09, 0.1, 0.11), tone);
+    mat.colorNode = mix(mix(concrete, glassCol, glass), vec3(0.02, 0.018, 0.016), holes.mul(0.9));
+    const shiny = glass.mul(float(1).sub(holes));
+    mat.roughnessNode = mix(float(1), float(0.3), shiny);
+    mat.metalnessNode = shiny.mul(0.55);
     if (this.atmo) {
       const night = this.atmo.uNight;
-      // window cells (~3.5 m x 4 m); the atlas' per-texel hash decides which still have power
-      const cell = vec2(floor(p.x.add(p.z).div(3.5)), floor(p.y.div(4)));
+      // window cells (~3.5 m x 4 m); the atlas' per-texel hash decides which still have power. Whole
+      // floors of a block share a feed, so light comes in lit floors and dark gaps, not even static
+      const cell = vec2(floor(along.div(3.5)), floor(p.y.div(4)));
       const h = texture(noiseTexture(), cell.add(0.5).div(256)).level(float(0)).a;
-      const side = step(abs(normalWorld.y), 0.5);
+      const feed = texture(noiseTexture(), vec2(floor(along.div(45)), floor(p.y.div(24))).add(0.5).div(256).add(0.5)).level(float(0)).a;
       const flick = sin(time.mul(h.mul(7).add(1)).add(h.mul(90))).mul(0.15).add(0.85);
-      const lit = step(0.985, h).mul(side).mul(flick);
-      const warm = mix(vec3(1.0, 0.55, 0.22), vec3(0.55, 0.85, 1.0), step(0.996, h));
+      const fed = step(0.88, feed);
+      const odds = mix(float(0.985), float(0.72), fed);
+      const lit = step(odds, h).mul(side).mul(flick).mul(float(1).sub(holes));
+      const warm = mix(vec3(1.0, 0.55, 0.22), vec3(0.55, 0.85, 1.0), step(0.996, h).max(step(0.97, feed)));
       const beacon = step(1.5, uv().x).mul(step(0.82, fract(time.mul(0.55))));
-      mat.emissiveNode = warm.mul(lit).mul(9).add(vec3(1.0, 0.08, 0.04).mul(beacon).mul(60)).mul(night);
+      mat.emissiveNode = warm.mul(lit).mul(mix(float(9), float(3.2), fed)).add(vec3(1.0, 0.08, 0.04).mul(beacon).mul(60)).mul(night);
     }
     const mesh = new THREE.Mesh(geo, mat);
     mesh.name = 'farCity';
