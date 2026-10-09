@@ -56,7 +56,7 @@ const GUNS: Record<HumanWeapon, NpcGun> = {
  */
 const KIT_GUNS: Record<HumanKit, NpcGun> = {
   marksman: { dmg: 30, interval: 2.7, burst: 1, mag: 5, spread: 0.0035, range: 200, pellets: 1, reload: 3.4, prefer: 55 },
-  heavy: { dmg: 6.5, interval: 1.05, burst: 3, mag: 8, spread: 0.06, range: 30, pellets: 9, reload: 3.8, prefer: 6 },
+  heavy: { dmg: 5.5, interval: 1.35, burst: 2, mag: 8, spread: 0.07, range: 24, pellets: 9, reload: 3.8, prefer: 7 },
   grenadier: GUNS.revolver,
 };
 const HP: Record<CrewRole, number> = { guard: 100, patrol: 100, sit: 90, leader: 130 };
@@ -965,6 +965,9 @@ export class Recovery implements HostileProvider {
           const c = _a.set(0, 0, 0);
           for (const x of movers) c.add(x.h.pos);
           c.divideScalar(movers.length).lerp(sq.known, 0.45);
+          // never on top of you: a screen, not a blindfold
+          const off = _b.subVectors(c, sq.known).setY(0);
+          if (off.length() < 8) c.copy(sq.known).addScaledVector(off.lengthSq() > 0.01 ? off.normalize() : _b.subVectors(gren.h.pos, sq.known).setY(0).normalize(), 8);
           c.y = this.host.hf.heightAt(c.x, c.z);
           this.throwSmoke(gren, c.clone());
         }
@@ -1268,7 +1271,7 @@ export class Recovery implements HostileProvider {
       // the breacher walks you down: no cover, straight at you, shooting as it comes
       if (m.cover) { m.cover.taken = false; m.cover = null; }
       if (!m.pushed) { m.pushed = true; this.bark(m, 'breach', true); }
-      if (dist > 4.5) moving = !this.walkTo(m, known, m.limpT > 0 ? 1.5 : 2.3, dt, true);
+      if (dist > 7) moving = !this.walkTo(m, known, m.limpT > 0 ? 1.5 : 2.3, dt, true);
       else h.vel.set(0, 0, 0);
     } else if (m.flank) {
       const arrived = this.walkTo(m, m.move, m.runSpeed, dt, true);

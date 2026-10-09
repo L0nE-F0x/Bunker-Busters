@@ -57,6 +57,7 @@ import { damp } from '@/engine/noise';
 import { Combat, sphereRay, type HurtKind, type Hostile } from './combat/Combat';
 import { PlayerArms } from './combat/PlayerArms';
 import { Recovery, CREW_SLOTS } from './combat/Recovery';
+import { AimAssist } from './combat/aimAssist';
 import { Machines } from './combat/Machines';
 import { MenuDirector } from './MenuDirector';
 
@@ -145,6 +146,7 @@ export class Game {
   /** The Kade field terminals (one per outpost): hack targets. */
   terminals!: KadeTerminals;
   private wantAds = false;
+  aimAssist: AimAssist | null = null;
   /** The dropped pack in the world: a duffel and a beacon. */
   private packMesh!: THREE.Group;
   private dying = 0;
@@ -1065,6 +1067,9 @@ export class Game {
     this.cam.snap(state.data.yaw + Math.PI, -0.05);
     this.grantArms(state);
     this.arms = new PlayerArms(state, this.hands, this.cam, this.camera, this.input, this.combat, this.audio, this.player);
+    // controller aim assist (friction over hostiles, a light pull on ADS): pad only
+    const assist = (this.aimAssist ??= new AimAssist(this.combat, (a, b) => this.recovery.smoked(a, b)));
+    pad.assist = (dt) => (this.player && this.arms?.equipped && this.arms.equipped !== 'crowbar' ? assist.frame(dt, this.cam, this.camera.position, this.wantAds) : 1);
     this.placePack();
     this.combat.hooks = {
       onVenom: (sec) => {
