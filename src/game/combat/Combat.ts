@@ -87,6 +87,8 @@ export interface PlayerTarget {
   collider: unknown;
   /** Height of the capsule (crouch shrinks it). */
   height: number;
+  /** Feeding rounds into a gun right now (a crew that sees it pushes). */
+  reloading?: boolean;
 }
 
 export interface CombatHooks {

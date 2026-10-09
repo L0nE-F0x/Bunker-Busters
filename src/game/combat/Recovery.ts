@@ -186,6 +186,8 @@ class Member implements Hostile {
   flankCover: CoverPoint | null = null;
   /** Next look round for fallen squadmates. */
   bodyT = Math.random();
+  /** Rushing you while you reload (seconds left). */
+  rushT = 0;
 
   constructor(readonly h: Human, public squad: Squad, readonly post: { pos: THREE.Vector3; yaw: number; role: CrewRole; path: THREE.Vector3[] }) {
     this.kit = h.look_.kit;
@@ -298,6 +300,8 @@ class Squad {
   radioed = false;
   /** A body was found: everyone's jumpy for a while (sharper eyes, faster to resolve a shape). */
   wary = 0;
+  /** Next chance to rush you while you reload (s). */
+  pushT = 0;
   constructor(readonly owner: Recovery, readonly outpost: Outpost | null) {}
   get alive() {
     return this.members.filter((m) => m.alive);
@@ -1040,6 +1044,23 @@ export class Recovery implements HostileProvider {
         this.search(sq, sq.known, true);
         return;
       }
+      // you're feeding rounds in where they can see it: the closest short gun rushes you, with a
+      // shout that's also your warning
+      sq.pushT -= dt;
+      const T0 = this.host.combat.target;
+      if (T0.reloading && sq.pushT <= 0 && live.some((x) => x.canSee)) {
+        const m = live.filter((x) => x.state === 'combat' && x.canSee && !x.perch && !x.flank && !x.pushing && x.radioT <= 0 && x.reloadT <= 0 && x.gun.prefer <= 16 && !x.fallback && x.h.pos.distanceTo(T0.feet) < 30)
+          .sort((a, b) => a.h.pos.distanceTo(T0.feet) - b.h.pos.distanceTo(T0.feet))[0];
+        if (m) {
+          sq.pushT = rnd(9, 14);
+          const off = _a.subVectors(m.h.pos, T0.feet).setY(0).normalize().multiplyScalar(m.gun.prefer * 0.45);
+          m.move.copy(T0.feet).add(off);
+          m.move.y = this.host.hf.heightAt(m.move.x, m.move.z);
+          if (m.cover) { m.cover.taken = false; m.cover = null; }
+          m.rushT = 3.5;
+          this.bark(m, 'push', true);
+        }
+      }
       // nerve breaks
       if (sq.morale < 0.25 && live.length <= 2) {
         for (const m of live) {
@@ -1332,6 +1353,11 @@ export class Recovery implements HostileProvider {
     if (m.perch) {
       // up to shoot over the parapet; down behind it when rounds crack past
       h.crouch = m.supp > 0.7 ? 1 : 0;
+    } else if (m.rushT > 0) {
+      // rushing you while you reload: straight in to its own short range, firing as it comes
+      m.rushT -= dt;
+      moving = !this.walkTo(m, m.move, m.runSpeed, dt, true);
+      if (!moving) m.rushT = 0;
     } else if (m.pushing) {
       // the breacher walks you down: no cover, straight at you, shooting as it comes
       if (m.cover) { m.cover.taken = false; m.cover = null; }
@@ -1843,7 +1869,7 @@ export class Recovery implements HostileProvider {
     return this.members.map((m) => ({
       slot: m.h.slot, kit: m.kit ?? '', state: m.state, ...(m.state === 'surrender' ? { surT: +m.surT.toFixed(1) } : {}), hp: Math.round(m.hp), mag: m.mag, see: m.canSee, cover: !!m.cover, detect: +m.detect.toFixed(2),
       ...(m.kit === 'heavy' ? { armour: Math.round(m.armour) } : {}), ...(m.kit === 'marksman' ? { charge: +m.charge.toFixed(2), perch: !!m.perch } : {}),
-      ...(m.flank ? { flank: m.flankCover ? 'cover' : 'open' } : {}), ...(m.radioT > 0 ? { radio: +m.radioT.toFixed(1) } : {}), ...(m.squad.wary > 0 ? { wary: Math.round(m.squad.wary) } : {}),
+      ...(m.flank ? { flank: m.flankCover ? 'cover' : 'open' } : {}), ...(m.rushT > 0 ? { rush: +m.rushT.toFixed(1) } : {}), ...(m.radioT > 0 ? { radio: +m.radioT.toFixed(1) } : {}), ...(m.squad.wary > 0 ? { wary: Math.round(m.squad.wary) } : {}),
     }));
   }
 

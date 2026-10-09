@@ -1890,6 +1890,7 @@ export class Game {
     tg.crouch = player.crouching;
     tg.noise = player.noise * s.archetype.stats.stealth;
     tg.torch = !!this.hands?.flashlightOn;
+    tg.reloading = !!this.arms?.reloading;
     tg.hidden = this.garage.playerInside;
     tg.night = this.atmo.isNight ? 1 : Math.max(0, Math.min(1, (0.15 - this.atmo.sunElevation) / 0.25));
     tg.visibility = 1 - this.weather.intensity * 0.75;

@@ -209,6 +209,11 @@ export const BARKS: Record<string, string[]> = {
     'My plates! Those were a loan!',
     'Armor\'s gone! Somebody cover me!',
   ],
+  push: [
+    'He\'s reloading! Push! Push!',
+    'Dry! He\'s dry! Go!',
+    'Reloading! Now, while he\'s busy!',
+  ],
   surrender: [
     'Okay! Okay! I\'m a contractor! I\'m not even full-time!',
     'Don\'t shoot! My equity hasn\'t vested!',
