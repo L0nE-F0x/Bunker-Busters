@@ -115,7 +115,7 @@ export class ColdStorageBuild {
   /** Rotor tops of the dry coolers (spin by day on solar, all the time once the hall has power). */
   fans!: THREE.InstancedMesh;
   readonly fanBase: THREE.Matrix4[] = [];
-  readonly lights: Record<'cold' | 'core' | 'lobby' | 'hall' | 'spark' | 'gate' | 'ups', VirtualLight>;
+  readonly lights: Record<'cold' | 'core' | 'lobby' | 'hall' | 'spark' | 'gate' | 'ups' | 'back' | 'east', VirtualLight>;
   readonly coreDoor: Door;
   readonly cageGate: Door;
   gateCone!: ReturnType<typeof lightCone>;
@@ -159,6 +159,9 @@ export class ColdStorageBuild {
       spark: this.light('#bfe6ff', 0, 16, -40, 3.6, -10),
       gate: this.light('#ffe2bc', 0, 22, -5.6, 5.6, 26.6),
       ups: this.light('#7dffa0', 1.6, 6, 21, FY + 2.2, 0.5),
+      // solar security lights on the back and east walls (the dark sides at night)
+      back: this.light('#ffe8c8', 0, 26, -3, 5.2, HALL.z0 - 4),
+      east: this.light('#ffe8c8', 0, 22, HALL.x1 + 4, 5.2, -5),
     };
 
     this.buildGround();
@@ -176,6 +179,7 @@ export class ColdStorageBuild {
     this.buildMast();
     this.buildCarPark();
     this.buildFence();
+    this.buildSecurityLights();
     this.buildPowerLine();
 
     // far stand-in first (it reads the same parts), then the near set
@@ -1198,6 +1202,33 @@ export class ColdStorageBuild {
   }
 
   // ------------------------------------------------------------------ fence, gate, gatehouse, monument
+  /**
+   * NIMBUS's solar security lights: wall packs washing the back (north) and east walls, each with a
+   * little panel on a bracket, so the dark sides of the hall read at night and from a distance.
+   */
+  private buildSecurityLights() {
+    const { b, A } = this;
+    const { x0, x1, z0 } = HALL;
+    const pv = pvMaterial();
+    const pack = (x: number, z: number, ry: number) => {
+      // ry: the direction the pack faces (0 = +z)
+      const sx = Math.sin(ry), sz = Math.cos(ry);
+      const y = 5.4;
+      b.add(M.dark(), box(0.45, 0.3, 0.3, x + sx * 0.15, y + 0.15, z + sz * 0.15, ry));
+      this.slots.night.add(this.d, box(0.38, 0.04, 0.24, x + sx * 0.18, y, z + sz * 0.18, ry));
+      b.add(pv, box(0.7, 0.03, 0.5, x + sx * 0.2, y + 0.75, z + sz * 0.2, ry), box(0.04, 0.5, 0.04, x + sx * 0.08, y + 0.5, z + sz * 0.08, ry));
+      const g = this.ground(x + sx * 2.2, z + sz * 2.2);
+      this.d.add(this.poolNight.m, A.quad('washWhite', 3.4, 5.2, x + sx * 0.03, y - 2.8, z + sz * 0.03, 0, ry, 0), A.floor('poolWhite', 6, 5, x + sx * 2.4, g + 0.08, z + sz * 2.4, ry));
+      this.halo(x + sx * 0.35, y - 0.1, z + sz * 0.35, '#ffe8c8', 1.4, CH.NIGHT, 2);
+    };
+    for (const x of [-19.5, -6.5, 6.5, 19.5]) pack(x, z0, Math.PI);
+    for (const z of [-10, -2]) pack(x1, z, Math.PI / 2);
+    pack(x0, -11, -Math.PI / 2);
+    // far stand-in: the north wall's row of lights is what you see of the place from the north flats
+    this.farHalos.add(new THREE.Vector3(-6.5, 5.3, z0 - 0.5), '#fff0d0', 6, 0, 1.2);
+    this.farHalos.add(new THREE.Vector3(x1 + 0.5, 5.3, -6), '#fff0d0', 6, 0, 1.2);
+  }
+
   private buildFence() {
     const { b, A } = this;
     const H = 2.8, st = M.galv();

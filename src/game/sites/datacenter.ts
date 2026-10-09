@@ -620,6 +620,8 @@ export class DataCenterSite extends Site {
     ch[CH.NIGHT] = 0.04 + night * 0.96;
     B.poolNight.k.value = night * 0.75;
     B.lights.gate.intensity = night * 16;
+    B.lights.back.intensity = night * 12;
+    B.lights.east.intensity = night * 10;
     B.gateCone.intensity.value = night * 0.22;
     S.mast.intensity.value = mastOn * 14;
     ch[CH.MAST] = mastOn;
