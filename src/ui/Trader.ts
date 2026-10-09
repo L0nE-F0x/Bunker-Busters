@@ -39,18 +39,20 @@ export function tillShelf(s: GameState) {
   return TILL_STOCK.map((l) => ({ id: l.id, qty: m[`till.q.${l.id}`] ?? 0 })).filter((l) => l.qty > 0);
 }
 
-export function tillBuy(s: GameState, id: string, markup: number): string | null {
+export function tillBuy(s: GameState, id: string, markup: number, n = 1): string | null {
   const m = s.data.marks;
   const left = m[`till.q.${id}`] ?? 0;
   if (left <= 0) return 'Sold out.';
+  n = Math.min(n, left);
   const price = buyPrice(id, markup);
   const slate = m['till.slate'] ?? 0;
-  if (slate < price) return `Short ${price - slate} on the slate. Sell her something.`;
+  if (slate < price * n) return `Short ${price * n - slate} on the slate. Sell her something.`;
   const fresh = (id === 'vest' || id === 'canteen') && !s.count(id);
-  if (!s.addItem(id, 1)) return 'Your pack won\'t take it.';
+  const got = s.addItem(id, n);
+  if (!got) return 'Your pack won\'t take it.';
   if (fresh) delete m[`gear.${id}`];
-  m['till.slate'] = slate - price;
-  m[`till.q.${id}`] = left - 1;
+  m['till.slate'] = slate - price * got;
+  m[`till.q.${id}`] = left - got;
   return null;
 }
 
@@ -90,8 +92,10 @@ export function openTill(host: TillHost, s: GameState, opts: TillOpts): Promise<
       if (!d) return '';
       const price = side === 'buy' ? buyPrice(id, opts.markup) : sellPrice(id, opts.offer);
       const slate = s.data.marks['till.slate'] ?? 0;
+      // loose rounds come by the handful too
+      const ten = side === 'buy' && d.category === 'ammo' && qty >= 10;
       const btns = side === 'buy'
-        ? `<button class="btn till-buy" data-id="${id}" data-key="b:${id}" ${slate < price ? 'disabled' : ''}>Buy · ${price}</button>`
+        ? `<button class="btn till-buy" data-id="${id}" data-n="1" data-key="b:${id}" ${slate < price ? 'disabled' : ''}>Buy · ${price}</button>${ten ? `<button class="btn till-buy" data-id="${id}" data-n="10" data-key="t:${id}" ${slate < price * 10 ? 'disabled' : ''}>×10 · ${price * 10}</button>` : ''}`
         : `<button class="btn till-sell" data-id="${id}" data-n="1" data-key="s:${id}">Sell · ${price}</button>${qty > 1 ? `<button class="btn till-sell all" data-id="${id}" data-n="${qty}" data-key="a:${id}">All · ${price * qty}</button>` : ''}`;
       return `<div class="till-row cat-${d.category}" data-desc="${esc(id)}"><span class="ic">${ICONS[d.icon] ?? ''}</span><span class="nm"><b>${esc(d.name)}</b><small>×${qty} · ${d.weight}kg</small></span><span class="bt">${btns}</span></div>`;
     };
@@ -139,7 +143,8 @@ export function openTill(host: TillHost, s: GameState, opts: TillOpts): Promise<
       };
       panel.querySelectorAll<HTMLButtonElement>('.till-buy').forEach((b) => (b.onclick = () => {
         const id = b.dataset.id!;
-        act(b.dataset.key!, () => tillBuy(s, id, opts.markup), TILL_QUIPS[id]?.buy ?? `${ITEMS[id].name}. She wraps it in yesterday's news.`);
+        const n = Number(b.dataset.n) || 1;
+        act(b.dataset.key!, () => tillBuy(s, id, opts.markup, n), TILL_QUIPS[id]?.buy ?? (n > 1 ? `${ITEMS[id].name} ×${n}, counted twice, in front of you.` : `${ITEMS[id].name}. She wraps it in yesterday's news.`));
       }));
       panel.querySelectorAll<HTMLButtonElement>('.till-sell').forEach((b) => (b.onclick = () => {
         const id = b.dataset.id!;
