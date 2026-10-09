@@ -16,7 +16,7 @@ import { LANDMARKS } from '@/content/world';
 import type { LandmarkDef } from '@/content/types';
 import { box, cyl, beam, place, merge, MeshBatch, DistanceLod, Frame, canvasTexture, grime, wire, shadowProxy } from './kit';
 import { rustyMetal, concrete, corrugated, neon, plainStandard, fabric, wood, glow, warmWindow, chainLink, uDaylight } from './materials';
-import { Fire, lightCone } from './effects';
+import { Fire, lightCone, GlowSprites } from './effects';
 import { VirtualLight } from './lights';
 import { dressSpire } from './spire';
 import { decalMat, glowDecalMat, uSiteNight, uSiteFlicker } from '../sites/jetKit';
@@ -417,13 +417,20 @@ export class Landmarks {
     root.add(near);
     const porch = new VirtualLight('#ffcf90', 0, 11, 1.6);
     porch.position.copy(f.p(dress.porchAt.x, dress.porchAt.y, dress.porchAt.z));
-    this.spire = { near, leds: dress.leds, fairy: dress.fairy, bulb: dress.porch, light: porch };
+    // the floods: one VirtualLight between them, halos near and far (the mound reads from the road at night)
+    const floodLight = new VirtualLight('#e8eeff', 0, 18, 1.7);
+    floodLight.position.copy(f.p((dress.floodAt[0].x + dress.floodAt[1].x) / 2, 4.6, (dress.floodAt[0].z + dress.floodAt[1].z) / 2));
+    const floodHalos = new GlowSprites(4), farHalos = new GlowSprites(4); // 4 channels: same program as the sites' far halos
+    for (const p of dress.floodAt) { floodHalos.add(p, '#eef2ff', 1.4, 0, 2.2); farHalos.add(p, '#eef2ff', 4, 0, 1.3); }
+    near.add(floodHalos.build());
+    this.spire = { near, leds: dress.leds, fairy: dress.fairy, bulb: dress.porch, light: porch, flood: dress.flood, floodLight, floodHalos, farHalos };
     // a work lamp that casts a light cone onto the intel spot
     const lampPos = new THREE.Vector3(shackX + 1.8, 2.5, shackZ + 1.9);
     const cone = lightCone(3, 1.6, '#bfeaff', 0.25);
     cone.mesh.position.copy(lampPos);
     cone.mesh.rotation.x = -0.5;
     near.add(cone.mesh);
+    far.add(this.spire.farHalos.build());
     this.addLod(root, f, 20, near, far);
     this.group.add(root);
     void neon;
@@ -436,7 +443,10 @@ export class Landmarks {
   }
 
   /** The Spire's night pieces (driven in update). */
-  private spire: { near: THREE.Object3D; leds: { value: number }[]; fairy: { value: number }[]; bulb: { value: number }; light: VirtualLight } | null = null;
+  private spire: {
+    near: THREE.Object3D; leds: { value: number }[]; fairy: { value: number }[]; bulb: { value: number }; light: VirtualLight;
+    flood: { value: number }; floodLight: VirtualLight; floodHalos: GlowSprites; farHalos: GlowSprites;
+  } | null = null;
 
   /** The camp's near set (the people round the fire join it, so they hide with it at range). */
   private campNear: THREE.Object3D | null = null;
@@ -513,6 +523,12 @@ export class Landmarks {
       sp.leds[0].value = Math.sin(t * 2.1) > 0 ? 5 : 0.4;
       sp.leds[1].value = Math.sin(t * 5.3 + 1) > 0.6 ? 6 : 0.3;
       sp.fairy.forEach((u, i) => (u.value = night * (4 + 2 * Math.sin(t * 1.3 + i * 2.1))));
+      // the floods come on with the dusk sensor, not gradually
+      const floods = night > 0.45 ? 1 : 0;
+      sp.flood.value = floods * 7;
+      sp.floodLight.intensity = near ? floods * 14 : 0;
+      sp.floodHalos.channels[0] = floods;
+      sp.farHalos.channels[0] = floods;
       // the shared site pools (sites set these near themselves; the Spire is far from both)
       if (near) { uSiteNight.value = night; uSiteFlicker.value = buzz > 0.5 ? 1 : 0.7; }
     }

@@ -6,6 +6,7 @@ import { Site } from './Site';
 import { box, cyl, beam, wire, norm, MeshBatch } from '../world/kit';
 import { rustyMetal, concrete, corrugated, plainStandard, fabric, wood, type GlowSlot } from '../world/materials';
 import { VirtualLight } from '../world/lights';
+import { GlowSprites } from '../world/effects';
 import { buildCar, type CarKind } from '../world/vehicles';
 import { ITEMS } from '@/content/items';
 import { XP_REWARDS } from '@/content/progression';
@@ -78,6 +79,11 @@ export class DriveInSite extends Site {
   private beam = beamMaterial('#e8f0ff', 0);
   private beamMesh!: THREE.Mesh;
   private screenLight!: VirtualLight;
+  /** Solar lot lamps round the fence (on at dusk whatever the generator does; one is on its way out). */
+  private lotLamp!: GlowSlot;
+  private lotLampBad!: GlowSlot;
+  private readonly lotLights: VirtualLight[] = [];
+  private readonly farLamps = new GlowSprites(4);
   private boothLight!: VirtualLight;
   private hallLight!: VirtualLight;
   private tint = new THREE.Color();
@@ -118,6 +124,8 @@ export class DriveInSite extends Site {
     this.portGlow = pal.slot('#ffe6b8', 0);
     this.genLed = pal.slot('#ff3a2a', 2);
     for (let i = 0; i < 3; i++) this.bulbs.push(pal.slot('#ffd38a', 0));
+    this.lotLamp = pal.slot('#ffe2b0', 0);
+    this.lotLampBad = pal.slot('#ffe2b0', 0);
 
     this.buildScreenStructure();
     this.buildLot();
@@ -125,8 +133,10 @@ export class DriveInSite extends Site {
     this.buildEntrance();
     this.buildFence();
     this.buildPlayground();
+    this.buildLotLamps();
 
     const { near, far } = this.kit.build(root, ctx.scene, 'drivein');
+    far.add(this.farLamps.build());
     this.buildMoving(near);
     this.buildSpectacle(root);
     this.buildMarqueeFaces(root);
@@ -574,6 +584,35 @@ export class DriveInSite extends Site {
     run(17, -36, 44, -36);
   }
 
+  /**
+   * Six solar lot lamps on 8 m poles round the fence: four still work, one flickers, one is dead.
+   * Warm pools on the sand, halos on night channels (5 steady, 6 the flickering one), two VirtualLights,
+   * and far halos so the lot reads from the highway after dark.
+   */
+  private buildLotLamps() {
+    const k = this.mats, kit = this.kit;
+    const poles: [number, number, number][] = [[-40, -31, 0], [40, -31, 0], [-40, 12, 0], [40, 12, 1], [-30, 42, 2], [30, 42, 0]];
+    poles.forEach(([x, z, state], i) => {
+      const y = this.g(x, z);
+      const dir = x < 0 ? 1 : -1; // the arm reaches in over the lot
+      const hx = x + dir * 1.3;
+      kit.b.add(k.steel, cyl(0.09, 0.13, 8, x, y + 4, z, 6), box(1.5, 0.08, 0.08, x + dir * 0.7, y + 7.9, z));
+      kit.b.add(k.dark, box(0.7, 0.18, 0.4, hx, y + 7.8, z), box(0.9, 0.04, 0.6, x - dir * 0.2, y + 8.25, z, 0, 0, dir * 0.4));
+      kit.col(x, y + 4, z, 0.15, 4, 0.15);
+      if (state === 2) return; // dead: the panel's gone, the head hangs dark
+      const slot = state === 1 ? this.lotLampBad : this.lotLamp;
+      slot.add(kit.b, box(0.6, 0.03, 0.32, hx, y + 7.7, z));
+      kit.halos.add(v3(hx, y + 7.6, z), '#ffe2b0', 1.6, state === 1 ? 6 : 5, 2);
+      kit.gd.add(glowDecalMat(), floorDecal('poolWarm', 13, 13, hx + dir * 1.5, y + 0.06, z, i));
+      this.farLamps.add(this.frame.p(hx, y + 7.6, z), '#ffe2b0', 4, state === 1 ? 2 : 1, 1.2);
+      if (i === 0 || i === 3) {
+        const L = new VirtualLight(0xffd8a8, 0, 20, 1.8);
+        L.position.copy(this.frame.p(hx, y + 7.4, z));
+        this.lotLights.push(L);
+      }
+    });
+  }
+
   private buildPlayground() {
     const k = this.mats, b = this.kit.b;
     const sx = -8, sz = -25;
@@ -1008,6 +1047,17 @@ export class DriveInSite extends Site {
     this.bulbs.forEach((bl, i) => { bl.intensity.value = powered ? (i === chase ? 7 : 1.2) * (0.3 + night) : 0; });
     for (let i = 0; i < 3; i++) this.kit.halos.channels[2 + i] = powered ? (i === chase ? 1 : 0.2) * night : 0;
     this.kit.halos.channels[1] = powered ? 0 : (Math.floor(this.t * 1.5) % 2) * 0.8;
+    // solar lot lamps: on after dusk; one has a failing driver
+    const fail = Math.sin(this.t * 17) * Math.sin(this.t * 2.3) > 0.55 ? 0.08 : 1;
+    const lamps = THREE.MathUtils.smoothstep(night, 0.15, 0.5);
+    this.lotLamp.intensity.value = lamps * 6;
+    this.lotLampBad.intensity.value = lamps * 6 * fail;
+    this.kit.halos.channels[5] = lamps;
+    this.kit.halos.channels[6] = lamps * fail;
+    this.farLamps.channels[1] = lamps;
+    this.farLamps.channels[2] = lamps * fail;
+    this.lotLights[0].intensity = lamps * 9;
+    this.lotLights[1].intensity = lamps * 9 * fail;
     this.genLed.intensity.value = powered ? 0 : (Math.floor(this.t * 1.5) % 2) * 3;
     // inside: tubes flicker on with the generator
     const tubeFl = Math.sin(this.t * 23) * Math.sin(this.t * 3.7) > 0.93 ? 0.3 : 1;
