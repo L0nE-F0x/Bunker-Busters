@@ -210,6 +210,31 @@ function settleTextureFlips() {
 }
 
 /**
+ * The scene's environment cache key (lights, shadows, environment map, fog) once per frame, not
+ * once per render call. Every render object checks it each pass to see whether its program is still
+ * valid, and three recomputes it on every render call by walking the whole lights and fog node
+ * graphs (~40 KB of garbage a frame here). The light set and the fog graph never change within a
+ * frame (VirtualLight's pool is fixed), and a change between frames is still seen the next frame.
+ */
+function frameCacheKeys(renderer: THREE.WebGPURenderer) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const nodes = (renderer as any)._nodes;
+  if (!nodes || typeof nodes.getCacheKey !== 'function' || !nodes.nodeFrame) return;
+  const own = nodes.getCacheKey;
+  const memo = new WeakMap<object, WeakMap<object, { f: number; k: number }>>();
+  nodes.getCacheKey = function (scene: object, lightsNode: object) {
+    const f = this.nodeFrame.frameId as number;
+    let m = memo.get(scene);
+    if (!m) { m = new WeakMap(); memo.set(scene, m); }
+    const e = m.get(lightsNode);
+    if (e && e.f === f) return e.k;
+    const k = own.call(this, scene, lightsNode) as number;
+    if (e) { e.f = f; e.k = k; } else m.set(lightsNode, { f, k });
+    return k;
+  };
+}
+
+/**
  * Runs `fn` (a warm-up render) with every new WebGL program linking in the background
  * (KHR_parallel_shader_compile) instead of three's synchronous path, where the link status query
  * right after each link stalls the page until the driver is done (~3 s of the boot headless, most of
@@ -267,6 +292,7 @@ export async function createRenderer(canvas: HTMLCanvasElement) {
   quietShadowAlphaTest(renderer);
   coalesceUniformUploads(renderer);
   if (!qs.has('noflipfix')) settleTextureFlips(); // (?noflipfix: A/B)
+  if (!qs.has('nokeymemo')) frameCacheKeys(renderer); // (?nokeymemo: A/B)
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFShadowMap;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
