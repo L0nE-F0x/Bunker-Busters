@@ -10,7 +10,7 @@ import { VirtualLight } from '../world/lights';
 import { Tracers, Debris, Flames } from './fx';
 import { Marks, Brass } from './marks';
 import type { WeaponId } from '@/content/weapons';
-import { DIFFICULTY, type Difficulty } from '@/content/weapons';
+import { DIFFICULTY, WEAPONS, type Difficulty } from '@/content/weapons';
 
 /**
  * The fight layer. Everything that can be shot, bitten or blown up registers here through a
@@ -346,7 +346,8 @@ export class Combat {
     const host = this.hostileRay(eye, dir, wT);
     const end = _p.copy(eye).addScaledVector(dir, host ? host.t : wT);
     if (tracer) this.tracers.emit(muzzle, end, 420, 9, 0.016);
-    for (const pr of this.providers) pr.whizz?.(eye, dir, host ? host.t : wT, host ? host.h : null);
+    // a subsonic round through a can doesn't crack past anyone's ear (the Hush .22): no suppression
+    if (!WEAPONS[weapon]?.suppressed) for (const pr of this.providers) pr.whizz?.(eye, dir, host ? host.t : wT, host ? host.h : null);
     if (host) {
       const point = end.clone();
       const amt = damage(host.t, host.zone);

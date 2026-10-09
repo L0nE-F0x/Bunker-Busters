@@ -912,3 +912,21 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #000; color:
   .till-list { max-height: 30vh; }
   .till-row .btn { padding: 9px 10px; }
 }
+
+.stance .pill.gearp { color: var(--ink-dim); }
+.stance .pill.platesp { border-color: rgba(63,242,224,0.45); color: var(--teal); }
+.stance .pill.platesp.low { border-color: rgba(255,90,70,0.6); color: #ff8d7a; }
+.stance .pill.focusp { border-color: rgba(93,255,154,0.45); color: var(--green); }
+.stance .pill.tagp { border-color: rgba(255,74,58,0.55); color: #ff8d7a; }
+
+.recipe-tabs { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 10px; }
+.recipe-tabs .tab { font-size: 11px; padding: 6px 9px; letter-spacing: 0.12em; }
+.till-body > * { flex-shrink: 0; }
+@media (max-height: 560px) {
+  .till-note, .till-desc, .till-slate small { display: none; }
+  .till-slate { padding: 6px 12px; }
+  .till-slate b { font-size: 20px; }
+  .till-list { max-height: none; overflow: visible; }
+  .till-panel { max-height: 97vh; }
+  .till-body { gap: 8px; }
+}

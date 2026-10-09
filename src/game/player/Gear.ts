@@ -91,6 +91,10 @@ export class Gear {
   private dom: GearDom;
   private plateWarned = false;
   private scopeOn = false;
+  private pillT = 0;
+  private pills: { plates: HTMLElement; focus: HTMLElement; tagged: HTMLElement } | null = null;
+  private pillText = ['', '', ''];
+  private uiRoot: HTMLElement;
   private swayX = 0;
   private swayY = 0;
 
@@ -107,6 +111,7 @@ export class Gear {
     uiRoot: HTMLElement,
     private toast: (text: string, kind?: 'info' | 'good' | 'bad') => void,
   ) {
+    this.uiRoot = uiRoot;
     this.dom = ensureDom(uiRoot);
     this.dom.binos.classList.remove('on');
     this.dom.binos.querySelector('.binos-label .kbd')!.textContent = actionKey('binoculars');
@@ -276,6 +281,8 @@ export class Gear {
     for (const [h, until] of this.tags) if (!h.alive || until < this.t) this.tags.delete(h);
     this.markT -= dt;
     if (this.markT <= 0) { this.markT = 1 / 30; this.drawMarks(); }
+    this.pillT -= dt;
+    if (this.pillT <= 0) { this.pillT = 0.25; this.drawPills(); }
   }
 
   /**
@@ -362,6 +369,33 @@ export class Gear {
     for (let j = i; j < d.marks.length; j++) if (d.marks[j].style.display !== 'none') d.marks[j].style.display = 'none';
   }
 
+  /** Status pills beside Crouch/Sprint: the vest's plates, Founder Focus, live tags. 4 Hz, text only on change. */
+  private drawPills() {
+    if (!this.pills || !this.pills.plates.isConnected) {
+      const stance = this.uiRoot.querySelector('#hud .stance');
+      if (!stance) return;
+      const mk = (c: string) => { const e = document.createElement('span'); e.className = `pill gearp ${c}`; e.style.display = 'none'; stance.prepend(e); return e; };
+      this.pills = { tagged: mk('tagp'), focus: mk('focusp'), plates: mk('platesp') };
+      this.pillText = ['', '', ''];
+    }
+    const s = this.state;
+    const p = s.count('vest') ? Math.round(vestPlates(s)) : -1;
+    const f = Math.ceil(this.focusT);
+    const texts = [
+      p < 0 ? '' : p > 0 ? `Plates ${p}` : 'Plates spent',
+      f > 0 ? `Focus ${Math.floor(f / 60)}:${String(f % 60).padStart(2, '0')}` : '',
+      this.tags.size ? `Tagged ${this.tags.size}` : '',
+    ];
+    const els = [this.pills.plates, this.pills.focus, this.pills.tagged];
+    texts.forEach((t, i) => {
+      if (t === this.pillText[i]) return;
+      this.pillText[i] = t;
+      els[i].textContent = t;
+      els[i].style.display = t ? '' : 'none';
+      if (i === 0) els[i].classList.toggle('low', p >= 0 && p < VEST_PLATES * 0.3);
+    });
+  }
+
   /** Run over (death, quit): put everything down. */
   dispose() {
     if (this.viewing) this.toggleBinos(false);
@@ -369,6 +403,8 @@ export class Gear {
     this.dom.scope.classList.remove('on');
     this.hands.root.visible = true;
     for (const m of this.dom.marks) m.style.display = 'none';
+    if (this.pills) for (const e of Object.values(this.pills)) e.remove();
+    this.pills = null;
   }
 }
 

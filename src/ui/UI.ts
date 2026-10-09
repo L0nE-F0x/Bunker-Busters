@@ -1054,12 +1054,23 @@ export class UI implements UIBridge {
     ov.appendChild(panel);
     this.root.appendChild(ov);
     let note = 'The fire is real. The full heal is not, unless you\'ve learned how to sleep.';
+    let rgroup = '';
     return new Promise((resolve) => {
       const finish = (why: string) => {
         window.removeEventListener('keydown', onKey, true);
         ov.remove();
         this.modalOpen = false;
         resolve(why);
+      };
+      // recipes in tabs by group (Tools, Ammunition, …), each tab counting what you can make right now
+      const recipeTabs = () => {
+        const groups = [...new Set(opts.recipes.map((r) => r.group ?? ''))];
+        if (!groups.includes(rgroup)) rgroup = groups.find((g) => opts.recipes.some((r) => (r.group ?? '') === g && !r.disabled)) ?? groups[0] ?? '';
+        if (groups.length < 2) return '';
+        return `<div class="recipe-tabs">${groups.map((g) => {
+          const n = opts.recipes.filter((r) => (r.group ?? '') === g && !r.disabled).length;
+          return `<button class="tab rtab ${g === rgroup ? 'on' : ''}" data-g="${esc(g)}">${esc(g)}${n ? `<i class="tab-dot">${n}</i>` : ''}</button>`;
+        }).join('')}</div>`;
       };
       const paint = () => {
         const people = opts.people.map((p) => {
@@ -1081,7 +1092,8 @@ export class UI implements UIBridge {
             </div>
             <div class="camp-col">
               <div class="label">Work the scrap</div>
-              <div class="recipes">${opts.recipes.map((r, i) => `${r.group && r.group !== opts.recipes[i - 1]?.group ? `<div class="label recipe-group">${esc(r.group)}</div>` : ''}<div class="recipe"><div><b>${esc(r.name)}</b><span>${esc(r.detail)}</span>${r.disabled ? `<small>${esc(r.disabled)}</small>` : ''}</div><button class="btn craft" data-id="${esc(r.id)}" ${r.disabled ? 'disabled' : ''}>Make</button></div>`).join('')}</div>
+              ${recipeTabs()}
+              <div class="recipes">${opts.recipes.filter((r) => (r.group ?? '') === rgroup).map((r) => `<div class="recipe"><div><b>${esc(r.name)}</b><span>${esc(r.detail)}</span>${r.disabled ? `<small>${esc(r.disabled)}</small>` : ''}</div><button class="btn craft" data-id="${esc(r.id)}" ${r.disabled ? 'disabled' : ''}>Make</button></div>`).join('')}</div>
             </div>
           </div>
           <footer><span class="kb"><span class="kbd">Esc</span> back to the fire</span></footer>`;
@@ -1089,6 +1101,7 @@ export class UI implements UIBridge {
         const radio = panel.querySelector('.radio') as HTMLButtonElement;
         radio.onclick = () => { if (radio.disabled) return; this.audio.play('uiConfirm'); finish('radio'); };
         panel.querySelectorAll('.camp-person').forEach((b) => (b as HTMLButtonElement).onclick = () => { this.audio.play('ui'); finish((b as HTMLElement).dataset.person ?? 'closed'); });
+        panel.querySelectorAll('.rtab').forEach((b) => (b as HTMLButtonElement).onclick = () => { rgroup = (b as HTMLElement).dataset.g ?? ''; this.audio.play('ui'); paint(); });
         panel.querySelectorAll('.craft').forEach((b) => (b as HTMLButtonElement).onclick = () => {
           const err = opts.onCraft((b as HTMLElement).dataset.id ?? '');
           this.audio.play(err ? 'deny' : 'uiConfirm');
