@@ -915,6 +915,7 @@ export class Game {
     const recipes = ordered.map(recipeRow);
     const refreshRecipes = () => recipes.splice(0, recipes.length, ...ordered.map(recipeRow));
     const campView = (): CampView => ({ has: (f) => s.has(f), count: (id) => s.count(id), rep: (id) => s.rep(id), name: s.archetype.name });
+    let travel = false;
     void this.withMinigame('idle', async () => {
       for (;;) {
         const why = await this.ui.camp({
@@ -935,6 +936,7 @@ export class Game {
           recipes,
         });
         if (why === 'closed') return;
+        if (why === 'travel') { travel = true; return; }
         if (why === 'radio') {
           if (debrief) await this.runDebrief();
           else {
@@ -948,7 +950,7 @@ export class Game {
         const member = CAMP.find((m) => m.id === why);
         if (member) await this.campTalk(member.id);
       }
-    });
+    }).then(() => { if (travel) this.openWorldMap(); });
   }
 
   /** One conversation with someone at the fire. Effects are the camp's own (content/camp.ts). */
@@ -1768,8 +1770,8 @@ export class Game {
         const s = this.state!;
         if (this.busy || this.dying || !this.player) return 'Not now.';
         if (this.huntedBy > 0) return 'Something is hunting you. Lose it first.';
-        if (this.garage.alarm > 0 || this.garage.drone.state === 'alert') return 'Not with an alarm going.';
-        if (this.garage.playerInside) return 'Not from inside a man\'s bunker. Walk out the way you came.';
+        if (this.bunkerAlarm || this.garage.drone.state === 'alert') return 'Not with an alarm going.';
+        if (this.bunkerInside) return 'Not from inside a bunker. Walk out the way you came.';
         if ((s.data.poison ?? 0) > 0) return 'Venom first. Walk it off and it walks you off a cliff.';
         if (this.combat.heat > 0.35) return 'Too loud out here. Let the shooting settle first.';
         return null;
@@ -1824,7 +1826,8 @@ export class Game {
     const [ax, , az] = APEX.location.position;
     const nearApex = this.player ? Math.hypot(this.player.position.x - ax, this.player.position.z - az) < 110 : false;
     if (s.has('apex.marker') || nearApex || s.has('apex.complete')) {
-      out.push({ id: 'apex', x: ax, z: az, label: s.has('apex.complete') ? 'Apex Vault (busted)' : 'Apex Vault · Tier 2', color: s.has('apex.complete') ? '#7d725f' : '#ff3a6e', kind: 'bunker' });
+      out.push({ id: 'apex', x: ax, z: az, label: s.has('apex.complete') ? 'Apex Vault (busted)' : 'Apex Vault · Tier 2', color: s.has('apex.complete') ? '#7d725f' : '#ff3a6e', kind: 'bunker',
+        note: s.has('apex.complete') ? 'Vesper Kade\'s vault on the salt. The water went home with you.' : 'Vesper Kade\'s vault at the west shore of the salt, against the range. Her road runs past the gatehouse.' });
     }
     for (const it of WORLD_INTEL) {
       if (s.has(`intel:${it.id}`)) continue;

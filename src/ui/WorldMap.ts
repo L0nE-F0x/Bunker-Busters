@@ -58,7 +58,7 @@ function roleOf(m: MapMarker, travel: Set<string>): Role {
   if (m.id === 'quest') return 'quest';
   if (m.id.startsWith('q:')) return 'side';
   if (m.id === 'pack') return 'pack';
-  if (m.id === 'drone') return 'drone';
+  if (m.id === 'drone' || m.kind === 'drone') return 'drone';
   if (travel.has(m.id)) return 'travel';
   if (m.id.startsWith('op:')) return 'outpost';
   if (m.id.startsWith('cache.')) return 'cache';

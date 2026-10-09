@@ -1082,6 +1082,7 @@ export class UI implements UIBridge {
               <div class="camp-actions">
                 <button class="btn primary rest">Rest and save</button>
                 <button class="btn radio" ${opts.radioDisabled ? 'disabled' : ''}>${esc(opts.radioLabel)}</button>
+                <button class="btn travel">Map · travel</button>
               </div>
               ${opts.radioDisabled ? `<p class="hint">${esc(opts.radioDisabled)}</p>` : ''}
               <div class="label" style="margin-top:18px">Around the fire</div>
@@ -1097,6 +1098,7 @@ export class UI implements UIBridge {
         (panel.querySelector('.rest') as HTMLButtonElement).onclick = () => { this.audio.play('uiConfirm'); opts.onRest(); note = 'You sit with it. Not new. Better than you were.'; paint(); };
         const radio = panel.querySelector('.radio') as HTMLButtonElement;
         radio.onclick = () => { if (radio.disabled) return; this.audio.play('uiConfirm'); finish('radio'); };
+        (panel.querySelector('.travel') as HTMLButtonElement).onclick = () => { this.audio.play('ui'); finish('travel'); };
         panel.querySelectorAll('.camp-person').forEach((b) => (b as HTMLButtonElement).onclick = () => { this.audio.play('ui'); finish((b as HTMLElement).dataset.person ?? 'closed'); });
         panel.querySelectorAll('.rtab').forEach((b) => (b as HTMLButtonElement).onclick = () => { rgroup = (b as HTMLElement).dataset.g ?? ''; this.audio.play('ui'); paint(); });
         panel.querySelectorAll('.craft').forEach((b) => (b as HTMLButtonElement).onclick = () => {
