@@ -14,8 +14,10 @@ import type { Combat, Hostile } from './Combat';
  * ground at night through a pooled VirtualLight, and crackles. Fire ignores cover: it's for the crew
  * dug in behind a truck, and for the pack that won't stop circling.
  *
- * Every mesh is built at boot (hidden) so its shader is warmed with the rest; nothing new is
- * compiled or lit when the first bottle flies.
+ * Every mesh is built at boot (hidden) from programs the scene already has (the plain prop material,
+ * the camp fire's flame cards, the shared flame/smoke sprites), and the lights are pooled
+ * VirtualLights made here: nothing compiles and no light is created when the first bottle flies
+ * (the pipeline count is unchanged; scratchpad items-test.mjs).
  */
 
 const FIRE_R = 2.6;
@@ -60,14 +62,6 @@ export class Throwables {
       this.pool.push(b);
       this.group.add(b);
     }
-  }
-
-  /** Show one bottle for the boot shader warm-up. Returns the undo. */
-  stage() {
-    const b = this.pool[0];
-    const was = b.visible;
-    b.visible = true;
-    return () => { b.visible = was; };
   }
 
   /** Burning patches right now (for the HUD / tests). */
