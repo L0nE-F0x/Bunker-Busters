@@ -66,7 +66,7 @@ const rand = mulberry32(seed);
 // the Meshy contractor bodies, for what=human&meshy
 const humanSkins = qs.get('what') === 'human' && qs.has('meshy') ? await HumanSkins.load(4, [3]) : null;
 // the Meshy wolf: what=wolf&leap=0.5 | &low=1 | &roll=0.3&look=0.8 | &amp=0.85&phase=1 | &dead=1.2
-const wolfSkins = qs.get('what') === 'wolf' ? await WolfSkins.load(3) : null;
+const wolfSkins = qs.get('what') === 'wolf' ? await WolfSkins.load(3, qs.has('coyote') ? { height: 0.7, tint: [1.32, 1.08, 0.78] } : {}) : null; // &coyote: the coyote look
 // the Meshy townsfolk: what=npc&id=inez&clip=idle&t=3 | &ids=ren,pip&clip=idle,idle2_m (side by side, &gap=1.1)
 //   &seat=0.44 sits them on a block that high | &look=0.5&nod=0.2 head turn | &raw (no wrist fixes)
 const npcIds = qs.get('what') === 'npc' ? (qs.get('ids') ?? qs.get('id') ?? 'inez').split(',') : [];

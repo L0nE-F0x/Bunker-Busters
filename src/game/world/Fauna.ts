@@ -1,5 +1,6 @@
 import * as THREE from 'three/webgpu';
 import { WolfSkins } from './wolfSkin';
+import { viewCull } from './kit';
 import { SnakeSkins, ScorpionSkins } from './creatureSkins';
 import { Plant, FUR, LEAF } from './flora';
 import { floraMaterial } from './materials';
@@ -310,6 +311,11 @@ class Body {
 interface Ctx { hf: Heightfield; player: THREE.Vector3; hour: number; dt: number; t: number; audio?: AudioEngine; sprinting: boolean; combat?: Combat; safe: { p: THREE.Vector3; r: number }[]; camFwd?: THREE.Vector3 }
 const DAY = (h: number) => h > 6.8 && h < 18.6;
 
+/**
+ * A vulture: soaring thermals by day, or, once something has died out here, circling over it, lower
+ * with every lap, then spiralling down to feed on the ground beside it, head bobbing, the odd wing
+ * flared at a rival. Come close (or fire a shot) and they labour back up into the circle.
+ */
 class Vulture {
   center = new THREE.Vector3();
   ang = Math.random() * 6.28;
@@ -319,32 +325,131 @@ class Vulture {
   flapT = rnd(4, 12);
   flap = 0;
   repick = 0;
-  constructor(readonly b: Body, readonly rig: ReturnType<typeof birdRig>) {}
-  update(c: Ctx) {
+  state: 'soar' | 'circle' | 'land' | 'feed' | 'up' = 'soar';
+  readonly pos = new THREE.Vector3(0, -999, 0);
+  private readonly prev = new THREE.Vector3();
+  private stateT = 0;
+  private wantAlt = 50;
+  readonly spot = new THREE.Vector3();
+  private phase = Math.random() * 6;
+  private flare = 0;
+  private yaw = 0;
+  /** Something with a shot or a sprint nearby spooks it (set by Fauna). */
+  spook = 0;
+  constructor(readonly b: Body, readonly rig: ReturnType<typeof birdRig>, readonly k: number) {}
+  update(c: Ctx, carcass: THREE.Vector3 | null) {
     const active = DAY(c.hour);
     this.b.visible = active;
-    if (!active) { this.repick = 0; return; }
-    if ((this.repick -= c.dt) <= 0 || this.center.distanceTo(c.player) > 260) {
-      this.repick = rnd(50, 110);
-      const a = Math.random() * 6.28, d = rnd(40, 160);
-      this.center.set(c.player.x + Math.cos(a) * d, 0, c.player.z + Math.sin(a) * d);
+    if (!active) { this.repick = 0; this.state = 'soar'; this.pos.y = -999; return; }
+    this.stateT += c.dt;
+    this.spook = Math.max(0, this.spook - c.dt);
+    const near = (p: THREE.Vector3) => Math.hypot(p.x - c.player.x, p.z - c.player.z);
+    // a kill: over to it and circle, lower each lap
+    if (carcass && (this.state === 'soar' || (this.state === 'circle' && this.center.distanceToSquared(carcass) > 4))) {
+      this.state = 'circle';
+      this.stateT = 0;
+      this.center.copy(carcass);
+      this.R = 9 + this.k * 4.5 + Math.random() * 3;
+      this.wantAlt = 30 + this.k * 7;
     }
-    this.ang += (this.dir * c.dt * 7) / this.R;
-    const ground = c.hf.heightAt(this.center.x, this.center.z);
-    const p = V(this.center.x + Math.cos(this.ang) * this.R, ground + this.alt + Math.sin(this.ang * 0.5 + this.R) * 3, this.center.z + Math.sin(this.ang) * this.R);
-    const yaw = Math.atan2(-Math.sin(this.ang) * this.dir, Math.cos(this.ang) * this.dir);
-    // the odd few lazy wingbeats to stay up, otherwise wings flat in a slight V
-    if ((this.flapT -= c.dt) <= 0) { this.flapT = rnd(8, 18); this.flap = 2.2; }
-    this.flap = Math.max(0, this.flap - c.dt);
-    const beat = this.flap > 0 ? Math.sin(c.t * 6) * 0.45 : 0;
-    this.b.place(p, yaw, 0, -this.dir * 0.32, 2.4);
+    if (!carcass && this.state !== 'soar' && this.state !== 'up') { this.state = 'soar'; this.repick = 0; this.wantAlt = rnd(42, 70); }
+    if (this.state === 'soar') {
+      if ((this.repick -= c.dt) <= 0 || this.center.distanceTo(c.player) > 260) {
+        this.repick = rnd(50, 110);
+        const a = Math.random() * 6.28, d = rnd(40, 160);
+        this.center.set(c.player.x + Math.cos(a) * d, 0, c.player.z + Math.sin(a) * d);
+        this.wantAlt = rnd(42, 70);
+      }
+    }
+    const scare = near(this.center) < (c.sprinting ? 34 : 24) || this.spook > 0;
+    if (this.state === 'circle') {
+      this.wantAlt = Math.max(16 + this.k * 4, this.wantAlt - c.dt * 0.35);
+      // after a while, with nobody close, down they go (the first one first)
+      if (this.stateT > 22 + this.k * 9 && !scare) {
+        this.state = 'land';
+        this.stateT = 0;
+        const a = this.k * 2.1 + Math.random() * 0.8;
+        this.spot.set(this.center.x + Math.cos(a) * rnd(1.6, 2.6), 0, this.center.z + Math.sin(a) * rnd(1.6, 2.6));
+        this.spot.y = c.hf.heightAt(this.spot.x, this.spot.z);
+      }
+    }
+    if ((this.state === 'land' || this.state === 'feed') && scare) {
+      this.state = 'up';
+      this.stateT = 0;
+      c.audio?.play('flap', { pos: this.pos, intensity: 1 });
+    }
+    if (this.state === 'up' && this.pos.y - c.hf.heightAt(this.pos.x, this.pos.z) > 14) { this.state = carcass ? 'circle' : 'soar'; this.stateT = 0; this.wantAlt = 32 + this.k * 6; }
+
+    this.prev.copy(this.pos);
     const [li, lo, ri, ro] = this.rig.wings;
-    this.b.pose(li, 0, 0, 0.12 + beat); this.b.pose(lo, 0, 0, 0.06 + beat * 0.5);
-    this.b.pose(ri, 0, 0, -0.12 - beat); this.b.pose(ro, 0, 0, -0.06 - beat * 0.5);
-    this.b.pose(this.rig.head, 0.15, Math.sin(c.t * 0.7 + this.R) * 0.4, 0);
-    this.b.pose(this.rig.legs, 1.4, 0, 0);
+    const ground = c.hf.heightAt(this.center.x, this.center.z);
+    if (this.state === 'soar' || this.state === 'circle') {
+      this.alt += (this.wantAlt - this.alt) * Math.min(1, c.dt * 0.25);
+      this.ang += (this.dir * c.dt * (this.state === 'circle' ? 6 : 7)) / this.R;
+      const tx = this.center.x + Math.cos(this.ang) * this.R, tz = this.center.z + Math.sin(this.ang) * this.R;
+      const ty = ground + this.alt + Math.sin(this.ang * 0.5 + this.R) * 3;
+      // glide over from wherever it was (a new circle, a lift-off) rather than jump there
+      if (this.pos.y < -900) this.pos.set(tx, ty, tz);
+      else this.pos.lerp(V(tx, ty, tz), Math.min(1, c.dt * 0.7));
+      this.yaw = Math.atan2(-Math.sin(this.ang) * this.dir, Math.cos(this.ang) * this.dir);
+      if ((this.flapT -= c.dt) <= 0) { this.flapT = rnd(8, 18); this.flap = 2.2; }
+      this.flap = Math.max(0, this.flap - c.dt);
+      const beat = this.flap > 0 ? Math.sin(c.t * 6) * 0.45 : 0;
+      this.b.place(this.pos, this.yaw, 0, -this.dir * 0.32, 2.4);
+      this.b.pose(li, 0, 0, 0.12 + beat); this.b.pose(lo, 0, 0, 0.06 + beat * 0.5);
+      this.b.pose(ri, 0, 0, -0.12 - beat); this.b.pose(ro, 0, 0, -0.06 - beat * 0.5);
+      this.b.pose(this.rig.head, 0.15, Math.sin(c.t * 0.7 + this.R) * 0.4, 0);
+      this.b.pose(this.rig.legs, 1.4, 0, 0);
+      return;
+    }
+    if (this.state === 'land') {
+      // a spiral down onto the spot, wings wide and cupped, legs out at the end
+      const u = Math.min(1, this.stateT / 7);
+      const r = 6 * (1 - u);
+      const a = this.ang + this.stateT * 0.9 * this.dir;
+      const t = V(this.spot.x + Math.cos(a) * r, this.spot.y + 0.3 + (1 - u * u) * 14, this.spot.z + Math.sin(a) * r);
+      this.pos.lerp(t, Math.min(1, c.dt * 2.5));
+      const v = _vv.subVectors(this.pos, this.prev);
+      if (v.x * v.x + v.z * v.z > 1e-6) this.yaw = Math.atan2(v.x, v.z);
+      const flare = u > 0.8 ? Math.sin(c.t * 9) * 0.5 : 0;
+      this.b.place(this.pos, this.yaw, -0.25 * u, 0, 2.4);
+      this.b.pose(li, 0, 0, 0.25 + flare); this.b.pose(lo, 0, 0, 0.15 + flare * 0.5);
+      this.b.pose(ri, 0, 0, -0.25 - flare); this.b.pose(ro, 0, 0, -0.15 - flare * 0.5);
+      this.b.pose(this.rig.head, 0.3, 0, 0);
+      this.b.pose(this.rig.legs, 1.4 - u * 1.4, 0, 0);
+      if (u >= 1 && this.pos.distanceTo(t) < 0.4) { this.state = 'feed'; this.stateT = 0; }
+      return;
+    }
+    if (this.state === 'feed') {
+      // hunched over the kill: head down and tugging, now and then a hop and a flared wing
+      this.pos.set(this.spot.x, this.spot.y + 0.3, this.spot.z);
+      this.yaw = Math.atan2(this.center.x - this.spot.x, this.center.z - this.spot.z) + Math.sin(c.t * 0.3 + this.k) * 0.4;
+      if (Math.random() < c.dt * 0.15) this.flare = 1;
+      this.flare = Math.max(0, this.flare - c.dt * 1.4);
+      const fl = Math.sin(this.flare * Math.PI) * 1.1;
+      const hop = this.flare > 0 ? Math.sin(this.flare * Math.PI) * 0.18 : 0;
+      this.b.place(V(this.pos.x, this.pos.y + hop, this.pos.z), this.yaw, 0.08, 0, 2.2);
+      this.b.pose(li, -0.05, 1.4 - fl, 0.15 + fl * 0.6); this.b.pose(lo, 0, 0.2 - fl * 0.3, 0);
+      this.b.pose(ri, -0.05, -1.4 + fl, -0.15 - fl * 0.6); this.b.pose(ro, 0, -0.2 + fl * 0.3, 0);
+      const tug = Math.max(0, Math.sin(c.t * 2.2 + this.k * 2));
+      this.b.pose(this.rig.head, 0.45 + tug * 0.35, Math.sin(c.t * 1.3 + this.k) * 0.3, 0);
+      this.b.pose(this.rig.legs, 0, 0, 0);
+      return;
+    }
+    // up: heavy beats, climbing away from you
+    this.phase += c.dt * 7;
+    const away = _vv.set(this.pos.x - c.player.x, 0, this.pos.z - c.player.z).normalize();
+    this.pos.addScaledVector(away, c.dt * 5).setY(this.pos.y + c.dt * 3.2);
+    this.yaw = Math.atan2(away.x, away.z);
+    const a = Math.sin(this.phase);
+    this.b.place(this.pos, this.yaw, -0.2, 0, 2.4);
+    this.b.pose(li, 0, 0, a * 0.8); this.b.pose(lo, 0, 0, Math.sin(this.phase - 0.8) * 0.45);
+    this.b.pose(ri, 0, 0, -a * 0.8); this.b.pose(ro, 0, 0, -Math.sin(this.phase - 0.8) * 0.45);
+    this.b.pose(this.rig.head, 0, 0, 0);
+    this.b.pose(this.rig.legs, 0.9, 0, 0);
   }
 }
+const _vv = new THREE.Vector3();
 
 class Raven {
   state: 'perch' | 'fly' | 'gone' = 'gone';
@@ -1094,7 +1199,10 @@ class Pack implements HostileProvider {
     if (this.state === 'travel' || this.state === 'watch') this.hunting = true, this.state = 'circle';
     void d;
   }
+  /** A wolf died here (Fauna keeps the carcass for the vultures). */
+  onDown: ((at: THREE.Vector3) => void) | null = null;
   onWolfDown(w: Wolf, at: THREE.Vector3, d: Damage) {
+    this.onDown?.(at);
     this.morale -= d.takedown ? 0.25 : 0.42;
     this.audio?.combat?.voice(d.takedown ? 'whimper' : 'yelp', at, 0.85);
     if (this.state === 'travel' || this.state === 'watch') this.hunting = true, this.state = 'circle';
@@ -1425,6 +1533,146 @@ class Pack implements HostileProvider {
 
 // ------------------------------------------------------------------ the system
 
+/**
+ * Coyotes: a family of three out after dark on the Meshy wolf model, smaller and tawny. They trot
+ * across the flats well clear of you, stop to look back, sometimes howl, and nose round a kill if
+ * there is one. Anything loud, or you getting close, sends them off at a flat run. Never hostile.
+ */
+class Coyote {
+  readonly pos = new THREE.Vector3();
+  yaw = 0;
+  speed = 0;
+  phase = Math.random() * 6;
+  look = 0;
+  nod = 0;
+  low = 0;
+  out = false;
+  constructor(readonly slot: number) {}
+}
+
+class Coyotes implements HostileProvider {
+  readonly pack: Coyote[] = [0, 1, 2].map((i) => new Coyote(i));
+  state: 'gone' | 'trot' | 'watch' | 'feed' | 'flee' = 'gone';
+  wait = rnd(30, 90);
+  private goal = new THREE.Vector3();
+  private dir = new THREE.Vector3();
+  private stopT = 0;
+  private stateT = 0;
+  private howlT = 0;
+  skins: WolfSkins | null = null;
+  audio?: AudioEngine;
+  /** Where they are (debug). */
+  get where() { return this.pack[0].pos; }
+  hostiles(): Hostile[] { return []; }
+  hear(pos: THREE.Vector3, radius: number, kind: NoiseKind) {
+    if (this.state === 'gone' || this.state === 'flee') return;
+    if ((kind === 'gunshot' || kind === 'explosion') && this.pack[0].pos.distanceTo(pos) < Math.min(radius, 160)) this.flee();
+  }
+  private flee() { this.state = 'flee'; this.stateT = 0; }
+  private night(h: number) { return h > 19.9 || h < 5.1; }
+
+  update(c: Ctx, carcass: THREE.Vector3 | null) {
+    const S = this.skins;
+    if (!S) return;
+    const lead = this.pack[0];
+    if (this.state === 'gone') {
+      for (const k of this.pack) { k.out = false; S.hide(k.slot); }
+      if ((this.wait -= c.dt) > 0 || !this.night(c.hour)) return;
+      const p = openSpot(c, 80, 120, 4);
+      if (!p) { this.wait = 5; return; }
+      // a line that passes 45–70 m from you, or a kill to nose round
+      if (carcass && carcass.distanceTo(c.player) < 170) { this.goal.copy(carcass); this.state = 'trot'; }
+      else {
+        const side = _cy.set(p.z - c.player.z, 0, -(p.x - c.player.x)).normalize().multiplyScalar(rnd(45, 70) * (Math.random() < 0.5 ? 1 : -1));
+        this.goal.set(c.player.x * 2 - p.x + side.x, 0, c.player.z * 2 - p.z + side.z);
+        this.state = 'trot';
+      }
+      this.pack.forEach((k, i) => { k.out = true; k.pos.set(p.x - i * 1.6 + rnd(-0.5, 0.5), 0, p.z - i * 1.4 + rnd(-0.5, 0.5)); k.speed = 0; });
+      this.stopT = rnd(10, 18);
+      this.howlT = rnd(8, 30);
+      this.stateT = 0;
+      return;
+    }
+    this.stateT += c.dt;
+    const dP = Math.hypot(lead.pos.x - c.player.x, lead.pos.z - c.player.z);
+    if (this.state !== 'flee' && (dP < (c.sprinting ? 40 : 28) || c.combat && c.combat.heat > 0.4)) this.flee();
+    if (dP > 175 || (!this.night(c.hour) && this.state !== 'flee') || (this.state === 'flee' && dP > 150)) {
+      this.state = 'gone';
+      this.wait = rnd(90, 240);
+      return;
+    }
+    // the lead decides; the others follow in its tracks
+    let speed = 2.6;
+    let lookAt: THREE.Vector3 | null = null;
+    if (this.state === 'trot') {
+      this.dir.subVectors(this.goal, lead.pos).setY(0);
+      const dg = this.dir.length();
+      if (carcass && this.goal.distanceToSquared(carcass) < 1 && dg < 3) { this.state = 'feed'; this.stateT = 0; }
+      else if (dg < 4) { this.state = 'gone'; this.wait = rnd(60, 180); return; }
+      if ((this.stopT -= c.dt) <= 0) { this.state = 'watch'; this.stateT = 0; this.stopT = rnd(12, 22); }
+    } else if (this.state === 'watch') {
+      speed = 0;
+      lookAt = c.player;
+      // the lead lifts its nose and howls; the others answer (audio's own coyote family)
+      if ((this.howlT -= c.dt) <= 0 && this.stateT > 0.8) { this.howlT = rnd(25, 60); lead.nod = 1.6; this.audio?.howl(lead.pos); }
+      if (this.stateT > rnd(2.5, 4)) this.state = 'trot';
+    } else if (this.state === 'feed') {
+      speed = 0;
+      if (this.stateT > 40) { this.state = 'gone'; this.wait = rnd(120, 300); return; }
+    } else {
+      // flee: flat out, away from you
+      this.dir.set(lead.pos.x - c.player.x, 0, lead.pos.z - c.player.z);
+      speed = 8.5;
+    }
+    this.pack.forEach((k, i) => {
+      let sp = speed;
+      let want: number | null = null;
+      if (i === 0) {
+        if (sp > 0) want = Math.atan2(this.dir.x, this.dir.z);
+      } else {
+        // follow a couple of metres behind and to the side of the one ahead
+        const ahead = this.pack[i - 1];
+        const fx = Math.sin(ahead.yaw), fz = Math.cos(ahead.yaw);
+        const tx = ahead.pos.x - fx * 2.2 + fz * (i === 1 ? 0.9 : -0.9), tz = ahead.pos.z - fz * 2.2 - fx * (i === 1 ? 0.9 : -0.9);
+        const dx = tx - k.pos.x, dz = tz - k.pos.z, d = Math.hypot(dx, dz);
+        if (this.state === 'feed') {
+          // round the kill, each its own side
+          const a = i * 2.3 + this.stateT * 0.05;
+          const gx = this.goal.x + Math.cos(a) * 1.8 - k.pos.x, gz = this.goal.z + Math.sin(a) * 1.8 - k.pos.z;
+          const gd = Math.hypot(gx, gz);
+          sp = gd > 0.4 ? Math.min(2, gd * 2) : 0;
+          if (sp > 0) want = Math.atan2(gx, gz);
+        } else if (d > 0.5) { sp = Math.min(speed > 0 ? speed * 1.15 : 2.8, d * 1.6); want = Math.atan2(dx, dz); }
+        else sp = 0;
+      }
+      if (want !== null) k.yaw += angDiff(k.yaw, want) * Math.min(1, c.dt * 5);
+      k.speed = lerp(k.speed, sp, Math.min(1, c.dt * 4));
+      k.pos.x += Math.sin(k.yaw) * k.speed * c.dt;
+      k.pos.z += Math.cos(k.yaw) * k.speed * c.dt;
+      const g = c.hf.heightAt(k.pos.x, k.pos.z);
+      k.pos.y = g;
+      // the gait: a quicker step than the wolf's (a smaller animal)
+      k.phase += c.dt * (k.speed > 6 ? 11 : 3.6 + k.speed * 1.9);
+      const tgt = lookAt ?? (this.state === 'feed' ? this.goal : null);
+      const lookYaw = tgt ? clamp(angDiff(k.yaw, Math.atan2(tgt.x - k.pos.x, tgt.z - k.pos.z)), -1.1, 1.1) : 0;
+      k.look = lerp(k.look, lookYaw, Math.min(1, c.dt * 3));
+      k.nod = Math.max(0, k.nod - c.dt);
+      const feeding = this.state === 'feed' && k.speed < 0.3;
+      k.low = lerp(k.low, feeding ? 1 : this.state === 'watch' ? 0.25 : 0, Math.min(1, c.dt * 3));
+      if (!viewCull.sees(_cy.set(k.pos.x, g + 0.4, k.pos.z), 1.2)) { S.hide(k.slot); return; }
+      const fx = Math.sin(k.yaw) * 0.3, fz = Math.cos(k.yaw) * 0.3;
+      const pitch = -Math.atan2(c.hf.heightAt(k.pos.x + fx, k.pos.z + fz) - c.hf.heightAt(k.pos.x - fx, k.pos.z - fz), 0.6);
+      const A = k.speed < 0.2 ? 0 : k.speed > 6 ? 0.85 : 0.45;
+      S.pose(k.slot, {
+        pos: _cy2.set(k.pos.x, g, k.pos.z), yaw: k.yaw, pitch: pitch * 0.8, roll: 0, bob: 0, phase: k.phase, amp: A, low: k.low,
+        look: k.look, nod: k.nod > 0 ? 0.85 : feeding ? -0.55 + Math.max(0, Math.sin(c.t * 2.4 + i)) * -0.25 : k.speed > 6 ? -0.12 : 0.05,
+        tail: k.speed > 6 ? -0.35 : feeding ? -0.15 : -0.05 + Math.sin(c.t * 1.6 + i) * 0.05, deadT: -1, side: 1,
+      });
+    });
+  }
+}
+const _cy = new THREE.Vector3(), _cy2 = new THREE.Vector3();
+
 export class Fauna {
   readonly mesh: THREE.Mesh;
   private P: Float32Array;
@@ -1440,6 +1688,10 @@ export class Fauna {
   readonly critters: Critters;
   private snakes: Snake[] = [];
   private scorpions: Scorpion[] = [];
+  /** Coyotes at night (only with the Meshy wolf model loaded); registered with Combat to hear shots. */
+  readonly coyotes = new Coyotes();
+  /** Fresh kills (contractors, wolves): vultures circle them by day, coyotes nose round them by night. */
+  private carcasses: { p: THREE.Vector3; t: number }[] = [];
   private t = 0;
   /** Places wolves won't follow you into (the camp fire, Dry Creek); set by Game. */
   safe: { p: THREE.Vector3; r: number }[] = [];
@@ -1473,7 +1725,7 @@ export class Fauna {
       this.bodies.push(b);
       return b;
     };
-    for (let k = 0; k < 3; k++) this.vultures.push(new Vulture(make(vulture.R), vulture));
+    for (let k = 0; k < 3; k++) this.vultures.push(new Vulture(make(vulture.R), vulture, k));
     const taken = new Set<THREE.Vector3>();
     for (let k = 0; k < 7; k++) this.ravens.push(new Raven(make(raven.R), raven, perches, taken));
     for (let k = 0; k < 3; k++) this.rabbits.push(new Rabbit(make(rabbit.R), rabbit));
@@ -1483,6 +1735,7 @@ export class Fauna {
     for (let k = 0; k < 3; k++) this.snakes.push(new Snake(make(snake.R), snake));
     for (let k = 0; k < 4; k++) this.scorpions.push(new Scorpion(make(scorp.R), scorp, wrecks));
     this.critters = new Critters(this.snakes, this.scorpions);
+    this.pack.onDown = (at) => this.addCarcass(at);
     for (const bf of butterflies) this.butterflies.push(new Butterfly(make(bf.R), bf));
     const g = new THREE.BufferGeometry();
     g.setAttribute('position', new THREE.BufferAttribute(this.P, 3));
@@ -1498,10 +1751,27 @@ export class Fauna {
     for (const b of this.bodies) b.write(this.P, this.N);
   }
 
+  /** Something died at `p` (Recovery's kills, the pack's losses): carrion for a while (8 play-minutes). */
+  addCarcass(p: THREE.Vector3) {
+    this.carcasses.push({ p: p.clone(), t: this.t });
+    if (this.carcasses.length > 4) this.carcasses.shift();
+  }
+
+  /** The freshest kill within `r` of the player, if any. */
+  private carcass(player: THREE.Vector3, r: number) {
+    this.carcasses = this.carcasses.filter((k) => this.t - k.t < 480);
+    let best: THREE.Vector3 | null = null, bt = -1;
+    for (const k of this.carcasses) if (k.t > bt && Math.hypot(k.p.x - player.x, k.p.z - player.z) < r) { bt = k.t; best = k.p; }
+    return best;
+  }
+
   /** Counts for debugging (window.game.fauna.census()). */
   census() {
     return {
       vultures: this.vultures.filter((x) => x.b.visible).length,
+      vultureStates: this.vultures.map((x) => x.state),
+      carcasses: this.carcasses.length,
+      coyotes: this.coyotes.state,
       ravens: this.ravens.map((x) => x.state),
       rabbits: this.rabbits.map((x) => x.state),
       lizards: this.lizards.map((x) => x.state),
@@ -1522,8 +1792,11 @@ export class Fauna {
     const c: Ctx = { hf: this.hf, player: far, hour: 12, dt: 0.016, t: 1.3, sprinting: false, safe: [] };
     const p = (x: number, y: number, z: number) => at.clone().add(V(x, y, z));
     const v = this.vultures[0];
-    v.update(c);
+    v.update(c, null);
     v.b.place(p(-5.2, 1.6, 0), 0.6, 0, -0.25, 2.4);
+    // a second one down on a kill, feeding
+    const v2 = this.vultures[1];
+    v2.state = 'feed'; v2.center.copy(p(-6.2, 0, 1.9)); v2.spot.copy(p(-6.6, 0, 0.6)); v2.update(c, v2.center);
     const [r0, r1] = this.ravens;
     r0.state = 'perch'; r0.pos.copy(p(-3.4, 0.11, 0.4)); r0.update(c);
     r1.state = 'fly'; r1.pos.copy(p(-3.4, 1.4, -0.4)); r1.vel.set(1, 0.5, 0.3); r1.phase = 1.2; r1.update(c);
@@ -1539,7 +1812,7 @@ export class Fauna {
     w[2].speed = 0; w[2].howl = 2; w[2].animate(c, null);
     const bf = this.butterflies[0];
     bf.on = true; bf.home.copy(p(0.2, 0, 1)); bf.pos.copy(p(0.2, 0.9, 1)); bf.update({ ...c, player: at, hour: 12 });
-    for (const x of [v.b, r0.b, r1.b, a.b, b.b, l.b, ...w.slice(0, 3).map((x) => x.b), bf.b]) x.visible = true;
+    for (const x of [v.b, v2.b, r0.b, r1.b, a.b, b.b, l.b, ...w.slice(0, 3).map((x) => x.b), bf.b]) x.visible = true;
     for (const x of this.bodies) x.write(this.P, this.N);
   }
 
@@ -1566,6 +1839,9 @@ export class Fauna {
     if (this.skins) {
       this.pack.wolves.forEach((w, i) => { w.skin = this.skins; w.slot = i; });
       this.models.add(this.skins.group);
+      // coyotes: the same model, a third smaller, the coat warmed to tawny
+      this.coyotes.skins = await WolfSkins.load(this.coyotes.pack.length, { height: 0.7, tint: [1.32, 1.08, 0.78], name: 'coyotes' });
+      if (this.coyotes.skins) this.models.add(this.coyotes.skins.group);
     }
     if (new URLSearchParams(location.search).has('procfauna')) return this.models;
     const [snakes, scorps] = await Promise.all([SnakeSkins.load(this.snakes.length), ScorpionSkins.load(this.scorpions.length)]);
@@ -1586,7 +1862,11 @@ export class Fauna {
     this.t += dt;
     const c = this.ctx(player, hour, Math.min(dt, 0.1), sprinting, audio);
     this.pack.audio = audio;
-    for (const x of this.vultures) x.update(c);
+    this.coyotes.audio = audio;
+    // the vultures go to the freshest kill near you (by day); the coyotes find it at night
+    const kill = this.carcass(player, 260);
+    for (const x of this.vultures) x.update(c, kill);
+    this.coyotes.update(c, kill);
     for (const x of this.ravens) x.update(c);
     for (const x of this.rabbits) x.update(c);
     for (const x of this.lizards) x.update(c);

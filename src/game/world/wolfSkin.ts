@@ -2,6 +2,7 @@ import * as THREE from 'three/webgpu';
 import { loadGLB } from '@/engine/models';
 import { clone as cloneSkinned } from 'three/addons/utils/SkeletonUtils.js';
 import { boundSkinned } from './kit';
+import { texture, uniform } from 'three/tsl';
 
 /**
  * The wolf as a real model (Meshy, prepared by scripts/models/prep-glb.mjs): one textured skinned
@@ -41,6 +42,9 @@ export interface WolfPose {
 /** Ear-tip height of the model in metres (a big desert wolf: ~0.8 m at the shoulder). */
 const HEIGHT = 1.02;
 
+/** Another canid on the same model: its size (ear-tip height, m) and a coat tint over the wolf's map. */
+export interface CanidLook { height?: number; tint?: [number, number, number]; name?: string }
+
 interface Slot {
   /** Placed at the wolf (position, yaw). */
   root: THREE.Group;
@@ -66,18 +70,18 @@ export class WolfSkins {
   /** Height of the body's centre above the feet (the death roll pivots here). */
   private centre = 0.5;
 
-  static async load(count: number): Promise<WolfSkins | null> {
+  static async load(count: number, look: CanidLook = {}): Promise<WolfSkins | null> {
     try {
       const gltf = await loadGLB('wolf');
-      return new WolfSkins(gltf, count);
+      return new WolfSkins(gltf, count, look);
     } catch (e) {
       console.warn('[wolf] model failed to load; keeping the procedural wolf', e);
       return null;
     }
   }
 
-  private constructor(gltf: { scene: THREE.Object3D; animations: THREE.AnimationClip[] }, count: number) {
-    this.group.name = 'wolves';
+  private constructor(gltf: { scene: THREE.Object3D; animations: THREE.AnimationClip[] }, count: number, look: CanidLook = {}) {
+    this.group.name = look.name ?? 'wolves';
     const src = gltf.scene;
     // one material for every slot, in the game's own node material (the loader's is a physical one)
     let mat: THREE.MeshStandardNodeMaterial | null = null;
@@ -85,7 +89,11 @@ export class WolfSkins {
       const m = o as THREE.SkinnedMesh;
       if (!m.isSkinnedMesh) return;
       const old = m.material as THREE.MeshStandardMaterial;
-      mat ??= new THREE.MeshStandardNodeMaterial({ map: old.map, roughness: 0.92, metalness: 0, side: THREE.FrontSide });
+      if (!mat) {
+        mat = new THREE.MeshStandardNodeMaterial({ map: old.map, roughness: 0.92, metalness: 0, side: THREE.FrontSide });
+        // a coyote: the wolf's coat warmed toward tawny (one more program, compiled with the scene)
+        if (look.tint && old.map) mat.colorNode = texture(old.map).rgb.mul(uniform(new THREE.Color(...look.tint)));
+      }
       if (old.map) old.map.anisotropy = 4;
       m.material = mat;
       m.castShadow = true;
@@ -100,7 +108,7 @@ export class WolfSkins {
     const fwd = new THREE.Vector3();
     if (head && hips) fwd.subVectors(head.getWorldPosition(new THREE.Vector3()), hips.getWorldPosition(new THREE.Vector3())).setY(0).normalize();
     const turn = Math.atan2(fwd.x, fwd.z); // model heading in its own frame
-    const k = HEIGHT / size.y;
+    const k = (look.height ?? HEIGHT) / size.y;
     const centre = box.getCenter(new THREE.Vector3());
     this.centre = (size.y * k) * 0.48;
     this.clipLen = gltf.animations[0]?.duration || 1;

@@ -419,6 +419,8 @@ export class Recovery implements HostileProvider {
   onRespawn: ((id: string) => void) | null = null;
   /** A road pair just spawned at `at` (Dez calls it on the radio once he's on their channel). */
   onPatrol: ((at: THREE.Vector3) => void) | null = null;
+  /** A contractor died here (the vultures find it by day, the coyotes by night). */
+  onCorpse: ((at: THREE.Vector3) => void) | null = null;
   /** An outpost's crew spawned (the player came near): re-apply this shift's hacks. */
   onSpawn: ((id: string) => void) | null = null;
 
@@ -591,6 +593,7 @@ export class Recovery implements HostileProvider {
     m.radioT = 0;
     m.charge = m.glint = 0;
     h.cower = 0;
+    this.onCorpse?.(h.pos);
     // How it goes down. A head shot, a close shotgun blast, a blast, a blow or a runner drops at
     // once (ragdoll); otherwise, often, it dies on its feet first: the knees go, it folds over the
     // wound, and then it falls (a takedown slumps the same way, quietly).

@@ -295,6 +295,7 @@ export class Game {
     this.scene.add(this.combat.group);
     this.combat.register(this.fauna.pack);
     this.combat.register(this.fauna.critters);
+    this.combat.register(this.fauna.coyotes);
     this.fauna.combat = this.combat;
     this.fauna.camFwd = new THREE.Vector3();
     await step(0.62, 'Charting the wasteland');
@@ -740,6 +741,7 @@ export class Game {
     }, this.interactables);
     this.recovery.onSpawn = (id) => this.terminals.reapply(id);
     this.recovery.safe = this.fauna.safe;
+    this.recovery.onCorpse = (p) => this.fauna.addCarcass(p);
     // SeedBot can be shot: every hit puts it on full alert; four quick ones knock it out of the sky
     const drone = this.garage.drone;
     let hits = 0, lastHit = -99;
