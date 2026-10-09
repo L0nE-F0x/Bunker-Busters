@@ -9,7 +9,7 @@ import { GlowSprites } from '../world/effects';
 import { ITEMS } from '@/content/items';
 import { XP_REWARDS } from '@/content/progression';
 import { Site } from './Site';
-import { SiteKit, mat4, rng, uSiteFlicker, uSiteNight, v3, xf } from './jetKit';
+import { SiteKit, decalMat, floorDecal, mat4, rng, uSiteFlicker, uSiteNight, v3, xf } from './jetKit';
 import { Bucket, TAG_COUNT, artGlow, artMaterial, artQuad } from './placesArt';
 import { SOLAR_FLAGS } from './solar';
 
@@ -392,6 +392,25 @@ export class WaitlistSite extends Site {
       else { shack(k, M, x, y, z, yaw, r); k.col(x, y + 1.1, z, 1.3, 1.1, 1.1, yaw); }
     }
     this.tentAt = this.frame.p(5.8, 0.6, -19.6);
+    // ground dressing: packed dirt where people lived (under every shelter, round the fire, along the
+    // run), and the litter of four years in line (cans, paper, bottles, cardboard)
+    for (const [x, z, , kind] of shelters) k.d.add(decalMat(), floorDecal(kind === 'tarp' ? 'oil' : 'dirt', 5.2, 4.6, x, k.ground(x, z) + 0.04, z, r() * 6));
+    for (let z = RUN_Z1 + 3; z < RUN_Z0; z += 6.5) k.d.add(decalMat(), floorDecal('dirt', 4.2, 7.5, (r() - 0.5) * 0.8, k.ground(0, z) + 0.035, z, (r() - 0.5) * 0.3));
+    LANES.forEach((lz) => { for (let x = LANE_X0 + 3; x < LANE_X1; x += 7) k.d.add(decalMat(), floorDecal('dirt', 7.5, 3.2, x, k.ground(x, lz) + 0.035, lz, (r() - 0.5) * 0.2)); });
+    k.d.add(decalMat(), floorDecal('oil', 5, 5, -11, k.ground(-11, -4) + 0.045, -4, 0.5));
+    k.d.add(decalMat(), floorDecal('scorch', 1.6, 1.6, -11, k.ground(-11, -4) + 0.05, -4, 1.2));
+    for (let i = 0; i < 70; i++) {
+      // mostly along the run and the lanes, some anywhere in the camp
+      const onRun = r() < 0.45;
+      const x = onRun ? (r() - 0.5) * 6 : -30 + r() * 48;
+      const z = onRun ? RUN_Z1 + 2 + r() * (RUN_Z0 - RUN_Z1) : -28 + r() * 54;
+      const y = k.ground(x, z), yaw = r() * 6, kind = r();
+      if (kind < 0.3) k.b.add(M.tin, xf(new THREE.CylinderGeometry(0.033, 0.033, 0.11 * (0.5 + r() * 0.5), 8).rotateZ(Math.PI / 2), mat4(x, y + 0.03, z, 0, yaw)));
+      else if (kind < 0.55) k.b.add(M.paper, xf(new THREE.BoxGeometry(0.21, 0.004, 0.28), mat4(x, y + 0.01, z, (r() - 0.5) * 0.2, yaw, (r() - 0.5) * 0.2)));
+      else if (kind < 0.72) k.b.add(M.jug, xf(new THREE.CylinderGeometry(0.035, 0.04, 0.24, 8).rotateZ(Math.PI / 2), mat4(x, y + 0.04, z, 0, yaw)));
+      else if (kind < 0.9) k.b.add(M.card, xf(new THREE.BoxGeometry(0.3 + r() * 0.3, 0.01, 0.25 + r() * 0.3), mat4(x, y + 0.012, z, 0, yaw, (r() - 0.5) * 0.15)));
+      else k.b.add(r() < 0.5 ? M.clothA : M.clothC, xf(new THREE.BoxGeometry(0.5, 0.02, 0.4), mat4(x, y + 0.012, z, 0, yaw)));
+    }
     // laundry lines between the shacks across the plaza's edge
     for (const [a, b] of [[[-5.5, -22.6], [-6.5, -15.8]], [[6.4, -11.2], [7.2, -4.5]], [[-5.2, -6.2], [-7.4, 0.2]]] as [number, number][][]) {
       const pa = v3(a[0], k.ground(a[0], a[1]) + 2.1, a[1]), pb = v3(b[0], k.ground(b[0], b[1]) + 2.0, b[1]);

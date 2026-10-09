@@ -370,6 +370,8 @@ export class Game {
     // Vesper's alarm calls Kade's gatehouse crew on her road to the apron
     this.apex.onAlarm = (at) => this.recovery.alertOutpost('apexgate', at);
     this.apex.onAmbush = (at, yaw, d, n) => this.recovery.summon(at, yaw, d, n);
+    // sites can call a Kade crew too (the Longshot, once its pod is opened)
+    for (const site of this.sites) site.onAmbush = (at, yaw, d, n) => this.recovery.summon(at, yaw, d, n);
     this.buildIntel();
     // stashes and searchable wrecks (not quests: just the desert being generous)
     this.scavenge = new Scavenge({

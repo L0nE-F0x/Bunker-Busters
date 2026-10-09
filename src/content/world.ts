@@ -74,7 +74,7 @@ export const LANDMARKS: LandmarkDef[] = [
   {
     id: 'waitlist', name: 'Waitlist City', kind: 'site', position: [312, 0, 300], rotation: -1.5708,
     blurb: 'Four thousand people queued for a bunker that seats by appointment. The appointments never opened.',
-    flatten: { r: 42, falloff: 14 },
+    flatten: { r: 42, falloff: 14 }, trampled: true,
   },
   {
     id: 'solar', name: 'Photon Park', kind: 'site', position: [-205, 0, 310], rotation: 0,

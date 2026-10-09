@@ -23,6 +23,7 @@ const F = {
   pod: 'site.booster.pod',
   cables: 'site.booster.cables',
   copv: 'site.booster.copv',
+  recovery: 'site.booster.recovery',
 } as const;
 
 const POD_CODE = '2048';
@@ -58,6 +59,8 @@ export class BoosterSite extends Site {
   private near!: THREE.Object3D;
   private t = 0;
   private ventT = 3;
+  /** seconds (spent near the site) between the pod opening and Kade's crew arriving */
+  private recoveryT = 30;
   private vent = new THREE.Vector3();
   private ventDir = new THREE.Vector3();
 
@@ -724,6 +727,17 @@ export class BoosterSite extends Site {
         this.ventT = 4 + Math.random() * 5;
         const w = this.frame.p(this.vent.x, this.vent.y, this.vent.z);
         this.ctx.puffs?.emit(w, 5, 0.25, 0.5, 0.5, this.ventDir, true);
+      }
+      // Kade's pod alarm worked after all: a recovery crew comes for the salvage, once, half a minute
+      // after the seal breaks (or the next time you're back, if you left before they got here)
+      if (s && s.has(F.pod) && !s.has(F.recovery) && this.onAmbush) {
+        if (d < 110) this.recoveryT -= dt;
+        if (this.recoveryT <= 0) {
+          s.set(F.recovery);
+          const w = new THREE.Vector3(Math.sin(this.frame.yaw), 0, Math.cos(this.frame.yaw)); // the site's north (local +z), the road side
+          const n = this.onAmbush(pl.clone(), Math.atan2(-w.x, -w.z), 38, 3);
+          if (n) this.ctx.ui.subtitle('Kade Recovery · radio', 'Seal breach on Longshot B7. That\'s the boss\'s water. Recover the asset, detain the thief.');
+        }
       }
       if (s && d < 14 && !s.has(F.found)) {
         s.set(F.found);

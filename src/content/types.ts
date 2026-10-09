@@ -265,4 +265,6 @@ export interface LandmarkDef {
   blurb: string;
   /** Terrain flattened around the landmark (Heightfield). Defaults depend on `kind`. */
   flatten?: { r: number; falloff: number };
+  /** Lived-on ground (a camp): Terrain tramples the playa cracks to dust and footpaths inside the flatten radius. */
+  trampled?: boolean;
 }

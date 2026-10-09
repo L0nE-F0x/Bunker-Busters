@@ -28,6 +28,8 @@ export abstract class Site {
   readonly spots: Record<string, THREE.Vector3> = {};
   readonly frame: Frame;
   protected readonly lods: DistanceLod[] = [];
+  /** Set by Game: send a Kade Recovery crew of `n` at `d` m from `at`, coming from direction `yaw` (Recovery.summon). Returns how many came. */
+  onAmbush: ((at: THREE.Vector3, yaw: number, d: number, n: number) => number) | null = null;
 
   constructor(readonly id: string, protected ctx: GameContext, protected landmarks: Landmarks) {
     const lm = LANDMARKS.find((l) => l.id === id);
