@@ -171,6 +171,10 @@ export class Apex extends Bunker<ApexBuilder> {
   // ------------------------------------------------------------------ per frame
   protected override frame(_dt: number, p: THREE.Vector3) {
     const near = p.distanceTo(this.b.origin) < 120;
+    // an Infiltrator reads a building by its vents: the duct on the hill's east side is on their map
+    if (near && this.s.archetype.id === 'infiltrator' && this.s.set(F.vent)) {
+      this.s.events.emit('toast', { text: 'You clock a vent on the east side of the hill, under the solar. Ducts like that go somewhere.', kind: 'info' });
+    }
     // the feed: a new post for each breach (and she posts it out loud, more or less)
     const post = this.currentPost();
     if (post !== this.post) {
@@ -207,16 +211,16 @@ export class Apex extends Bunker<ApexBuilder> {
     // the hangar's high bays are always on (it's dark under the arch); the apron flood and the
     // stand's uplight come on at night. In an alarm everything inside goes red and pulses.
     for (const l of L.hangar) {
-      l.intensity = alarm ? 10 + pulse * 30 : 26 * flick;
+      l.intensity = alarm ? 16 + pulse * 28 : 26 * flick;
       l.color.set(alarm ? 0xff3020 : 0xffe8c8);
     }
-    L.hall.intensity = alarm ? 4 + pulse * 16 : 12;
+    L.hall.intensity = alarm ? 9 + pulse * 14 : 12;
     L.hall.color.set(alarm ? 0xff2a18 : 0xd8ecff);
-    L.room.intensity = alarm ? 6 + pulse * 18 : 18;
+    L.room.intensity = alarm ? 11 + pulse * 16 : 18;
     L.room.color.set(alarm ? 0xff2a18 : 0xbfe8ff);
     L.flood.intensity = nightOn * (alarm ? 40 + pulse * 60 : 70);
     L.flood.color.set(alarm ? 0xff6050 : 0xfff1d0);
-    L.rocket.intensity = nightOn * 34;
+    L.rocket.intensity = nightOn * 90;
     S.strip.value = (alarm ? 1.5 : 5) * flick;
     S.hallStrip.value = alarm ? 0.8 + pulse * 3 : 4;
     S.roomStrip.value = alarm ? 0.8 + pulse * 3 : 4.5;
@@ -255,8 +259,9 @@ export class Apex extends Bunker<ApexBuilder> {
     if (this.isOpen('airlock')) return 'The airlock is open. Into the launch corridor.';
     if (this.isOpen('hangar')) {
       if (s.has(F.code)) return 'The airlock code is the launch clock over the door, hours and minutes. Read it, then type.';
-      return 'The airlock at the back of the hangar: a keypad that "counts down", or SPLICE it (Electronics 3). Her cameras sweep the floor.';
+      return `The airlock at the back of the hangar: a keypad that "counts down", or SPLICE it (Electronics 3). Her cameras sweep the floor.${s.has(F.vent) ? ' The vent outside skips it.' : ''}`;
     }
-    return 'The hangar door: pick it, short its controller, blow it, or buzz Vesper on the intercom. The camera over the door sweeps the apron.';
+    const vent = s.has(F.vent) ? ' Or the vent on the hill\'s east side.' : '';
+    return `The hangar door: pick it, short its controller, blow it, or buzz Vesper on the intercom.${vent} The camera over the door sweeps the apron.`;
   }
 }

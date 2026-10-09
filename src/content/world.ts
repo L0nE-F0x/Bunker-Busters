@@ -167,10 +167,11 @@ export const WORLD_INTEL: IntelItem[] = [
     body:
       'R. — She changed the airlock code AGAIN. New system: the code is the launch clock over the door. Hours and minutes, T-minus. ' +
       'It counts down, so it\'s never the same twice, which she calls "zero trust" and I call "my knees". Read the clock, type it, go in. ' +
-      'Don\'t tell the camps. Don\'t tell Tanner. Don\'t look at the camera over the hangar, it posts you. — D.',
+      'Don\'t tell the camps. Don\'t tell Tanner. Don\'t look at the camera over the hangar, it posts you. ' +
+      'P.S. Whoever keeps smoking in the vent on the east side of the hill: it goes straight into the launch corridor, past the lasers. Stop it. — D.',
     position: [-352, 0, -100],
-    reveals: ['apex.code', 'apex.marker'],
-    revealLines: ['The airlock code is the launch clock over the door: hours and minutes, counting down.'],
+    reveals: ['apex.code', 'apex.marker', 'apex.vent'],
+    revealLines: ['The airlock code is the launch clock over the door: hours and minutes, counting down.', 'A vent on the hill\'s east side runs into the launch corridor, past two of the beams.'],
     xp: 50,
   },
 ];

@@ -576,11 +576,18 @@ export class ApexBuilder implements BunkerShell {
     const { x0, x1, z0, z1, cx0, cx1, vaultZ, innerZ, hall, room } = B;
     // outer retaining walls (the front one is the hangar's back wall)
     this.wall(b, m.wallC, x0 - 0.3, x0, z0, z1, room + 0.6);
-    this.wall(b, m.wallC, x1, x1 + 0.3, z0, z1, room + 0.6);
+    // (the east wall has the vent duct's mouth in it, at z −18.1…−16.9, 1.2 m high)
+    const V0 = -18.1, V1 = -16.9, VH = 1.2;
+    this.wall(b, m.wallC, x1, x1 + 0.3, z0, V0, room + 0.6);
+    this.wall(b, m.wallC, x1, x1 + 0.3, V1, z1, room + 0.6);
+    this.wall(b, m.wallC, x1, x1 + 0.3, V0, V1, room + 0.6 - VH, VH);
     this.wall(b, m.wallC, x0 - 0.3, x1 + 0.3, z0 - 0.3, z0, room + 0.6);
     // the corridor's walls (the plant rooms either side are solid), its roof, the room's roof
     this.wall(b, m.wallC, x0, cx0, vaultZ, z1 - 0.2, room + 0.6);
-    this.wall(b, m.wallC, cx1, x1, vaultZ, z1 - 0.2, room + 0.6);
+    this.wall(b, m.wallC, cx1, x1, vaultZ, V0, room + 0.6);
+    this.wall(b, m.wallC, cx1, x1, V1, z1 - 0.2, room + 0.6);
+    this.wall(b, m.wallC, cx1, x1, V0, V1, room + 0.6 - VH, VH);
+    this.buildVent(b, d, m, V0, V1, VH);
     b.add(m.wallC, box(cx1 - cx0, room + 0.6 - hall, z1 - vaultZ, (cx0 + cx1) / 2, hall + (room + 0.6 - hall) / 2, (vaultZ + z1) / 2 - 0.1));
     b.add(m.wallC, box(x1 - x0 + 0.6, 0.6, vaultZ - z0 + 0.3, (x0 + x1) / 2, room + 0.3, (z0 + vaultZ) / 2 - 0.15));
     d.add(m.darkC, box(cx1 - cx0, 0.1, z1 - vaultZ, (cx0 + cx1) / 2, 0.05, (vaultZ + z1) / 2));
@@ -734,6 +741,34 @@ export class ApexBuilder implements BunkerShell {
     this.halos.add(this.w(-10, room - 0.3, -24.5), '#ff3020', 1, ApexBuilder.CH.ALARM, 2);
   }
 
+  /**
+   * The vent: a crawl duct from the hill's east face into the launch corridor, past the first two
+   * beams. A padlocked grate outside (the `vent` entry, hinged on its north edge, swinging out).
+   */
+  private buildVent(b: MeshBatch, d: MeshBatch, m: ReturnType<ApexBuilder['mats']>, z0: number, z1: number, h: number) {
+    const x = APEX_BLOCK.x1 + 0.3, zc = (z0 + z1) / 2;
+    d.add(m.darkC, box(APEX_BLOCK.x1 - APEX_BLOCK.cx1 + 0.3, 0.06, z1 - z0, (APEX_BLOCK.cx1 + x) / 2, 0.03, zc));
+    // the hood round the mouth, a warning stencil, cigarette ends (someone smokes in here)
+    b.add(m.brushed, box(0.14, 0.14, z1 - z0 + 0.4, x + 0.07, h + 0.07, zc), box(0.14, h, 0.14, x + 0.07, h / 2, z0 - 0.13), box(0.14, h, 0.14, x + 0.07, h / 2, z1 + 0.13));
+    b.add(m.print, apexPrint('stripes', 1.4, 0.22, M(x + 0.15, h + 0.3, zc, Math.PI / 2)));
+    for (let i = 0; i < 5; i++) b.add(m.white, cyl(0.012, 0.012, 0.06, x + 0.4 + i * 0.13, 0.03, zc - 0.3 + (i % 3) * 0.22, 5, 0, 0, Math.PI / 2));
+    // the grate leaf: bars in a frame, a padlock on the free edge
+    const pivot = new THREE.Group();
+    pivot.position.set(x + 0.2, 0, z0);
+    pivot.userData.x0 = pivot.position.x;
+    const lb = new MeshBatch();
+    lb.add(m.lattice, box(0.06, 0.06, z1 - z0, 0, 0.05, (z1 - z0) / 2), box(0.06, 0.06, z1 - z0, 0, h - 0.05, (z1 - z0) / 2));
+    for (let k = 0; k <= 6; k++) lb.add(m.lattice, box(0.04, h, 0.04, 0, h / 2, 0.02 + k * ((z1 - z0 - 0.04) / 6)));
+    lb.add(m.brushed, box(0.08, 0.12, 0.06, 0.06, 0.6, z1 - z0 - 0.08));
+    pivot.add(lb.build('apexVentGrate'));
+    this.group.add(pivot);
+    const pos = this.w(x + 0.2, h / 2, zc), half = V(0.1, h / 2, (z1 - z0) / 2);
+    this.doors.vent = { pivot, open: 0, target: 0, collider: this.physics.addBox(pos, half), axis: 'y', amount: 1.7, colliderSpec: { pos, half } };
+    this.points.vent = this.w(x + 0.9, 0.7, zc);
+    // the corridor end: the inner grille, kicked out and leaning on the wall
+    d.add(m.lattice, place(new THREE.BoxGeometry(0.05, h, z1 - z0), APEX_BLOCK.cx1 + 0.35, h / 2 - 0.05, zc - 1.2, 0, 0.3, 0.25));
+  }
+
   // ------------------------------------------------------------------ the salt: what's stranded on it
   private buildSalt(b: MeshBatch, m: ReturnType<ApexBuilder['mats']>) {
     // relative to Apex's origin: the salt's centre is ~(+40, −46). A Kade water tanker that didn't
@@ -769,7 +804,8 @@ export class ApexBuilder implements BunkerShell {
       hall: L('#d8ecff', 0, 12, -10, 3.6, -16),
       room: L('#bfe8ff', 0, 15, -10, 5.4, -27.5),
       flood: L('#fff1d0', 0, 34, -24.6, 10, 19),
-      rocket: L('#ffd8a8', 0, 22, 10, 3, 6),
+      // floods the booster from the front at night: it's the monument, she lights it like one
+      rocket: L('#ffe2bc', 0, 20, 14, 13, 3.2),
     };
   }
 }

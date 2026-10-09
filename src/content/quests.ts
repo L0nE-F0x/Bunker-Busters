@@ -174,12 +174,12 @@ export const QUESTS: QuestDef[] = [
       {
         id: 'hangar', text: 'Get into the hangar', at: 'apex',
         hint: 'Pick the five pins, short the door controller (Electronics 2), blow it (Demolition 3), or buzz Vesper on the intercom and give her a reason. The camera over the door sweeps the apron.',
-        done: (v) => any(v, 'apex.hangar.open', 'apex.airlock.open', 'apex.vault.open', 'apex.complete'),
+        done: (v) => any(v, 'apex.hangar.open', 'apex.airlock.open', 'apex.vent.open', 'apex.vault.open', 'apex.complete'),
       },
       {
         id: 'airlock', text: 'Get through the airlock', at: 'apex',
-        hint: 'The code is the launch clock over the door, hours and minutes, and it counts down. Or splice the controller: door, cameras and lasers in one go.',
-        done: (v) => any(v, 'apex.airlock.open', 'apex.vault.open', 'apex.complete'),
+        hint: 'The code is the launch clock over the door, hours and minutes, and it counts down. Or splice the controller: door, cameras and lasers in one go. Or crawl in through the vent on the hill\'s east side, if you know about it.',
+        done: (v) => any(v, 'apex.airlock.open', 'apex.vent.open', 'apex.vault.open', 'apex.complete'),
       },
       {
         id: 'vault', text: 'Open the Cistern Room', at: 'apex',

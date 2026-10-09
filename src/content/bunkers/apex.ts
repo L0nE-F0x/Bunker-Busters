@@ -24,6 +24,7 @@ export const VESPER = {
   cameras: { speaker: VK, text: 'My cameras just went dark. Do you know what that does to my engagement?' },
   vault: { speaker: VK, text: 'Not the cistern. That water is load-bearing for my valuation.' },
   vaultLoud: { speaker: VK, text: 'You breached the Cistern Room. With a bomb. Next to the water. Very sustainable.' },
+  vent: { speaker: VK, text: 'The vent? Really? That vent has a podcast now. You\'re a guest on it.' },
   lockout: { speaker: VK, text: 'Wrong code, twice. The clock was right there. It was literally counting for you.' },
   busted: { speaker: VK, text: 'Fine. This is fine. I\'m launching something anyway. Into the sun, probably.' },
   after: { speaker: VK, text: 'You again. There\'s nothing left in there but a tank shaped like my feelings.' },
@@ -132,6 +133,14 @@ export const APEX: Bunker = {
         line: VESPER.airlock.text,
       },
       {
+        // the crawl duct on the hill's east side: past the airlock and the first two beams (Infiltrators
+        // know it's there; everyone else reads the shift note)
+        id: 'vent', point: 'vent', radius: 1.9, doors: ['vent'], needs: 'apex.vent',
+        primary: { kind: 'lockpick', pins: 3, title: 'VENT GRATE' },
+        secondary: { kind: 'charge', label: 'Blow the grate', demolition: 2, quiet: true, loud: 'The grate goes into the duct with a bang. The hill hums with it.' },
+        line: VESPER.vent.text,
+      },
+      {
         id: 'vault', point: 'vaultDoor', radius: 2.3, doors: ['vault'],
         primary: { kind: 'lockpick', pins: 6, title: 'CISTERN ROOM' },
         secondary: { kind: 'charge', label: 'Place a breach charge', demolition: 5, quiet: false, loud: 'The vault door comes off its hinges. Somewhere, a post goes up.', line: VESPER.vaultLoud.text },
@@ -139,7 +148,7 @@ export const APEX: Bunker = {
         trauma: 0.25,
       },
     ],
-    portals: [{ entry: 'airlock', pad: [0.4, 0.2, 1.4] }],
+    portals: [{ entry: 'airlock', pad: [0.4, 0.2, 1.4] }, { entry: 'vent', pad: [1.2, 0.2, 0.3] }],
     voice: {
       point: 'speaker',
       greet: VESPER.greet.text,
@@ -197,6 +206,8 @@ export const APEX_FLAGS = {
   complete: 'apex.complete',
   /** She let you in on the intercom. */
   demo: 'apex.demo',
+  /** You know about the vent on the hill's east side. */
+  vent: 'apex.vent',
 };
 
 /**
