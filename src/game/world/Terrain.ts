@@ -1,7 +1,7 @@
 import * as THREE from 'three/webgpu';
 import {
   Fn, vec2, vec3, float, positionWorld, normalWorld, texture, smoothstep, mix, abs, pow, sin,
-  uniform, normalView, positionView, faceDirection, step, fwidth, clamp,
+  uniform, normalView, positionView, faceDirection, step, fwidth, clamp, cameraPosition, time,
 } from 'three/tsl';
 import { noise, fbm2, noiseAt } from '@/engine/noiseTex';
 import type { Heightfield } from './Heightfield';
@@ -341,7 +341,7 @@ export class Terrain {
     const rimAA = smoothstep(0.5, 0.12, fwidth(xz.x.div(2.4)).mul(10));
     const rim = smoothstep(0.1, 0.02, plate.b).mul(rimAA);
     const shoreDust = smoothstep(uSalt.z.sub(14), uSalt.z.add(2), saltEdge);
-    const saltCol = mix(vec3(0.86, 0.85, 0.82), vec3(0.95, 0.94, 0.91), plate.r.mul(0.6).add(rim.mul(0.5)))
+    const saltCol = mix(vec3(0.8, 0.79, 0.76), vec3(0.92, 0.91, 0.88), plate.r.mul(0.6).add(rim.mul(0.5)))
       .mul(float(0.94).add(grain.mul(0.08)))
       .mul(mix(vec3(1), vec3(0.93, 0.86, 0.76), shoreDust.mul(0.7).add(smoothstep(0.62, 0.8, midTap.g).mul(0.25))));
     col = mix(col, saltCol, saltK);
@@ -366,6 +366,16 @@ export class Terrain {
       const amount = a.uStorm.mul(0.55).add(a.uDust.mul(0.08));
       col = mix(col, (a.uStormColor as N).mul(2.2).add(vec3(0.05, 0.03, 0.01)), flow.mul(amount));
       h = h.add(flow.mul(amount).mul(0.4));
+
+      // mirage on the salt: looked across at a grazing angle, the hot crust mirrors the horizon in
+      // shimmering bands (day only; it lifts off in a storm)
+      const toCam = cameraPosition.sub(wp);
+      const camDist = toCam.length();
+      const graze = smoothstep(0.075, 0.012, toCam.y.div(camDist));
+      const shimmer = noise(vec2(xz.x.div(30), xz.y.div(5)).add(vec2(time.mul(0.03), time.mul(-0.11)))).g;
+      const mirage = saltK.mul(graze).mul(smoothstep(30, 110, camDist)).mul(float(1).sub(a.uNight)).mul(float(1).sub(a.uStorm))
+        .mul(smoothstep(0.25, 0.75, shimmer).mul(0.45).add(0.4));
+      col = mix(col, (a.uHorizon as N).mul(1.15), mirage);
     }
 
     mat.colorNode = col;
