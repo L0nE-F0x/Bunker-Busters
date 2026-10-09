@@ -54,7 +54,7 @@ const SENTRY_LINES = [
 
 // ------------------------------------------------------------------ laser line (one shared material)
 let _laserMat: THREE.MeshBasicNodeMaterial | null = null;
-function laserMaterial() {
+export function laserMaterial() {
   if (_laserMat) return _laserMat;
   const m = new THREE.MeshBasicNodeMaterial({ transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide, fog: false, forceSinglePass: true });
   const u: N = uv();
@@ -311,8 +311,10 @@ class Sentry implements Hostile {
       this.head.updateMatrixWorld();
       const from = _a.set(0, 0.03, 0.31).applyMatrix4(this.head.matrixWorld);
       const dir = _b.set(0, 0, 1).transformDirection(this.head.matrixWorld);
-      const hit = host.combat.worldRay(from, dir, 45);
-      this.laser.scale.set(hit ? hit.t : 45, laser, laser);
+      // (the beam runs along the quads' local +Z: that axis is its length, x/y its width; the ray
+      // starts clear of the sentry's own box, which used to stop it at 0)
+      const hit = host.combat.worldRay(_c.copy(from).addScaledVector(dir, 0.4), dir, 45);
+      this.laser.scale.set(laser, laser, (hit ? hit.t : 45) + 0.4);
     }
   }
 }

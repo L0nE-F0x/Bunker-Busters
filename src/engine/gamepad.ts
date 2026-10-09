@@ -63,6 +63,11 @@ export class Pad {
   private crouchLatch = false;
   private sprintLatch = false;
   private rimT = 0;
+  /**
+   * Aim assist (combat/aimAssist.ts, set by Game): called once a frame in play while the pad is the
+   * device in use; returns the right stick's look-speed scale (it may also nudge the camera itself).
+   */
+  assist: ((dt: number) => number) | null = null;
   private dirHeld: Record<'up' | 'down' | 'left' | 'right', number> = { up: -1, down: -1, left: -1, right: -1 };
   private gp: Gamepad | null = null;
   private api = typeof navigator !== 'undefined' && typeof navigator.getGamepads === 'function';
@@ -180,8 +185,9 @@ export class Pad {
 
     // look: a response curve for fine aim near the centre, full speed at the rim, then a turn boost
     const lm = Math.hypot(rx, ry);
+    const slow = input.device === 'pad' && this.assist ? this.assist(dt) : 1;
     if (lm > 0) {
-      const k = Math.pow(lm, 1.9) / lm;
+      const k = (Math.pow(lm, 1.9) / lm) * slow;
       this.rimT = lm > 0.95 ? this.rimT + dt : 0;
       const boost = 1 + (BOOST - 1) * Math.min(1, Math.max(0, (this.rimT - 0.22) / 0.3));
       input.mouseDX += rx * k * LOOK_YAW * boost * dt * PX_PER_RAD;

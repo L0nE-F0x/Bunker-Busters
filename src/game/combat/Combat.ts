@@ -88,6 +88,8 @@ export interface PlayerTarget {
   collider: unknown;
   /** Height of the capsule (crouch shrinks it). */
   height: number;
+  /** Feeding rounds into a gun right now (a crew that sees it pushes). */
+  reloading?: boolean;
 }
 
 export interface CombatHooks {
@@ -99,6 +101,8 @@ export interface CombatHooks {
   trauma(k: number): void;
   /** Envenomed (seconds of poison added). */
   onVenom?(seconds: number): void;
+  /** An enemy round cracked past close (`k` 0..1: how close), fired from `from`: flinch. */
+  onNearMiss?(from: THREE.Vector3, k: number): void;
 }
 
 type Collider = ReturnType<Physics['world']['createCollider']>;
@@ -130,6 +134,8 @@ export class Combat {
   heat = 0;
   /** Last time (s) the player was shot at or bitten. */
   lastThreat = -99;
+  /** 0..1 rounds cracking close past the player lately (the view narrows and shakes; decays). */
+  suppression = 0;
   hooks: CombatHooks | null = null;
   /** Shared effects from the world (set by Game). */
   sparks: Sparks | null = null;
@@ -398,7 +404,12 @@ export class Combat {
       const along = THREE.MathUtils.clamp(_o.dot(dir), 0, wT);
       const close = _p.copy(muzzle).addScaledVector(dir, along);
       const miss = close.distanceTo(t.eye);
-      if (miss < 3.2 && i === 0) this.audio.combat?.whizz(close, miss);
+      if (miss < 3.2 && i === 0) {
+        this.audio.combat?.whizz(close, miss);
+        const k = 1 - miss / 3.2;
+        this.suppression = Math.min(1, this.suppression + 0.1 + 0.28 * k);
+        this.hooks?.onNearMiss?.(muzzle, k);
+      }
       if (world) {
         const kind = this.surfaceAt(world.collider, end);
         this.impactFx(kind, end, world.normal, dir, 0.8);
@@ -483,6 +494,7 @@ export class Combat {
     for (const l of this.enemyMuzzle) if (l.intensity < 0.05) l.intensity = 0;
     if (this.blast.intensity < 0.05) this.blast.intensity = 0;
     this.heat = Math.max(0, this.heat - dt * (this.t - this.lastThreat > 6 ? 0.12 : 0.02));
+    this.suppression = Math.max(0, this.suppression - dt * (this.t - this.lastThreat > 1.5 ? 0.45 : 0.12));
   }
 
   /** The most aware hostile and how aware (HUD), plus whether anything is hunting the player. */

@@ -62,7 +62,8 @@ import { Throwables } from './combat/Throwables';
 import { Gear } from './player/Gear';
 import { modBlock, WEAPONS, type WeaponId } from '@/content/weapons';
 import { hotbarItem, restoreBlock } from '@/content/items';
-import { Recovery } from './combat/Recovery';
+import { Recovery, CREW_SLOTS } from './combat/Recovery';
+import { AimAssist } from './combat/aimAssist';
 import { Machines } from './combat/Machines';
 import { MenuDirector } from './MenuDirector';
 
@@ -157,6 +158,7 @@ export class Game {
   /** The Kade field terminals (one per outpost): hack targets. */
   terminals!: KadeTerminals;
   private wantAds = false;
+  aimAssist: AimAssist | null = null;
   /** The dropped pack in the world: a duffel and a beacon. */
   private packMesh!: THREE.Group;
   private dying = 0;
@@ -307,6 +309,7 @@ export class Game {
     this.scene.add(this.throwables.group);
     this.combat.register(this.fauna.pack);
     this.combat.register(this.fauna.critters);
+    this.combat.register(this.fauna.coyotes);
     this.fauna.combat = this.combat;
     this.fauna.camFwd = new THREE.Vector3();
     await step(0.62, 'Charting the wasteland');
@@ -335,7 +338,7 @@ export class Game {
     this.settlement = new Settlement(this.ctx, this.landmarks);
     if (!SKIP.has('sites')) this.sites = buildSites(this.ctx, this.landmarks);
     // the Meshy contractors (before the warm-up; ?prochuman keeps the procedural bodies)
-    this.humanSkins = new URLSearchParams(location.search).has('prochuman') ? null : await models(HumanSkins.load(10, [0]), 0.7, 0.78, bunkerMsg);
+    this.humanSkins = new URLSearchParams(location.search).has('prochuman') ? null : await models(HumanSkins.load(CREW_SLOTS, [0]), 0.7, 0.78, bunkerMsg);
     this.buildRecovery();
     this.buildIntel();
     // stashes and searchable wrecks (not quests: just the desert being generous)
@@ -755,6 +758,7 @@ export class Game {
     }, this.interactables);
     this.recovery.onSpawn = (id) => this.terminals.reapply(id);
     this.recovery.safe = this.fauna.safe;
+    this.recovery.onCorpse = (p) => this.fauna.addCarcass(p);
     // SeedBot can be shot: every hit puts it on full alert; four quick ones knock it out of the sky
     const drone = this.garage.drone;
     let hits = 0, lastHit = -99;
@@ -1091,6 +1095,9 @@ export class Game {
     this.gear?.dispose();
     this.gear = new Gear(state, this.hands, this.cam, this.camera, this.input, this.combat, this.audio, this.player, this.throwables, this.ui.root, (t, k) => this.ui.toast(t, k));
     this.arms.steadyK = () => this.gear?.steadyK() ?? 1;
+    // controller aim assist (friction over hostiles, a light pull on ADS): pad only
+    const assist = (this.aimAssist ??= new AimAssist(this.combat, (a, b) => this.recovery.smoked(a, b)));
+    pad.assist = (dt) => (this.player && this.arms?.equipped && this.arms.equipped !== 'crowbar' ? assist.frame(dt, this.cam, this.camera.position, this.wantAds) : 1);
     this.placePack();
     this.combat.hooks = {
       onVenom: (sec) => {
@@ -1100,6 +1107,13 @@ export class Game {
       onHurt: (amt, from, kind) => this.playerHurt(amt, from, kind),
       onHit: (k) => { this.ui.hitmark(k); this.audio.combat?.hitmark(k); if (k === 'kill') state.data.stats.kills = (state.data.stats.kills ?? 0) + 1; },
       trauma: (k) => { this.cam.addTrauma(k); this.input.rumble(k, k * 0.6, 160 + k * 240); },
+      // a round snapping past: the head flinches away from it (suppression narrows the view, below)
+      onNearMiss: (from, k) => {
+        if (!this.player) return;
+        const bearing = Math.atan2(from.x - this.player.position.x, from.z - this.player.position.z) - (this.cam.yaw + Math.PI);
+        this.cam.punch(bearing, 0.02 + 0.035 * k);
+        this.hands?.jolt(0.08 + 0.12 * k);
+      },
     };
     // hands, everything they can hold, and the shadow body compile on the first frame, under the fade
     this.warmNext = { roots: [this.camera, this.player.model.root], stage: () => this.hands?.stageItems() };
@@ -1793,7 +1807,7 @@ export class Game {
     this.post.damage.value = damp(this.post.damage.value as number, 0, 2.5, dt);
     this.post.menuShade.value = damp(this.post.menuShade.value as number, this.mode === 'title' || this.mode === 'charselect' ? 1 : 0, 3, dt);
     this.post.emp.value = damp(this.post.emp.value as number, 0, 1.2, dt);
-    if (this.mode !== 'playing') this.post.lowHp.value = 0;
+    if (this.mode !== 'playing') { this.post.lowHp.value = 0; this.post.vignette.value = 0.32; this.post.aberration.value = 0.0007; }
     const alertTarget = this.mode === 'playing' && this.garage.drone.state === 'alert' ? 0.8 : this.mode === 'playing' ? this.garage.drone.detection * 0.4 : 0;
     this.post.alert.value = damp(this.post.alert.value as number, alertTarget, 4, dt);
     const tension = this.mode === 'playing' ? Math.max(this.garage.drone.detection, this.garage.alarm > 0 ? 1 : 0, this.combat.heat) : 0;
@@ -1914,6 +1928,7 @@ export class Game {
     tg.crouch = player.crouching;
     tg.noise = player.noise * s.archetype.stats.stealth;
     tg.torch = !!this.hands?.flashlightOn;
+    tg.reloading = !!this.arms?.reloading;
     tg.hidden = this.garage.playerInside;
     tg.night = this.atmo.isNight ? 1 : Math.max(0, Math.min(1, (0.15 - this.atmo.sunElevation) / 0.25));
     tg.visibility = 1 - this.weather.intensity * 0.75;
@@ -2047,6 +2062,10 @@ export class Game {
     if (this.audio.combat?.heartbeat(dt, lowK)) this.hbPhase = 0;
     const throb = Math.exp(-this.hbPhase * 7) + 0.6 * Math.exp(-Math.max(0, this.hbPhase - 0.19) * 9) * (this.hbPhase > 0.19 ? 1 : 0);
     this.post.lowHp.value = damp(this.post.lowHp.value as number, lowK * (0.65 + 0.35 * Math.min(1, throb)), 6, dt);
+    // under fire: rounds cracking close narrow the view and smear its edges for a moment
+    const supp = blocked ? 0 : this.combat.suppression;
+    this.post.vignette.value = 0.32 + supp * 0.5;
+    this.post.aberration.value = 0.0007 + supp * 0.0014;
 
     // death is a debt, not a nap: you wake at the fire hours later, and your pack is where you fell
     if (s.data.health <= 0 && !this.busy) this.die();

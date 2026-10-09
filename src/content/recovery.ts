@@ -1,4 +1,4 @@
-import type { HumanWeapon } from '@/game/combat/Humans';
+import type { HumanWeapon, HumanKit } from '@/game/combat/Humans';
 
 /**
  * Kade Holdings Asset Recovery: the contractors who guard the aquifer "pilot program" and repossess
@@ -16,6 +16,12 @@ export interface CrewPost {
   role: CrewRole;
   at: [number, number];
   yaw: number;
+  /**
+   * A specialist: `marksman` (scoped rifle; holds the overwatch tower if there is one, and its scope
+   * glints before every shot), `heavy` (a breacher in plates with a pump: walks you down, doesn't
+   * hide), `grenadier` (smoke to cover the crew's moves, and the compliance charges).
+   */
+  kit?: HumanKit;
 }
 
 export interface OutpostDef {
@@ -35,6 +41,8 @@ export interface OutpostDef {
   mines?: number;
   /** A Hornet drone patrols the perimeter. */
   hornet?: boolean;
+  /** An overwatch tower for the marksman (local x, z, yaw it faces). */
+  perch?: [number, number, number];
   /** What's in the footlocker. */
   loot: { id: string; qty: number }[];
 }
@@ -55,7 +63,7 @@ export const OUTPOSTS: OutpostDef[] = [
     blurb: 'Where Kade stacks what it repossesses. Today: water jugs, a vending machine, somebody\'s piano.',
     crew: [
       { weapon: 'rifle', role: 'leader', at: [0, 4], yaw: 0 },
-      { weapon: 'shotgun', role: 'guard', at: [7, 9], yaw: 0.5 },
+      { weapon: 'shotgun', role: 'guard', at: [7, 9], yaw: 0.5, kit: 'heavy' },
       { weapon: 'rifle', role: 'patrol', at: [-8, -6], yaw: 3 },
       { weapon: 'revolver', role: 'sit', at: [-2.5, -2], yaw: 1.4 },
     ],
@@ -66,11 +74,13 @@ export const OUTPOSTS: OutpostDef[] = [
     id: 'pipeline', name: 'Pipeline Camp 3', tier: 2, x: 260, z: -150, rot: 1.1, r: 18,
     blurb: 'A pumping skid on the line that carries the creek west. Painted on it: "WATER IS A SERVICE".',
     crew: [
+      { weapon: 'rifle', role: 'leader', at: [0, -5], yaw: 3.1 },
+      { weapon: 'rifle', role: 'guard', at: [-3, -14.5], yaw: 0.15, kit: 'marksman' },
+      { weapon: 'revolver', role: 'sit', at: [3, -2], yaw: 2, kit: 'grenadier' },
       { weapon: 'rifle', role: 'guard', at: [6, 6], yaw: 0.2 },
       { weapon: 'shotgun', role: 'patrol', at: [-7, 3], yaw: -1.5 },
-      { weapon: 'rifle', role: 'leader', at: [0, -5], yaw: 3.1 },
-      { weapon: 'revolver', role: 'sit', at: [3, -2], yaw: 2 },
     ],
+    perch: [-3, -14.5, 0.15],
     sentries: [[-10, 9, -0.5]],
     mines: 8,
     hornet: true,
@@ -81,11 +91,13 @@ export const OUTPOSTS: OutpostDef[] = [
     blurb: 'The Dry Creek aquifer comes up here, into a Kade tank, under Kade guns. The creek did not dry up. It was moved.',
     crew: [
       { weapon: 'rifle', role: 'leader', at: [0, 8], yaw: 0 },
-      { weapon: 'shotgun', role: 'guard', at: [9, 4], yaw: 1.2 },
+      { weapon: 'shotgun', role: 'guard', at: [9, 4], yaw: 1.2, kit: 'heavy' },
+      { weapon: 'rifle', role: 'guard', at: [7, -14], yaw: -0.35, kit: 'marksman' },
+      { weapon: 'revolver', role: 'sit', at: [-3, -3], yaw: 0.8, kit: 'grenadier' },
       { weapon: 'rifle', role: 'guard', at: [-9, 5], yaw: -1.1 },
       { weapon: 'shotgun', role: 'patrol', at: [6, -9], yaw: 2.8 },
-      { weapon: 'revolver', role: 'sit', at: [-3, -3], yaw: 0.8 },
     ],
+    perch: [7, -14, -0.35],
     sentries: [[12, 14, 0.6], [-13, 13, -0.6]],
     mines: 14,
     hornet: true,
@@ -111,6 +123,13 @@ export const BODY_LOOT: { id: string; qty: [number, number]; p: number }[] = [
   { id: 'ammo22', qty: [5, 10], p: 0.08 },
   { id: 'vest', qty: [1, 1], p: 0.03 },
 ];
+
+/** What a specialist carries on top: the breacher's spare shells and plate scrap, the marksman's .30-30 and rangefinder cell, the grenadier's charges. */
+export const KIT_LOOT: Record<HumanKit, { id: string; qty: [number, number]; p: number }[]> = {
+  marksman: [{ id: 'ammo3030', qty: [4, 8], p: 1 }, { id: 'battery', qty: [1, 1], p: 0.35 }, { id: 'water', qty: [1, 1], p: 0.5 }],
+  heavy: [{ id: 'shells', qty: [4, 8], p: 1 }, { id: 'scrap', qty: [2, 4], p: 0.9 }, { id: 'medkit', qty: [1, 1], p: 0.25 }],
+  grenadier: [{ id: 'charge', qty: [1, 1], p: 0.6 }, { id: 'noisemaker', qty: [1, 2], p: 0.45 }],
+};
 
 /** Bark lines by situation. Corporate to the end. */
 export const BARKS: Record<string, string[]> = {
@@ -169,6 +188,55 @@ export const BARKS: Record<string, string[]> = {
   kill: [
     'Asset recovered.',
     'Target down. Somebody log it.',
+  ],
+  body: [
+    'Man down in the yard! Nobody heard a thing?',
+    'That\'s Dale. Dale\'s not on break. Dale\'s dead.',
+    'Body! We\'ve got a body! Everyone wake up!',
+    'Somebody\'s in the wire. Eyes open. Both of them.',
+  ],
+  radio: [
+    'Recovery, this is Field. We have a trespasser, requesting bodies.',
+    'Calling it in! Somebody pick up!',
+    'Base, we need backup. Bring the good waivers.',
+  ],
+  radioAck: [
+    'They\'re coming. Hold the line till the cavalry clocks in.',
+    'Backup\'s inbound! Look busy!',
+  ],
+  radioNone: [
+    'Base? Base! Nobody\'s on the radio. Typical.',
+    'Nobody\'s answering. We\'re on our own.',
+  ],
+  breach: [
+    'Breaching! Stand still, it\'s faster!',
+    'Walking in. Don\'t make me run.',
+    'Plates on. Coming to you.',
+  ],
+  plates: [
+    'My plates! Those were a loan!',
+    'Armor\'s gone! Somebody cover me!',
+  ],
+  push: [
+    'He\'s reloading! Push! Push!',
+    'Dry! He\'s dry! Go!',
+    'Reloading! Now, while he\'s busy!',
+  ],
+  surrender: [
+    'Okay! Okay! I\'m a contractor! I\'m not even full-time!',
+    'Don\'t shoot! My equity hasn\'t vested!',
+    'I surrender! Is there a form for this?',
+    'I give up! Tell Kade I was very brave!',
+  ],
+  spared: [
+    'Thank you. I\'m logging this as a positive interaction.',
+    'You never saw me. I was never on the clock.',
+    'Take it. Take the badge. I hated the photo anyway.',
+  ],
+  smoke: [
+    'Smoke out! Visibility is a privilege!',
+    'Popping smoke! Move, move!',
+    'Smoke! Nobody breathe on the clock!',
   ],
   idle: [
     'Twelve more months and I get a bunker seat. Allegedly.',
