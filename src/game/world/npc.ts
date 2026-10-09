@@ -5,7 +5,7 @@ import {
 } from 'three/tsl';
 import { noise } from '@/engine/noiseTex';
 import { rimColor, rimStrength } from './materials';
-import type { NpcModels, NpcActor } from './npcSkin';
+import type { NpcModels, NpcActor, ClipCoord } from './npcSkin';
 import { viewCull } from './kit';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -83,6 +83,26 @@ interface Figure {
   idle: number;
   /** Time the model's clips haven't been advanced (it was out of view and out of the sun's box). */
   owed?: number;
+  /**
+   * Noticing you, per person: its own radius (the def's ± 1 m, so a group doesn't turn as one when
+   * you cross a line), left 0.75 m further out than entered; a reaction delay before the head
+   * follows a change; its own turn speed; small darts of the eyes/head while it looks at you.
+   */
+  r: number;
+  near: boolean;
+  mode: 'idle' | 'look' | 'alarm';
+  wait: number;
+  react: number;
+  speed: number;
+  tYaw: number;
+  tNod: number;
+  sacT: number;
+  sacY: number;
+  sacN: number;
+  /** Modelled neighbours (within 4.5 m: a campfire's circle), and the last motion it switched to (and when). */
+  nb: Figure[];
+  lastSrc: string;
+  lastT: number;
 }
 
 const MAX = 16;
@@ -443,7 +463,12 @@ export class NpcCrowd {
       into.idx = i;
       const { neck, hipY } = figure(into, def);
       const phase = (i * 2.399) % (Math.PI * 2);
-      const fig: Figure = { def, neck, hipY, yaw: 0, look: 0, nod: 0, idle: phase * 7 };
+      const fig: Figure = {
+        def, neck, hipY, yaw: 0, look: 0, nod: 0, idle: phase * 7,
+        r: (def.notice ?? 5.5) + (Math.random() * 2 - 1), near: false, mode: 'idle', wait: 0,
+        react: 0.15 + Math.random() * 0.45, speed: 2.5 + Math.random() * 2.5,
+        tYaw: 0, tNod: 0, sacT: 0, sacY: 0, sacN: 0, nb: [], lastSrc: '', lastT: -99,
+      };
       if (modelled) {
         const actor = models!.make(def.id, seated, hipY)!;
         actor.root.position.add(new THREE.Vector3(def.x, def.y, def.z));
@@ -456,6 +481,20 @@ export class NpcCrowd {
       this.uA[i].set(neck.x, neck.y, neck.z, 0);
       this.uB[i].set(hipY, phase, def.yaw, 0);
     });
+    // neighbours keep out of each other's step: no two in one circle start one motion within 3 s,
+    // and two playing the same one (or its mirror image) run half a loop apart
+    for (const f of this.figs) {
+      const a = f.actor;
+      if (!a) continue;
+      f.nb = this.figs.filter((g) => g !== f && g.actor && Math.hypot(g.def.x - f.def.x, g.def.z - f.def.z) < 4.5);
+      const coord: ClipCoord = {
+        playing: () => f.nb.map((g) => g.actor!.playing),
+        may: (src) => !f.nb.some((g) => g.lastSrc === src && this.t - g.lastT < 3),
+        started: (src) => { f.lastSrc = src; f.lastT = this.t; },
+      };
+      a.coord = coord;
+      a.spread();
+    }
     this.mesh.name = name;
     if (procedural) {
       const m = new THREE.Mesh(sink.build(), npcMaterial(this.uA, this.uB));
@@ -498,34 +537,51 @@ export class NpcCrowd {
     // a bang wins over the player: heads whip round toward it (faster than an idle glance)
     const pl = this.local.copy(cam).applyMatrix4(this.inv);
     const c = startled ? this.alarmAt : pl;
-    const k = 1 - Math.exp(-(startled ? 9 : 4) * dt);
     this.figs.forEach((f, i) => {
+      // within talking range: each by its own radius, leaving a little further out than entering
+      const dPl = Math.hypot(pl.x - f.neck.x, pl.z - f.neck.z);
+      if (dPl < f.r) f.near = true;
+      else if (dPl > f.r + 0.75) f.near = false;
       const dx = c.x - f.neck.x, dz = c.z - f.neck.z;
       const dist = Math.hypot(dx, dz);
       let rel = Math.atan2(dx, dz) - f.def.yaw;
       rel = Math.atan2(Math.sin(rel), Math.cos(rel));
-      const reach = startled ? Infinity : f.def.notice ?? 5.5;
-      let yaw: number, nod: number;
-      if (dist < reach && Math.abs(rel) < (startled ? Math.PI : 2.1)) {
-        yaw = THREE.MathUtils.clamp(rel, -1.05, 1.05);
-        nod = THREE.MathUtils.clamp(-Math.atan2(c.y - f.neck.y - 0.1, Math.max(0.5, dist)) * 0.8, -0.35, 0.3);
-      } else {
-        // idle: glance around now and then
-        const n = Math.sin(this.t * 0.21 + f.idle) * Math.sin(this.t * 0.13 + f.idle * 1.7);
-        yaw = n > 0.35 ? 0.55 * Math.sign(Math.sin(this.t * 0.05 + f.idle)) : n < -0.5 ? -0.3 : 0;
-        nod = 0.05 * Math.sin(this.t * 0.31 + f.idle);
+      const mode = startled ? 'alarm' : f.near && Math.abs(rel) < 2.1 ? 'look' : 'idle';
+      // a change of mind takes a beat to reach the head (a bang, less of one)
+      if (mode !== f.mode) {
+        f.mode = mode;
+        f.wait = mode === 'alarm' ? 0.05 + Math.random() * 0.2 : f.react * (0.7 + Math.random() * 0.6);
       }
-      f.look += (yaw - f.look) * k;
-      f.nod += (nod - f.nod) * k;
+      f.wait -= dt;
+      if (f.wait <= 0) {
+        if (mode !== 'idle') {
+          f.tYaw = THREE.MathUtils.clamp(rel, -1.05, 1.05);
+          f.tNod = THREE.MathUtils.clamp(-Math.atan2(c.y - f.neck.y - 0.1, Math.max(0.5, dist)) * 0.8, -0.35, 0.3);
+          // looking at you, the gaze doesn't sit dead still: a small dart every second or three
+          if (mode === 'look' && (f.sacT -= dt) <= 0) {
+            f.sacT = 1 + Math.random() * 2;
+            f.sacY = (Math.random() * 2 - 1) * 0.05;
+            f.sacN = (Math.random() * 2 - 1) * 0.035;
+          }
+          if (mode === 'look') { f.tYaw += f.sacY; f.tNod += f.sacN; }
+        } else {
+          // idle: glance around now and then
+          const n = Math.sin(this.t * 0.21 + f.idle) * Math.sin(this.t * 0.13 + f.idle * 1.7);
+          f.tYaw = n > 0.35 ? 0.55 * Math.sign(Math.sin(this.t * 0.05 + f.idle)) : n < -0.5 ? -0.3 : 0;
+          f.tNod = 0.05 * Math.sin(this.t * 0.31 + f.idle);
+        }
+      }
+      const k = 1 - Math.exp(-(startled ? 9 : f.speed) * dt);
+      f.look += (f.tYaw - f.look) * k;
+      f.nod += (f.tNod - f.nod) * k;
       this.uA[i].w = f.look;
       this.uB[i].w = f.nod;
       const a = f.actor;
       if (a) {
-        const near = Math.hypot(pl.x - f.neck.x, pl.z - f.neck.z) < (f.def.notice ?? 5.5);
         // a model nobody can see (nor its shadow) isn't posed; it catches up on its clips when it is
         if (viewCull.sees(_npcC.setFromMatrixPosition(a.root.matrixWorld).setY(_npcC.y + 0.9), 1.4)) {
           a.root.visible = true;
-          a.update(dt + (f.owed ?? 0), near, f.look, f.nod);
+          a.update(dt + (f.owed ?? 0), f.near, f.look, f.nod);
           f.owed = 0;
         } else {
           a.root.visible = false;
