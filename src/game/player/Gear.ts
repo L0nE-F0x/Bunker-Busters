@@ -342,7 +342,7 @@ export class Gear {
       if (this.hands.busy) return;
       if (this.viewing) this.toggleBinos(false);
       this.aiming = true;
-      this.hands.setBase('molHold');
+      this.hands.setBase('molAim');
       this.audio.combat?.foley('draw', 0.5);
     }
     if (!this.aiming) return;

@@ -366,6 +366,8 @@ export const POSES: Record<string, { r: HandPose; l: HandPose; items?: { r?: str
   empThrow: { r: P(0.08, -0.1, -0.58, -0.35, 0.1, -0.6, 0.12, 0.15, 0.1, 0.25), l: READY },
   // a molotov: held by the neck, lit rag up, then the same overarm throw as the EMP
   molHold: { r: P(0.16, -0.16, -0.4, 0.45, 0.2, -1.2, 0.85, 0.8, 0.75), l: READY, items: { r: 'molotov' } },
+  // holding it lit while you line up the throw (the arc is on screen): lower and out to the right
+  molAim: { r: P(0.22, -0.25, -0.43, 0.62, 0.12, -1.2, 0.85, 0.8, 0.75), l: READY, items: { r: 'molotov' } },
   molWind: { r: P(0.24, -0.06, -0.26, 1.05, -0.35, -1.45, 0.85, 0.8, 0.75), l: P(0.16, -0.2, -0.44, 0.0, 0.1, -0.6, 0.15, 0.15, 0.1, 0.15), items: { r: 'molotov' } },
   // binoculars at the eyes: both hands up and in, just under the frame (the view is the eyepieces)
   binos: { r: P(0.07, -0.2, -0.2, 0.9, 0.3, -1.3, 0.7, 0.65, 0.6), l: P(0.07, -0.2, -0.2, 0.9, 0.3, -1.3, 0.7, 0.65, 0.6) },
