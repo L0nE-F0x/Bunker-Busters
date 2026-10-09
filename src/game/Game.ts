@@ -787,7 +787,8 @@ export class Game {
       see: (a, b) => this.combat.clearLine(a, b, this.combat.target.collider),
       say: (speaker, text, pos) => this.ui.subtitle(speaker, text, { pos: pos.clone() }),
     };
-    this.combat.register({ hostiles: () => [], hear: (p, _r, k) => { if (this.player) barks.hear(p, k, this.player.position); } });
+    // (a suppressed shot, heard at 18 m, doesn't startle a town 100 m off)
+    this.combat.register({ hostiles: () => [], hear: (p, r, k) => { if (this.player && r > 30) barks.hear(p, k, this.player.position); } });
   }
 
   private collectIntel(id: string) {

@@ -317,7 +317,8 @@ function crowbar(): ArmsModel {
 function pistol22(): ArmsModel {
   const root = new THREE.Group();
   const black = steelMat('#34373b', 0.4);
-  const parkerized = steelMat('#4b4f55', 0.46);
+  // two-tone: a stainless slide over a black frame (a target pistol, and it reads at a glance)
+  const parkerized = steelMat('#a3a8ae', 0.32);
   const bright = steelMat('#8a8e94', 0.3);
   const can = hardMat('#2b2d30', 0.55, 0.6);
   const panel = hardMat('#4a3a2c', 0.7, 0);
