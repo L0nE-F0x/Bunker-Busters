@@ -332,7 +332,7 @@ function ik(root: THREE.Vector3, target: THREE.Vector3, a: number, b: number, po
 const _ik1 = new THREE.Vector3(), _ik2 = new THREE.Vector3();
 
 export type HitZone = 'head' | 'body' | 'arm' | 'leg';
-export type HumanPose = 'relaxed' | 'ready' | 'aim' | 'reload' | 'throw' | 'radio' | 'sit';
+export type HumanPose = 'relaxed' | 'ready' | 'aim' | 'reload' | 'throw' | 'radio' | 'sit' | 'surrender';
 
 /** One person's animation state. AI writes the inputs; `pose()` turns them into bone matrices. */
 export class Human {
@@ -347,6 +347,8 @@ export class Human {
   private aimK = 0;
   private readyK = 0;
   private crouchS = 0;
+  /** 0..1 hands going up (surrender; the gun is on the ground). */
+  private surK = 0;
   private phase = Math.random() * 6;
   /** Standing still, a person still breathes and shifts their weight: their own clock and tempo. */
   private idleT = Math.random() * 100;
@@ -431,6 +433,7 @@ export class Human {
     const dying = this.dyingT >= 0 ? THREE.MathUtils.smoothstep(this.dyingT / this.dyingDur, 0, 1) : 0;
     if (this.dyingT >= 0) this.dyingT += dt;
     const wantAim = this.pose === 'aim' && this.dyingT < 0 ? 1 : 0;
+    this.surK += ((this.pose === 'surrender' && this.dyingT < 0 ? 1 : 0) - this.surK) * Math.min(1, dt * 4);
     const wantReady = this.dyingT < 0 && (this.pose === 'aim' || this.pose === 'ready' || this.pose === 'reload' || this.pose === 'throw') ? 1 : 0;
     this.aimK += (wantAim - this.aimK) * Math.min(1, dt * (this.dyingT >= 0 ? 5 : 9));
     this.readyK += (wantReady - this.readyK) * Math.min(1, dt * (this.dyingT >= 0 ? 4 : 6));
@@ -554,6 +557,12 @@ export class Human {
     // weapon up vector: mostly world up, rolled a touch when relaxed
     const wUp = _wu.copy(UP).addScaledVector(cl, (1 - this.readyK) * 0.4).normalize();
     frameTo(this.mats[BONE.weapon], wPos, wUp, _tmp.copy(wDir).negate(), 1);
+    // surrendering: the gun goes down in the dirt in front of it, on its side
+    if (this.pose === 'surrender' || this.surK > 0.5) {
+      const gp = _c.copy(this.pos).addScaledVector(cf, 0.7).addScaledVector(cl, -0.2);
+      gp.y = (this.floor ?? hf.heightAt(gp.x, gp.z)) + 0.03;
+      frameTo(this.mats[BONE.weapon], gp, cl, _tmp.copy(cf).applyAxisAngle(UP, 1.2), 1);
+    }
     // re-derive the barrel so the muzzle matches the bone
     const wm = this.mats[BONE.weapon];
     this.muzzle.set(0, 0.064, pistol ? -0.17 : -0.68).applyMatrix4(wm);
@@ -575,6 +584,13 @@ export class Human {
     let cradle = 1 - Math.min(1, reload * 1.6);
     if (this.pose === 'radio') cradle = 0;
     if (dying > 0 && hz === 'body' && !pistol) cradle *= 1 - Math.min(1, dying * 1.6);
+    // hands up, open, either side of the hat
+    const sk = this.surK;
+    if (sk > 0.01) {
+      grip.lerp(_hs.copy(neck).addScaledVector(UP, 0.3 * H).addScaledVector(cl, -0.25).addScaledVector(cf, 0.08), sk);
+      fore = _b.lerp(_hs.copy(neck).addScaledVector(UP, 0.3 * H).addScaledVector(cl, 0.25).addScaledVector(cf, 0.08), sk);
+      cradle *= 1 - sk;
+    }
     for (const side of [1, -1] as const) {
       const sh = side > 0 ? shL : shR;
       const hand = side > 0 ? fore : grip;
@@ -588,6 +604,7 @@ export class Human {
       frameTo(this.mats[side > 0 ? BONE.fArmL : BONE.fArmR], elbow, _tmp.subVectors(elbow, wrist), cf, H);
       const palm = _pole.copy(cl).multiplyScalar(-side);
       if (side > 0) palm.multiplyScalar(1 - 0.7 * cradle).addScaledVector(UP, 0.9 * cradle);
+      if (sk > 0.01) palm.lerp(cf, sk).normalize();
       frameTo(this.mats[side > 0 ? BONE.handL : BONE.handR], wrist, _tmp.subVectors(wrist, hand), palm, H);
     }
     this.updateDerived();
@@ -623,7 +640,7 @@ const _f = new THREE.Vector3(), _l = new THREE.Vector3(), _cf = new THREE.Vector
 const _cb = new THREE.Vector3(), _tmp = new THREE.Vector3(), _hf = new THREE.Vector3(), _hu = new THREE.Vector3(), _md = new THREE.Vector3();
 const _pole = new THREE.Vector3(), _toe = new THREE.Vector3(), _ad = new THREE.Vector3(), _rd = new THREE.Vector3(), _rdy = new THREE.Vector3();
 const _wd = new THREE.Vector3(), _wp = new THREE.Vector3(), _wu = new THREE.Vector3(), _a = new THREE.Vector3(), _b = new THREE.Vector3(), _c = new THREE.Vector3();
-const _h1 = new THREE.Vector3(), _h2 = new THREE.Vector3(), _hc = new THREE.Vector3();
+const _h1 = new THREE.Vector3(), _h2 = new THREE.Vector3(), _hc = new THREE.Vector3(), _hs = new THREE.Vector3();
 
 /** Every contractor's body in one skinned mesh. `slots` people max; looks are fixed per slot. */
 export class HumanCrowd {

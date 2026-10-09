@@ -110,7 +110,7 @@ const angDiff = (a: number, b: number) => Math.atan2(Math.sin(b - a), Math.cos(b
 const rnd = (a: number, b: number) => a + Math.random() * (b - a);
 const pick = <T,>(a: T[]) => a[Math.floor(Math.random() * a.length)];
 
-type MState = 'idle' | 'suspicious' | 'search' | 'combat' | 'flee' | 'dead';
+type MState = 'idle' | 'suspicious' | 'search' | 'combat' | 'flee' | 'surrender' | 'dead';
 
 class Member implements Hostile {
   readonly kind = 'human' as const;
@@ -176,6 +176,9 @@ class Member implements Hostile {
   radioT = 0;
   /** Breacher: has said its line. */
   pushed = false;
+  /** Surrendered: seconds on its knees, and the prompt to take its lanyard. */
+  surT = 0;
+  surIt: Interactable | null = null;
   /** Searching: the side of the last-known position this one sweeps. */
   sector = 0;
   /** Flanking to this cover (taken on arrival). */
@@ -262,13 +265,13 @@ class Member implements Hostile {
   }
 
   unaware() {
-    return this.alive && (this.state === 'idle' || (this.state === 'suspicious' && this.detect < 0.6));
+    return this.alive && (this.state === 'idle' || this.state === 'surrender' || (this.state === 'suspicious' && this.detect < 0.6));
   }
   facing() {
     return _d.set(Math.sin(this.h.yaw), 0, Math.cos(this.h.yaw));
   }
   awareness() {
-    if (!this.alive || !this.h.active) return 0;
+    if (!this.alive || !this.h.active || this.state === 'surrender') return 0;
     if (this.state === 'combat') return 1;
     if (this.state === 'search') return 0.7;
     return this.detect;
@@ -497,7 +500,28 @@ export class Recovery implements HostileProvider {
     this.dropBody(m);
   }
 
-  private spawnOutpost(op: Outpost) {
+  /**
+   * Twelve bodies for the whole map: before a crew turns out, calm crews well behind you (> 250 m,
+   * not fighting) stand down to free theirs (they come back when you do). Without this, walking from
+   * one outpost toward two others left the last posts (the specialists) unmanned.
+   */
+  private makeRoom(n: number, player: THREE.Vector3) {
+    if (this.free.length >= n) return;
+    const far = this.outposts
+      .filter((o) => o.squad && o.state === 'active' && o.squad.alert !== 'combat')
+      .map((o) => ({ o, d: Math.hypot(player.x - o.def.x, player.z - o.def.z) }))
+      .filter((x) => x.d > 250)
+      .sort((a, b) => b.d - a.d);
+    for (const { o } of far) {
+      if (this.free.length >= n) break;
+      this.despawnSquad(o.squad!);
+      o.squad = null;
+      o.state = 'dormant';
+    }
+  }
+
+  private spawnOutpost(op: Outpost, player?: THREE.Vector3) {
+    if (player) this.makeRoom(op.def.crew.length, player);
     const sq = new Squad(this, op);
     const f = op.build.frame;
     for (const post of op.def.crew) {
@@ -593,6 +617,7 @@ export class Recovery implements HostileProvider {
     m.suppressing = false;
     m.radioT = 0;
     m.charge = m.glint = 0;
+    this.dropSurrender(m);
     h.cower = 0;
     this.onCorpse?.(h.pos);
     // How it goes down. A head shot, a close shotgun blast, a blast, a blow or a runner drops at
@@ -821,7 +846,7 @@ export class Recovery implements HostileProvider {
     sq.knownT = this.t;
     sq.hiddenT = 0;
     for (const m of sq.alive) {
-      if (m.state === 'flee') continue;
+      if (m.state === 'flee' || m.state === 'surrender') continue;
       if (m.state !== 'combat') {
         m.state = 'combat';
         m.react = delay + rnd(0.1, 0.7) * this.host.combat.diff.react;
@@ -841,7 +866,7 @@ export class Recovery implements HostileProvider {
     sq.known.copy(at);
     sq.knownT = this.t;
     // spread out: the first walks to where you were, the rest fan round it, each its own side
-    const live = sq.alive.filter((m) => m.state !== 'flee');
+    const live = sq.alive.filter((m) => m.state !== 'flee' && m.state !== 'surrender');
     const base = Math.random() * 6.28;
     live.forEach((m, i) => {
       m.state = 'search';
@@ -903,7 +928,7 @@ export class Recovery implements HostileProvider {
       if (op.state === 'dormant' && d < 240) {
         const clearedAt = host.marks[`cleared.${op.def.id}`];
         if (clearedAt != null && host.playTime() - clearedAt < 30 * 60) { op.state = 'cleared'; this.onSpawn?.(op.def.id); continue; }
-        this.spawnOutpost(op);
+        this.spawnOutpost(op, player);
       } else if (op.state === 'active' && d > 330 && op.squad && op.squad.alert !== 'combat') {
         this.despawnSquad(op.squad);
         op.squad = null;
@@ -1005,7 +1030,12 @@ export class Recovery implements HostileProvider {
       }
       // nerve breaks
       if (sq.morale < 0.25 && live.length <= 2) {
-        for (const m of live) if (m.state !== 'flee' && !m.perch) { m.state = 'flee'; this.bark(m, 'flee'); sq.smokeT = Math.min(sq.smokeT, 0); }
+        for (const m of live) {
+          if (m.state === 'flee' || m.state === 'surrender' || m.perch) continue;
+          // close to you, it gives up; further off, it runs (and the smoke covers it)
+          if (m.h.pos.distanceTo(this.host.combat.target.feet) < 18 && Math.random() < 0.7) this.surrender(m);
+          else { m.state = 'flee'; this.bark(m, 'flee'); sq.smokeT = Math.min(sq.smokeT, 0); }
+        }
       }
       // send someone round when you've gone to ground
       if (sq.flankT <= 0 && sq.hiddenT > 3 && live.length >= 2) {
@@ -1059,7 +1089,7 @@ export class Recovery implements HostileProvider {
       if (sq.searchT > 22) {
         sq.alert = 'calm';
         sq.morale = Math.min(1, sq.morale + 0.3);
-        for (const m of live) { m.state = 'idle'; m.detect = 0; }
+        for (const m of live) if (m.state !== 'surrender' && m.state !== 'flee') { m.state = 'idle'; m.detect = 0; }
         this.bark(live[0], 'lost');
       }
     }
@@ -1133,7 +1163,7 @@ export class Recovery implements HostileProvider {
     h.pose = 'relaxed';
     h.crouch = 0;
     // the marksman's scope catches the sun as it sweeps (a hint, long before it's settling on you)
-    if (m.kit === 'marksman' && m.state !== 'combat') m.glint = m.state === 'idle' ? 0.08 : 0.16;
+    if (m.kit === 'marksman' && m.state !== 'combat') m.glint = m.state === 'idle' ? 0.08 : m.state === 'surrender' || m.state === 'flee' ? 0 : 0.16;
     switch (m.state) {
       case 'idle': {
         const post = m.post;
@@ -1211,11 +1241,26 @@ export class Recovery implements HostileProvider {
         const away = _a.subVectors(h.pos, T.feet).setY(0).normalize().multiplyScalar(30).add(h.pos);
         away.y = this.host.hf.heightAt(away.x, away.z);
         this.walkTo(m, away, 5.2, dt);
+        // run down: it gives up
+        if (h.pos.distanceTo(T.feet) < 7 && T.alive && m.surT === 0) { this.surrender(m); return; }
         if (h.pos.distanceTo(T.feet) > 90 && !m.canSee) {
           // they ran far enough: gone
-          this.release(m);
+          this.rout(m);
         }
         return;
+      }
+      case 'surrender': {
+        // on its knees, hands up, watching you; you walk off (or it waits long enough) and it runs
+        h.pose = 'surrender';
+        h.crouch = 0.62;
+        h.vel.multiplyScalar(Math.exp(-dt * 8));
+        const to = _a.subVectors(T.feet, h.pos);
+        face = Math.atan2(to.x, to.z);
+        h.aimYaw = h.yaw;
+        h.aimPitch = 0;
+        m.surT += dt;
+        if (to.length() > 30 || m.surT > 45 || !T.alive) { this.dropSurrender(m); m.state = 'flee'; }
+        break;
       }
     }
     void speed;
@@ -1396,6 +1441,65 @@ export class Recovery implements HostileProvider {
     if (this.smoked(h.eye, T.chest)) return false;
     if (this.host.combat.clearLine(h.eye, T.chest, T.collider)) return true;
     return this.host.combat.clearLine(h.eye, T.eye, T.collider);
+  }
+
+  /**
+   * A broken contractor gives up: the gun goes in the dirt, the hands go up, a line about its
+   * contract. It doesn't fight or spot; you can take its lanyard and rounds (it runs once you have),
+   * walk away (it runs), or not. Its crew counts it out of the fight.
+   */
+  private surrender(m: Member) {
+    if (m.state === 'surrender') return;
+    m.state = 'surrender';
+    m.surT = 0;
+    m.flank = false;
+    m.suppressing = false;
+    m.reloadT = 0;
+    m.h.reloadT = 0;
+    if (m.cover) { m.cover.taken = false; m.cover = null; }
+    if (m.flankCover) { m.flankCover.taken = false; m.flankCover = null; }
+    if (m.squad.suppressor === m) m.squad.suppressor = null;
+    this.bark(m, 'surrender', true);
+    const it: Interactable = {
+      id: `surrender:${m.h.slot}`,
+      pos: m.h.pos.clone().setY(m.h.pos.y + 1),
+      radius: 2.4,
+      visible: () => m.state === 'surrender',
+      primary: {
+        label: 'Take his lanyard and his rounds',
+        available: () => true,
+        run: () => {
+          const ammo = { rifle: 'ammo3030', shotgun: 'shells', revolver: 'ammo38' }[m.h.weapon];
+          const lines = this.host.give([{ id: 'kade_badge', qty: 1 }, { id: ammo, qty: Math.round(rnd(3, 6)) }, ...(Math.random() < 0.5 ? [{ id: 'water', qty: 1 }] : [])]);
+          this.host.toast(lines.join(' · '), 'good');
+          this.host.audio.play('pickup');
+          this.host.xp(10, 'Spared a contractor');
+          this.bark(m, 'spared', true);
+          this.dropSurrender(m);
+          m.state = 'flee';
+        },
+      },
+    };
+    it.pos.copy(m.h.pos).setY(m.h.pos.y + 1);
+    m.surIt = it;
+    this.host.interactables.push(it);
+  }
+
+  private dropSurrender(m: Member) {
+    if (!m.surIt) return;
+    const i = this.host.interactables.indexOf(m.surIt);
+    if (i >= 0) this.host.interactables.splice(i, 1);
+    m.surIt = null;
+  }
+
+  /** A contractor ran off for good: out of its crew (a crew that's all dead or gone clears its outpost). */
+  private rout(m: Member) {
+    const sq = m.squad;
+    this.dropSurrender(m);
+    this.release(m);
+    const i = sq.members.indexOf(m);
+    if (i >= 0) sq.members.splice(i, 1);
+    if (!sq.alive.length && sq.outpost && sq.outpost.state === 'active' && sq.outpost.squad === sq) this.cleared(sq.outpost);
   }
 
   /** A fallen squadmate in view (not yet found), or null. */
@@ -1706,7 +1810,7 @@ export class Recovery implements HostileProvider {
 
   census() {
     return this.members.map((m) => ({
-      slot: m.h.slot, kit: m.kit ?? '', state: m.state, hp: Math.round(m.hp), mag: m.mag, see: m.canSee, cover: !!m.cover, detect: +m.detect.toFixed(2),
+      slot: m.h.slot, kit: m.kit ?? '', state: m.state, ...(m.state === 'surrender' ? { surT: +m.surT.toFixed(1) } : {}), hp: Math.round(m.hp), mag: m.mag, see: m.canSee, cover: !!m.cover, detect: +m.detect.toFixed(2),
       ...(m.kit === 'heavy' ? { armour: Math.round(m.armour) } : {}), ...(m.kit === 'marksman' ? { charge: +m.charge.toFixed(2), perch: !!m.perch } : {}),
       ...(m.flank ? { flank: m.flankCover ? 'cover' : 'open' } : {}), ...(m.radioT > 0 ? { radio: +m.radioT.toFixed(1) } : {}), ...(m.squad.wary > 0 ? { wary: Math.round(m.squad.wary) } : {}),
     }));

@@ -74,11 +74,11 @@ export const OUTPOSTS: OutpostDef[] = [
     id: 'pipeline', name: 'Pipeline Camp 3', tier: 2, x: 260, z: -150, rot: 1.1, r: 18,
     blurb: 'A pumping skid on the line that carries the creek west. Painted on it: "WATER IS A SERVICE".',
     crew: [
+      { weapon: 'rifle', role: 'leader', at: [0, -5], yaw: 3.1 },
+      { weapon: 'rifle', role: 'guard', at: [-3, -14.5], yaw: 0.15, kit: 'marksman' },
+      { weapon: 'revolver', role: 'sit', at: [3, -2], yaw: 2, kit: 'grenadier' },
       { weapon: 'rifle', role: 'guard', at: [6, 6], yaw: 0.2 },
       { weapon: 'shotgun', role: 'patrol', at: [-7, 3], yaw: -1.5 },
-      { weapon: 'rifle', role: 'leader', at: [0, -5], yaw: 3.1 },
-      { weapon: 'revolver', role: 'sit', at: [3, -2], yaw: 2, kit: 'grenadier' },
-      { weapon: 'rifle', role: 'guard', at: [-3, -14.5], yaw: 0.15, kit: 'marksman' },
     ],
     perch: [-3, -14.5, 0.15],
     sentries: [[-10, 9, -0.5]],
@@ -92,10 +92,10 @@ export const OUTPOSTS: OutpostDef[] = [
     crew: [
       { weapon: 'rifle', role: 'leader', at: [0, 8], yaw: 0 },
       { weapon: 'shotgun', role: 'guard', at: [9, 4], yaw: 1.2, kit: 'heavy' },
+      { weapon: 'rifle', role: 'guard', at: [7, -14], yaw: -0.35, kit: 'marksman' },
+      { weapon: 'revolver', role: 'sit', at: [-3, -3], yaw: 0.8, kit: 'grenadier' },
       { weapon: 'rifle', role: 'guard', at: [-9, 5], yaw: -1.1 },
       { weapon: 'shotgun', role: 'patrol', at: [6, -9], yaw: 2.8 },
-      { weapon: 'revolver', role: 'sit', at: [-3, -3], yaw: 0.8, kit: 'grenadier' },
-      { weapon: 'rifle', role: 'guard', at: [7, -14], yaw: -0.35, kit: 'marksman' },
     ],
     perch: [7, -14, -0.35],
     sentries: [[12, 14, 0.6], [-13, 13, -0.6]],
@@ -208,6 +208,17 @@ export const BARKS: Record<string, string[]> = {
   plates: [
     'My plates! Those were a loan!',
     'Armor\'s gone! Somebody cover me!',
+  ],
+  surrender: [
+    'Okay! Okay! I\'m a contractor! I\'m not even full-time!',
+    'Don\'t shoot! My equity hasn\'t vested!',
+    'I surrender! Is there a form for this?',
+    'I give up! Tell Kade I was very brave!',
+  ],
+  spared: [
+    'Thank you. I\'m logging this as a positive interaction.',
+    'You never saw me. I was never on the clock.',
+    'Take it. Take the badge. I hated the photo anyway.',
   ],
   smoke: [
     'Smoke out! Visibility is a privilege!',
