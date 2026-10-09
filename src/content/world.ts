@@ -58,6 +58,21 @@ export const LANDMARKS: LandmarkDef[] = [
     blurb: 'A delivery 1,281 days late and still, technically, in progress.',
     flatten: { r: 9, falloff: 16 },
   },
+  {
+    id: 'booster', name: 'The Longshot', kind: 'site', position: [130, 0, -300], rotation: 0.3,
+    blurb: 'Kade\'s reusable rocket, reused once. It landed, in the sense that it is on the land.',
+    flatten: { r: 34, falloff: 18 },
+  },
+  {
+    id: 'waitlist', name: 'Waitlist City', kind: 'site', position: [312, 0, 300], rotation: -1.5708,
+    blurb: 'Four thousand people queued for a bunker that seats by appointment. The appointments never opened.',
+    flatten: { r: 42, falloff: 14 },
+  },
+  {
+    id: 'solar', name: 'Photon Park', kind: 'site', position: [-205, 0, 310], rotation: 0,
+    blurb: 'Seven rows of glass, four robots wiping them, and a customer who stopped paying when the world ended.',
+    flatten: { r: 40, falloff: 14 },
+  },
 ];
 
 /**

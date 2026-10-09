@@ -34,6 +34,12 @@ export const CACHES: CacheDef[] = [
   { id: 'c.jet-nw', kind: 'crate', at: [-362, 330], label: 'Pry open the Kade crate' },
   { id: 'c.mesa', kind: 'locker', at: [140, 110], label: 'Open the footlocker' },
   { id: 'c.flats', kind: 'pack', at: [-150, -60], label: 'Search the traveller\'s pack' },
+  // the empty quarters, and the walks to the 2026-10-10 sites
+  { id: 'c.ne-wash', kind: 'locker', at: [300, 235], label: 'Open the footlocker' },
+  { id: 'c.south-basin', kind: 'cooler', at: [48, -315], label: 'Open the cooler' },
+  { id: 'c.nw-basin', kind: 'can', at: [-140, 300], label: 'Open the ammo can' },
+  { id: 'c.sw-flats', kind: 'pack', at: [-300, -320], label: 'Search the traveller\'s pack' },
+  { id: 'c.east-edge', kind: 'crate', at: [340, -45], label: 'Pry open the Kade crate' },
 ];
 
 /** One line of a loot table: `p` chance, `qty` range. `ammo` picks a calibre (owned guns favoured). */

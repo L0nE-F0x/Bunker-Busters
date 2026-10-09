@@ -346,6 +346,13 @@ export function journalEntries(v: StoryView): JournalEntry[] {
           : 'All eight pages, copied into the back of Pip\'s ledger under THE OTHER COLUMN. When there\'s a trial, Pip is reading it out.',
     });
   }
+  // the 2026-10-10 sites (src/game/sites/booster.ts, waitlist.ts, solar.ts)
+  add('seen:booster', 'The Longshot', 'A Kade booster on its side in the south basin, KADE three metres tall down the tank. Flight-proven, once. Kade taped it off and never came back for it.');
+  add('site.booster.done', 'Pad B', 'The flight recorder kept her voice: "Land it at the pad." It didn\'t. The pod was for Vesper Kade: glacier water, flown in from Iceland. "No Kade water on board. I know where it\'s been." Pad B is west of the salt.');
+  add('seen:waitlist', 'Waitlist City', 'A bunker called Everafter, set into the mountain at the head of the north-east basin, and four thousand people who queued for it. NOW SERVING 0001. Somebody still feeds the fire.');
+  add('site.waitlist.done', 'Twelve residents', 'The service door opens on the grand-opening date. Behind it, Kade jugs: forty a week, by drone, for twelve people inside. The line outside was never going to move.');
+  add('seen:solar', 'Photon Park', 'A solar farm in the north-west basin that still powers Everafter. Its cleaning robots never stopped. Nobody has paid the bill since the Pivot.');
+  add('site.solar.done', 'Pulled the plug', 'You threw Photon Park\'s main breaker. Everafter is on its backup cell, and its locks fail open. The robots kept cleaning.');
   return out.reverse();
 }
 

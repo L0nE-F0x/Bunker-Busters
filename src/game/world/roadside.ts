@@ -4,7 +4,8 @@ import type { Physics } from '@/engine/physics';
 import { mulberry32 } from '@/engine/noise';
 import { HIGHWAY, WORLD_SEED } from '@/content/world';
 import { box, place, norm, MeshBatch } from './kit';
-import { rustyMetal, plainStandard, wood } from './materials';
+import { concrete, fabric, rustyMetal, plainStandard, wood } from './materials';
+import { HITCH_SIGNS, artMap, artMaterial } from '../sites/placesArt';
 import { paint, decal, atlasMap, atlasSolid, decalMat, F_DISPLAY, F_UI, weather } from '../sites/jetKit';
 
 /**
@@ -273,5 +274,160 @@ export function buildRoadside(hf: Heightfield, physics: Physics, b: MeshBatch, w
     sk(f0.x, f0.z, f1.x, f1.z, w.pos.x, w.pos.z);
     skids++;
   }
+  leftovers(hf, physics, b, { rand, at, nearest, inside, clear });
   return decals.build('skids', false, true);
+}
+
+/**
+ * What the evacuation left on the road (2026-10-10): two Kade checkpoints (jersey barriers in a
+ * chicane, cones, a booth, a boom across one lane, a sign), luggage trails on the shoulders where
+ * people gave up carrying things, hitchhikers' cardboard signs, and Kade's survey stakes pricing
+ * the road. All family materials into the poles' batch (no new draws); the printed signs use the
+ * places atlas (one draw for all of them).
+ */
+function leftovers(hf: Heightfield, physics: Physics, b: MeshBatch, k: {
+  rand: () => number;
+  at: (s: number, off: number) => { x: number; y: number; z: number; yaw: number; side: THREE.Vector3; tan: THREE.Vector3 };
+  nearest: (x: number, z: number) => number;
+  inside: (p: { x: number; z: number }) => boolean;
+  clear: (x: number, z: number) => boolean;
+}) {
+  const { rand, at, nearest, inside, clear } = k;
+  const M = {
+    barrier: concrete('#aaa397', { scale: 1.4, stains: 0.8 }),
+    cone: plainStandard('#e0601c', 0.6),
+    coneBand: plainStandard('#e8e4da', 0.5),
+    booth: rustyMetal({ base: '#3a3d42', rust: 0.4, metalness: 0.5, roughness: 0.55 }),
+    glass: plainStandard('#20282c', 0.15, 0.5),
+    boom: plainStandard('#d8641e', 0.5),
+    boomW: plainStandard('#e8e4da', 0.5),
+    caseA: plainStandard('#2c3a52', 0.55), caseB: plainStandard('#7a2e28', 0.55), caseC: plainStandard('#3c3c3e', 0.5),
+    duffel: fabric('#4a5a3a'), cloth: fabric('#b8ae98'), clothB: fabric('#5a3a5a'),
+    card: plainStandard('#a67c52', 0.92),
+    stake: wood('#8a6a44'),
+    flag: plainStandard('#ff6a1a', 0.6),
+    steel: rustyMetal({ base: '#9c9e9a', rust: 0.45, metalness: 0.75, roughness: 0.45 }),
+  };
+  const art = artMaterial();
+  const T = (g: THREE.BufferGeometry, x: number, y: number, z: number, yaw = 0, pitch = 0, roll = 0) =>
+    norm(g.applyMatrix4(new THREE.Matrix4().compose(new THREE.Vector3(x, y, z), new THREE.Quaternion().setFromEuler(new THREE.Euler(pitch, yaw, roll, 'YXZ')), new THREE.Vector3(1, 1, 1))));
+  // the jersey barrier profile, extruded along its length (z)
+  const jersey = (() => {
+    const s = new THREE.Shape();
+    s.moveTo(-0.3, 0); s.lineTo(0.3, 0); s.lineTo(0.3, 0.08); s.lineTo(0.1, 0.33); s.lineTo(0.075, 0.81);
+    s.lineTo(-0.075, 0.81); s.lineTo(-0.1, 0.33); s.lineTo(-0.3, 0.08); s.closePath();
+    return new THREE.ExtrudeGeometry(s, { depth: 3.0, bevelEnabled: false }).translate(0, 0, -1.5);
+  })();
+  const cone = (x: number, z: number, down: boolean) => {
+    const y = hf.heightAt(x, z), yaw = rand() * 6;
+    const pitch = down ? Math.PI / 2 - 0.25 : 0;
+    const lift = down ? 0.16 : 0;
+    b.add(M.cone, T(new THREE.ConeGeometry(0.16, 0.7, 10, 1, true).translate(0, 0.35, 0), x, y + lift, z, yaw, pitch));
+    b.add(M.coneBand, T(new THREE.CylinderGeometry(0.075, 0.1, 0.12, 10, 1, true).translate(0, 0.42, 0), x, y + lift, z, yaw, pitch));
+    b.add(M.cone, T(new THREE.BoxGeometry(0.42, 0.04, 0.42).translate(0, 0.02, 0), x, y + (down ? 0.2 : 0), z, yaw, pitch));
+  };
+  const sign = (name: string, w: number, h: number, x: number, z: number, yaw: number, lift: number, tilt = 0) => {
+    const y = hf.heightAt(x, z);
+    for (const px of [-w * 0.35, w * 0.35]) b.add(M.steel, T(new THREE.BoxGeometry(0.07, lift + h * 0.5, 0.07).translate(px, (lift + h * 0.5) / 2, -0.05), x, y - 0.1, z, yaw, tilt));
+    b.add(M.steel, T(new THREE.BoxGeometry(w + 0.04, h + 0.04, 0.025).translate(0, lift + h / 2, -0.025), x, y - 0.1, z, yaw, tilt));
+    b.add(art, norm(artMap(name, new THREE.PlaneGeometry(w, h)).translate(0, lift + h / 2, -0.01).applyMatrix4(new THREE.Matrix4().compose(new THREE.Vector3(x, y - 0.1, z), new THREE.Quaternion().setFromEuler(new THREE.Euler(tilt, yaw, 0, 'YXZ')), new THREE.Vector3(1, 1, 1)))));
+  };
+
+  // ---- checkpoints: a chicane of barriers across both lanes, a booth, a boom, cones, the sign
+  for (const [cx, cz] of [[178, -14], [-248, 96]] as [number, number][]) {
+    const s0 = nearest(cx, cz);
+    const c0 = at(s0, 0);
+    if (!inside(c0)) continue;
+    // stagger: two barriers from each side, offset along the road, one shoved askew
+    const rows: [number, number, number][] = [[-6, -2.6, 0], [-6, -5.6, 0], [6, 2.6, 0], [6, 5.6, 0.25], [0, -8.4, 0.5]];
+    for (const [ds, off, skew] of rows) {
+      const q = at(s0 + ds, off);
+      const yaw = q.yaw + Math.PI / 2 + skew + (rand() - 0.5) * 0.1;
+      b.add(M.barrier, T(jersey.clone(), q.x, q.y - 0.02, q.z, yaw));
+      physics.addBox({ x: q.x, y: q.y + 0.4, z: q.z }, { x: 0.28, y: 0.42, z: 1.5 }, yaw);
+    }
+    // the booth on the shoulder: a steel box with a window band, door ajar
+    const bq = at(s0 - 2, 9.5);
+    if (clear(bq.x, bq.z)) {
+      b.add(M.booth, T(new THREE.BoxGeometry(1.8, 2.3, 1.6).translate(0, 1.15, 0), bq.x, bq.y, bq.z, bq.yaw));
+      b.add(M.glass, T(new THREE.BoxGeometry(1.84, 0.6, 1.64).translate(0, 1.6, 0), bq.x, bq.y, bq.z, bq.yaw));
+      b.add(M.booth, T(new THREE.BoxGeometry(2.1, 0.1, 1.9).translate(0, 2.35, 0), bq.x, bq.y, bq.z, bq.yaw));
+      physics.addBox({ x: bq.x, y: bq.y + 1.15, z: bq.z }, { x: 0.9, y: 1.15, z: 0.8 }, bq.yaw);
+      // the boom from the booth across the near lane, snapped and hanging
+      const bp = at(s0 - 2, 7.6);
+      b.add(M.steel, T(new THREE.BoxGeometry(0.3, 1.0, 0.3).translate(0, 0.5, 0), bp.x, bp.y, bp.z, bp.yaw));
+      for (let i = 0; i < 5; i++) {
+        const mat = i % 2 ? M.boomW : M.boom;
+        const q = at(s0 - 2, 7.3 - i * 0.8);
+        b.add(mat, T(new THREE.BoxGeometry(0.1, 0.1, 0.8), q.x, bp.y + 1.0 - i * 0.02, q.z, q.yaw + Math.PI / 2, 0, 0));
+      }
+      const tip = at(s0 - 2, 3.1);
+      b.add(M.boom, T(new THREE.BoxGeometry(0.1, 0.1, 1.6), tip.x, tip.y + 0.5, tip.z, tip.yaw + Math.PI / 2, 0.6));
+    }
+    const sq = at(s0 - 14, 7.2);
+    if (clear(sq.x, sq.z)) sign('rsCheck', 2.0, 1.0, sq.x, sq.z, sq.yaw + Math.PI, 1.3, (rand() - 0.5) * 0.08);
+    for (let i = 0; i < 7; i++) {
+      const q = at(s0 - 10 + i * 3.2, (i % 2 ? -1 : 1) * (1 + rand() * 4));
+      cone(q.x, q.z, rand() < 0.45);
+    }
+  }
+
+  // ---- luggage trails: suitcases, a duffel, clothes, a box of files, on the shoulder near the wrecks
+  const trails: [number, number][] = [[-120, 122], [60, 74], [268, -82], [-300, 72]];
+  for (const [tx, tz] of trails) {
+    const s0 = nearest(tx, tz);
+    for (let i = 0; i < 9; i++) {
+      const q = at(s0 + i * 2.2 + rand() * 1.5, (rand() < 0.5 ? -1 : 1) * (5 + rand() * 3.5));
+      if (!inside(q) || !clear(q.x, q.z)) continue;
+      const yaw = rand() * 6, kind = rand();
+      if (kind < 0.35) {
+        const mat = [M.caseA, M.caseB, M.caseC][Math.floor(rand() * 3)];
+        const open = rand() < 0.4;
+        b.add(mat, T(new THREE.BoxGeometry(0.7, 0.22, 0.48).translate(0, 0.11, 0), q.x, q.y, q.z, yaw));
+        if (open) {
+          b.add(mat, T(new THREE.BoxGeometry(0.7, 0.06, 0.48).translate(0, 0.03, 0.24), q.x, q.y + 0.22, q.z, yaw, -2.2));
+          b.add(M.cloth, T(new THREE.BoxGeometry(0.6, 0.06, 0.4).translate(0, 0.21, 0), q.x, q.y, q.z, yaw));
+        } else {
+          b.add(M.steel, T(new THREE.BoxGeometry(0.22, 0.03, 0.03).translate(0, 0.23, 0), q.x, q.y, q.z, yaw));
+        }
+      } else if (kind < 0.55) {
+        b.add(M.duffel, T(new THREE.CapsuleGeometry(0.17, 0.5, 4, 10).rotateZ(Math.PI / 2).translate(0, 0.16, 0), q.x, q.y, q.z, yaw));
+      } else if (kind < 0.8) {
+        b.add(rand() < 0.5 ? M.cloth : M.clothB, T(new THREE.PlaneGeometry(0.7, 0.5).rotateX(-Math.PI / 2).translate(0, 0.02, 0), q.x, q.y, q.z, yaw, 0, (rand() - 0.5) * 0.1));
+      } else {
+        b.add(M.card, T(new THREE.BoxGeometry(0.4, 0.3, 0.32).translate(0, 0.15, 0), q.x, q.y, q.z, yaw, 0, 0.1));
+      }
+    }
+  }
+
+  // ---- hitchhikers' signs: a stake, a cardboard sign, a stool, a pack, facing the oncoming lane
+  const hitch: [number, number, number][] = [[-75, 119, 1], [96, 48, -1], [300, -100, 1]];
+  hitch.forEach(([hx, hz, sd], i) => {
+    const q = at(nearest(hx, hz), sd * 7.4);
+    if (!inside(q) || !clear(q.x, q.z)) return;
+    const face = q.yaw + (sd > 0 ? Math.PI : 0) + (rand() - 0.5) * 0.4;
+    b.add(M.stake, T(new THREE.BoxGeometry(0.05, 1.5, 0.05).translate(0, 0.75, -0.04), q.x, q.y - 0.1, q.z, face, (rand() - 0.5) * 0.15));
+    b.add(M.card, T(new THREE.BoxGeometry(0.72, 0.5, 0.01).translate(0, 1.2, -0.012), q.x, q.y - 0.1, q.z, face));
+    b.add(art, norm(artMap(HITCH_SIGNS[i % HITCH_SIGNS.length], new THREE.PlaneGeometry(0.7, 0.48)).translate(0, 1.2, -0.005).applyMatrix4(new THREE.Matrix4().compose(new THREE.Vector3(q.x, q.y - 0.1, q.z), new THREE.Quaternion().setFromEuler(new THREE.Euler(0, face, 0, 'YXZ')), new THREE.Vector3(1, 1, 1)))));
+    const p = at(nearest(hx, hz) + 1.2, sd * 8.2);
+    b.add(M.duffel, T(new THREE.BoxGeometry(0.34, 0.5, 0.22).translate(0, 0.25, 0), p.x, p.y, p.z, rand() * 6, 0, 0.2));
+    b.add(M.steel, T(new THREE.CylinderGeometry(0.17, 0.17, 0.04, 10).translate(0, 0.42, 0), p.x + 0.7, p.y, p.z, 0));
+    for (let j = 0; j < 3; j++) {
+      const a = (j / 3) * Math.PI * 2;
+      b.add(M.steel, T(new THREE.CylinderGeometry(0.012, 0.012, 0.44, 4).translate(0, 0.21, 0), p.x + 0.7 + Math.cos(a) * 0.1, p.y, p.z + Math.sin(a) * 0.1, 0, Math.cos(a) * 0.2, Math.sin(a) * 0.2));
+    }
+  });
+
+  // ---- Kade's survey stakes, pricing the road: a stake with orange flagging every 18 m along a stretch
+  for (const [sx, sz, sd] of [[70, 70, 1], [-60, 118, -1]] as [number, number, number][]) {
+    const s0 = nearest(sx, sz);
+    for (let i = 0; i < 8; i++) {
+      const q = at(s0 + i * 18, sd * 9);
+      if (!inside(q) || !clear(q.x, q.z)) continue;
+      const lean = (rand() - 0.5) * 0.2;
+      b.add(M.stake, T(new THREE.BoxGeometry(0.04, 0.9, 0.04).translate(0, 0.45, 0), q.x, q.y - 0.1, q.z, rand() * 6, lean));
+      b.add(M.flag, T(new THREE.PlaneGeometry(0.06, 0.32).translate(0.03, 0.7, 0), q.x, q.y - 0.1, q.z, q.yaw + rand(), lean, 0.3));
+      b.add(M.flag, T(new THREE.PlaneGeometry(0.06, 0.32).translate(0.03, 0.7, 0).rotateY(Math.PI), q.x, q.y - 0.1, q.z, q.yaw + rand(), lean, 0.3));
+    }
+  }
 }
