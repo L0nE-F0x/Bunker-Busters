@@ -441,6 +441,9 @@ export function buildCut(S: Site, H: Hooks, physics: Physics, f: Frame): CaveOut
   log(P, wick.x - Math.sin(wy) * 0.05, wick.z - Math.cos(wy) * 0.05, 1.4, wy, 0.2);
   H.npc({ id: 'wick', look: LOOKS.wick, pose: 'warm', x: wick.x, y: fy(wick.x, wick.z), z: wick.z, yaw: wy, seat: 0.4, notice: 6 });
   H.spot('wick', wick.x, fy(wick.x, wick.z) + 1.0, wick.z);
+  // night calls: once Wick has Doc's medkit, Doc walks up the wash to check on him after midnight (content/routines.ts)
+  const doc = { x: -0.45, z: 5.35 };
+  H.npc({ id: 'doc', look: LOOKS.doc, pose: 'clipboard', x: doc.x, y: fy(doc.x, doc.z), z: doc.z, yaw: Math.atan2(wick.x - doc.x, wick.z - doc.z), notice: 5, station: 'doc.cut', alt: true });
   S.col(wick.x + Math.sin(wy) * 0.25, 0.6, wick.z + Math.cos(wy) * 0.25, 0.3, 0.6, 0.3, wy);
   // a rope strung wall to wall with pots and a ladle
   {

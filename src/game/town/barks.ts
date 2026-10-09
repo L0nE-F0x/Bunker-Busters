@@ -39,6 +39,8 @@ interface Person {
   shots: number;
   /** The player has been well away since the last greeting (greetings fire on approach only). */
   away: boolean;
+  /** In one of their routine slots right now (not asleep, not on a call). */
+  here: boolean;
 }
 
 const HELLO_R = 5.6;
@@ -63,16 +65,31 @@ export class TownBarks {
   private build() {
     const out: Person[] = [];
     for (const c of this.crowds) {
-      const hs = c.heads();
+      const hs = c.heads(true);
       this.heads.push(hs.map((h) => h.pos));
       for (const h of hs) {
         const lines = TOWN_BARKS[h.id];
-        if (!lines) continue;
-        out.push({ id: h.id, pos: h.pos, lines, said: {}, start: Math.floor(Math.random() * 8), hello: 0, shots: 0, away: true });
+        // one voice per person, whichever routine slot they're in (followed in `follow`)
+        if (!lines || out.some((p) => p.id === h.id)) continue;
+        out.push({ id: h.id, pos: h.pos.clone(), lines, said: {}, start: Math.floor(Math.random() * 8), hello: 0, shots: 0, away: true, here: true });
       }
     }
+    this.follow();
     return out;
   }
+
+  /** Routines: each voice comes from wherever its person is now, and nobody who's out says hello. */
+  private follow() {
+    if (!this.people) return;
+    const live = new Map<string, THREE.Vector3>();
+    for (const c of this.crowds) for (const h of c.heads()) live.set(h.id, h.pos);
+    for (const p of this.people) {
+      const at = live.get(p.id);
+      p.here = !!at;
+      if (at) p.pos.copy(at);
+    }
+  }
+  private followT = 0;
 
   private line(p: Person, kind: BarkKind) {
     // lines about what you've done (content/townBarks.ts `when`) take every other turn while they apply
@@ -98,6 +115,7 @@ export class TownBarks {
     const host = this.host;
     if (!host) return;
     this.people ??= this.build();
+    if ((this.followT -= dt) <= 0) { this.followT = 1; this.follow(); }
     this.eye.copy(cam);
     const pend = this.pending;
     if (pend && this.t >= pend.at) {
@@ -108,6 +126,7 @@ export class TownBarks {
     if ((this.scan -= dt) > 0) return;
     this.scan = 0.25;
     for (const p of this.people) {
+      if (!p.here) continue;
       const d = p.pos.distanceTo(cam);
       if (d > AWAY_R) { p.away = true; continue; }
       if (d > HELLO_R || !p.away) continue;
@@ -136,6 +155,7 @@ export class TownBarks {
     if (!this.host || this.pending || this.t < this.gap) return;
     let best: Person | null = null, bd = HEAR_R;
     for (const p of this.people) {
+      if (!p.here) continue;
       const d = p.pos.distanceTo(this.eye);
       if (d < bd && this.t >= p.shots) { best = p; bd = d; }
     }

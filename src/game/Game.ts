@@ -31,6 +31,7 @@ import { Scavenge } from './world/Scavenge';
 import { NpcModels } from './world/npcSkin';
 import { updateShownMatrices, viewCull } from './world/kit';
 import { NpcCrowd } from './world/npc';
+import { routineOpen } from '@/content/routines';
 import { HumanSkins } from './combat/humanSkin';
 import { Garage } from './bunker/Garage';
 import { Settlement } from './town/Settlement';
@@ -337,6 +338,8 @@ export class Game {
     // the Meshy townsfolk (before the warm-up; ?procnpc keeps the procedural figures)
     const bunkerMsg = 'Building a doomsday bunker (pre-revenue)';
     NpcCrowd.models = await models(NpcModels.load(), 0.7, 0.78, bunkerMsg);
+    // routines (content/routines.ts): who is in which seat or spot, by the hour and the story
+    NpcCrowd.schedule = (st) => routineOpen(st, { playing: this.mode === 'playing', hour: this.atmo.hour, has: (f) => !!this.state?.has(f) });
     this.landmarks.addCampPeople();
     this.settlement = new Settlement(this.ctx, this.landmarks);
     if (!SKIP.has('sites')) this.sites = buildSites(this.ctx, this.landmarks);
@@ -1710,7 +1713,7 @@ export class Game {
     }
     if (s.data.pack) out.push({ id: 'pack', x: s.data.pack.position[0], z: s.data.pack.position[2], label: 'Your pack', color: '#ff8a2a', kind: 'intel' });
     for (const op of OUTPOSTS) {
-      if (!s.has(`seen:${op.id}`) && this.map.revealedAt(op.x, op.z) < 40) continue;
+      if (!s.has(`seen:${op.id}`) && !s.has(`rumour.${op.id}`) && this.map.revealedAt(op.x, op.z) < 40) continue;
       const cleared = s.has(`outpost.${op.id}.cleared`) && (s.data.marks[`cleared.${op.id}`] ?? -1e9) > s.data.stats.playTime - 30 * 60;
       out.push({ id: `op:${op.id}`, x: op.x, z: op.z, label: cleared ? `${op.name} (cleared)` : op.name, color: cleared ? '#7d725f' : '#ff4a3a', kind: 'bunker' });
     }
@@ -2106,6 +2109,7 @@ export class Game {
       px: player.position.x,
       pz: player.position.z,
       night: this.atmo.isNight,
+      hour: this.atmo.hour,
       storm: this.weather.intensity,
       alarm: this.garage.alarm > 0 || this.garage.drone.state === 'alert',
     });

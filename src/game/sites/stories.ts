@@ -1,13 +1,15 @@
 import * as THREE from 'three/webgpu';
 import type { GameContext, Interactable } from '../context';
-import type { Landmarks } from '../world/Landmarks';
+import { Landmarks } from '../world/Landmarks';
 import type { GameState } from '../State';
-import { MeshBatch, DistanceLod, shadowProxy } from '../world/kit';
-import { glow, plainStandard, rustyMetal, wood, concrete, desertRock } from '../world/materials';
+import { MeshBatch, DistanceLod, shadowProxy, Frame } from '../world/kit';
+import { glow, plainStandard, rustyMetal, wood, concrete, desertRock, fabric } from '../world/materials';
+import { LANDMARKS } from '@/content/world';
 import { rockGeometry } from '../world/Props';
 import { loreMaterial, loreQuad } from '../world/loreAtlas';
 import { STORY_SPOTS } from '@/content/quests';
 import { rumourTonight } from '@/content/camp';
+import type { SpotHandle } from '@/engine/ambient';
 
 const V = (x: number, y: number, z: number) => new THREE.Vector3(x, y, z);
 const _e = new THREE.Euler();
@@ -221,8 +223,132 @@ export class Stories {
       this.pool.visible = false;
       this.group.add(this.pool);
       this.spots.pool = landmarks.campPoint(-3.6, 0, 4.6);
+
+      // the routine seats (content/routines.ts, Landmarks.CAMP_SEATS): Hollis's watch crate and Ren's
+      // lookout crate at the road edge of the slab, Pip's crate by her pool; a jerrycan by the watch,
+      // a mug on the lookout's crate lid. Their tops are 0.62 over the frame, like the logs.
+      const fy = Math.atan2(ax.x, ax.z) - Math.PI / 2; // camp space's yaw in the world
+      const cb = new MeshBatch();
+      const slats = wood('#8a6a44');
+      for (const [key, [cx, cz, yaw]] of Object.entries(Landmarks.CAMP_SEATS)) {
+        const w = landmarks.campPoint(cx, 0, cz);
+        // the seat point is where the hips sit: the crate sits under it, a little behind
+        const back = 0.08;
+        const px = w.x - Math.sin(fy + yaw) * back, pz = w.z - Math.cos(fy + yaw) * back;
+        const top = landmarks.campPosition.y;
+        cb.add(slats, T(new THREE.BoxGeometry(0.5, 0.42, 0.44), px, top + 0.21, pz, 0, fy + yaw, 0));
+        cb.add(dark, T(new THREE.BoxGeometry(0.52, 0.03, 0.46), px, top + 0.15, pz, 0, fy + yaw, 0));
+        ctx.physics.addBox(V(px, top + 0.21, pz), { x: 0.25, y: 0.21, z: 0.22 }, fy + yaw);
+        if (key === 'watch') {
+          const j = V(px + Math.cos(fy + yaw) * 0.6, top, pz - Math.sin(fy + yaw) * 0.6);
+          cb.add(plainStandard('#8a2a1e', 0.55, 0.3), T(new THREE.BoxGeometry(0.17, 0.34, 0.28), j.x, j.y + 0.17, j.z, 0, fy + yaw + 0.4, 0));
+        }
+      }
+      const crates = cb.build('camp-routine-crates');
+      shadowProxy(crates);
+      this.group.add(crates);
+      this.lods.push(new DistanceLod(landmarks.campPosition.clone(), 20, crates, null, 170));
     }
+    this.keeps = this.keepsakes();
+    this.endingProps(landmarks);
   }
+
+  /**
+   * Keepsakes at Dry Creek's street fire (the creek site's frame; town/creek.ts fireCircle): after
+   * Still Here, a transistor radio on a crate by Sol's log; after Rider 9's delivery, the plate Nia
+   * sets out for him every night on an upturned bucket by Ren's crate, under a cloth.
+   */
+  private keepsakes() {
+    const lm = LANDMARKS.find((l) => l.id === 'creek')!;
+    const hf = this.ctx.hf;
+    const f = new Frame(lm.position[0], hf.heightAt(lm.position[0], lm.position[2]), lm.position[2], lm.rotation);
+    const at = (x: number, z: number) => { const p = f.p(x, 0, z); p.y = hf.heightAt(p.x, p.z); return p; };
+    const make = (name: string, x: number, z: number, yaw: number, build: (mb: MeshBatch) => void) => {
+      const mb = new MeshBatch();
+      build(mb);
+      const g = mb.build(name);
+      const p = at(x, z);
+      placed(g, p.x, p.y, p.z, f.yaw + yaw);
+      g.visible = false;
+      const wrap = new THREE.Group();
+      wrap.add(g);
+      this.group.add(wrap);
+      this.lods.push(new DistanceLod(p, 1, wrap, null, 140));
+      return g;
+    };
+    const radio = make('rosa-radio', -2.95, 1.75, 0.6, (mb) => {
+      mb.add(wood('#7a5a36'), T(new THREE.BoxGeometry(0.42, 0.34, 0.34), 0, 0.17, 0));
+      mb.add(plainStandard('#3d6b8a', 0.5, 0.2), T(new THREE.BoxGeometry(0.26, 0.15, 0.08), 0, 0.42, 0));
+      mb.add(rustyMetal({ base: '#6a6d70', rust: 0.45, metalness: 0.7 }), T(new THREE.BoxGeometry(0.15, 0.09, 0.006), -0.04, 0.42, 0.042));
+      mb.add(plainStandard('#d8c9a0', 0.6), T(new THREE.CylinderGeometry(0.022, 0.022, 0.012, 10), 0.08, 0.44, 0.042, Math.PI / 2, 0, 0)); // the dial
+      mb.add(rustyMetal({ base: '#6a6d70', rust: 0.45, metalness: 0.7 }), rod(V(0.1, 0.5, -0.02), V(0.32, 0.92, -0.1), 0.004, 4));
+      // the words Dez wrote, on the back of a Kade lanyard card, propped against it
+      mb.add(plainStandard('#efe9da', 0.8), T(new THREE.BoxGeometry(0.09, 0.12, 0.004), -0.14, 0.4, 0.06, -0.25, 0.2, 0));
+    });
+    const plate = make('nine-plate', 2.35, 4.0, -0.4, (mb) => {
+      mb.add(rustyMetal({ base: '#8a8f92', rust: 0.35, metalness: 0.6 }), T(new THREE.CylinderGeometry(0.15, 0.13, 0.36, 12), 0, 0.18, 0));
+      mb.add(plainStandard('#e8e2d2', 0.4), T(new THREE.CylinderGeometry(0.13, 0.1, 0.02, 16), 0, 0.37, 0));
+      mb.add(fabric('#b8402e', 0.9), T(new THREE.SphereGeometry(0.11, 12, 6, 0, Math.PI * 2, 0, 1.2).scale(1, 0.55, 1), 0, 0.375, 0));
+      mb.add(plainStandard('#c9a24a', 0.5, 0.4), T(new THREE.BoxGeometry(0.012, 0.004, 0.13), 0.12, 0.382, 0.03, 0, 0.5, 0)); // a fork
+    });
+    return { radio, plate };
+  }
+  /**
+   * Last Chance after the debrief, one thing per ending: read the names, and a bedsheet under the
+   * canopy says so; take the deal, and Vesper's jugs stand by the pumps (nineteen; Ren counted);
+   * keep the leverage, and her free-trial crate sits on the forecourt with its parachute.
+   */
+  private endingProps(landmarks: Landmarks) {
+    const top = landmarks.campPosition.y; // the forecourt slab
+    const o = landmarks.campPoint(0, 0, 0);
+    const ax = landmarks.campPoint(1, 0, 0).sub(o).normalize();
+    const fy = Math.atan2(ax.x, ax.z) - Math.PI / 2;
+    const paper = loreMaterial();
+    const make = (name: string, flag: string, x: number, z: number, yaw: number, build: (mb: MeshBatch) => void) => {
+      const mb = new MeshBatch();
+      build(mb);
+      const g = mb.build(name);
+      const w = landmarks.campPoint(x, 0, z);
+      placed(g, w.x, top, w.z, fy + yaw);
+      g.visible = false;
+      const wrap = new THREE.Group();
+      wrap.add(g);
+      this.group.add(wrap);
+      this.lods.push(new DistanceLod(new THREE.Vector3(w.x, top, w.z), 2, wrap, null, 170));
+      this.flagged.push({ obj: g, flag });
+    };
+    // the banner: hung from the canopy's north fascia (z 6.1, its bottom edge 4.95 up), facing the logs
+    make('names-banner', 'act1.broadcast', -1.2, 6.32, 0, (mb) => {
+      mb.add(paper, T(loreQuad('namesBanner', 4.2, 1.3), 0, 4.2, 0, 0.04, 0, 0));
+      const rope = plainStandard('#c9b48c', 0.9);
+      for (const sx of [-2.05, 2.05]) mb.add(rope, rod(V(sx, 4.86, 0.0), V(sx * 1.02, 4.97, -0.12), 0.012, 4));
+    });
+    // nineteen jugs in a pyramid by the east pumps: ten, six, three
+    make('kade-jugs', 'act1.deal', 4.7, 1.6, 0.2, (mb) => {
+      const blue = plainStandard('#3f7fc0', 0.25, 0.05);
+      const cap = plainStandard('#1d2733', 0.5);
+      const rows: [number, number, number][] = [[5, 2, 0], [3, 2, 1], [3, 1, 2]];
+      for (const [nx, nz, k] of rows) for (let i = 0; i < nx; i++) for (let j = 0; j < nz; j++) {
+        const x = (i - (nx - 1) / 2) * 0.3, z = (j - (nz - 1) / 2) * 0.3, y = 0.24 + k * 0.48;
+        mb.add(blue, T(new THREE.CylinderGeometry(0.14, 0.14, 0.44, 10), x, y, z));
+        mb.add(cap, T(new THREE.CylinderGeometry(0.035, 0.035, 0.05, 8), x, y + 0.24, z));
+        if (j === nz - 1) mb.add(paper, T(loreQuad('jugLabel', 0.18, 0.09), x, y, z + 0.141));
+      }
+    });
+    // the free-trial drop: a white Kade crate, a slumped orange parachute, the cord across the slab
+    make('free-trial', 'act1.leverage', 5.2, -3.2, -0.5, (mb) => {
+      mb.add(plainStandard('#ecebe6', 0.5), T(new THREE.BoxGeometry(0.9, 0.62, 0.62), 0, 0.31, 0));
+      mb.add(plainStandard('#c8302a', 0.5), T(new THREE.BoxGeometry(0.92, 0.08, 0.64), 0, 0.5, 0));
+      mb.add(paper, T(loreQuad('freeTrial', 0.6, 0.3), 0, 0.28, 0.312));
+      const chute = fabric('#e8742a', 0.9);
+      mb.add(chute, T(rockGeometry(83, 2).scale(0.95, 0.16, 0.75), -1.35, 0.06, -0.5, 0, 0.4, 0.05), T(rockGeometry(84, 1).scale(0.45, 0.2, 0.4), -0.75, 0.1, -0.15, 0, 1.1, 0));
+      mb.add(plainStandard('#c9b48c', 0.9), rod(V(-0.45, 0.6, 0), V(-1.0, 0.05, -0.3), 0.008, 4), rod(V(-0.45, 0.6, 0.1), V(-1.2, 0.04, 0.1), 0.008, 4));
+    });
+  }
+  private flagged: { obj: THREE.Object3D; flag: string }[] = [];
+  private radioLoop: SpotHandle | null = null;
+  private keeps: { radio: THREE.Object3D; plate: THREE.Object3D } | null = null;
+  private keepT = 0;
 
   private get s() { return this.ctx.state; }
 
@@ -362,7 +488,8 @@ export class Stories {
     if (choice === 'rumour') {
       // Dez's pick of the night: the pickup it points at goes on the map
       const r = rumourTonight({ has: (f) => s.has(f), count: (i) => s.count(i), rep: (p) => s.rep(p), name: s.archetype.name, rests: s.data.rests });
-      if (r?.intel && s.set(`rumour.${r.intel}`)) setTimeout(() => this.toast('Marked on your map: what the band was talking about.', 'info'), 400);
+      const key = r?.intel ?? r?.op;
+      if (key && s.set(`rumour.${key}`)) setTimeout(() => this.toast('Marked on your map: what the band was talking about.', 'info'), 400);
     }
     if (choice === 'song.hollis' && s.has('q.song.asked')) s.set('q.song.hollis');
     if (choice === 'song.dez' && s.has('q.song.hollis')) s.set('q.song.dez');
@@ -383,6 +510,21 @@ export class Stories {
       this.applyCam();
     }
     if (s && !s.has('seen:capsule') && Math.hypot(cam.x - this.capsuleAt.x, cam.z - this.capsuleAt.z) < 22) s.set('seen:capsule');
+    // keepsakes and the pool follow the flags (they change in conversation, mid-run)
+    if (s && this.keeps && (this.keepT -= dt) <= 0) {
+      this.keepT = 0.5;
+      const radio = s.has('q.song.band') || s.has('q.song.quiet');
+      if (this.keeps.radio.userData.on !== radio) { this.keeps.radio.userData.on = radio; this.keeps.radio.visible = radio; }
+      // and you can hear it: the radio murmurs by Sol's log (a positional loop, built only when you're near)
+      if (radio && !this.radioLoop) {
+        this.radioLoop = this.ctx.audio.loop('radio', this.keeps.radio.position.clone().setY(this.keeps.radio.position.y + 0.45));
+        this.radioLoop?.setGain(0.55);
+      } else if (!radio && this.radioLoop) { this.radioLoop.stop(); this.radioLoop = null; }
+      const plate = s.has('q.rider.delivered');
+      if (this.keeps.plate.userData.on !== plate) { this.keeps.plate.userData.on = plate; this.keeps.plate.visible = plate; }
+      if (s.favours().pipPool && !this.pool.visible) this.pool.visible = true;
+      for (const f of this.flagged) { const on = s.has(f.flag); if (f.obj.visible !== on) f.obj.visible = on; }
+    }
     this.t += dt;
     // the camera blinks blue while it uploads (dark once cut); the relay's light follows its feed
     const ph = this.t % 2.2;

@@ -18,6 +18,7 @@ import { buildCut } from './cave';
 import { buildWash } from './wash';
 import { uTownNight } from './townAtlas';
 import { TownBarks } from './barks';
+import { STATIONS, AWAY } from '@/content/routines';
 
 type Col = ReturnType<Physics['addBox']>;
 
@@ -232,10 +233,21 @@ export class Settlement {
 
   // ------------------------------------------------------------------ interactions
   private buildInteractables() {
-    const talk = (id: string, label: string, run: () => void | Promise<void>): Interactable => ({
-      id, pos: this.pos(id), radius: 2.05,
-      primary: { label, available: () => true, run },
-    });
+    const talk = (id: string, label: string, run: () => void | Promise<void>): Interactable => {
+      this.home.set(id, this.pos(id).clone());
+      const self = this;
+      return {
+        id, pos: this.pos(id), radius: 2.05,
+        // Ren's lookout is at Last Chance once the drive-in is told
+        visible: () => !self.gone.has(id),
+        primary: {
+          // off their routine (asleep, on a call, shut): the prompt is whatever they left behind
+          get label() { return self.away.has(id) && AWAY[id] ? AWAY[id].label : label; },
+          available: () => true,
+          run: () => (self.away.has(id) && AWAY[id] ? self.awayNote(id, run) : run()),
+        },
+      };
+    };
 
     this.interactables.push(talk('nia', 'Talk to Nia', () => this.talkNia()));
     this.interactables.push({
@@ -255,7 +267,7 @@ export class Settlement {
     });
     this.interactables.push({
       id: 'inez', pos: this.pos('inez'), radius: 2.1,
-      primary: { label: 'Talk to Inez', available: () => true, run: () => this.talkInez() },
+      primary: talk('inez', 'Talk to Inez', () => this.talkInez()).primary,
       secondary: {
         label: 'Palm the till',
         available: () => {
@@ -421,6 +433,9 @@ export class Settlement {
         [night, ' Kitchen\'s closed. The coffee isn\'t.'],
       );
       case 'doc': return pick(
+        [this.slot('doc') === 'doc.cut', ' (He keeps his voice down. Wick is asleep, or pretending to be.) Night call. His lungs are better. His manners aren\'t.'],
+        [this.slot('doc') === 'doc.fire', ' Evenings I come out to Sol\'s fire. It\'s cheaper than a waiting room and the patients are already sitting down.'],
+        [this.slot('doc') === 'doc.diner', ' Breakfast. Nia insists. In writing.'],
         [ending === 'broadcast', ' Half the names you read on the radio were my patients. I crossed them off, then I crossed them back on. They\'re alive. That should count.'],
         [ending === 'leverage', ' A ledger in an ammo tin. That\'s a prescription I understand.'],
         [ending === 'deal', ' Twenty jugs a week. Tell Mara to boil them. I don\'t trust water with a logo.'],
@@ -454,6 +469,55 @@ export class Settlement {
         [!!ending, ' Whatever you did with that ledger, the salt still glows at night. Do better next time.'],
         [night, ' Fire\'s small on purpose.'],
       );
+    }
+  }
+
+  // ------------------------------------------------------------------ routines (content/routines.ts)
+  /** Where each talk prompt lives by default (the person's first slot). */
+  private home = new Map<string, THREE.Vector3>();
+  /** Not in any slot right now (asleep, on a call, shut): the prompt is their note. */
+  private away = new Set<string>();
+  /** Living somewhere else now (Ren at Last Chance): no prompt here at all. */
+  private gone = new Set<string>();
+  private routineT = 0;
+
+  /** Follow each person to whichever slot they're in, twice a second. */
+  private followRoutines(dt: number) {
+    if ((this.routineT -= dt) > 0) return;
+    this.routineT = 0.5;
+    for (const [id, home] of this.home) {
+      const w = this.crowds.map((c) => c.where(id)).find((x) => !!x) ?? null;
+      const spot = this.world.get(id)!;
+      this.gone.delete(id);
+      this.away.delete(id);
+      if (w) {
+        // the talk prompt stands where they are (their slot's neck, a little lower: the old spots were at 1.05)
+        if (w.station && !STATIONS[w.station]?.primary) spot.copy(w.neck).setY(w.neck.y - 0.35);
+        else spot.copy(home);
+      } else {
+        spot.copy(home);
+        if (id === 'ren' && this.s?.has('q.ren.truth')) this.gone.add(id);
+        else this.away.add(id);
+      }
+    }
+  }
+
+  /** The routine slot someone is in right now ('' if none, or no slots). */
+  private slot(id: string) {
+    return this.crowds.map((c) => c.where(id)).find((x) => !!x)?.station ?? '';
+  }
+
+  private async awayNote(id: string, talk: () => void | Promise<void>) {
+    const a = AWAY[id];
+    const pick = await this.ctx.ui.choose({
+      speaker: a.speaker,
+      text: a.text,
+      choices: [...(a.knock ? [{ id: 'knock', label: a.knock.label }] : []), { id: 'ok', label: 'Leave it.' }],
+    });
+    if (pick === 'knock' && a.knock) {
+      this.ctx.ui.subtitle(a.knock.speaker, a.knock.text);
+      await new Promise((r) => setTimeout(r, 1400));
+      await talk();
     }
   }
 
@@ -945,7 +1009,9 @@ export class Settlement {
       const owner = s.has('q.inez.inez');
       return {
         speaker: 'Inez Quill',
-        text: (owner
+        text: this.away.has('inez')
+          ? 'Closed. You knocked. I came down the stair in my good shawl for this, so it had better be commerce.'
+          : (owner
           ? 'Welcome to the Till. My Till. Legally, in pencil. Browse. Don\'t palm. I can hear a hand.'
           : s.has('q.inez.town')
             ? 'The town\'s Till is open. The town\'s prices went up. Funny how that works.'
@@ -1379,6 +1445,7 @@ export class Settlement {
     if (cam) for (const l of this.lods) l.update(cam);
     if (cam) for (const c of this.crowds) c.update(dt, cam);
     if (cam) this.barks.update(dt, cam);
+    this.followRoutines(dt);
     const s = this.ctx.state;
     if (s && !this.synced) {
       this.synced = true;
