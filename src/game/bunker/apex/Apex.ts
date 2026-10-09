@@ -224,6 +224,8 @@ export class Apex extends Bunker<ApexBuilder> {
   override triggerAlarm(at: THREE.Vector3 | null, reason: string) {
     super.triggerAlarm(at, reason);
     this.rang = true;
+    const pad = this.entry('airlock').primary;
+    if (pad.kind === 'keypad' && reason === pad.lockoutReason) this.taunt(VESPER.lockout.text);
     this.onAlarm?.(at ?? this.b.points.airlock);
   }
 
