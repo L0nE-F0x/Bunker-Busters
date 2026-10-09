@@ -1793,6 +1793,9 @@ export class Recovery implements HostileProvider {
   private updateSmokes(dt: number) {
     for (const k of [...this.smokes]) {
       if (k.body) {
+        // never through the ground (a throw from inside a wall or under the terrain's skin)
+        const t0 = k.body.translation(), g0 = this.host.hf.heightAt(t0.x, t0.z);
+        if (t0.y < g0 - 0.4) { k.body.setTranslation({ x: t0.x, y: g0 + 0.1, z: t0.z }, true); k.body.setLinvel({ x: 0, y: 0, z: 0 }, true); }
         const t = k.body.translation(), r = k.body.rotation();
         k.mesh.position.set(t.x, t.y, t.z);
         k.mesh.quaternion.set(r.x, r.y, r.z, r.w);
@@ -1824,6 +1827,8 @@ export class Recovery implements HostileProvider {
   private updateCharges(dt: number) {
     for (const c of [...this.charges]) {
       c.fuse -= dt;
+      const t0 = c.body.translation(), g0 = this.host.hf.heightAt(t0.x, t0.z);
+      if (t0.y < g0 - 0.4) { c.body.setTranslation({ x: t0.x, y: g0 + 0.1, z: t0.z }, true); c.body.setLinvel({ x: 0, y: 0, z: 0 }, true); }
       const t = c.body.translation(), r = c.body.rotation();
       c.mesh.position.set(t.x, t.y, t.z);
       c.mesh.quaternion.set(r.x, r.y, r.z, r.w);

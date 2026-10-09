@@ -1590,7 +1590,8 @@ class Coyotes implements HostileProvider {
   audio?: AudioEngine;
   /** Where they are (debug). */
   get where() { return this.pack[0].pos; }
-  hostiles(): Hostile[] { return []; }
+  private static readonly none: Hostile[] = [];
+  hostiles(): Hostile[] { return Coyotes.none; }
   /** Every shot or blast (Fauna startles the birds and the small things with it). */
   onShot: ((pos: THREE.Vector3, radius: number) => void) | null = null;
   hear(pos: THREE.Vector3, radius: number, kind: NoiseKind) {
@@ -1798,7 +1799,7 @@ export class Fauna {
 
   /** The freshest kill within `r` of the player, if any. */
   private carcass(player: THREE.Vector3, r: number) {
-    this.carcasses = this.carcasses.filter((k) => this.t - k.t < 480);
+    if (this.carcasses.length && this.t - this.carcasses[0].t >= 480) this.carcasses = this.carcasses.filter((k) => this.t - k.t < 480);
     let best: THREE.Vector3 | null = null, bt = -1;
     for (const k of this.carcasses) if (k.t > bt && Math.hypot(k.p.x - player.x, k.p.z - player.z) < r) { bt = k.t; best = k.p; }
     return best;
