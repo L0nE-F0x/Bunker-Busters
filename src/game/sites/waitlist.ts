@@ -86,7 +86,10 @@ export class WaitlistSite extends Site {
     this.buildHeadwall(M, button.material, keyLed.material);
     this.buildQueue(M);
     this.buildCamp(M, bulbs.material, coals.material);
-    this.buildKiosk(M);
+    const flood = glow('#ffe2b0', 0);
+    this.flood = flood.intensity as unknown as { value: number };
+    this.buildKiosk(M, flood.material);
+    this.pylonLight.parent = root;
 
     // lights: the board's glow on the plaza, the fire, two of the string's bulbs
     this.boardLight = new VirtualLight('#ff5a2a', 0, 16, 2);
@@ -473,7 +476,7 @@ export class WaitlistSite extends Site {
   private cartAt = new THREE.Vector3();
 
   // ================================================================ where the line starts
-  private buildKiosk(M: Mats) {
+  private buildKiosk(M: Mats, floodMat: THREE.Material) {
     const k = this.kit;
     const kx = LANE_X0 - 2.6, kz = LANES[0] + 2.2;
     const y = k.ground(kx, kz);
@@ -494,10 +497,41 @@ export class WaitlistSite extends Site {
     k.b.add(M.post, xf(new THREE.CylinderGeometry(0.03, 0.03, 1.4, 6), mat4(bx, y + 0.45, bz - 0.15, 0.2, -0.5)));
     this.prints.add(artQuad('wlPoster', 0.72, 1.08, mat4(bx + Math.sin(-0.5) * 0.03, y + 1.1, bz + Math.cos(-0.5) * 0.03, -0.12, -0.5)));
     this.posterAt = v3(bx, y + 1.1, bz + 0.3);
+    // the pylon at the mouth of the basin, readable from down the valley, and the flags by the kiosk
+    const px = -41, pz = 12, py = k.ground(px, pz);
+    k.b.add(M.wall, xf(new THREE.BoxGeometry(1.4, 0.9, 4.2), mat4(px, py + 0.3, pz)));
+    for (const s of [-1, 1]) k.b.add(M.steel, xf(new THREE.BoxGeometry(0.3, 8.4, 0.3), mat4(px, py + 4.6, pz + s * 1.7)));
+    k.b.add(M.panel, xf(new THREE.BoxGeometry(0.42, 3.0, 4.7), mat4(px, py + 8.0, pz)));
+    k.b.add(M.gold, xf(new THREE.BoxGeometry(0.5, 0.12, 4.8), mat4(px, py + 9.56, pz)));
+    this.prints.add(artQuad('wlPylon', 4.5, 2.81, mat4(px - 0.22, py + 8.0, pz, 0, -Math.PI / 2)));
+    this.prints.add(artQuad('wlPylon', 4.5, 2.81, mat4(px + 0.22, py + 8.0, pz, 0, Math.PI / 2)));
+    for (const s of [-1, 1]) {
+      k.b.add(M.steel, xf(new THREE.BoxGeometry(0.9, 0.05, 0.05), mat4(px - 0.6, py + 6.3, pz + s * 1.2)));
+      k.b.add(floodMat, xf(new THREE.BoxGeometry(0.18, 0.12, 0.26), mat4(px - 1.05, py + 6.36, pz + s * 1.2, 0, 0, 0.5)));
+    }
+    k.col(px, py + 4.5, pz, 0.7, 4.5, 2.1, 0);
+    this.pylonLight = new VirtualLight('#ffe2b0', 0, 10, 2);
+    this.pylonLight.position.set(px - 2.2, py + 7.2, pz);
+    const r = rng(83);
+    for (let i = 0; i < 5; i++) {
+      const fx = -38 + i * 3.2, fz = 29.5 + (i % 2) * 0.6, fy = k.ground(fx, fz);
+      k.b.add(M.pole, xf(new THREE.CylinderGeometry(0.04, 0.06, 7, 6), mat4(fx, fy + 3.5, fz)));
+      k.b.add(M.gold, xf(new THREE.SphereGeometry(0.08, 8, 6), mat4(fx, fy + 7.05, fz)));
+      const flag = new THREE.PlaneGeometry(1.7, 1.05, 8, 1);
+      const p = flag.attributes.position as THREE.BufferAttribute;
+      for (let j = 0; j < p.count; j++) { const u = p.getX(j) + 0.85; p.setZ(j, Math.sin(u * 3.1 + i) * 0.12 * u); }
+      flag.translate(0.85, 0, 0).computeVertexNormals();
+      const yaw = 0.4 + (r() - 0.5) * 0.3;
+      const cloth = i % 2 ? M.flagB : M.flagA;
+      k.b.add(cloth, xf(flag.clone(), mat4(fx, fy + 6.4, fz, 0, yaw)));
+      k.b.add(cloth, xf(flipped(flag), mat4(fx, fy + 6.4, fz, 0, yaw)));
+    }
     this.spot('start', kx - 1, 0, kz + 5);
     this.spot('approach', -30, 0, 34);
   }
   private ticketAt = new THREE.Vector3();
+  private pylonLight!: VirtualLight;
+  private flood!: { value: number };
   private posterAt = new THREE.Vector3();
 
   // ================================================================ interactions
@@ -744,6 +778,10 @@ export class WaitlistSite extends Site {
     this.farHalo.channels[2] = night * fl * 0.8;
     this.button.value = dark ? 0 : 1 + Math.sin(this.t * 2) * 0.8 + night * 2;
     this.keyLed.value = open || dark ? 0 : 1 + night * 3;
+    // the pylon's floodlights come on at dusk, on Everafter's circuit
+    const fl2 = dark ? 0 : THREE.MathUtils.smoothstep(night, 0.2, 0.55);
+    this.flood.value = fl2 * 8;
+    this.pylonLight.intensity = fl2 * 5;
     if (this.near.visible) {
       uSiteNight.value = night;
       uSiteFlicker.value = glitch;
@@ -815,6 +853,7 @@ function mats() {
     tv: plainStandard('#1a1a1c', 0.4, 0.2),
     bulbDead: plainStandard('#6a6458', 0.3, 0.1),
     potty: plainStandard('#3f7a9a', 0.6), pottyRoof: plainStandard('#d9d4c4', 0.6),
+    flagA: fabric('#e9e3d4'), flagB: fabric('#9a7a4a'),
     board: wood('#6a5236'),
     dispenser: plainStandard('#a8322a', 0.45, 0.1),
   };

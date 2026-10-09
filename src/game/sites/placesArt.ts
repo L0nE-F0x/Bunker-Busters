@@ -289,6 +289,32 @@ artPaint('wlServe', 512, 160, (c, w, h) => {
   for (let x = 0; x < w; x += 4) c.fillRect(x, 0, 1, h);
   for (let y = 0; y < h; y += 4) c.fillRect(0, y, w, 1);
 });
+artPaint('wlPylon', 512, 320, (c, w, h, r) => {
+  // the roadside pylon at the mouth of the basin: the brand, the promise, an arrow
+  const g = c.createLinearGradient(0, 0, 0, h);
+  g.addColorStop(0, '#2a2420');
+  g.addColorStop(1, '#3a302a');
+  c.fillStyle = g;
+  c.fillRect(0, 0, w, h);
+  c.strokeStyle = '#c9a65a';
+  c.lineWidth = 6;
+  c.strokeRect(10, 10, w - 20, h - 20);
+  stencil(c, 'EVERAFTER', w / 2, 118, 104, '#e8cf8a', 'center', 900);
+  c.font = `500 30px ${F_UI}`;
+  c.fillStyle = '#e9e3d4';
+  c.textAlign = 'center';
+  c.fillText('CONTINUITY RESIDENCES', w / 2, 168);
+  c.fillStyle = '#c9a65a';
+  c.fillRect(60, 196, w - 120, 3);
+  c.font = `700 30px ${F_UI}`;
+  c.fillStyle = '#e9e3d4';
+  c.fillText('NOW BOOKING  ·  QUEUE AHEAD  →', w / 2, 248);
+  c.font = `500 18px ${F_MONO}`;
+  c.fillStyle = 'rgba(233,227,212,0.7)';
+  c.fillText('YOUR PLACE IN LINE IS SECURE', w / 2, 286);
+  grime(c, w, h, 1.0, 71);
+  blast(c, w, h, r, 500, 3);
+});
 artPaint('wlStart', 448, 256, (c, w, h, r) => {
   c.fillStyle = '#1f2a2c';
   c.fillRect(0, 0, w, h);

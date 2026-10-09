@@ -2,7 +2,7 @@ import * as THREE from 'three/webgpu';
 import type { GameContext } from '../context';
 import type { Landmarks } from '../world/Landmarks';
 import { norm } from '../world/kit';
-import { corrugated, glow, plainStandard, rustyMetal, wood } from '../world/materials';
+import { chainLink, corrugated, glow, plainStandard, rustyMetal, wood } from '../world/materials';
 import { VirtualLight } from '../world/lights';
 import { ITEMS } from '@/content/items';
 import { XP_REWARDS } from '@/content/progression';
@@ -78,6 +78,7 @@ export class SolarSite extends Site {
 
     this.buildRows(M);
     this.buildHut(M, hutLamp.material);
+    this.buildFence(M);
     this.buildCable(M);
     this.bots = this.buildBots(M, lamp.material);
 
@@ -230,12 +231,73 @@ export class SolarSite extends Site {
   private cabinetAt = new THREE.Vector3();
   private botAt = new THREE.Vector3();
 
+  // ================================================================ the perimeter: chain link, a gate left open, a run pushed flat
+  private buildFence(M: Mats) {
+    const k = this.kit;
+    const link = chainLink();
+    const x0 = -31, x1 = 38, z0 = -21, z1 = 21, H = 2.2, step = 3;
+    const panel = (a: THREE.Vector3, b: THREE.Vector3, h: number) => {
+      const len = Math.hypot(b.x - a.x, b.z - a.z);
+      const g = new THREE.BufferGeometry();
+      g.setAttribute('position', new THREE.Float32BufferAttribute([a.x, a.y, a.z, b.x, b.y, b.z, b.x, b.y + h, b.z, a.x, a.y, a.z, b.x, b.y + h, b.z, a.x, a.y + h, a.z], 3));
+      g.setAttribute('uv', new THREE.Float32BufferAttribute([0, 0, len, 0, len, h, 0, 0, len, h, 0, h], 2));
+      g.computeVertexNormals();
+      return norm(g);
+    };
+    // the four sides as runs of posts; `skip(t)` leaves a gap, `flat(t)` lays the panel down
+    const side = (ax: number, az: number, bx: number, bz: number, skip: (x: number, z: number) => boolean, flat: (x: number, z: number) => boolean) => {
+      const len = Math.hypot(bx - ax, bz - az), n = Math.round(len / step);
+      let runStart: THREE.Vector3 | null = null;
+      let last: THREE.Vector3 | null = null;
+      const flush = (end: THREE.Vector3) => {
+        if (!runStart) return;
+        const c = runStart.clone().add(end).multiplyScalar(0.5);
+        const half = runStart.distanceTo(end) / 2;
+        if (half > 0.2) k.col(c.x, c.y + H / 2, c.z, Math.abs(bx - ax) > 0.1 ? half : 0.05, H / 2, Math.abs(bz - az) > 0.1 ? half : 0.05, 0);
+        runStart = null;
+      };
+      for (let i = 0; i <= n; i++) {
+        const t = i / n, x = ax + (bx - ax) * t, z = az + (bz - az) * t, y = k.ground(x, z);
+        const p = v3(x, y, z);
+        if (skip(x, z) || flat(x, z)) { if (last) flush(last); last = null; continue; }
+        k.b.add(M.post, xf(new THREE.CylinderGeometry(0.04, 0.04, H + 0.1, 6), mat4(x, y + H / 2, z)));
+        if (!runStart) runStart = p;
+        last = p;
+        if (i < n) {
+          const t2 = (i + 1) / n, x2 = ax + (bx - ax) * t2, z2 = az + (bz - az) * t2;
+          if (skip(x2, z2)) { flush(p); last = null; continue; }
+          const q = v3(x2, k.ground(x2, z2), z2);
+          if (flat(x2, z2)) {
+            flush(p);
+            last = null;
+            // pushed flat outward: the panel lies on the sand from this post
+            const out = v3(Math.sign(bz - az), 0, -Math.sign(bx - ax));
+            k.nb.add(link, flatPanel(p, q, out, H));
+            continue;
+          }
+          k.nb.add(link, panel(p, q, H)); // thin batch: an alpha-tested lattice can't go in the solid shadow proxy
+          k.b.add(M.rail, xf(new THREE.CylinderGeometry(0.025, 0.025, Math.hypot(x2 - x, z2 - z), 5).rotateZ(Math.PI / 2).rotateY(-Math.atan2(z2 - z, x2 - x)), mat4((x + x2) / 2, (y + q.y) / 2 + H, (z + z2) / 2)));
+        }
+      }
+      if (last) flush(last);
+    };
+    const none = () => false;
+    side(x0, z0, x1, z0, (x) => x > 14 && x < 20.5, none); // south, the gate gap by the sign
+    side(x1, z0, x1, z1, none, none); // east, behind the hut
+    side(x1, z1, x0, z1, none, (x) => x > -12 && x < -3); // north: a run pushed flat by a storm
+    side(x0, z1, x0, z0, none, none); // west
+    // the gate leaf, swung back against the fence
+    const gy = k.ground(14.5, z0);
+    k.nb.add(link, panel(v3(14.5, gy + 0.05, z0), v3(14.5 - 2.6, gy + 0.05, z0 - 2.4), H - 0.1));
+    k.b.add(M.post, xf(new THREE.CylinderGeometry(0.035, 0.035, H, 6), mat4(14.5 - 2.6, gy + H / 2, z0 - 2.4)));
+  }
+
   // ================================================================ the buried line, heading east
   private buildCable(M: Mats) {
     const k = this.kit;
     // a trench scar out of the hut and a row of marker posts, every twelve metres toward Everafter
     for (let i = 0; i < 6; i++) {
-      const x = 38 + i * 12, z = -1 - i * 1.5;
+      const x = 42 + i * 12, z = -1 - i * 1.5;
       const y = k.ground(x, z);
       k.b.add(M.marker, xf(new THREE.BoxGeometry(0.12, 1.2, 0.12), mat4(x, y + 0.6, z)));
       if (i % 2 === 0) {
@@ -243,7 +305,7 @@ export class SolarSite extends Site {
         this.prints.add(artQuad('ppMarker', 0.32, 0.45, mat4(x, y + 0.85, z + 0.065)));
       }
     }
-    k.b.add(M.conduit, xf(new THREE.BoxGeometry(5, 0.06, 0.5), mat4(36.6, k.ground(36.6, -1) + 0.02, -1)));
+    k.b.add(M.conduit, xf(new THREE.BoxGeometry(7, 0.06, 0.5), mat4(37.6, k.ground(37.6, -1) + 0.02, -1)));
   }
 
   // ================================================================ SHINE units
@@ -499,4 +561,16 @@ function mergeParts(parts: THREE.BufferGeometry[]) {
   g.setAttribute('uv', new THREE.BufferAttribute(uvs, 2));
   g.computeBoundingSphere();
   return g;
+}
+
+/** A chain-link panel lying on the sand, pushed flat outward from the post line a→b. */
+function flatPanel(a: THREE.Vector3, b: THREE.Vector3, out: THREE.Vector3, h: number) {
+  const len = Math.hypot(b.x - a.x, b.z - a.z);
+  const A = a.clone().setY(a.y + 0.06), B = b.clone().setY(b.y + 0.06);
+  const C = B.clone().addScaledVector(out, h).setY(b.y + 0.12), D = A.clone().addScaledVector(out, h).setY(a.y + 0.12);
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute([A.x, A.y, A.z, B.x, B.y, B.z, C.x, C.y, C.z, A.x, A.y, A.z, C.x, C.y, C.z, D.x, D.y, D.z], 3));
+  g.setAttribute('uv', new THREE.Float32BufferAttribute([0, 0, len, 0, len, h, 0, 0, len, h, 0, h], 2));
+  g.computeVertexNormals();
+  return norm(g);
 }
