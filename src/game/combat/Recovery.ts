@@ -499,6 +499,7 @@ export class Recovery implements HostileProvider {
     h.hitT = 99;
     h.cower = 0;
     h.floor = null;
+    h.dropped = null;
     return h;
   }
 

@@ -349,6 +349,8 @@ export class Human {
   private crouchS = 0;
   /** 0..1 hands going up (surrender; the gun is on the ground). */
   private surK = 0;
+  /** Where its gun lies after it gave up (it never picks it back up), or null: armed. */
+  dropped: THREE.Matrix4 | null = null;
   private phase = Math.random() * 6;
   /** Standing still, a person still breathes and shifts their weight: their own clock and tempo. */
   private idleT = Math.random() * 100;
@@ -558,11 +560,12 @@ export class Human {
     const wUp = _wu.copy(UP).addScaledVector(cl, (1 - this.readyK) * 0.4).normalize();
     frameTo(this.mats[BONE.weapon], wPos, wUp, _tmp.copy(wDir).negate(), 1);
     // surrendering: the gun goes down in the dirt in front of it, on its side
-    if (this.pose === 'surrender' || this.surK > 0.5) {
+    if (this.pose === 'surrender' && !this.dropped) {
       const gp = _c.copy(this.pos).addScaledVector(cf, 0.7).addScaledVector(cl, -0.2);
       gp.y = (this.floor ?? hf.heightAt(gp.x, gp.z)) + 0.03;
-      frameTo(this.mats[BONE.weapon], gp, cl, _tmp.copy(cf).applyAxisAngle(UP, 1.2), 1);
+      this.dropped = frameTo(new THREE.Matrix4(), gp, cl, _tmp.copy(cf).applyAxisAngle(UP, 1.2), 1);
     }
+    if (this.dropped) this.mats[BONE.weapon].copy(this.dropped);
     // re-derive the barrel so the muzzle matches the bone
     const wm = this.mats[BONE.weapon];
     this.muzzle.set(0, 0.064, pistol ? -0.17 : -0.68).applyMatrix4(wm);
@@ -584,6 +587,12 @@ export class Human {
     let cradle = 1 - Math.min(1, reload * 1.6);
     if (this.pose === 'radio') cradle = 0;
     if (dying > 0 && hz === 'body' && !pistol) cradle *= 1 - Math.min(1, dying * 1.6);
+    // unarmed (it gave up): the hands hang at its sides when they aren't up
+    if (this.dropped) {
+      grip.copy(pelvis).addScaledVector(cl, -0.24 * L.build).addScaledVector(UP, -0.12).addScaledVector(cf, 0.04 + Math.sin(ph) * 0.12 * walk);
+      fore = _b.copy(pelvis).addScaledVector(cl, 0.24 * L.build).addScaledVector(UP, -0.12).addScaledVector(cf, 0.04 - Math.sin(ph) * 0.12 * walk);
+      cradle = 0;
+    }
     // hands up, open, either side of the hat
     const sk = this.surK;
     if (sk > 0.01) {
