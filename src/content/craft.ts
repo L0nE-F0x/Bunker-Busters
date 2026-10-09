@@ -1,4 +1,5 @@
 import type { SkillId } from './types';
+import type { ModId } from './weapons';
 
 export interface Recipe {
   id: string;
@@ -9,7 +10,9 @@ export interface Recipe {
   need: { id: string; qty: number }[];
   skill?: { id: SkillId; level: number };
   /** Heading in the camp panel. */
-  group?: 'Tools' | 'Ammunition' | 'Medicine' | 'Salvage' | 'Gear';
+  group?: 'Tools' | 'Ammunition' | 'Medicine' | 'Salvage' | 'Gear' | 'Weapon mods';
+  /** Not an item: fits a mod to a weapon you carry (its `out.qty` is 0). See weapons.ts MODS. */
+  mod?: ModId;
   /** Not a new item: tops a piece of gear back up (its `out.qty` is 0). See Gear.ts. */
   restore?: 'vest' | 'canteen';
 }
@@ -208,5 +211,28 @@ export const RECIPES: Recipe[] = [
   },
 ];
 
+RECIPES.push(
+  {
+    id: 'mod_scope',
+    group: 'Weapon mods',
+    name: 'Scope the .30-30',
+    detail: '1 binoculars + 3 scrap → a 4× scope on the rifle · Firearms 2',
+    out: { id: 'rifle', qty: 0 },
+    need: [{ id: 'binoculars', qty: 1 }, { id: 'scrap', qty: 3 }],
+    skill: { id: 'firearms', level: 2 },
+    mod: 'scope',
+  },
+  {
+    id: 'mod_choke',
+    group: 'Weapon mods',
+    name: 'Choke the Pump Twelve',
+    detail: '1 smart padlock + 4 scrap → a full choke on the shotgun · Firearms 1',
+    out: { id: 'shotgun', qty: 0 },
+    need: [{ id: 'smart_lock', qty: 1 }, { id: 'scrap', qty: 4 }],
+    skill: { id: 'firearms', level: 1 },
+    mod: 'choke',
+  },
+);
+
 /** Camp panel order: headings in this order, recipes in file order under each. */
-export const RECIPE_GROUPS = ['Tools', 'Ammunition', 'Medicine', 'Gear', 'Salvage'] as const;
+export const RECIPE_GROUPS = ['Tools', 'Ammunition', 'Medicine', 'Gear', 'Weapon mods', 'Salvage'] as const;

@@ -59,6 +59,7 @@ import { PlayerArms } from './combat/PlayerArms';
 import { Throwables } from './combat/Throwables';
 import { Gear } from './player/Gear';
 import { restoreBlock } from '@/content/items';
+import { modBlock } from '@/content/weapons';
 import { Recovery } from './combat/Recovery';
 import { Machines } from './combat/Machines';
 import { MenuDirector } from './MenuDirector';
@@ -828,8 +829,9 @@ export class Game {
   private recipeBlock(r: Recipe): string | undefined {
     const s = this.state!;
     if (r.skill && s.skill(r.skill.id) < r.skill.level) return `Needs ${SKILLS[r.skill.id].name} ${r.skill.level}`;
+    const gear = r.restore ? restoreBlock(s, r.restore) : r.mod ? modBlock(s, r.mod) : undefined;
+    if (gear) return gear;
     for (const n of r.need) if (s.count(n.id) < n.qty) return `Need ${n.qty}× ${ITEMS[n.id]?.name ?? n.id}`;
-    if (r.restore) return restoreBlock(s, r.restore);
     return undefined;
   }
 

@@ -10,6 +10,7 @@ import type { Throwables } from '../combat/Throwables';
 import type { MapMarker } from '@/ui/Minimap';
 import { CANTEEN_SIPS, VEST_PLATES, canteenSips, vestPlates } from '@/content/items';
 import { actionKey } from '@/engine/bindings';
+import { MODS } from '@/content/weapons';
 
 /**
  * The tools that change how you play (overnight swarm 2), each wired into a system that already exists:
@@ -32,7 +33,7 @@ const TAGGABLE = new Set(['human', 'wolf', 'drone', 'turret', 'mine']);
 const _fwd = new THREE.Vector3(), _to = new THREE.Vector3(), _p = new THREE.Vector3(), _r = new THREE.Vector3();
 
 /** Screen markers + the binocular mask: built once, shared by every run. */
-interface GearDom { binos: HTMLDivElement; range: HTMLElement; tagged: HTMLElement; layer: HTMLDivElement; marks: HTMLElement[]; dist: HTMLElement[] }
+interface GearDom { scope: HTMLDivElement; binos: HTMLDivElement; range: HTMLElement; tagged: HTMLElement; layer: HTMLDivElement; marks: HTMLElement[]; dist: HTMLElement[] }
 let dom: GearDom | null = null;
 function ensureDom(root: HTMLElement): GearDom {
   if (dom && dom.binos.isConnected) return dom;
@@ -58,9 +59,20 @@ function ensureDom(root: HTMLElement): GearDom {
     marks.push(m);
     dist.push(m.querySelector('span')!);
   }
+  // the rifle's scope: one eyepiece, a duplex reticle (heavy posts, fine centre) and holdover ticks
+  const scope = document.createElement('div');
+  scope.className = 'binos scopeview';
+  scope.innerHTML = `<svg class="mask" viewBox="0 0 160 90" preserveAspectRatio="xMidYMid slice"><defs>
+      <radialGradient id="bbScope"><stop offset="0.9" stop-color="#000"/><stop offset="1" stop-color="#fff"/></radialGradient>
+      <mask id="bbScopeMask"><rect x="-80" y="-40" width="320" height="170" fill="#fff"/><circle cx="80" cy="45" r="41" fill="url(#bbScope)"/></mask>
+    </defs><rect x="-80" y="-40" width="320" height="170" fill="#030303" mask="url(#bbScopeMask)"/>
+    <g fill="#0b0b0b"><rect x="39" y="44.55" width="33" height="0.9"/><rect x="88" y="44.55" width="33" height="0.9"/><rect x="79.55" y="53" width="0.9" height="33"/><rect x="79.55" y="4" width="0.9" height="33"/></g>
+    <g stroke="#0b0b0b" stroke-width="0.14"><path d="M72 45 H88 M80 37 V53"/><path d="M78.6 48 H81.4 M79 51 H81 M78.6 47 H81.4" stroke-width="0.12"/></g></svg>
+    <div class="binos-label">SURVEY SCOPE · 4× · HOLD STILL</div>`;
+  root.prepend(scope);
   root.prepend(binos);
   root.prepend(layer);
-  dom = { binos, range: binos.querySelector('.range')!, tagged: binos.querySelector('.tagged')!, layer, marks, dist };
+  dom = { scope, binos, range: binos.querySelector('.range')!, tagged: binos.querySelector('.tagged')!, layer, marks, dist };
   return dom;
 }
 
@@ -78,6 +90,9 @@ export class Gear {
   private shownDist: number[] = [];
   private dom: GearDom;
   private plateWarned = false;
+  private scopeOn = false;
+  private swayX = 0;
+  private swayY = 0;
 
   constructor(
     private state: GameState,
@@ -255,11 +270,37 @@ export class Gear {
       this.cam.aimK = Math.max(this.cam.aimK, this.binoK);
     }
     this.dom.binos.classList.toggle('on', this.binoK > 0.5);
+    this.scopeView(dt);
     if (this.viewing && !blocked && this.binoK > 0.85) this.scan(dt);
     // expire tags
     for (const [h, until] of this.tags) if (!h.alive || until < this.t) this.tags.delete(h);
     this.markT -= dt;
     if (this.markT <= 0) { this.markT = 1 / 30; this.drawMarks(); }
+  }
+
+  /**
+   * A scoped .30-30 aimed: the scope's eyepiece instead of the gun (the model and the hands are hidden
+   * so they can't block the view), and a slow drift of the reticle that breath, Marksman, Founder
+   * Focus and crouching all calm.
+   */
+  private scopeView(dt: number) {
+    const a = this.hands.arms;
+    const on = a.current === 'rifle' && a.ads > 0.9 && this.state.has(MODS.scope.flag) && !this.viewing;
+    if (on !== this.scopeOn) {
+      this.scopeOn = on;
+      this.dom.scope.classList.toggle('on', on);
+      this.hands.root.visible = !on;
+    }
+    const steady = this.focused || this.state.focus('firearms') === 'marksman';
+    const k = on ? (steady ? 0.15 : 1) * (this.player.crouching ? 0.6 : 1) : 0;
+    const sx = Math.sin(this.t * 0.83) * 0.0017 * k + Math.sin(this.t * 2.1) * 0.0004 * k;
+    const sy = Math.sin(this.t * 1.61) * 0.0012 * k;
+    const ex = sx - this.swayX, ey = sy - this.swayY;
+    const r = Math.min(1, dt * 10);
+    this.cam.yaw += ex * r;
+    this.cam.pitch += ey * r;
+    this.swayX += ex * r;
+    this.swayY += ey * r;
   }
 
   /** Dwell on a hostile near the middle of the view to tag it. */
@@ -325,6 +366,8 @@ export class Gear {
   dispose() {
     if (this.viewing) this.toggleBinos(false);
     this.dom.binos.classList.remove('on');
+    this.dom.scope.classList.remove('on');
+    this.hands.root.visible = true;
     for (const m of this.dom.marks) m.style.display = 'none';
   }
 }

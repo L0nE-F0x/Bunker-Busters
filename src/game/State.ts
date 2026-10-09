@@ -12,6 +12,7 @@ import {
 import { EventBus } from '@/engine/events';
 import { defaultBinds, sanitizeBinds, type BindMap } from '@/engine/bindings';
 import type { WeaponId, Difficulty } from '@/content/weapons';
+import { MODS, modBlock } from '@/content/weapons';
 
 /** What you dropped where you fell: walk back for it. A second death loses it. */
 export interface DroppedPack {
@@ -366,13 +367,20 @@ export class GameState {
     if (recipe.skill && this.skill(recipe.skill.id) < recipe.skill.level) {
       return `Requires ${SKILLS[recipe.skill.id].name} ${recipe.skill.level}.`;
     }
+    // a fitted mod or a full piece of gear says so before asking for parts
+    const block = recipe.mod ? modBlock(this, recipe.mod) : recipe.restore ? restoreBlock(this, recipe.restore) : undefined;
+    if (block) return `${block}.`;
     for (const n of recipe.need) {
       if (this.count(n.id) < n.qty) return `Need ${n.qty}× ${ITEMS[n.id]?.name ?? n.id}.`;
     }
+    if (recipe.mod) {
+      // a mod: spend the parts, the weapon remembers (a flag, so it outlives selling and rebuying)
+      for (const n of recipe.need) this.removeItem(n.id, n.qty);
+      this.set(MODS[recipe.mod].flag);
+      return null;
+    }
     if (recipe.restore) {
       // gear upkeep (re-plating the vest): spend the parts, the piece is like new
-      const no = restoreBlock(this, recipe.restore);
-      if (no) return `${no}.`;
       for (const n of recipe.need) this.removeItem(n.id, n.qty);
       delete this.data.marks[`gear.${recipe.restore}`];
       return null;

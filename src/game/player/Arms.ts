@@ -205,11 +205,17 @@ function shotgun(): ArmsModel {
   add(pump, box(0.046, 0.044, 0.17, 0.016, 3), wood, 0, -0.003, 0);
   for (let i = 0; i < 7; i++) add(pump, box(0.047, 0.003, 0.004, 0.001), hardMat('#3b2214', 0.7, 0), 0, -0.003 + 0.014, -0.06 + i * 0.02);
   add(pump, box(0.006, 0.006, 0.12, 0.002), blued, 0.016, 0.018, 0.12); // action bar
-  const muzzle = V3(0, 0.068, -0.68);
+  // full choke (bone, scaled to nothing until fitted): a knurled tube standing proud of the muzzle
+  const choke = new THREE.Group();
+  choke.position.set(0, 0.068, -0.683);
+  root.add(choke);
+  add(choke, cylZ(0.0128, 0.0124, 0.034, 18), steelMat('#9a9ea4', 0.28));
+  for (let i = 0; i < 3; i++) add(choke, cylZ(0.0132, 0.0132, 0.003, 18), steelMat('#5a5e64', 0.5), 0, 0, -0.006 + i * 0.008);
+  const muzzle = V3(0, 0.068, -0.7);
   const flash = buildFlash(muzzle, 0.2);
   bakeParts(root, true);
   root.add(flash);
-  return { root, sightY: 0.1, muzzle, parts: { pump }, flash };
+  return { root, sightY: 0.1, muzzle, parts: { pump, choke }, flash };
 }
 
 function rifle(): ArmsModel {
@@ -256,11 +262,31 @@ function rifle(): ArmsModel {
   const loop = new THREE.TorusGeometry(0.022, 0.0035, 6, 18, Math.PI * 1.4);
   add(lever, loop, case_, 0, -0.025, 0.07, 0, Math.PI / 2, Math.PI * 0.35);
   add(lever, box(0.004, 0.022, 0.006, 0.0015), bright, 0, -0.012, 0.045, 0.35, 0, 0); // trigger
+  // camp-fitted scope (bone, scaled to nothing until fitted): half a pair of survey binoculars on
+  // two rings, matte, a turret on top and one on the side; the sight line rises to its axis
+  const scope = new THREE.Group();
+  scope.position.set(0, 0.128, -0.16);
+  root.add(scope);
+  const matte = hardMat('#1d1f22', 0.6, 0.35);
+  add(scope, cylZ(0.0115, 0.0115, 0.17, 18), matte, 0, 0, 0.0);
+  add(scope, cylZ(0.0115, 0.019, 0.05, 18), matte, 0, 0, -0.105);
+  add(scope, cylZ(0.019, 0.019, 0.018, 18), matte, 0, 0, -0.138);
+  add(scope, cylZ(0.0155, 0.0115, 0.035, 18), matte, 0, 0, 0.1);
+  add(scope, cylZ(0.0158, 0.0158, 0.03, 18), hardMat('#151617', 0.85, 0), 0, 0, 0.13);
+  add(scope, new THREE.CylinderGeometry(0.0068, 0.0068, 0.016, 12), matte, 0, 0.017, 0.0);
+  add(scope, new THREE.CylinderGeometry(0.0068, 0.0068, 0.016, 12).rotateZ(Math.PI / 2), matte, 0.017, 0, 0.0);
+  add(scope, cylZ(0.0172, 0.0172, 0.004, 18), steelMat('#8a8e94', 0.3), 0, 0, -0.146); // objective ring
+  for (const z of [-0.055, 0.07]) {
+    add(scope, box(0.026, 0.008, 0.014, 0.002), blued, 0, -0.012, z);
+    add(scope, box(0.012, 0.044, 0.012, 0.002), blued, 0, -0.034, z);
+  }
+  // a strip of tape where the binoculars' hinge used to be
+  add(scope, cylZ(0.0118, 0.0118, 0.016, 18), hardMat('#cfc6b0', 0.8, 0), 0, 0, 0.03);
   const muzzle = V3(0, 0.06, -0.67);
   const flash = buildFlash(muzzle, 0.15);
   bakeParts(root, true);
   root.add(flash);
-  return { root, sightY: 0.099, muzzle, parts: { lever, hammer }, flash };
+  return { root, sightY: 0.099, muzzle, parts: { lever, hammer, scope }, flash };
 }
 
 function crowbar(): ArmsModel {
@@ -646,6 +672,14 @@ export class Arms {
     if (id === 'shotgun') this.pumpT = 0;
     if (id === 'rifle') this.leverT = 0;
     if (id === 'pistol22') this.slideT = 0;
+  }
+
+  /** Camp-fitted mods: show the part, and move the rifle's sight line up to the scope's axis. */
+  setMods(scope: boolean, choke: boolean) {
+    const r = this.models.rifle, s = this.models.shotgun;
+    r.parts.scope?.scale.setScalar(scope ? 1 : 1e-4);
+    r.sightY = scope ? 0.128 : 0.099;
+    s.parts.choke?.scale.setScalar(choke ? 1 : 1e-4);
   }
 
   /** The pistol's slide stays back on an empty magazine (until the reload's slide release). */

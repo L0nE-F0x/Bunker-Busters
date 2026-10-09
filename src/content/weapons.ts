@@ -83,6 +83,40 @@ export const WEAPONS: Record<WeaponId, WeaponDef> = {
 /** Cycle order for the mouse wheel / Q. */
 export const WEAPON_ORDER: WeaponId[] = ['crowbar', 'pistol22', 'revolver', 'shotgun', 'rifle'];
 
+/**
+ * Camp-fitted weapon mods (overnight swarm 2). A flag in the save (`mod.<weapon>.<id>`) once fitted;
+ * `modded()` folds them into the weapon's numbers, the viewmodel shows the part (Arms.setMods).
+ */
+export type ModId = 'scope' | 'choke';
+export const MODS: Record<ModId, { weapon: WeaponId; name: string; flag: string; blurb: string }> = {
+  scope: { weapon: 'rifle', name: 'Survey scope', flag: 'mod.rifle.scope', blurb: 'Half a pair of binoculars on rings: 4× through a real reticle, tighter aimed shots.' },
+  choke: { weapon: 'shotgun', name: 'Full choke', flag: 'mod.shotgun.choke', blurb: 'A tube in the muzzle: a tighter pattern that still bites at fifteen metres.' },
+};
+
+/** Why a mod can't be fitted right now (or undefined). */
+export function modBlock(s: { count(id: string): number; has(flag: string): boolean }, m: ModId): string | undefined {
+  const d = MODS[m];
+  if (!s.count(WEAPONS[d.weapon].item)) return `No ${WEAPONS[d.weapon].name} to fit it to`;
+  if (s.has(d.flag)) return 'Already fitted';
+  return undefined;
+}
+
+const _modCache = new Map<string, WeaponDef>();
+/** `w` with whatever mods `has` says are fitted (memoized: PlayerArms asks every frame). */
+export function modded(w: WeaponDef, has: (flag: string) => boolean): WeaponDef {
+  let key = '';
+  for (const m of Object.keys(MODS) as ModId[]) if (MODS[m].weapon === w.id && has(MODS[m].flag)) key += m + ',';
+  if (!key) return w;
+  key = w.id + ':' + key;
+  let d = _modCache.get(key);
+  if (d) return d;
+  d = { ...w, recoil: { ...w.recoil } };
+  if (key.includes('scope')) { d.adsFov = 13; d.adsSpread = w.adsSpread * 0.5; d.draw = w.draw * 1.15; }
+  if (key.includes('choke')) { d.hipSpread = w.hipSpread * 0.78; d.adsSpread = w.adsSpread * 0.66; d.range = w.range + 5; d.maxRange = w.maxRange + 8; }
+  _modCache.set(key, d);
+  return d;
+}
+
 /** Damage at distance `d` for weapon `w` (per hit). */
 export function falloff(w: WeaponDef, d: number) {
   if (d <= w.range) return 1;

@@ -5,7 +5,7 @@ import type { GameState } from '../State';
 import type { Hands } from '../player/Hands';
 import type { FirstPersonCamera } from '../player/FirstPersonCamera';
 import type { Player } from '../player/Player';
-import { WEAPONS, WEAPON_ORDER, falloff, type WeaponId, type WeaponDef } from '@/content/weapons';
+import { WEAPONS, WEAPON_ORDER, MODS, falloff, modded, type WeaponId, type WeaponDef } from '@/content/weapons';
 import type { Combat, Hostile, Zone } from './Combat';
 
 /**
@@ -88,8 +88,14 @@ export class PlayerArms {
     return ammo ? this.state.count(ammo) : 0;
   }
 
+  private hasFlag = (f: string) => this.state.has(f);
+  /** A scope is fitted to the rifle (Gear draws the scope view when it's aimed). */
+  get scoped() {
+    return this.equipped === 'rifle' && this.state.has(MODS.scope.flag);
+  }
+
   private get w(): WeaponDef | null {
-    return this.equipped ? WEAPONS[this.equipped] : null;
+    return this.equipped ? modded(WEAPONS[this.equipped], this.hasFlag) : null;
   }
 
   private drawTime(w: WeaponDef) {
@@ -132,6 +138,7 @@ export class PlayerArms {
     this.fireBuffer = Math.max(0, this.fireBuffer - dt);
     this.bloom = Math.max(0, this.bloom - dt * 2.4);
     const w = this.w;
+    this.hands.arms.setMods(this.state.has(MODS.scope.flag), this.state.has(MODS.choke.flag));
 
     // camera recoil: a quick punch up, then most of it settles back
     if (this.pendingKick > 0) {

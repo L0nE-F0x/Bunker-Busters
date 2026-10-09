@@ -280,7 +280,7 @@ export const KEEP_ON_DEATH = (id: string) => { const c = ITEMS[id]?.category; re
 // --- Gear state (overnight swarm 2). Lives in `data.marks` (absent = fresh), so saves need no migration.
 export const VEST_PLATES = 100;
 export const CANTEEN_SIPS = 3;
-type GearView = { count(id: string): number; data: { marks: Record<string, number> } };
+type GearView = { count(id: string): number; has?(flag: string): boolean; data: { marks: Record<string, number> } };
 /** Plate points left on the vest you wear. */
 export const vestPlates = (s: GearView) => Math.max(0, Math.min(VEST_PLATES, s.data.marks['gear.vest'] ?? VEST_PLATES));
 /** Drinks left in the canteen. */
@@ -296,5 +296,7 @@ export function restoreBlock(s: GearView, id: 'vest' | 'canteen'): string | unde
 export function itemStatus(id: string, s: GearView): string {
   if (id === 'vest') { const p = Math.round(vestPlates(s)); return p > 0 ? `Plates ${p} / ${VEST_PLATES}` : 'Plates spent: re-plate it at the fire'; }
   if (id === 'canteen') { const n = canteenSips(s); return n > 0 ? `${n} of ${CANTEEN_SIPS} drinks left` : 'Empty: rest at the fire, or ask Inez'; }
+  if (id === 'rifle' && s.has?.('mod.rifle.scope')) return 'Fitted: survey scope (4×)';
+  if (id === 'shotgun' && s.has?.('mod.shotgun.choke')) return 'Fitted: full choke';
   return '';
 }
