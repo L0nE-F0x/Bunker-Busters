@@ -2,7 +2,8 @@ import * as THREE from 'three/webgpu';
 import { loadGLB } from '@/engine/models';
 import { clone as cloneSkinned } from 'three/addons/utils/SkeletonUtils.js';
 import { boundSkinned } from './kit';
-import { WristTwist } from './limbTwist';
+import { WristTwist, mittFrame } from './limbTwist';
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 
 /**
  * The named townsfolk as Meshy models (scripts/models/build-npcs.sh → build-glb.mjs: rig + clips
@@ -29,6 +30,16 @@ export const NPC_MODELS = ['nia', 'doc', 'inez', 'sol', 'ren', 'wick', 'mara', '
 export const NPC_PROPS: Record<string, { file: string; pos: [number, number, number]; rot: [number, number, number]; scale: number }> = {
   hollis: { file: 'truckercap', pos: [-1.7, 20.3, 2.6], rot: [-7.5, 3.2, 3.6], scale: 16 },
   dez: { file: 'headset', pos: [-1.0, 10.3, -14.2], rot: [-20.9, 2.3, 3.3], scale: 13.5 },
+};
+/**
+ * Props in a hand, placed in the mitt's frame (measured from the mesh at bind: X wrist → fingers,
+ * Y out of the palm, Z across it; metres from the mitt's centre), since each rig rests its Hand
+ * bone at its own roll. `palm`: which way the palm faces at bind (model space), when "down" isn't it.
+ */
+const HAND_PROPS: Record<string, { side: 'Left' | 'Right'; kind: 'mug' | 'clipboard'; at: [number, number, number]; rot?: [number, number, number]; palm?: [number, number, number] }> = {
+  ren: { side: 'Right', kind: 'mug', at: [-0.045, 0.055, 0], palm: [0, 1, 0] },
+  pip: { side: 'Right', kind: 'mug', at: [-0.04, 0.05, 0], palm: [0, 1, 0] },
+  doc: { side: 'Left', kind: 'clipboard', at: [0.11, 0.02, 0] },
 };
 /** Seated people who chat among themselves now and then: their `near` clips join the idle pool. */
 const CHATS = new Set(['sol', 'mara', 'hollis', 'dez']);
@@ -65,6 +76,8 @@ interface Template {
   /** Wrist twist spreading, per side. */
   wrist: { side: 'Left' | 'Right'; w: WristTwist }[];
   prop?: THREE.Object3D;
+  /** Held in a hand (on that Hand bone, in its space). */
+  held?: { bone: string; obj: THREE.Object3D };
 }
 
 /** The crowd's say in what an actor starts next (npc.ts): neighbours don't start one motion together. */
@@ -177,7 +190,58 @@ function template(id: string, scene: THREE.Object3D, anims: THREE.AnimationClip[
     const h = bind.get(side + 'Hand');
     return h && bind.has(side + 'ForeArm') ? [{ side, w: new WristTwist(h.q, h.p) }] : [];
   });
-  return { id, scene, clips, list, idle, near, ins: list.filter((c) => c.once), bind, wrist };
+  return { id, scene, clips, list, idle, near, ins: list.filter((c) => c.once), bind, wrist, held: heldProp(id, scene, bones) };
+}
+
+let _heldMat: THREE.MeshStandardNodeMaterial | null = null;
+const _heldGeo: Partial<Record<'mug' | 'clipboard', THREE.BufferGeometry>> = {};
+/** The mug (npc.ts's: a cylinder and a handle) and the clipboard, in the mitt frame, vertex-coloured. */
+function heldGeometry(kind: 'mug' | 'clipboard') {
+  const g = _heldGeo[kind];
+  if (g) return g;
+  const part = (geo: THREE.BufferGeometry, m: THREE.Matrix4, color: string) => {
+    const x = geo.index ? geo.toNonIndexed() : geo;
+    x.applyMatrix4(m);
+    x.deleteAttribute('uv');
+    const c = new THREE.Color(color), n = x.attributes.position.count;
+    x.setAttribute('color', new THREE.Float32BufferAttribute(Array.from({ length: n * 3 }, (_, i) => (i % 3 === 0 ? c.r : i % 3 === 1 ? c.g : c.b)), 3));
+    return x;
+  };
+  const M = (x = 0, y = 0, z = 0, r?: THREE.Euler) => new THREE.Matrix4().compose(new THREE.Vector3(x, y, z), new THREE.Quaternion().setFromEuler(r ?? new THREE.Euler()), new THREE.Vector3(1, 1, 1));
+  const parts = kind === 'mug'
+    // across the palm (the fingers wrap it), the handle on the far side
+    ? [part(new THREE.CylinderGeometry(0.042, 0.038, 0.1, 10), M(0, 0, 0, new THREE.Euler(Math.PI / 2, 0, 0)), '#7a2f24'),
+      part(new THREE.TorusGeometry(0.025, 0.008, 5, 8), M(0, 0.05, 0, new THREE.Euler(0, Math.PI / 2, 0)), '#7a2f24'),
+      part(new THREE.CylinderGeometry(0.036, 0.036, 0.004, 10), M(0, 0, -0.046, new THREE.Euler(Math.PI / 2, 0, 0)), '#3a2416')]
+    // gripped by its top edge: the board lies in the palm's plane, hanging past the fingers
+    : [part(new THREE.BoxGeometry(0.32, 0.012, 0.24), M(), '#6b4a2e'),
+      part(new THREE.BoxGeometry(0.27, 0.004, 0.21), M(0.01, 0.008, 0), '#e8e2d2'),
+      part(new THREE.BoxGeometry(0.025, 0.02, 0.08), M(-0.15, 0.01, 0), '#9a9890')];
+  return (_heldGeo[kind] = mergeGeometries(parts)!);
+}
+
+/** `id`'s hand prop, built on its Hand bone's mitt frame at bind (null: none, or the mitt unmeasurable). */
+function heldProp(id: string, scene: THREE.Object3D, bones: Record<string, THREE.Bone>) {
+  const P = HAND_PROPS[id];
+  const hand = P && bones[P.side + 'Hand'];
+  let body: THREE.SkinnedMesh | null = null;
+  scene.traverse((o) => { if ((o as THREE.SkinnedMesh).isSkinnedMesh) body ??= o as THREE.SkinnedMesh; });
+  if (!P || !hand || !body) return undefined;
+  const m = mittFrame(body, hand, new THREE.Vector3(...(P.palm ?? [0, -1, 0])));
+  if (!m) return undefined;
+  _heldMat ??= new THREE.MeshStandardNodeMaterial({ vertexColors: true, roughness: 0.6, metalness: 0 });
+  const mesh = new THREE.Mesh(heldGeometry(P.kind), _heldMat);
+  mesh.name = `${id}-${P.kind}`;
+  mesh.castShadow = false;
+  mesh.position.set(...P.at);
+  if (P.rot) mesh.rotation.set(...(P.rot.map((d) => (d * Math.PI) / 180) as [number, number, number]));
+  // the frame: X along the fingers, Y out of the palm, Z across; bone space is cm, the prop metres
+  const obj = new THREE.Group();
+  obj.quaternion.setFromRotationMatrix(new THREE.Matrix4().makeBasis(m.long, m.palm, m.side));
+  obj.position.copy(m.c);
+  obj.scale.setScalar(1 / hand.matrixWorld.getMaxScaleOnAxis());
+  obj.add(mesh);
+  return { bone: hand.name, obj };
 }
 
 /** Blend `clip` at time `t` into the bones with weight `w` (`reset`: start from the bind pose). */
@@ -232,6 +296,7 @@ export class NpcActor {
       if ((o as THREE.SkinnedMesh).isSkinnedMesh) this.skinned.push(o as THREE.SkinnedMesh);
     });
     if (T.prop && this.B.Head) this.B.Head.add(T.prop.clone(true));
+    if (T.held) this.B[T.held.bone]?.add(T.held.obj.clone(true));
     this.clock = Float64Array.from(T.list, (c) => (c.once ? 0 : Math.random() * c.dur));
     this.chat = seated && CHATS.has(T.id);
     this.shift = seated ? null : { w: 2 * Math.PI * rand(0.06, 0.12), a: rand(1.1, 1.6) * (Math.PI / 180), ph: rand(0, 7) };

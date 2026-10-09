@@ -21,8 +21,9 @@ on() { [ ${#ids[@]} -eq 0 ] && return 0; for i in "${ids[@]}"; do [ "$i" = "$1" 
 on nia && build nia ${DC}Nia_Rigged.glb \
   --clips ${DC}Nia_Animations.glb:Idle=idle,Talk_with_Hands_Open=near,Listening_Gesture=near2,Stand_and_Chat=ins_chat \
   --mirror ${DC}Nia_Animations.glb:Idle=idle_m
+# (Hand_on_Hip_Gesture lifts the clipboard hand over his head: left out)
 on doc && build doc ${DC}Doc_Rigged.glb \
-  --clips ${DC}Doc_Animations.glb:Idle=idle,Talk_with_Right_Hand_Open=near,Listening_Gesture=near2,Shrug=ins_shrug,Hand_on_Hip_Gesture=ins_hip \
+  --clips ${DC}Doc_Animations.glb:Idle=idle,Talk_with_Right_Hand_Open=near,Listening_Gesture=near2,Shrug=ins_shrug \
   --mirror ${DC}Doc_Animations.glb:Idle=idle_m
 # (Checkout_Gesture was her loop; its wrist is the worst in the set, so it's an occasional gesture)
 on inez && build inez ${DC}Inez_Rigged.glb \
