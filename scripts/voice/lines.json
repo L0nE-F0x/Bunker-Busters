@@ -3450,6 +3450,46 @@
   "where": "src/content/camp.ts"
  },
  {
+  "key": "0cfqpib",
+  "voice": "am_fenrir",
+  "fx": "radio",
+  "speed": 1.05,
+  "speaker": "Kade Recovery",
+  "words": "Seal breach on Longshot B7. That's the boss's water. Recover the asset, detain the thief.",
+  "tts": "Seal breach on Longshot B7. That's the boss's water. Recover the asset, detain the thief.",
+  "where": "src/game/sites/booster.ts"
+ },
+ {
+  "key": "0dxznq4",
+  "voice": "am_michael",
+  "fx": "radio",
+  "speed": 1.05,
+  "speaker": "Kade Recovery",
+  "words": "Seal breach on Longshot B7. That's the boss's water. Recover the asset, detain the thief.",
+  "tts": "Seal breach on Longshot B7. That's the boss's water. Recover the asset, detain the thief.",
+  "where": "src/game/sites/booster.ts"
+ },
+ {
+  "key": "137vfzx",
+  "voice": "bm_george",
+  "fx": "radio",
+  "speed": 1.05,
+  "speaker": "Kade Recovery",
+  "words": "Seal breach on Longshot B7. That's the boss's water. Recover the asset, detain the thief.",
+  "tts": "Seal breach on Longshot B7. That's the boss's water. Recover the asset, detain the thief.",
+  "where": "src/game/sites/booster.ts"
+ },
+ {
+  "key": "0ab3sff",
+  "voice": "bm_daniel",
+  "fx": "radio",
+  "speed": 1.05,
+  "speaker": "Kade Recovery",
+  "words": "Seal breach on Longshot B7. That's the boss's water. Recover the asset, detain the thief.",
+  "tts": "Seal breach on Longshot B7. That's the boss's water. Recover the asset, detain the thief.",
+  "where": "src/game/sites/booster.ts"
+ },
+ {
   "key": "17lxjad",
   "voice": "am_fenrir",
   "fx": "radio",
