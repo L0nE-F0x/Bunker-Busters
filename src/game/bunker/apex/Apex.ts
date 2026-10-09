@@ -396,9 +396,11 @@ export class Apex extends Bunker<ApexBuilder> {
     L.hall.color.set(alarm ? 0xff2a18 : 0xd8ecff);
     L.room.intensity = alarm ? 11 + pulse * 16 : 18;
     L.room.color.set(alarm ? 0xff2a18 : 0xbfe8ff);
-    L.flood.intensity = nightOn * (alarm ? 40 + pulse * 60 : 70);
+    // outside lights can't reach in: switched off (for the pool) while you're in the vault block
+    const out = this.playerInside ? 0 : 1;
+    L.flood.intensity = out * nightOn * (alarm ? 40 + pulse * 60 : 70);
     L.flood.color.set(alarm ? 0xff6050 : 0xfff1d0);
-    L.rocket.intensity = nightOn * 55;
+    L.rocket.intensity = out * nightOn * 55;
     S.strip.value = (alarm ? 1.5 : 5) * flick;
     S.hallStrip.value = alarm ? 0.8 + pulse * 3 : 4;
     S.roomStrip.value = alarm ? 0.8 + pulse * 3 : 4.5;

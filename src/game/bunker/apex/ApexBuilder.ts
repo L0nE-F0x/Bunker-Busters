@@ -944,10 +944,14 @@ export class ApexBuilder implements BunkerShell {
     this.lights = {
       hangar: [L('#ffe8c8', 0, 20, -15, 9.4, 4), L('#ffe8c8', 0, 20, -5, 9.4, 4)],
       hall: L('#d8ecff', 0, 12, -10, 3.6, -16),
-      room: L('#bfe8ff', 0, 15, -10, 5.4, -27.5),
+      room: L('#bfe8ff', 0, 16, -10, 4.6, -24.8),
       flood: L('#fff1d0', 0, 34, -24.6, 10, 19),
       // floods the booster from the front at night: it's the monument, she lights it like one
       rocket: L('#ffe2bc', 0, 20, 14, 13, 3.2),
     };
+    // the vault's own lights win the pool's slots when you're near them (at night the apron flood and
+    // the booster's light outrank a 12-unit corridor lamp, and the corridor went black)
+    this.lights.hall.priority = 3;
+    this.lights.room.priority = 2;
   }
 }
