@@ -188,6 +188,9 @@ class Member implements Hostile {
   bodyT = Math.random();
   /** Rushing you while you reload (seconds left). */
   rushT = 0;
+  /** Running out of (or away from) fire: seconds left, and from where. */
+  panicT = 0;
+  readonly panicFrom = new THREE.Vector3();
 
   constructor(readonly h: Human, public squad: Squad, readonly post: { pos: THREE.Vector3; yaw: number; role: CrewRole; path: THREE.Vector3[] }) {
     this.kit = h.look_.kit;
@@ -332,6 +335,8 @@ export class Recovery implements HostileProvider {
   private members: Member[] = [];
   private free: number[] = [];
   private patrol: Squad | null = null;
+  /** Squads sent in by script (Apex's exit ambush, `?fight`, the debug summon): live beside the patrol. */
+  private extra: Squad[] = [];
   private patrolCd = rnd(300, 420);
   /** Places patrols keep away from (the camp, Dry Creek): set by the host. */
   safe: { p: THREE.Vector3; r: number }[] = [];
@@ -853,6 +858,7 @@ export class Recovery implements HostileProvider {
     const out: Squad[] = [];
     for (const o of this.outposts) if (o.squad) out.push(o.squad);
     if (this.patrol) out.push(this.patrol);
+    for (const sq of this.extra) out.push(sq);
     return out;
   }
 
@@ -916,6 +922,7 @@ export class Recovery implements HostileProvider {
     for (const sq of this.squads()) this.despawnSquad(sq);
     for (const op of this.outposts) { op.squad = null; op.state = 'dormant'; op.lockerOpen = false; }
     this.patrol = null;
+    this.extra = [];
     this.patrolCd = rnd(300, 420);
     for (const c of this.charges) { this.host.physics.world.removeRigidBody(c.body); c.mesh.visible = false; }
     this.charges = [];
@@ -960,6 +967,11 @@ export class Recovery implements HostileProvider {
           this.onRespawn?.(op.def.id);
         }
       }
+    }
+    // squads sent in by script: gone once they're dead or left far behind (and not fighting)
+    for (const sq of [...this.extra]) {
+      const far = sq.members.every((m) => m.h.pos.distanceTo(player) > 260);
+      if (far && (sq.alert !== 'combat' || !sq.alive.length)) { this.despawnSquad(sq); this.extra.splice(this.extra.indexOf(sq), 1); }
     }
     // the road patrol
     if (this.patrol) {
@@ -1157,6 +1169,31 @@ export class Recovery implements HostileProvider {
     m.limpT = Math.max(0, m.limpT - dt);
     m.runSpeed = m.limpT > 0 ? 2.4 : 4.6;
     h.cower = 0;
+
+    // ---- fire: standing in a burning patch it panics and runs out of it (shouting); a fresh one
+    // landing close scatters it; nobody fights from inside the flames
+    if (host.combat.fires.length && m.state !== 'surrender') {
+      const f = host.combat.inFire(h.pos, 3.2);
+      if (f) {
+        const inside = Math.hypot(h.pos.x - f.p.x, h.pos.z - f.p.z) < f.r + 0.3;
+        if (inside && m.panicT < 1) { m.panicT = 2.4; m.panicFrom.copy(f.p); this.bark(m, 'burn', true); }
+        else if (f.t < 1.5 && m.panicT <= 0) { m.panicT = 1.1; m.panicFrom.copy(f.p); }
+      }
+    }
+    if (m.panicT > 0) {
+      m.panicT -= dt;
+      h.pose = 'ready';
+      if (m.cover) { m.cover.taken = false; m.cover = null; }
+      if (m.perch) { h.cower = 1; return; } // nowhere to go up there: it ducks and burns
+      const away = _a.subVectors(h.pos, m.panicFrom).setY(0);
+      if (away.lengthSq() < 0.01) away.set(Math.sin(h.yaw), 0, Math.cos(h.yaw));
+      away.normalize().multiplyScalar(6).add(h.pos);
+      away.y = host.hf.heightAt(away.x, away.z);
+      this.walkTo(m, away, 5.4, dt, false);
+      h.cower = 0.4;
+      m.coverT = 99;
+      return;
+    }
 
     // ---- perception (staggered)
     m.thinkT -= dt;
@@ -1364,7 +1401,8 @@ export class Recovery implements HostileProvider {
       // the breacher walks you down: no cover, straight at you, shooting as it comes
       if (m.cover) { m.cover.taken = false; m.cover = null; }
       if (!m.pushed) { m.pushed = true; this.bark(m, 'breach', true); }
-      if (dist > 7) moving = !this.walkTo(m, known, m.limpT > 0 ? 1.5 : 2.3, dt, true);
+      // (on Story it holds further off: the walk is the threat, not a point-blank volley)
+      if (dist > (this.host.combat.difficulty === 'story' ? 10 : 7)) moving = !this.walkTo(m, known, m.limpT > 0 ? 1.5 : 2.3, dt, true);
       else h.vel.set(0, 0, 0);
     } else if (m.flank) {
       const arrived = this.walkTo(m, m.move, m.runSpeed, dt, true);
@@ -1446,7 +1484,11 @@ export class Recovery implements HostileProvider {
     const g = m.gun;
     const gun = h.weapon === 'revolver' ? 'revolver' : h.weapon === 'shotgun' ? 'shotgun' : 'rifle';
     const muzzle = h.muzzle.clone();
-    this.host.combat.enemyRound(muzzle, aim, spread, g.dmg, gun, { pellets: g.pellets });
+    // Story forgives a breacher's volley: softer pellets and a longer pump between bursts (it should
+    // read as "move!", not kill a player who stood still for a few seconds)
+    const story = m.kit === 'heavy' && this.host.combat.difficulty === 'story';
+    if (story) pace *= 1.5;
+    this.host.combat.enemyRound(muzzle, aim, spread, g.dmg * (story ? 0.6 : 1), gun, { pellets: g.pellets });
     this.host.combat.enemyFlash(muzzle, _a.subVectors(aim, muzzle).normalize(), h.weapon === 'shotgun' ? 1.3 : 1);
     this.host.audio.combat?.gunshot(gun, muzzle);
     this.host.combat.noise(h.pos, 150, 'gunshot');
@@ -1601,7 +1643,8 @@ export class Recovery implements HostileProvider {
       const dark = T.night > 0.5 && !T.torch ? 1.4 - 0.4 * T.light : 1;
       // off your screen, the glint can't warn you: it takes twice as long to settle
       const unseen = viewCull.sees(m.h.eye, 0.4) ? 1 : 2;
-      m.charge = Math.min(1, m.charge + dt / (1.9 * diff.react * run * dark * unseen));
+      // never under 1.8 s of glint, whatever the difficulty (Hard's 0.75 react would make it 1.4 s)
+      m.charge = Math.min(1, m.charge + dt / (Math.max(1.8, 1.9 * diff.react) * run * dark * unseen));
     } else m.charge = Math.max(0, m.charge - dt * (m.canSee ? 0.5 : 1.4));
     m.glint = m.charge > 0 ? 0.3 + 0.7 * m.charge * m.charge : 0.16;
     if (m.charge >= 1) {
@@ -1677,6 +1720,7 @@ export class Recovery implements HostileProvider {
     let bestS = Infinity;
     const consider = (c: CoverPoint) => {
       if (c.taken) return;
+      if (this.host.combat.fires.length && this.host.combat.inFire(c.pos, 1.5)) return;
       const dT = c.pos.distanceTo(threat);
       const dM = c.pos.distanceTo(h.pos);
       if (dM > 28 || dT < minT) return;
@@ -1714,7 +1758,9 @@ export class Recovery implements HostileProvider {
     if (d < 0.5) { h.vel.multiplyScalar(Math.exp(-dt * 10)); if (h.vel.lengthSq() < 0.01) h.vel.set(0, 0, 0); m.lastPos.copy(h.pos); return true; }
     to.divideScalar(d);
     // feelers: something solid ahead at knee height → try round it
-    const feel = (dir: THREE.Vector3) => !this.host.combat.worldRay(_b.copy(h.pos).setY(h.pos.y + 0.5), dir, 1.4, this.host.combat.target.collider);
+    // (burning ground counts as a wall: nobody walks into a molotov's patch)
+    const C = this.host.combat;
+    const feel = (dir: THREE.Vector3) => !C.worldRay(_b.copy(h.pos).setY(h.pos.y + 0.5), dir, 1.4, C.target.collider) && !(C.fires.length && C.inFire(_b.copy(h.pos).addScaledVector(dir, 1.6), 0.7));
     let dir = to;
     if (!feel(dir)) {
       for (const a of [0.6, -0.6, 1.2, -1.2, 1.8, -1.8]) {
@@ -1851,6 +1897,10 @@ export class Recovery implements HostileProvider {
 
   /** Debug: drop a squad of `n` at `d` m in front of the player, already hunting (or not). */
   summon(player: THREE.Vector3, yaw: number, d = 25, n = 3, hunt = true, kits?: (HumanKit | null | undefined)[]) {
+    // twelve bodies for the map: calm crews well away stand down first, then a calm road pair; a
+    // crew that's fighting keeps its bodies and the summoned squad comes in short (or not at all)
+    this.makeRoom(n, player);
+    if (this.free.length < n && this.patrol && this.patrol.alert !== 'combat') { this.despawnSquad(this.patrol); this.patrol = null; this.patrolCd = rnd(180, 360); }
     const sq = new Squad(this, null);
     const weapons: HumanWeapon[] = ['rifle', 'shotgun', 'revolver', 'rifle', 'shotgun'];
     const KW: Record<HumanKit, HumanWeapon> = { marksman: 'rifle', heavy: 'shotgun', grenadier: 'revolver' };
@@ -1867,8 +1917,8 @@ export class Recovery implements HostileProvider {
       sq.members.push(m);
       this.members.push(m);
     }
-    if (this.patrol) this.despawnSquad(this.patrol);
-    this.patrol = sq;
+    if (!sq.members.length) return 0;
+    this.extra.push(sq);
     if (hunt) this.engage(sq, player, 0.3);
     return sq.members.length;
   }

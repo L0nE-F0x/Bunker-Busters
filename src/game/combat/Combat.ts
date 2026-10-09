@@ -136,6 +136,16 @@ export class Combat {
   lastThreat = -99;
   /** 0..1 rounds cracking close past the player lately (the view narrows and shakes; decays). */
   suppression = 0;
+  /**
+   * Burning ground right now (molotov patches; Throwables keeps it): centre, radius and age (s).
+   * Contractors path round it and panic in it, wolves and coyotes won't cross it.
+   */
+  readonly fires: { p: THREE.Vector3; r: number; t: number }[] = [];
+  /** The burning patch within `pad` m of `p` (flat distance, about the same level), or null. */
+  inFire(p: THREE.Vector3, pad = 0) {
+    for (const f of this.fires) if (Math.abs(p.y - f.p.y) < 2.5 && Math.hypot(p.x - f.p.x, p.z - f.p.z) < f.r + pad) return f;
+    return null;
+  }
   hooks: CombatHooks | null = null;
   /** Shared effects from the world (set by Game). */
   sparks: Sparks | null = null;

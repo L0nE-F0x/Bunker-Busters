@@ -28,7 +28,7 @@ const BURN = 9;
 const BURN_PLAYER = 5;
 
 interface Bottle { mesh: THREE.Group; body: ReturnType<Physics['world']['createRigidBody']>; fuse: number; lastVel: THREE.Vector3; armed: number }
-interface Patch { p: THREE.Vector3; t: number; tick: number; crackle: number; light: VirtualLight; emit: number; fire: Fire }
+interface Patch { p: THREE.Vector3; t: number; tick: number; crackle: number; light: VirtualLight; emit: number; fire: Fire; zone: { p: THREE.Vector3; r: number; t: number } }
 
 const _v = new THREE.Vector3(), _w = new THREE.Vector3(), _up = new THREE.Vector3(0, 1, 0);
 /** Fuel smoke is black, not the pale dust a gun or a blast kicks up. */
@@ -126,14 +126,22 @@ export class Throwables {
     const light = this.lights[slot];
     const fire = this.fires[slot];
     const prev = this.patches.find((q) => q.light === light);
-    if (prev) this.patches.splice(this.patches.indexOf(prev), 1);
+    if (prev) { this.patches.splice(this.patches.indexOf(prev), 1); this.dropZone(prev.zone); }
     light.position.copy(p).setY(y + 0.8);
     light.intensity = 30;
     fire.group.position.copy(p);
     fire.group.rotation.y = Math.random() * Math.PI;
     fire.group.scale.set(1, 0.05, 1);
     fire.group.visible = true;
-    this.patches.push({ p, t: 0, tick: 0, crackle: 0, light, emit: 0, fire });
+    // the AI's view of it (Combat.fires): contractors and animals keep out of burning ground
+    const zone = { p, r: FIRE_R, t: 0 };
+    this.combat.fires.push(zone);
+    this.patches.push({ p, t: 0, tick: 0, crackle: 0, light, emit: 0, fire, zone });
+  }
+
+  private dropZone(z: Patch['zone']) {
+    const i = this.combat.fires.indexOf(z);
+    if (i >= 0) this.combat.fires.splice(i, 1);
   }
 
   update(dt: number) {
@@ -156,9 +164,12 @@ export class Throwables {
         f.light.intensity = 0;
         f.fire.group.visible = false;
         this.patches.splice(this.patches.indexOf(f), 1);
+        this.dropZone(f.zone);
         continue;
       }
       const k = Math.min(1, life * 2.2);
+      f.zone.t = f.t;
+      f.zone.r = FIRE_R * (0.6 + 0.4 * k);
       // the blaze: flares up in a third of a second, wide and low (a puddle, not a bonfire), then
       // sinks with the fuel; a slow breathing so it never looks like a card
       const up = Math.min(1, f.t / 0.35);

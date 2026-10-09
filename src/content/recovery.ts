@@ -230,6 +230,11 @@ export const BARKS: Record<string, string[]> = {
     'My plates! Those were a loan!',
     'Armor\'s gone! Somebody cover me!',
   ],
+  burn: [
+    'I\'m on fire! Is that covered?!',
+    'Fire! Who signed off on fire?!',
+    'Hot! Hot! It\'s in my boots!',
+  ],
   push: [
     'He\'s reloading! Push! Push!',
     'Dry! He\'s dry! Go!',
