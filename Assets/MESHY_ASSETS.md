@@ -1,5 +1,7 @@
 # MESHY_ASSETS.md: integrating the Meshy models
 
+> **2026-10-09:** NPCs moving in lockstep or with wrong-facing hands? See `Assets/NPC_ANIMATION_FIXES.md` (diagnosis, code fixes, optional clips).
+
 For the agent that wires the files in `Assets/` into the game. Written 2026-10-08 against `main` at `845e810` (v0.5.4 + wolf-death fix). Every number below was measured from these files (GLB parse, forward kinematics, texture sampling) or read from the code. Anything marked **est.** is an estimate; confirm it on screen. Read `CLAUDE.md` first; this file only adds what's specific to these assets.
 
 - `Assets/` is untracked: all 31 GLBs show `??` in `git status`, including the wolf's raw export. Only `public/models/wolf.glb` is committed. Keep it that way unless the owner says otherwise.

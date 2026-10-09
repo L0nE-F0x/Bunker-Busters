@@ -1242,6 +1242,15 @@ Toured every point of interest from four sides by day and night (jet, ColdStorag
 
 **Not done / next:** untested on real hardware and in WebKitGTK (its Gamepad support depends on the build; without it nothing changes). No aim assist yet (a slow-down over hostiles would help stick aiming). A pad press may not count as a user gesture for starting the AudioContext in browsers (the desktop app is fine). Tutorial toasts still name the default keys in prose.
 
+## 2026-10-09: promo media for v0.5.6 (trailer, teasers, stills)
+
+The X campaign for v0.5.6: an 85 s launch trailer, a 21 s teaser, a 15 s combat teaser and 19 stills, built from the game itself with `scripts/promo/` (headless, nothing on screen). The kit and its posting plan are in `~/Videos/BunkerBusters-v0.5.6-promo/` (outside the repo).
+
+- **Capture** (`rig.mjs`): the page runs on a virtual clock (performance.now, Date.now, rAF, timers), stepped exactly 1/60 s per frame and grabbed over CDP, so footage is frame-perfect at 60 fps whatever the headless speed (~12–16 fps capture at 1080p Ultra). The game's `new AudioContext()` becomes an `OfflineAudioContext` suspended at every frame boundary, so each take carries its own sample-accurate game sound (gunfire, impacts, wolves, barks, wind). `begin()` forces a frame until the game loop's in-flight rAF lands on the virtual queue (without it, the loop can stay frozen through a settle).
+- **Shots:** `director.js` (free camera in `cine` mode, first-person aim/fire helpers, `D.tame()` so SeedBot zaps without the knockout, an exposure lift before render), `shots-world.mjs` (establishing shots), `shots-combat.mjs` (scripted first- and third-person fights, SeedBot), `shots-heist.mjs` (lockpick and SPLICE played by solvers via their module prototypes, the laser hall), `stills.mjs` (2560×1440 key art), `score.mjs` (the generative score's moods as stems).
+- **Edit:** `overlays.mjs` (cards, subtitles, labels, key art in the game's own fonts), `sfx.py` (synthesised hits, braams, risers), `edit.py` + `cuts.py` (timeline → one ffmpeg graph; numpy mix with ducking, a bus compressor, -14 LUFS, -1 dBFS limiter). Python needs numpy: use `~/.local/share/bb-tts/venv/bin/python`. The fight act is cut on the fight stem's beat grid (72 BPM).
+- **Findings:** `Member.shootable()` is "dying on its feet", not "alive". Unaware squads (`summon(..., false)`) are the way to get first-person kills on camera; hunting squads back off to 30 m and cover. The dusk wolf shots need a gamma lift. Night needs `D.expo` 1.25–1.5 to read on social.
+
 ## 2026-10-09: townsfolk out of lockstep, wrists and hands (NPC_ANIMATION_FIXES.md §2–3)
 
 The owner: people sitting together played identical, synced loops and mirrored each other ("GTA 4 on a log"), and some hands faced the wrong way. Worked from `Assets/NPC_ANIMATION_FIXES.md` (BunkerBustersBot's diagnosis). Code and rebuilt models only; no Meshy credits (the doc's §4, ~51 credits of own-rig seated clips, is still optional).
