@@ -1,8 +1,9 @@
 import * as THREE from 'three/webgpu';
 import {
   Fn, vec2, vec3, float, positionWorld, normalWorld, texture, smoothstep, mix, abs, pow, sin,
-  uniform, normalView, positionView, faceDirection, step, fwidth, clamp,
+  uniform, normalView, positionView, faceDirection, step, fwidth, clamp, cameraPosition, time,
 } from 'three/tsl';
+import { gradeU } from '@/engine/postfx';
 import { noise, fbm2, noiseAt } from '@/engine/noiseTex';
 import type { Heightfield } from './Heightfield';
 import type { Atmosphere } from './Atmosphere';
@@ -351,6 +352,21 @@ export class Terrain {
       const amount = a.uStorm.mul(0.55).add(a.uDust.mul(0.08));
       col = mix(col, (a.uStormColor as N).mul(2.2).add(vec3(0.05, 0.03, 0.01)), flow.mul(amount));
       h = h.add(flow.mul(amount).mul(0.4));
+    }
+
+    if (this.atmo) {
+      // road mirage: on a hot afternoon the far asphalt, seen at a grazing angle, turns into a pool of
+      // sky that wobbles and breaks up (an inferior mirage). Only on the road, only far, only in heat.
+      const a = this.atmo;
+      const toCam = cameraPosition.sub(wp);
+      const dist = toCam.length();
+      const grazing = float(1).sub(abs(toCam.y).div(dist));
+      const wob = noise(vec2(xz.x.div(9).add(time.mul(0.11)), xz.y.div(9).sub(time.mul(0.07)))).r;
+      const mirage = smoothstep(0.986, 0.997, grazing.add(wob.sub(0.5).mul(0.006))).mul(smoothstep(30, 90, dist))
+        .mul(smoothstep(0.35, 0.9, roadFinal)).mul(gradeU.heat).mul(float(1).sub(a.uStorm)).toVar();
+      const sky = mix(a.uHaze, a.uHorizon, 0.65).mul(1.15);
+      col = col.mul(float(1).sub(mirage.mul(0.85)));
+      mat.emissiveNode = (sky as N).mul(mirage.mul(0.8));
     }
 
     mat.colorNode = col;
