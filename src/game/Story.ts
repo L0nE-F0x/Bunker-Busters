@@ -4,7 +4,7 @@ import type { UI } from '@/ui/UI';
 import { QUESTS, QUEST, questComplete, questOutcome, currentStep, LIFEBOAT_PAGES, lifeboatCount, STORY_SPOTS, type QuestDef, type QuestView, type QuestReward } from '@/content/quests';
 import { BANTER, type BanterView } from '@/content/banter';
 import { PERSON, standingTier, STANDING_WORD, shortName } from '@/content/people';
-import { storyObjective } from '@/content/story';
+import { storyObjective, journalEntries } from '@/content/story';
 import { LANDMARKS, WORLD_INTEL } from '@/content/world';
 import { ITEMS } from '@/content/items';
 import { GARAGE } from '@/content/bunkers/garage';
@@ -45,9 +45,20 @@ export class Story {
     );
     // A loaded (or migrated) run catches up quietly: no toast per step it already walked.
     this.sync(true);
+    // ...and gets a "previously" line: the newest thing in the journal, and what's next
+    if (state.has('briefed') && state.data.stats.playTime > 120) {
+      const last = journalEntries({ has: (f) => state.has(f), archetype: state.archetype })[0];
+      const q = this.focusQuest();
+      const step = q ? currentStep(q, this.view()) : null;
+      const next = step ? `Next: ${step.text}.` : '';
+      if (last || next) this.recapT = setTimeout(() => this.ui.banner('PREVIOUSLY', [last?.title, next].filter(Boolean).join('  ·  '), 'info'), 1800);
+    }
   }
 
+  private recapT: ReturnType<typeof setTimeout> | null = null;
+
   dispose() {
+    if (this.recapT) clearTimeout(this.recapT);
     for (const off of this.offs) off();
     this.offs = [];
   }

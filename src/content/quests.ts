@@ -803,7 +803,7 @@ export const QUESTS: QuestDef[] = [
         flag: 'q.cam.hello',
         label: 'You said hello to whoever was watching.',
         text: 'Ezra Seymour answered. He knew your water ration and which foot you favour. He lives north of the salt, in something he calls the Panopticon, and he says he\'ll know when you\'re close. The blue light still blinks. Now you know whose eye it is.',
-        reward: { xp: 120, items: [{ id: 'battery', qty: 2 }], rep: { hollis: -1, ezra: 2 } },
+        reward: { xp: 120, items: [{ id: 'battery', qty: 2 }], rep: { ezra: 2 } },
       },
     ],
     wrap: { speaker: 'Hollis Grange', text: 'Three years that thing watched me fix a sign. Hope it learned something.' },

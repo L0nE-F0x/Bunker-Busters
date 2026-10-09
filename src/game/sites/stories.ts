@@ -213,7 +213,7 @@ export class Stories {
       const o = landmarks.campPoint(0, 0, 0);
       const ax = landmarks.campPoint(1, 0, 0).sub(o).normalize();
       const p = landmarks.campPoint(-3.6, 0, 7.6);
-      const yaw = Math.atan2(ax.x, ax.z) - Math.PI / 2;
+      const yaw = Math.atan2(ax.x, ax.z) + Math.PI / 2; // the lettering faces the logs
       const mb = new MeshBatch();
       mb.add(paper, T(loreQuad('chalkPool', 2.4, 1.2), 0, 0, 0, -Math.PI / 2, 0, 0));
       this.pool = mb.build('pip-pool', false, true);
@@ -316,17 +316,17 @@ export class Stories {
       this.ctx.audio.play('click', { pos: this.ctx.player.position });
       const EZRA: Record<string, { speaker: string; text: string; choices: { id: string; label: string; next?: string }[] }> = {
         e1: {
-          speaker: 'Ezra Seymour · Glimpse',
+          speaker: 'Ezra Seymour · relay',
           text: 'Oh! Hi. Wow. Nobody ever talks to the relays. Hi! You\'re the one from the gas station. You drink one point four bottles a day and you favour your left foot. That\'s not creepy. That\'s care.',
           choices: [{ id: 'who', label: 'Who is this?', next: 'e2' }],
         },
         e2: {
-          speaker: 'Ezra Seymour · Glimpse',
+          speaker: 'Ezra Seymour · relay',
           text: 'I\'m Ezra. Glimpse? The neighbourhood app? I\'m north of the salt now, in a place I call the Panopticon. Eleven hundred cameras. Every one of them is pointed at somebody I care about. Which is everybody. Which is the point.',
           choices: [{ id: 'stop', label: 'Stop watching the camp.', next: 'e3' }],
         },
         e3: {
-          speaker: 'Ezra Seymour · Glimpse',
+          speaker: 'Ezra Seymour · relay',
           text: 'Don\'t come looking for me. I mean, you can. I\'ll know when you\'re close. I always know. Say hi to Hollis. He waves at the camera every morning. He thinks it\'s a sign. It kind of is.',
           choices: [{ id: 'bye', label: 'Let go of the button.' }],
         },

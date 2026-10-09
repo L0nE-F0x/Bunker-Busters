@@ -223,13 +223,13 @@ export const BANTER: Banter[] = [
     text: 'A mast on the rise with two dishes. One looks at the camp. The other looks north, at nothing you can see.',
   },
   {
-    id: 'ezra.night', speaker: 'Ezra Seymour · Glimpse', priority: 3,
+    id: 'ezra.night', speaker: 'Ezra Seymour · camera', priority: 3,
     near: { lm: 'gas', r: 40 },
     when: (v) => v.night && v.has('q.cam.hello'),
     text: 'Evening! You moved the cooler. Bold choice. I\'m not judging. I\'m archiving.',
   },
   {
-    id: 'ezra.wave', speaker: 'Ezra Seymour · Glimpse', priority: 3,
+    id: 'ezra.wave', speaker: 'Ezra Seymour · camera', priority: 3,
     near: { lm: 'gas', r: 40 },
     when: (v) => !v.night && v.has('q.cam.hello') && v.has('q.cam.told'),
     text: 'Hollis waved at me this morning. With one finger. I\'m counting it.',
