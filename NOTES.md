@@ -1549,3 +1549,13 @@ Eight worktree agents (apex, story, items, perf, visuals, places, combat, map) r
 - **Voices:** 727 → 731 clips, all tonight's lines rendered (Ezra Seymour and the Everafter concierge are new CAST voices).
 - **Merge notes:** `git rerere` is on; conflicts were all additive (Game.ts imports/hooks, WORLD_INTEL, journal lines, the jet/drive-in halo fix made identically by two agents). One leftover from resolving the bunker registry (the Garage updated twice a frame on the title) was caught and fixed by QA. The Panopticon's place is "the old coast, north of the salt" in every line.
 - **Not checked:** real hardware input (pad, phone touch fix), the chart worker in WebKitGTK, a full-width desktop window (the perf agent saw 31 fps at 1890×1138 vs 49 at 936×1138 with the same JS time: compositing or GPU, open).
+
+## 2026-10-10: machines' tiny parts by distance (overnight swarm 2: perf, round 3)
+
+- Hidden past ~100 m, with 95/105 m hysteresis (`detailAt` in `combat/Machines.ts`):
+  - a sentry's status LED and sensor eye
+  - a Hornet's eye and rotor discs
+- Each of those parts is 5-40 cm, so under a pixel at that range, and costs a draw. The bodies, the Hornet's light cone and a firing laser stay. Sentries still hide entirely past 190 m.
+- A sentry's solar panel is family-merged with its dark parts, so splitting it out would have added a draw up close. It stays.
+- **Numbers:** from Dry Creek looking at the Kade Wellhead (~150 m; `perf-probe --spots wellhead,wellheadNight`), draws 171 → 164 by day and 175 → 165 at night. Programs 204 → 204. `?nomachlod` A/Bs it.
+- **Night check:** night A/B in the open at ~115 m (`scratchpad/perf/mach-open-ab.png`, `mach-open-zoom.png`). Bloom doesn't bring the hidden LEDs/eyes back as specks; the only differing pixels are the Hornets' moving light cones. From Dry Creek itself the Wellhead sits behind The Till, and day and night shots are identical.
