@@ -274,21 +274,28 @@ export class ApexBuilder implements BunkerShell {
     b.add(m.rubber, beam(V(4.6, 0.15, 12.4), V(2.2, 0.15, 12.8), 0.08, 6));
     b.add(m.rubber, beam(V(4.6, 0.25, 1.0), V(2.2, 0.25, 0.4), 0.08, 6));
 
-    // the solar field, three rows tilted toward the road
+    // the solar field: three racks of six panels, tilted toward the road (one panel blew off its rack
+    // and lies face down at the end of the field)
+    const tilt = 0.45, ct = Math.cos(tilt), st = Math.sin(tilt), PY = 1.15, HALF = 0.8;
     for (const rz of [13.5, 18.5, 23.5]) {
       for (let i = 0; i < 6; i++) {
-        const x = 10 + i * 2.25;
-        const tilt = -0.42;
-        b.add(m.panel, place(new THREE.BoxGeometry(2.1, 0.05, 1.5), x, 1.2, rz, tilt));
-        b.add(m.frame, place(new THREE.BoxGeometry(2.16, 0.06, 0.05), x, 1.2 + Math.sin(-tilt) * 0.74, rz - Math.cos(tilt) * 0.74, tilt));
-        b.add(m.frame, place(new THREE.BoxGeometry(2.16, 0.06, 0.05), x, 1.2 - Math.sin(-tilt) * 0.74, rz + Math.cos(tilt) * 0.74, tilt));
-        b.add(m.lattice, box(0.08, 1.4, 0.08, x - 0.9, 0.7, rz - 0.3), box(0.08, 0.9, 0.08, x - 0.9, 0.45, rz + 0.45));
-        // one has blown off its frame and lies face down
         if (rz === 18.5 && i === 4) continue;
+        const x = 10.2 + i * 2.2;
+        b.add(m.panel, place(new THREE.BoxGeometry(2.12, 0.05, 2 * HALF), x, PY, rz, tilt));
+        // cell grid lines on the face (thin, a hair above it)
+        for (const k of [-0.5, 0, 0.5]) b.add(m.frame, place(new THREE.BoxGeometry(0.02, 0.01, 2 * HALF), x + k * 1.06, PY + 0.03 * ct, rz + 0.03 * st, tilt));
       }
-      this.col(15.6, 0.9, rz, 7, 0.9, 0.8);
+      const L = 6 * 2.2;
+      // rails along the high and low edges, posts under each end and the middle
+      const hi = { y: PY + HALF * st, z: rz - HALF * ct }, lo = { y: PY - HALF * st, z: rz + HALF * ct };
+      b.add(m.frame, box(L, 0.07, 0.07, 10.2 + 2.5 * 2.2, hi.y - 0.05, hi.z), box(L, 0.07, 0.07, 10.2 + 2.5 * 2.2, lo.y - 0.05, lo.z));
+      for (const px of [9.2, 15.7, 22.2]) {
+        b.add(m.lattice, box(0.08, hi.y - 0.05, 0.08, px, (hi.y - 0.05) / 2, hi.z), box(0.08, lo.y - 0.05, 0.08, px, (lo.y - 0.05) / 2, lo.z));
+        b.add(m.lattice, beam(V(px, 0.05, lo.z), V(px, hi.y - 0.1, hi.z), 0.03, 4));
+      }
+      this.col(15.7, 0.8, rz, 6.7, 0.8, 0.85);
     }
-    b.add(m.panel, place(new THREE.BoxGeometry(2.1, 0.05, 1.5), 21.5, 0.08, 26.6, 0.03, 0.4, 0.02));
+    b.add(m.panel, place(new THREE.BoxGeometry(2.1, 0.05, 1.6), 21.5, 0.08, 26.6, 0.03, 0.4, 0.02));
 
     // the road sign: APEX, private launch site, trespassers will be posted
     for (const sx of [6.2, 11.8]) {
@@ -368,7 +375,6 @@ export class ApexBuilder implements BunkerShell {
     // weld rings, soot creeping up from the engines, the wordmark down its side
     for (let y = 2.5; y < L; y += 2.6) add(m.brushed, cyl(R + 0.025, R + 0.025, 0.06, 0, y, 0, 40));
     add(m.soot, cyl(R + 0.02, R + 0.02, 3.6, 0, 1.8, 0, 40));
-    add(m.soot, place(new THREE.CylinderGeometry(R + 0.03, R + 0.03, 4, 40, 1, true, 0.6, 1.4), 0, 4.8, 0));
     add(m.print, apexPrint('logo', 12, 2.6, M(0, 16, R + 0.04, 0, 0, Math.PI / 2)));
     add(m.print, apexPrint('logo', 12, 2.6, M(R + 0.04, 16, 0, Math.PI / 2, 0, Math.PI / 2)));
     // engines under the skirt
