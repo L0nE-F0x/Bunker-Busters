@@ -16,6 +16,7 @@ import type { Heightfield } from '@/game/world/Heightfield';
 import { HumanCrowd, type HumanLook, type HitZone } from '@/game/combat/Humans';
 import { HumanSkins } from '@/game/combat/humanSkin';
 import { WolfSkins } from '@/game/world/wolfSkin';
+import { NpcModels } from '@/game/world/npcSkin';
 
 const qs = new URLSearchParams(location.search);
 const num = (k: string, d: number) => Number(qs.get(k) ?? d);
@@ -65,6 +66,10 @@ const rand = mulberry32(seed);
 const humanSkins = qs.get('what') === 'human' && qs.has('meshy') ? await HumanSkins.load(4, [3]) : null;
 // the Meshy wolf: what=wolf&leap=0.5 | &low=1 | &roll=0.3&look=0.8 | &amp=0.85&phase=1 | &dead=1.2
 const wolfSkins = qs.get('what') === 'wolf' ? await WolfSkins.load(3) : null;
+// the Meshy townsfolk: what=npc&id=inez&clip=idle&t=3 | &ids=ren,pip (side by side, &gap=1.1)
+//   &seat=0.44 sits them on a block that high | &look=0.5&nod=0.2 head turn
+const npcIds = qs.get('what') === 'npc' ? (qs.get('ids') ?? qs.get('id') ?? 'inez').split(',') : [];
+const npcModels = npcIds.length ? await NpcModels.load(npcIds) : null;
 const BUILDERS: Record<string, () => THREE.Object3D> = {
   wolf: () => {
     const s = wolfSkins!;
@@ -145,6 +150,27 @@ const BUILDERS: Record<string, () => THREE.Object3D> = {
     c.people.forEach((p) => humanSkins?.pose(p.slot, p, true));
     if (humanSkins) { const g = new THREE.Group(); g.add(c.mesh, humanSkins.group); return g; }
     return c.mesh;
+  },
+  npc: () => {
+    const g = new THREE.Group();
+    const seat = qs.has('seat') ? num('seat', 0.44) : null;
+    npcIds.forEach((id, i) => {
+      const a = npcModels?.make(id, seat !== null, (seat ?? 0) + 0.1);
+      if (!a) return console.warn('[lab] no model for', id);
+      a.root.position.x = (i - (npcIds.length - 1) / 2) * num('gap', 1.1);
+      const clip = qs.get('clip') ?? 'idle';
+      if (!a.pin(clip, num('t', 0))) console.warn(`[lab] ${id} has no ${clip}: ${a.roles().join(', ')}`);
+      g.add(a.root);
+      g.updateMatrixWorld(true);
+      a.update(0, false, num('look', 0), num('nod', 0));
+      if (seat !== null) {
+        const block = new THREE.Mesh(new THREE.BoxGeometry(0.45, seat, 0.4), new THREE.MeshStandardNodeMaterial({ color: '#6b5a48', roughness: 1 }));
+        block.position.set(a.root.position.x, seat / 2, 0);
+        block.castShadow = block.receiveShadow = true;
+        g.add(block);
+      }
+    });
+    return g;
   },
   rock: () => {
     const g = new THREE.Group();
