@@ -219,12 +219,16 @@ export class Input {
     if (this.device === 'pad' && binds.map.rumble) this.rumbleFn?.(strong, weak, ms);
   }
 
-  /** Mouse buttons only count while the mouse is captured (a click that grabs it never fires). */
+  /**
+   * Mouse buttons only count while the mouse is captured (a click that grabs it never fires). Never on
+   * the touch build: a tap on a menu button sends a compat mousedown, and the touch "capture" is
+   * instant, so the tap that closed the briefing or the Kit fired the gun in the same frame.
+   */
   private codeDown(c: string) {
-    return this.down.has(c) && (!c.startsWith('Mouse') || (this.locked && !this.soft));
+    return this.down.has(c) && (!c.startsWith('Mouse') || (this.locked && !this.soft && !this.touch));
   }
   private codePressed(c: string) {
-    return this.pressedThisFrame.has(c) && (!c.startsWith('Mouse') || (this.locked && !this.soft));
+    return this.pressedThisFrame.has(c) && (!c.startsWith('Mouse') || (this.locked && !this.soft && !this.touch));
   }
 
   /** Action held: any bound key or mouse button, the controller, or an on-screen button (`act:x`). */
