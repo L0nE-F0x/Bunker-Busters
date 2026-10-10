@@ -154,7 +154,7 @@ export abstract class Bunker<S extends BunkerShell = BunkerShell> {
     if (this.recon) return this.recon;
     const out: ReconTarget[] = [];
     const cams = this.cameras, wires = this.tripwires, grid = this.lasers;
-    if (cams) for (const c of cams.cams) out.push({ key: c, pos: c.eye, radius: 0.25, label: 'camera', live: () => !cams.off });
+    if (cams) cams.cams.forEach((c, i) => out.push({ key: c, pos: c.eye, radius: 0.25, label: 'camera', live: () => !cams.isOff(i) }));
     if (wires) for (const w of wires.wires) out.push({ key: w, pos: w.a.clone().lerp(w.b, 0.5), radius: 0.3, label: 'tripwire', live: () => w.armed });
     if (grid) for (const l of grid.beams) out.push({ key: l, pos: l.a.clone().lerp(l.b, 0.5), radius: 0.4, label: 'laser', live: () => !grid.off });
     for (const d of this.drones) out.push({ key: d, pos: d.position, radius: 0.7, label: 'drone', live: () => d.state !== 'disabled' });
@@ -508,7 +508,7 @@ export abstract class Bunker<S extends BunkerShell = BunkerShell> {
       return { box, open: () => door.open > 0.005 || door.target > 0 };
     });
     return (this._interior = new Interior(this.id, new THREE.Matrix4(),
-      (p) => p.x > hb.min.x + 0.05 && p.x < hb.max.x - 0.05 && p.z > hb.min.z + 0.05 && p.z < hb.max.z - 0.05 && p.y < hb.max.y,
+      (this.b.contains ? (p: THREE.Vector3) => this.b.contains!(p) : null) ?? ((p: THREE.Vector3) => p.x > hb.min.x + 0.05 && p.x < hb.max.x - 0.05 && p.z > hb.min.z + 0.05 && p.z < hb.max.z - 0.05 && p.y < hb.max.y),
       portals,
       [this.b.group, ...this.drones.map((d) => d.group)]));
   }
@@ -521,7 +521,7 @@ export abstract class Bunker<S extends BunkerShell = BunkerShell> {
     this.b.lod?.update(cam);
     if (!this.b.interior) return;
     const hb = this.b.innerBox;
-    const inside = cam.x > hb.min.x - 0.5 && cam.x < hb.max.x + 0.5 && cam.z > hb.min.z - 0.5 && cam.z < hb.max.z + 0.5 && cam.y < hb.max.y + 1;
+    const inside = this.b.contains ? this.b.contains(cam, 0.5) : cam.x > hb.min.x - 0.5 && cam.x < hb.max.x + 0.5 && cam.z > hb.min.z - 0.5 && cam.z < hb.max.z + 0.5 && cam.y < hb.max.y + 1;
     const throughDoor = this.sec.portals.some(({ entry }) => {
       const e = this.entry(entry), d = this.b.doors[e.doors[0]];
       return (d.open > 0.01 || d.target > 0) && cam.distanceToSquared(this.b.points[e.point]) < 32 * 32;
@@ -539,7 +539,7 @@ export abstract class Bunker<S extends BunkerShell = BunkerShell> {
     const p = player.position;
     const feet2 = this.feet2.set(p.x, p.z);
     const ib = this.b.innerBox, gb = this.b.groundsBox;
-    this.playerInside = ib.containsPoint(this.probe.copy(p).setY(ib.min.y + 1));
+    this.playerInside = this.b.contains ? this.b.contains(p) : ib.containsPoint(this.probe.copy(p).setY(ib.min.y + 1));
     this.playerOnGrounds = gb.containsPoint(this.probe.copy(p).setY(gb.min.y + 1));
     this.frame(dt, p);
 

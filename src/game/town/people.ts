@@ -27,6 +27,11 @@ export const LOOKS: Record<string, NpcLook> = {
     skin: '#d2a684', hair: '#3a2a1c', hairStyle: 'crop', build: 0.92, height: 0.96,
     shirt: '#7a7a6a', pants: '#34383a', coat: '#4a5a52', coatLen: 0.35, hat: 'hood', hatColor: '#4a5a52', scarf: '#c9b48a', boots: '#2c2620',
   },
+  // Ada Ivers, Doc's sister, out of the Panopticon: grey crop, a faded staff polo, khakis
+  ada: {
+    skin: '#c99c80', hair: '#a8a29a', hairStyle: 'crop', fem: true, build: 0.96, height: 0.95,
+    shirt: '#9fc0dc', pants: '#a89a78', boots: '#4a3424',
+  },
   // Wick: the hermit; beanie, a beard to the sternum, a blanket for a coat
   wick: {
     skin: '#a87a5c', hair: '#b4aca0', hairStyle: 'long', beard: 'long', build: 1.0, height: 1.0,

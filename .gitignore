@@ -9,3 +9,5 @@ src-tauri/gen
 
 # raw Meshy exports (hundreds of MB); the game ships public/models/*.glb built from them
 Assets/*.glb
+Assets/*.png
+Assets/meshy-tasks.json

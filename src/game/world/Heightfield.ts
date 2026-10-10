@@ -1,6 +1,7 @@
 import { Simplex2, smoothstep, lerp, clamp } from '@/engine/noise';
 import { WORLD_SIZE, WORLD_SEED, HIGHWAY, SIDE_ROADS, LANDMARKS, CAVE_TRAIL, SALT_FLAT } from '@/content/world';
 import { APEX, APEX_PAD, APEX_BLOCK_PAD } from '@/content/bunkers/apex';
+import { PANOPTICON, PANOPTICON_PAD } from '@/content/bunkers/panopticon';
 import { GARAGE } from '@/content/bunkers/garage';
 import { OUTPOSTS } from '@/content/recovery';
 
@@ -74,6 +75,8 @@ export class Heightfield {
     this.zones.push({ x: APEX.location.position[0], z: APEX.location.position[2], ...APEX_PAD });
     const bp = APEX_BLOCK_PAD;
     this.zones.push({ x: APEX.location.position[0] + bp.dx, z: APEX.location.position[2] + bp.dz, r: bp.r, falloff: bp.falloff, target: bp.target });
+    // the Panopticon's pad at the head of the valley north of the salt, cut into the cliff foot
+    this.zones.push({ x: PANOPTICON.location.position[0], z: PANOPTICON.location.position[2], ...PANOPTICON_PAD });
     // her road squeezes past a mesa spur north of the pad: open the cut a little
     this.zones.push({ x: -351, z: -62, r: 9, falloff: 14 });
     // Kade outposts sit on pads of their own

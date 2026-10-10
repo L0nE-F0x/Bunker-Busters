@@ -35,6 +35,7 @@ import { routineOpen } from '@/content/routines';
 import { HumanSkins } from './combat/humanSkin';
 import { Garage } from './bunker/Garage';
 import { Apex } from './bunker/apex/Apex';
+import { Panopticon } from './bunker/panopticon/Panopticon';
 import type { Bunker } from './bunker/Bunker';
 import { Settlement } from './town/Settlement';
 import { buildSites, Errands, type Site } from './sites';
@@ -57,6 +58,7 @@ import { RECIPE_GROUPS } from '@/content/craft';
 import { SKILLS } from '@/content/skills';
 import { GARAGE } from '@/content/bunkers/garage';
 import { APEX } from '@/content/bunkers/apex';
+import { PANOPTICON } from '@/content/bunkers/panopticon';
 import { ITEMS, HOTBAR_ITEMS, KEEP_ON_DEATH } from '@/content/items';
 import { KadeTerminals } from './combat/terminals';
 import { OUTPOSTS } from '@/content/recovery';
@@ -142,6 +144,7 @@ export class Game {
   garage!: Garage;
   /** Tier 2, Vesper's launch site west of the salt (Act II). */
   apex!: Apex;
+  panopticon!: Panopticon;
   /** Every bunker (the Garage first): interactables, update/cull, interiors, EMP, alarms. */
   bunkers: Bunker[] = [];
   settlement!: Settlement;
@@ -351,7 +354,8 @@ export class Game {
     await step(0.7, 'Building a doomsday bunker (pre-revenue)');
     this.garage = new Garage(this.ctx);
     this.apex = new Apex(this.ctx);
-    this.bunkers = [this.garage, this.apex];
+    this.panopticon = new Panopticon(this.ctx);
+    this.bunkers = [this.garage, this.apex, this.panopticon];
     this.combat.sparks = this.garage.sparks;
     // wolves won't follow you to the fire or into a town
     this.fauna.safe = [{ p: this.landmarks.campPosition.clone(), r: 30 }];
@@ -359,6 +363,8 @@ export class Game {
     // the Meshy townsfolk (before the warm-up; ?procnpc keeps the procedural figures)
     const bunkerMsg = 'Building a doomsday bunker (pre-revenue)';
     NpcCrowd.models = await models(NpcModels.load(), 0.7, 0.78, bunkerMsg);
+    // Ezra, Ada and the reviewers sit (and stand) in the Panopticon from boot (before the warm-up)
+    this.panopticon.addPeople(NpcCrowd.models);
     // routines (content/routines.ts): who is in which seat or spot, by the hour and the story
     NpcCrowd.schedule = (st) => routineOpen(st, { playing: this.mode === 'playing', hour: this.atmo.hour, has: (f) => !!this.state?.has(f) });
     this.landmarks.addCampPeople();
@@ -370,6 +376,11 @@ export class Game {
     // Vesper's alarm calls Kade's gatehouse crew on her road to the apron
     this.apex.onAlarm = (at) => this.recovery.alertOutpost('apexgate', at);
     this.apex.onAmbush = (at, yaw, d, n) => this.recovery.summon(at, yaw, d, n);
+    // Ezra calls Kade up the valley: a squad from the valley mouth side of `at`
+    this.panopticon.onAlarm = (at, from) => {
+      const yaw = Math.atan2(at.x - from.x, at.z - from.z);
+      this.recovery.summon(at, yaw, Math.min(46, Math.max(24, Math.hypot(at.x - from.x, at.z - from.z))), this.atmo.uNight.value > 0.5 ? 2 : 3);
+    };
     // sites can call a Kade crew too (the Longshot, once its pod is opened)
     for (const site of this.sites) site.onAmbush = (at, yaw, d, n) => this.recovery.summon(at, yaw, d, n);
     this.buildIntel();
@@ -390,6 +401,7 @@ export class Game {
     if (!SKIP.has('env')) this.buildEnvironment();
     if (SKIP.has('garage')) this.scene.remove(this.garage.b.group, this.garage.drone.group);
     if (SKIP.has('apex')) this.scene.remove(this.apex.b.group);
+    if (SKIP.has('panopticon')) this.scene.remove(this.panopticon.b.group);
     if (SKIP.has('ui')) document.getElementById('ui')!.style.display = 'none';
     if (SKIP.has('terrain')) this.scene.remove(this.terrain.mesh, this.terrain.far);
     if (SKIP.has('sky')) this.scene.remove(this.atmo.sky);
@@ -921,7 +933,8 @@ export class Game {
     void this.withMinigame('idle', async () => {
       for (;;) {
         const why = await this.ui.camp({
-          radioLabel: debrief ? 'Radio Mara · read the names' : s.has('apex.complete') && !s.has('act2.debriefed') ? 'Radio Mara · the water came east' : 'Raise Mara on the radio',
+          radioLabel: debrief ? 'Radio Mara · read the names' : s.has('apex.complete') && !s.has('act2.debriefed') ? 'Radio Mara · the water came east'
+            : s.has('panopticon.complete') && !s.has('act3.debriefed') ? 'Radio Mara · the lamp went out' : 'Raise Mara on the radio',
           people: CAMP.filter((m) => m.present(campView())).map((m) => ({ id: m.id, name: m.name, role: m.role })),
           onRest: () => {
             const full = s.skill('survival') >= 5;
@@ -1117,6 +1130,12 @@ export class Game {
     let spawn = new THREE.Vector3(x, this.hf.heightAt(x, z) + 0.1, z);
     // debug: ?at=garage starts the run inside the Garage (benching interior mode)
     if (new URLSearchParams(location.search).get('at') === 'garage') spawn = this.garage.b.points.interior.clone().setY(this.garage.b.points.interior.y - 0.9);
+    // ?at=panopticon starts down the valley from it, facing the lamp (Act III without the walk)
+    if (new URLSearchParams(location.search).get('at') === 'panopticon') {
+      const o = this.panopticon.b.origin;
+      spawn = new THREE.Vector3(o.x + 4, 0, o.z + 70);
+      spawn.y = this.hf.heightAt(spawn.x, spawn.z) + 0.2;
+    }
     this.player = new Player(this.physics, state.data.archetype, spawn);
     this.player.yaw = state.data.yaw;
     this.player.speedMult = state.archetype.stats.speed;
@@ -1839,6 +1858,12 @@ export class Game {
       out.push({ id: 'apex', x: ax, z: az, label: s.has('apex.complete') ? 'Apex Vault (busted)' : 'Apex Vault · Tier 2', color: s.has('apex.complete') ? '#7d725f' : '#ff3a6e', kind: 'bunker',
         note: s.has('apex.complete') ? 'Vesper Kade\'s vault on the salt. You took the water east.' : 'Vesper Kade\'s vault at the west shore of the salt, against the range. Her road runs past the gatehouse.' });
     }
+    const [px, , pz] = PANOPTICON.location.position;
+    const nearPan = this.player ? Math.hypot(this.player.position.x - px, this.player.position.z - pz) < 140 : false;
+    if (s.has('panopticon.marker') || s.has('act2.debriefed') || nearPan || s.has('panopticon.complete')) {
+      out.push({ id: 'panopticon', x: px, z: pz, label: s.has('panopticon.complete') ? 'The Panopticon (busted)' : 'The Panopticon · Tier 3', color: s.has('panopticon.complete') ? '#7d725f' : '#ff3a6e', kind: 'bunker',
+        note: s.has('panopticon.complete') ? 'Ezra Seymour\'s lighthouse at the head of the valley. You took the water, and you decided what happened to the archive.' : 'Ezra Seymour\'s building at the head of the valley north of the salt: a ring round an old lighthouse with a blue lamp.' });
+    }
     for (const it of WORLD_INTEL) {
       if (s.has(`intel:${it.id}`)) continue;
       const known = it.id === 'intel.gas.note' || s.has(`rumour.${it.id}`) || this.map.revealedAt(it.position[0], it.position[2]) > 100;
@@ -1866,8 +1891,8 @@ export class Game {
 
   /** The tracked quest (or the main story) speaks unless you're standing at the Garage. */
   private objective(): string {
-    const here = this.garage.objective() || this.apex.objective();
-    const label = here && !this.garage.objective() ? 'Act II · Apex Vault' : undefined;
+    const here = this.garage.objective() || this.apex.objective() || this.panopticon.objective();
+    const label = !here || this.garage.objective() ? undefined : this.apex.objective() ? 'Act II · Apex Vault' : 'Act III · The Panopticon';
     return this.story ? this.story.objective(here, label).text : here;
   }
 
@@ -2220,6 +2245,12 @@ export class Game {
         s.set('seen:apex');
         s.set('apex.marker');
         this.ui.banner('APEX VAULT', 'The valley\'s water, a rocket that has never left, and a woman live-streaming both. Tier 2.', 'info');
+      }
+      const [px, , pz] = PANOPTICON.location.position;
+      if (!s.has('seen:panopticon') && Math.hypot(player.position.x - px, player.position.z - pz) < 130) {
+        s.set('seen:panopticon');
+        s.set('panopticon.marker');
+        this.ui.banner('THE PANOPTICON', 'An old lighthouse at the head of the valley, a ring of desks round it, and a man who has watched every camp for three years. Tier 3.', 'info');
       }
       for (const c of WORLD_CACHES) {
         if (s.has(c.id) || s.has(`approach:${c.id}`)) continue;

@@ -119,7 +119,10 @@ fetch(`https://api.github.com/repos/${REPO}/releases/latest`, { headers: { Accep
 {
   const esc = (t: string) => t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
   const md = (t: string) => esc(t).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>').replace(/\*(.+?)\*/g, '<i>$1</i>');
-  const sections = changelog.split(/^## /m).slice(1).filter((s) => /^v\d/.test(s)).slice(0, 2);
+  // (only released versions: a section for the next release waits for the version bump)
+  const ver = (v: string) => v.replace(/^v/, '').split('.').map(Number);
+  const released = (v: string) => { const a = ver(v), b = ver(__APP_VERSION__); for (let i = 0; i < 3; i++) if ((a[i] ?? 0) !== (b[i] ?? 0)) return (a[i] ?? 0) < (b[i] ?? 0); return true; };
+  const sections = changelog.split(/^## /m).slice(1).filter((s) => /^v\d/.test(s) && released(s.split('\n')[0].trim())).slice(0, 2);
   $('#news-list')!.innerHTML = sections.map((s, i) => {
     const [head, ...lines] = s.split('\n');
     const v = head.trim();

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Build the townsfolk models (public/models/<id>.glb) from the raw Meshy exports in Assets/.
-#   scripts/models/build-npcs.sh            all ten
+#   scripts/models/build-npcs.sh            all of them
 #   scripts/models/build-npcs.sh pip dez    just these
 #
 # Roles (world/npcSkin.ts): idle* loop (each person drifts between them), near* loop while you're
@@ -12,6 +12,7 @@ cd "$(dirname "$0")/../.."
 A=Assets/Meshy_AI_
 DC=${A}DryCreek_
 CP=${A}Camp_
+PN=${A}Panopticon_
 build() { local id=$1; shift; node scripts/models/build-glb.mjs "public/models/$id.glb" "$@" --size 1024; }
 
 ids=("$@")
@@ -51,4 +52,23 @@ on hollis && build hollis ${CP}Hollis_Rigged.glb \
   --clips ${DC}Wick_Animations.glb:Sit_and_Doze_Off=idle2,Sitting_Answering_Questions=near
 on dez && build dez ${CP}Dez_Rigged.glb \
   --mirror ${DC}Wick_Animations.glb:Chair_Sit_Idle_M=idle_m,Sitting_Answering_Questions=near_m
+
+# --- the Panopticon: Ezra on his feet at the monitor wall; Ada and two reviewers at their desks
+# (Ezra borrows Sol's standing idle and talk loops; the reviewers borrow Sol's and Ada's seated clips)
+on ezra && build ezra ${PN}Ezra_Rigged.glb \
+  --clips ${DC}Sol_Animations.glb:Idle=idle,Talk_with_Hands_Open=near,Listening_Gesture=near2 \
+  --clips ${PN}Ezra_Animations.glb:Scheming_Hand_Rub=idle2,Look_Around_Dumbfounded=ins_look,Stand_Talking_Angry=talk_hard \
+  --mirror ${DC}Sol_Animations.glb:Idle=idle_m
+on ada && build ada ${PN}Ada_Rigged.glb \
+  --clips ${PN}Ada_Animations.glb:Chair_Sit_Idle_F=idle,Sit_Hands_on_Head_Lean_Back=ins_lean,Sit_to_Stand_Transition_F=stand \
+  --clips ${DC}Sol_Animations.glb:Sitting_Answering_Questions=near \
+  --clips ${PN}Ada_Walking_Basic.glb:walking_man=walk
+on rev1 && build rev1 ${PN}Reviewer1_Rigged.glb \
+  --clips ${DC}Sol_Animations.glb:Chair_Sit_Idle_M=idle,Sitting_Answering_Questions=near \
+  --clips ${PN}Ada_Animations.glb:Sit_Hands_on_Head_Lean_Back=ins_lean \
+  --mirror ${DC}Sol_Animations.glb:Chair_Sit_Idle_M=idle_m
+on rev2 && build rev2 ${PN}Reviewer2_Rigged.glb \
+  --clips ${PN}Ada_Animations.glb:Chair_Sit_Idle_F=idle \
+  --clips ${DC}Sol_Animations.glb:Sitting_Answering_Questions=near \
+  --mirror ${PN}Ada_Animations.glb:Chair_Sit_Idle_F=idle_m
 true

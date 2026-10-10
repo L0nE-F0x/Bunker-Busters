@@ -8,6 +8,10 @@ Repo: https://github.com/L0nE-F0x/Bunker-Busters (public, branch `main`). Read `
 
 **Current phase:** v0.6.1 is live (released 2026-10-10): the writing pass (NOTES "writing pass on everything unvoiced"): every unvoiced note/quest/journal/item/toast rewritten to read naturally, documents keep line breaks, and 135 more cast lines voiced. v0.6.0 came from the second overnight swarm (NOTES.md has one `2026-10-10` section per agent): Tier 2 **Apex Vault** placed west of a new salt flat and Act II playable to the end (bunker registry `game.bunkers`), four+one new favours and the #LIFEBOAT lore series (Ezra Seymour of the Panopticon is the Tier 3 hook), NPC daily routines, three new sites (The Longshot, Waitlist City, Photon Park), Kade specialists (marksman/breacher/grenadier) + surrender + fear of fire, vultures/coyotes, the Hush .22/molotov/binoculars/plates + Inez's Till + weapon mods, a world map with fog and fast travel, sky/cloud/horizon/night-light visuals, and perf (lowfx HUD shadows, texture-flip uniforms). All dialogue is voiced. The owner has the desktop app installed. We are **refining and iterating**. The owner cares most about visual quality ("make it look incredible"), then game feel. **Batch fixes; release only when the owner says "ship"** (then do it yourself: `scripts/release.sh patch` for 0.6.1, or `minor` if a content batch joins it).
 
+### Next session (handoff, 2026-10-10, the Panopticon)
+- **Tier 3, the Panopticon, is built** (unreleased; CHANGELOG has `## v0.7.0` ready: ship it with `scripts/release.sh minor` when the owner says so). First, **ask how it plays**: the lamp (too harsh? Kade on the first catch), the camera chain (readable?), Ada and Ezra in person (models, voices), the archive choice. `?at=panopticon` starts down the valley from it. NOTES "Tier 3, the Panopticon".
+- The owner wants the remaining bunkers added **one at a time, carefully**: next is Tier 4, Prudence Ashby's Alignment Spire (the debrief already names it). Propose a design first, quote Meshy credits before spending (64 left until 8 Nov).
+
 ### Next session (handoff, 2026-10-10, co-op parked)
 - **Do not start co-op.** The owner wants two-player play only after 1.0.0 is released and marketing is underway. The plan is `COOP.md` (host-authoritative guest, WebRTC, Garage first, host save stays the story). It is parked. No networking code, no second player, no `?buddy` flag, until the owner picks it up after 1.0.
 - **First, ask how the rewritten text reads** (notes, the #LIFEBOAT chat, quest hints, the journal) and whether the 135 newly voiced lines sound right (Dez's rumours, Mara's per-character briefings and codas, Dry Creek's news lines, Tanner's/Vesper's speaker shouts). Nobody has listened to them yet. Follow the **Writing** rule below for any new text.
@@ -22,7 +26,7 @@ Repo: https://github.com/L0nE-F0x/Bunker-Busters (public, branch `main`). Read `
 - **Tooling notes:** `scripts/dev/load-bench.mjs` (cold/warm load like Netlify), `pad-test.mjs` / `controls-test.mjs`, prop lab `what=human&meshy`, `what=wolf&leap`. `bench-desktop.sh`'s filter printed nothing on 2026-10-09; run the binary directly with `BB_START_URL=…?bench&autostart&fight` and grep `[BENCH]`. Worktree agents need `node_modules` symlinked and hit Vite 403s on fonts (use a config override).
 
 ### Previous handoff (2026-10-08)
-- **Meshy API:** the owner is on Pro; the key is in `~/.config/meshy/key` (chmod 600, verified: 1,080 credits on 2026-10-08). Read it from there (`Authorization: Bearer $(cat …)`); **never** copy it into the repo, a script default, or chat. Before spending credits on a batch, tell the owner the rough cost. API docs: https://docs.meshy.ai/api (async tasks: create → poll → download GLB; image/text-to-3D, remesh, **humanoid-only** rigging, a 678-clip humanoid animation library at `GET /openapi/v1/animations/library` (free to list), balance at `GET /openapi/v1/balance`).
+- **Meshy API:** the owner is on Pro; the key is in `~/.config/meshy/key` (chmod 600). `scripts/models/meshy.mjs` runs the whole pipeline (preview → texture → rig → clips; `--preview-only` first, check the thumbnail, then `--preview <id>`). Balance after the Panopticon batch (2026-10-10): 64 credits, 208/month, refills 8 Nov. Read it from there (`Authorization: Bearer $(cat …)`); **never** copy it into the repo, a script default, or chat. Before spending credits on a batch, tell the owner the rough cost. API docs: https://docs.meshy.ai/api (async tasks: create → poll → download GLB; image/text-to-3D, remesh, **humanoid-only** rigging, a 678-clip humanoid animation library at `GET /openapi/v1/animations/library` (free to list), balance at `GET /openapi/v1/balance`).
 - **First jobs, in order:**
   1. ~~Wolf death~~ **done in code** (2026-10-08): a timed collapse in `wolfSkin.ts` (`death(t)`): flinch, front legs buckle then hind, topple onto the side with a settle, go limp, one last twitch; a wolf shot mid-run skids. **Meshy's API can't help the wolf**: API rigging and its 678-clip animation library are humanoid-only, and web-app (quadruped) rigs aren't visible to the API. Quadruped clips (run, bite, death), if any, come from the Meshy *web app*, downloaded by the owner into `Assets/`.
   2. ~~Kade contractors, Dry Creek six, snake, scorpion~~ **done (v0.5.5)** from Grok's Meshy batch; read `Assets/MESHY_ASSETS.md` (inventory, clip names, measured offsets, known visual misses not to "fix"). Meshy balance after that batch: 178 credits.
@@ -118,11 +122,12 @@ src/game/world/             Atmosphere (sky, fog, sun, day/night), Heightfield +
                             shadowProxy, Frame), lights (VirtualLight pool), npc (people)
 src/game/town/              Dry Creek, The Cut and the wash (Settlement.ts: build half + NPC dialogue/quests half)
 src/game/sites/             points of interest, one class each: jet, drivein, datacenter, tube (Site.ts: flag contract)
-src/game/bunker/            bunker runtime: Bunker.ts runs a heist from data (content/bunkers/<id>.ts `security`: entries with
+src/game/bunker/            bunker runtime (Garage, Apex, Panopticon): Bunker.ts runs a heist from data (content/bunkers/<id>.ts `security`: entries with
                             lockpick/circuit/keypad/SPLICE/charge/open methods, tripwires, lasers + power box, cameras, drones,
                             alarm, owner voice, loot, interior, save flags <id>.<entry>.open etc.) on a builder's shell (shell.ts);
                             hazards.ts. Garage = GarageBuilder + Tanner's talk/daemons/lights; Drone (SeedBot AI);
-                            apex/ = Tier 2 skeleton (greybox, not placed; built only by the dev harness)
+                            apex/ = Tier 2 (Vesper). panopticon/ = Tier 3 (Ezra: the lamp, the face gate, the camera chain,
+                            the reviewers, the archive; NOTES 2026-10-10 "the Panopticon")
 src/game/player/            Player (Rapier controller), FirstPersonCamera, Hands (procedural viewmodel + poses),
                             Arms (weapon models + viewmodel animation; hands are solved onto the weapon),
                             CharacterModel (third-person body, now a shadow-only caster), ThirdPersonCamera (unused)
@@ -175,7 +180,7 @@ Game URL flags:
 - `?webgl`, `?gpu=high|low|reset`: backend override
 - `?skip=ui,post,env,dust,haze,props,landmarks,scrub,fauna,garage,terrain,sky,shadows,fog`: subsystem bisecting
 - `?fight`: drop a Recovery squad in front of you (Story difficulty, can't die), for benches
-- `?interior=off`: never skip the exterior (A/B for interior mode). `?at=garage`: start the run inside the Garage
+- `?interior=off`: never skip the exterior (A/B for interior mode). `?at=garage`: start the run inside the Garage. `?at=panopticon`: start down the valley from the Panopticon. `?nolamp`: hide its lamp's beam (perf A/B)
 
 Desktop dev hooks (env vars):
 - `BB_START_URL`: open another URL

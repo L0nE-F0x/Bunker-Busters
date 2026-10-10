@@ -24,8 +24,8 @@ import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
  * something changed.
  */
 
-/** Characters that have a model: Dry Creek's six and the camp's four. */
-export const NPC_MODELS = ['nia', 'doc', 'inez', 'sol', 'ren', 'wick', 'mara', 'hollis', 'pip', 'dez'] as const;
+/** Characters that have a model: Dry Creek's six, the camp's four, and the Panopticon's four (Ezra, Ada, two reviewers). */
+export const NPC_MODELS = ['nia', 'doc', 'inez', 'sol', 'ren', 'wick', 'mara', 'hollis', 'pip', 'dez', 'ezra', 'ada', 'rev1', 'rev2'] as const;
 /** Head props, in Head-bone space (1 unit = 1 cm there; fits from Assets/MESHY_ASSETS.md §5). */
 export const NPC_PROPS: Record<string, { file: string; pos: [number, number, number]; rot: [number, number, number]; scale: number }> = {
   hollis: { file: 'truckercap', pos: [-1.7, 20.3, 2.6], rot: [-7.5, 3.2, 3.6], scale: 16 },
@@ -380,6 +380,26 @@ export class NpcActor {
     return true;
   }
 
+  /**
+   * A scripted beat: play `role` now (Ada getting up from her desk). It plays once; `hold` keeps its
+   * last frame afterwards (no idles), otherwise it goes back to the loop it interrupted.
+   */
+  play(role: string, hold = false) {
+    const c = this.T.clips.get(role);
+    if (!c) return false;
+    this.pending = null;
+    this.prev = this.cur;
+    this.cur = c;
+    this.clock[c.i] = 0;
+    this.fade = 0;
+    this.fadeDur = 0.4;
+    this.scripted = hold ? 'hold' : 'once';
+    return true;
+  }
+
+  /** Playing a scripted beat (`play`). */
+  private scripted: 'once' | 'hold' | null = null;
+
   /** A bone by name (the prop lab draws on them). */
   bone(name: string): THREE.Bone | undefined {
     return this.B[name];
@@ -416,12 +436,14 @@ export class NpcActor {
    */
   update(dt: number, near: boolean, look: number, nod: number) {
     this.time += dt;
-    if (!this.pinned) this.decide(dt, near);
+    if (this.scripted === 'once' && this.clock[this.cur.i] >= this.cur.dur - 0.05 && this.fade >= 1) { this.scripted = null; this.queue(this.base, 0); }
+    if (!this.pinned && !this.scripted) this.decide(dt, near);
     const step = this.pinned ? 0 : dt * this.rate;
     for (const c of this.T.list) {
       const k = c.i;
       // loops run all the time (a switch picks one up wherever it is); a gesture only while it shows
-      if (!c.once) this.clock[k] = (this.clock[k] + step) % c.dur;
+      if (this.scripted && c === this.cur) this.clock[k] = Math.min(c.dur - 1e-3, this.clock[k] + step);
+      else if (!c.once) this.clock[k] = (this.clock[k] + step) % c.dur;
       else if (c === this.cur || c === this.prev) this.clock[k] = Math.min(c.dur, this.clock[k] + step);
     }
     this.fade = Math.min(1, this.fade + dt / this.fadeDur);

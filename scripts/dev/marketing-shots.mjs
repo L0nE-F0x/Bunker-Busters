@@ -66,6 +66,8 @@ WORLD.push(
   ['place-waitlist', free([318, 1.6, 328], [310, 2.2, 296], 58, 17.7)],
   // the Longshot's booster on its side in the north basin, pylons behind
   ['place-longshot', free([100, 3, -262], [132, 3, -302], 50, 17.3)],
+  // the Panopticon at dusk from the valley, the lamp's beam out over the cliff
+  ['place-panopticon', free([-283, 2, -296], [-297, 16, -350], 50, 18.9)],
   // Photon Park's panel rows at sunset, low along a row
   ['place-solar', free([-178, 1.7, 296], [-212, 1.2, 316], 48, 17.6)],
 );

@@ -1619,3 +1619,32 @@ The owner said the marketing page was one of the oldest parts of the project and
   - The game's title has **Install app** on phones (it replaced the iOS tip).
 - **Manifest:** added a 192 px icon, a maskable icon (Android crops to a circle), a description, categories and screenshots (`media/shot-1..3.jpg`) for Android's richer install sheet. `site.webmanifest` was removed.
 - **Not checked:** a real phone (Android prompt, iOS steps), Safari's rendering of the page, how the video looks on a real connection.
+
+## 2026-10-10: Tier 3, the Panopticon (Act III)
+
+The owner asked to start adding the missing bunkers "one by one, carefully". The design was agreed first: Ezra in person (a real Meshy model), Ada plus a few reviewers inside, and one review when it's finished.
+
+- **Where:** the head of the valley north of the salt, centred at (−296, −350), a pad flattened to y 7 (`PANOPTICON_PAD`), with the cliff behind it. From the salt the white tower stands against the banded rock.
+- **What** (`content/bunkers/panopticon.ts` data, `game/bunker/panopticon/`: `PanopticonBuilder` geometry, `Panopticon` runtime, `panopticonAtlas` prints + the shared feed canvas):
+  - The building: a windowless drum (r 18) of twelve 30° bays round the old Point Argus lighthouse. Bay 0 is the gate passage; the other eleven are reviewers' cells behind clear glass.
+  - **The lamp:** turns once every 40 s. A wedge of the valley in its beam with a clear ray to the lantern counts as seen (0.6 s). The first time, Ezra calls a Kade squad up the valley. If you looped the camp's Glimpse camera (`q.cam.loop`), it passes over you.
+  - **The face gate:** opens for staff only. SPLICE `enrol` (+`poles`), short the motor, blow the rails (Demolition 4), or Social 4 at the gate intercom (Ezra opens it for "a witness").
+  - **The chain:** four tower cameras, each watching another one's junction box: cam1's box is on the tower, cam2's in cam1's view, and so on. Cutting a box while its watcher is live rings the alarm. Per-camera flags are `panopticon.cam.<id>.off` (CameraGrid now supports single cameras: `isOff`, `killOne`). The poles have boxes too.
+  - **People:** Ada at desk 7 (her code 2212, the chain order, and she walks out while you're in the tower), Kofi at 4 (glances back now and then and reports you: an alarm), Jun at 10 (sees you, says nothing). Ezra stands at his monitor wall in the tower.
+  - **The tower:** keypad 2212 (locked during an alarm), SPLICE `tower`+`towercams` (Electronics 4), or a charge (Demolition 5).
+  - **The archive:** a choice card (take → `archive_drive`, wipe, broadcast). The cistern, the locker and the shelf are the loot.
+  - Alarm: Kade up the valley, once a minute at most.
+- **Shell:** `BunkerShell.contains?` was added for round buildings, because the drum's bounding box has outdoor corners. Bunker uses it for `playerInside`, interior mode and the inside-only draws.
+- **Story:** quest `act3` (starts at `act2.debriefed`), `panopticonDebrief` at the camp radio (gate method, loud/quiet, archive outcome, Ada), the next name (Prudence Ashby, the Alignment Spire), journal entries, Ada in People.
+  - Afterwards Ada sits at Doc's desk in the clinic (routine `ada.clinic`, model `ada`) with five voiced lines. The scavenge pack `c.sw-flats` was moved off the new apron, to (−314, −262).
+- **Models** (Meshy API, `scripts/models/meshy.mjs`, key from `~/.config/meshy/key`): Ezra, Ada (meshy-7.1) and two reviewers (meshy-6-lite), all borrowing clips by bone name (`build-npcs.sh`: ezra, ada, rev1, rev2).
+  - Spent **144 credits** (64 left; the balance refills on 8 Nov). Two lite previews were redone, one crouched and one in a school skirt, 10 credits.
+  - `NpcActor.play(role, hold)` plays a scripted beat (Ada standing up).
+- **Voices:** 66 new clips (931 total). New cast: `ezra` (same voice as `ezra seymour`, room fx, for in person), `ada ivers`, `kofi boateng`, `jun ishida`.
+- **Perf** (debug desktop app, High, 936×1138 window):
+  - camp start ~52 fps; the valley facing the Panopticon 48.5 median.
+  - The building's geometry costs ~nothing. The lamp's beam was ~3 ms with `lightCone`, so it has its own cheap cone (`lampCone`: no noise, no depth reads) at ~0.3 ms. `?nolamp` A/Bs it.
+  - Pipelines: 196 at boot = 196 after visiting every room, so nothing compiles late.
+- **Tests** (headless): two scripted playthroughs, 17 + 10 checks: refusal, enrol, inside test, chain order, Ada, lockdown, archive card, loot, Ada leaving, debrief, lamp→Kade, loop, poles, invite, Kofi, Jun, towercams. `?at=panopticon` starts a run down the valley from it.
+- **Site:** three bunker cards, "Three bunkers open. Five to go.", the ladder's next is the Alignment Spire. "What's new" now hides changelog sections newer than the running version (v0.7.0 is written and waits for the release).
+- **Not checked:** a real play by hand (the owner), the desktop release build's numbers, how the four new models look up close in motion over time (only stills and short runs).

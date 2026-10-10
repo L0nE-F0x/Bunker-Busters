@@ -234,6 +234,23 @@ export const PEOPLE: PersonDef[] = [
     ],
   },
   {
+    id: 'ada', accent: '#9fc0dc', name: 'Ada Ivers', role: 'Doc\'s sister', place: 'Desk 7, then Dry Creek',
+    bio: 'Number 2,212 in the Everafter line. She wrote to her brother at the clinic every month from her camp chair. When the line broke up, Ezra gave her a desk in the ring, and she watched the camps for him for two years.',
+    known: (v) => v.has('panopticon.ada.met') || v.has('panopticon.ada.free'),
+    about: [
+      { who: 'doc', line: 'He still signs off "your annoying brother". Out loud, now.', when: (v) => v.has('panopticon.ada.free') },
+      { who: 'doc', line: 'Tell him I\'m eating. He\'ll ask.' },
+      { who: 'ezra', line: 'He read everything we wrote, every night. Nobody else ever has.' },
+      { who: 'mara', line: 'If Mara gets her court, I\'ll stand up in it. I know what I saw.', when: (v) => v.has('panopticon.archive.take') },
+    ],
+    ofYou: [
+      'You came for the water.',
+      'You came for the water and stopped to talk. Most people don\'t.',
+      'You told my brother where I was. Thank you.',
+      'I watched people for two years. I know which ones keep their word.',
+    ],
+  },
+  {
     id: 'ezra', accent: '#6f9cff', name: 'Ezra Seymour', role: 'Founder, Glimpse', place: 'The Panopticon, north of the salt',
     bio: 'Built Glimpse, the neighbourhood app that never forgot a face, and then a bunker with eleven hundred cameras in it. Came up with the name "the Pivot". Watches every camp he can reach, and honestly believes it\'s because he cares.',
     known: (v) => v.has('q.cam.hello') || v.has('lore.panopticon'),

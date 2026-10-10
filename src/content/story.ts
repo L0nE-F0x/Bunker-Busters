@@ -59,6 +59,17 @@ export function briefingFor(a: ArchetypeDef): StoryPage[] {
  */
 export function campRadio(v: StoryView): { pages: StoryPage[]; flags: string[] } {
   const a = v.archetype;
+  // Act III's debrief: the lighthouse, the archive, and Ada if she walked out
+  if (v.has('panopticon.complete') && !v.has('act3.debriefed')) return { pages: panopticonDebrief(v), flags: ['act3.debriefed'] };
+  if (v.has('act3.debriefed')) {
+    return {
+      pages: [
+        { speaker: 'Mara Voss', text: 'The lamp\'s been dark three nights running. Wick says the ridge looks wrong without it.' },
+        { speaker: 'Mara Voss', text: 'Prudence Ashby. The Alignment Spire. When you\'re ready, we\'ll talk about how. Mara, out.' },
+      ],
+      flags: [],
+    };
+  }
   // Act II's debrief: the water came east, and the band is talking about how you got in
   if (v.has('apex.complete') && !v.has('act2.debriefed')) return { pages: apexDebrief(v), flags: ['act2.debriefed'] };
   if (v.has('act2.debriefed')) {
@@ -341,6 +352,13 @@ export function journalEntries(v: StoryView): JournalEntry[] {
   add('apex.complete', 'The Cistern Room', 'A tank with her name on it and the valley\'s water inside, and a framed poll on the wall: should the camps get water? 88% said "lol". The tap still works. The water is going east.');
   add('intel:intel.apex.memo', 'Your guests', 'A memo on Vesper\'s cot from somewhere called the Panopticon. Every face that crossed her apron, matched and ranked, in exchange for her water. At the bottom: "We can see whoever is reading this. Hi."');
   add('q:act2:done', 'The Panopticon', 'After Apex, Dez picked it up on the band: a building on the old coast north of the salt, with no windows and a lot of antennas. Whoever is in there read the camp\'s names back before anyone had said them.');
+  add('seen:panopticon', 'The Panopticon', 'The old Point Argus light at the head of the valley north of the salt, with a windowless ring of desks built round it. A blue lamp turns on the tower once every forty seconds. Everyone at a desk watches a camp.');
+  add('panopticon.ada.met', 'Desk 7', 'Ada Ivers, Doc\'s sister, number 2,212 in the Everafter line. When the line broke up she was the only one still writing letters, so Ezra gave her a desk. She knows the camera order and the tower code.');
+  add('panopticon.archive.take', 'The archive, taken', 'Three years of every camp in the valley on one drive: who gave water and who took it. It\'s in Mara\'s ammo tin now, for a court.');
+  add('panopticon.archive.wipe', 'The archive, wiped', 'You held the switch down until the rack went dark. Three years of every camp, gone. Ezra watched you do it.');
+  add('panopticon.archive.broadcast', 'The archive, broadcast', 'You sent Ezra\'s archive to every camp radio in the valley at once: names, litres, who sold places in the Everafter line.');
+  add('panopticon.complete', 'The keeper\'s cistern', 'An old lighthouse cistern under a hatch in Ezra\'s room, and what Vesper paid him in water for faces. He\'d worked out what he needed to the litre. The rest is going south.');
+  add('q:act3:done', 'Prudence Ashby', 'After the Panopticon, Ezra gave you one more name: Prudence Ashby, who runs Careful Labs from the Alignment Spire. Its doors ask ethics questions, and its turrets apologise before they fire.');
   add('cave.wick.vesper', 'Vesper in the Cut', 'Wick says Vesper Kade once called the Garage a prototype with bad unit economics. He told her the prototype had his cousin\'s water in it. She painted her initials in a pocket of the rock and left.');
   // the founders, from the outside (WORLD_INTEL's lore pickups and the four favours that hang off them)
   add('lore.lifeboat', '#LIFEBOAT', 'A group chat the founders kept before the Pivot: Vesper Kade, Hunter Vale, Ezra Seymour, Prudence Ashby, Orrin, Kit, and Tanner, who kept getting removed and coming back. Every device that died out here kept its last page. Dez hears them trying to sync at three in the morning.');
@@ -404,7 +422,43 @@ export function apexDebrief(v: StoryView): StoryPage[] {
   return pages;
 }
 
+/**
+ * Act III's debrief at the fire, after the Panopticon: how you got through his gate, loud or quiet,
+ * what you did with the archive, Ada if she walked out, and the next name.
+ */
+export function panopticonDebrief(v: StoryView): StoryPage[] {
+  const first = v.archetype.name.split(' ')[0];
+  const pages: StoryPage[] = [
+    { speaker: 'Mara Voss', text: `${first}. The lighthouse water came down the valley this morning. Hollis carried the last jug in himself and wouldn\'t let anyone help.` },
+  ];
+  pages.push({
+    speaker: 'Dez Marlow',
+    text: v.has('panopticon.invited')
+      ? 'You talked him into opening his own gate. First door anyone\'s opened for us in three years, and he opened it himself.'
+      : v.has('panopticon.enrolled')
+        ? 'You put your own face on his staff list. As far as Glimpse knows, you still work there.'
+        : 'You went through his gate the hard way. I heard the rails go from here, and so did the Spire.',
+  });
+  pages.push(v.has('panopticon.loud')
+    ? { speaker: 'Dez Marlow', text: 'Kade came up the valley after you. I counted their trucks on the salt road. They went back with nobody.' }
+    : { speaker: 'Mara Voss', text: 'No alarm. Ezra says nobody in the ring looked up from their desk. He would know.' });
+  pages.push(v.has('panopticon.archive.take')
+    ? { speaker: 'Mara Voss', text: 'The drive is in the ammo tin with the ledger and the chat. Three years of who gave and who took. If there\'s ever a court, it goes in first, and I\'ll be there to read it.' }
+    : v.has('panopticon.archive.wipe')
+      ? { speaker: 'Mara Voss', text: 'You wiped it. I\'d have kept it. But I wasn\'t standing in that room with him, and you were.' }
+      : v.has('panopticon.archive.broadcast')
+        ? { speaker: 'Mara Voss', text: 'Every camp heard it last night. Names, litres, who sold places in the Everafter line. Two camps on the ridge have stopped talking to each other. Three others have started.' }
+        : { speaker: 'Mara Voss', text: 'You left the archive with him. He\'ll go on watching, and writing it down. I don\'t know yet whether that\'s good.' });
+  if (v.has('panopticon.ada.free')) {
+    pages.push({ speaker: 'Mara Voss', text: 'Doc called on the band an hour ago. Ada walked into Dry Creek at dawn carrying a folded camp chair. He couldn\'t get the words out, so Nia said them for him.' });
+  }
+  pages.push({ speaker: 'Mara Voss', text: 'That\'s Act III. When you left, Ezra said one more name. Prudence Ashby, the Alignment Spire. He said she\'d be expecting you. Sleep.' });
+  return pages;
+}
+
 export function storyObjective(v: StoryView): string {
+  if (v.has('act3.debriefed')) return 'Act III is done. Prudence Ashby\'s Alignment Spire is next. Mara will say when.';
+  if (v.has('panopticon.complete')) return 'The Panopticon is done. Radio Mara from the campfire.';
   if (v.has('act2.debriefed')) return 'Act II is done. Ezra Seymour is north of the salt, in the Panopticon, and he knows your name.';
   if (v.has('apex.complete')) return 'Apex is done and the water is heading east. Radio Mara from the campfire.';
   if (v.has('debriefed')) return 'Act I is done. Apex Vault is west of the salt. Ask in Dry Creek who would come with you.';

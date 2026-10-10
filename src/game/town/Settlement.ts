@@ -1,4 +1,5 @@
 import { TILL_LINES } from '@/content/trade';
+import { ADA_CREEK } from '@/content/bunkers/panopticon';
 import * as THREE from 'three/webgpu';
 import { Interior } from '../world/interiors';
 import type { Heightfield } from '@/game/world/Heightfield';
@@ -260,6 +261,23 @@ export class Settlement {
       }),
     });
     this.interactables.push(talk('doc', 'Talk to Doc Ivers', () => this.talkDoc()));
+    // Ada, once she's out of the Panopticon (content/routines.ts 'ada.clinic')
+    this.interactables.push({
+      id: 'ada', pos: this.pos('ada'), radius: 2.0,
+      visible: () => !!this.s?.has('panopticon.ada.free'),
+      primary: {
+        label: 'Talk to Ada',
+        available: () => true,
+        run: () => {
+          const s = this.s;
+          if (s.set('creek.talk.ada')) s.addXP(XP_REWARDS.talk, 'Ada, at home');
+          const n = s.data.marks['ada.line'] ?? 0;
+          s.data.marks['ada.line'] = n + 1;
+          const line = ADA_CREEK[n % ADA_CREEK.length];
+          this.ctx.ui.subtitle(line.speaker, line.text, { pos: this.pos('ada') });
+        },
+      },
+    });
     this.interactables.push({
       id: 'generator', pos: this.pos('generator'), radius: 1.9,
       visible: () => !this.s?.has('creek.power'),

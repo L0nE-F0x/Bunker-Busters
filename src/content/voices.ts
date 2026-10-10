@@ -41,6 +41,11 @@ export const CAST: Record<string, CastVoice> = {
   everafter: { voice: 'af_bella', fx: 'pa', speed: 1.0 }, // Waitlist City's concierge (sites/waitlist.ts)
   'kade recovery': { voice: ['am_fenrir', 'am_michael', 'bm_george', 'bm_daniel'], fx: 'radio', speed: 1.05 },
   'ezra seymour': { voice: 'bm_fable', fx: 'pa', speed: 1.04 },
+  // in his tower he's in the room with you (content/bunkers/panopticon.ts EZ_ROOM)
+  ezra: { voice: 'bm_fable', fx: 'room', speed: 1.02 },
+  'ada ivers': { voice: 'af_nicole', fx: 'room', speed: 0.92 },
+  'kofi boateng': { voice: 'am_liam', fx: 'room', speed: 1.02 },
+  'jun ishida': { voice: 'bf_alice', fx: 'room', speed: 0.98 },
 };
 
 const ALIAS: Record<string, string> = { mara: 'mara voss' };

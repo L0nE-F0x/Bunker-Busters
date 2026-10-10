@@ -480,6 +480,9 @@ function clinic(S: Site, H: Hooks): CreekLive {
     S.pool('poolWarm', 1.0, 1.0, 3.55, FY + 0.775, -7.0);
   }
   chair(P, 3.0, -6.6, -Math.PI / 2, FY, M.woodDark());
+  // Ada, once she's walked out of the Panopticon: in Doc's chair, at his desk, doing his books
+  H.npc({ id: 'ada', look: LOOKS.ada, pose: 'warm', x: 3.0, y: FY, z: -6.6, yaw: Math.PI / 2, seat: 0.46, notice: 5, station: 'ada.clinic' });
+  H.spot('ada', 3.0, FY + 1.0, -6.6);
   P.cyl(M.galv(), 0.03, 0.03, 1.4, -1.4, FY + 0.7, zB + t + 0.25, 6).box(M.galv(), 0.4, 0.06, 0.45, -1.4, FY + 0.04, zB + t + 0.42).box(M.galv(), 0.3, 0.05, 0.05, -1.4, FY + 1.35, zB + t + 0.3);
   S.decal('eyechart', 0.5, 0.67, x1 - t - 0.01, FY + 1.55, -10.2, -Math.PI / 2);
   crate(P, 3.4, FY, -8.7, 0.6, 0.45, 0.45, 0.1, M.enamel());

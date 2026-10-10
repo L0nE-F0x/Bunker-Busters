@@ -228,6 +228,12 @@ const defs: ItemDef[] = [
     description: 'A leather roll of tension wrenches and picks. Take it back to Sol at the street fire, or unroll it into your kit for five picks.',
     flavor: 'Stamped S.V. on the flap, worn almost smooth.',
   },
+  // --- the Panopticon ---
+  {
+    id: 'archive_drive', name: 'The Valley Archive', category: 'intel', weight: 0.3, stack: 1, value: 0, icon: 'drive',
+    description: 'Ezra\'s master drive: three years of every camp in the valley, who gave water and who took it. Mara wants it for a court, if there\'s ever a court again.',
+    flavor: 'VALLEY · 3 YRS · MASTER, in his handwriting.',
+  },
   {
     id: 'deed', name: 'Deed to the Till', category: 'intel', weight: 0, stack: 1, value: 0, icon: 'intel',
     description: 'The landlord\'s deed to the Till, signed over to "whoever is still here". Inez wants it, and so does the rest of Dry Creek. Give it to one of them.',

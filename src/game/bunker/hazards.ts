@@ -214,13 +214,22 @@ export class CameraGrid {
     this.seen = cams.map(() => 0);
   }
 
+  /** All of them (SPLICE's loop, a breaker): `<bunker>.cameras.off`. */
   get off() {
     return this.bunker.state.has(this.bunker.flag('cameras.off'));
   }
 
+  /** One camera cut at its own box: `<bunker>.cam.<id>.off` (the Panopticon's chain). */
+  camFlag(id: string) {
+    return this.bunker.flag(`cam.${id}.off`);
+  }
+
+  isOff(i: number, has: (f: string) => boolean = (f) => this.bunker.state.has(f)) {
+    return has(this.bunker.flag('cameras.off')) || has(this.camFlag(this.cams[i].id));
+  }
+
   applyFlags(has: (f: string) => boolean) {
-    const off = has(this.bunker.flag('cameras.off'));
-    for (const c of this.cams) c.lens.value = off ? 0 : 1;
+    this.cams.forEach((c, i) => { c.lens.value = this.isOff(i, has) ? 0 : 1; });
   }
 
   kill() {
@@ -229,12 +238,31 @@ export class CameraGrid {
     this.seen.fill(0);
   }
 
+  /** Cut one camera (and only that one). */
+  killOne(id: string) {
+    const i = this.cams.findIndex((c) => c.id === id);
+    if (i < 0) return;
+    this.bunker.state.set(this.camFlag(id));
+    this.seen[i] = 0;
+    this.bunker.applyFlags();
+  }
+
+  /** The camera with this id, live and looking (its current yaw) at `p`, within range and cone (no ray). */
+  watching(id: string, p: THREE.Vector3) {
+    const i = this.cams.findIndex((c) => c.id === id);
+    if (i < 0 || this.isOff(i)) return false;
+    const c = this.cams[i];
+    const dx = p.x - c.eye.x, dz = p.z - c.eye.z, flat = Math.hypot(dx, dz);
+    if (flat > c.range || flat < 0.3) return false;
+    const yaw = c.pivot.rotation.y;
+    return (dx * Math.sin(yaw) + dz * Math.cos(yaw)) / flat > Math.cos(c.halfAngle + 0.15);
+  }
+
   /** `chest`: the player's chest in world space; `stealth`: the same multiplier drones use. */
   update(dt: number, t: number, chest: THREE.Vector3, stealth: number, collider: unknown) {
     this.cooldownT = Math.max(0, this.cooldownT - dt);
-    const off = this.off;
     this.cams.forEach((c, i) => {
-      if (off) { this.seen[i] = 0; return; }
+      if (this.isOff(i)) { this.seen[i] = 0; return; }
       const yaw = c.yaw0 + Math.sin((t / c.period) * Math.PI * 2) * c.sweep;
       c.pivot.rotation.y = yaw;
       this.to.copy(chest).sub(c.eye);

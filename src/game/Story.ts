@@ -10,6 +10,7 @@ import { ITEMS } from '@/content/items';
 import { GARAGE } from '@/content/bunkers/garage';
 import { actionWord } from '@/engine/bindings';
 import { APEX } from '@/content/bunkers/apex';
+import { PANOPTICON } from '@/content/bunkers/panopticon';
 import { OUTPOSTS } from '@/content/recovery';
 
 /** Seconds between two banter lines, at least. Exploring should feel accompanied, not narrated. */
@@ -269,6 +270,7 @@ export class Story {
     const spot = STORY_SPOTS[step.at];
     if (spot) return { x: spot[0], z: spot[1], label: q.title };
     if (step.at === 'apex') return { x: APEX.location.position[0], z: APEX.location.position[2], label: q.title };
+    if (step.at === 'panopticon') return { x: PANOPTICON.location.position[0], z: PANOPTICON.location.position[2], label: q.title };
     const lm = LANDMARKS.find((l) => l.id === step.at);
     if (lm) return { x: lm.position[0], z: lm.position[2], label: q.title };
     const op = OUTPOSTS.find((o) => o.id === step.at);

@@ -33,6 +33,8 @@ export const STATIONS: Record<string, Station> = {
   'doc.cut': { open: (c) => c.has('q.doc.delivered') && between(c.hour, 0, 5) },
   'doc.fire': { open: (c) => between(c.hour, 19, 24) },
   'inez.till': { primary: true, open: (c) => between(c.hour, 7, 21) },
+  // Ada, after the Panopticon: at Doc's desk in the clinic, doing his books
+  'ada.clinic': { open: (c) => c.has('panopticon.ada.free') },
   'ren.road': { primary: true, open: (c) => !c.has('q.ren.truth') },
   // Last Chance: Hollis keeps the night watch by the road; Pip sleeps (and, once she has it, spends
   // the middle of the day by her pool); Ren keeps the lookout crate after the drive-in

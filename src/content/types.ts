@@ -69,7 +69,7 @@ export type PersonId =
   | 'mara' | 'hollis' | 'pip' | 'dez'
   | 'nia' | 'doc' | 'inez' | 'sol' | 'ren' | 'wick'
   | 'tanner' | 'vesper'
-  | 'ezra'
+  | 'ezra' | 'ada'
   | 'creek' | 'compact';
 
 export type SolutionKind = 'stealth' | 'hack' | 'force' | 'social' | 'lockpick';

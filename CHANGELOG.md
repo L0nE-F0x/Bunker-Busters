@@ -3,6 +3,16 @@
 Each `## vX.Y.Z` section becomes the GitHub release notes and the "what's new" list in the in-app
 update notice (the first few bullets). `scripts/release.sh` refuses to release a version without one.
 
+## v0.7.0
+- **The Panopticon is open.** Act III plays to the end: follow the valley north from the salt to Ezra Seymour's building, a ring of reviewers' desks built round the old Point Argus lighthouse. Its blue lamp turns once every forty seconds and calls Kade up the valley if it catches you in the open. Get through a face gate that only opens for staff, past four cameras on the tower that watch each other's junction boxes, and into the tower. Mara debriefs you at the fire and names the next door
+- **Ezra in person.** He stands at his monitor wall in the tower and answers back. Take his archive of three years of every camp to Mara, wipe it, or broadcast it to every radio in the valley, and the debrief remembers which
+- **Ada Ivers.** Doc's sister is at desk 7. She knows the camera order and the tower code, and if you talk to her she walks out while Ezra is busy with you. After that she's at Doc's desk in Dry Creek. Two more reviewers share the ring: one reports you, one doesn't
+- **Your camp loop pays off.** If you looped the Glimpse camera by the camp road, the lamp still files you as an empty forecourt
+- **More voices.** 66 new lines for Ezra, Ada and the reviewers
+- **Phones: a cleaner HUD.** The thumb buttons sit in one corner, Use only appears when there's something to use, the torch moved to the top bar, the objective folds to two lines, and empty hotbar slots are hidden
+- **Phones: install it, play offline.** Tapping Play on a phone offers to install the game. Android installs it in one tap; iPhone shows the three steps. Once installed it saves itself (about 55 MB, voices included) and plays with no connection
+- **A new website.** A gameplay video at the top, how a job goes, every place and bunker, and what's new, straight from this list
+
 ## v0.6.1
 - **Everything you read, rewritten.** Every note, log, letter, poster, quest, journal entry, item and character bio got a pass so it reads like it was written by the person who wrote it: county forms read like forms, tired guards write in lowercase, the founders' group chat looks like a real group chat, and a man walking west writes like a man, not a novelist. Fewer punchlines, more detail
 - **Documents look like documents.** Station logs, flight recorders, field books and letters keep their line breaks

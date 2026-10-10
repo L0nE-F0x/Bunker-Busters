@@ -200,6 +200,59 @@ export const QUESTS: QuestDef[] = [
     },
   },
 
+  {
+    id: 'act3',
+    kind: 'main',
+    title: 'Act III · The Panopticon',
+    giver: 'mara',
+    where: 'North of the salt',
+    blurb:
+      'Ezra Seymour has watched every camp in the valley for three years from an old lighthouse at the head of the valley north of the salt. He read the camp\'s names on the band the night the water came east. Mara wants to know what he wrote down, and where his water comes from.',
+    start: (v) => v.has('act2.debriefed'),
+    steps: [
+      {
+        id: 'north', text: 'Reach the Panopticon, north of the salt', at: 'panopticon',
+        hint: 'Cross the salt to its north shore and follow the valley up to its head. The tower is white with a red band, and the lamp on it is blue.',
+        done: (v) => any(v, 'seen:panopticon', 'panopticon.gate.open', 'panopticon.complete'),
+      },
+      {
+        id: 'ada', text: 'Find Ada Ivers', optional: true, at: 'panopticon',
+        hint: 'Doc\'s sister may be at one of the desks in the ring. Look for desk 7.',
+        done: (v) => any(v, 'panopticon.ada.met', 'panopticon.ada.free'),
+      },
+      {
+        id: 'gate', text: 'Get through the face gate', at: 'panopticon',
+        hint: 'It opens for staff faces only. SPLICE yourself onto the staff list or short the motor (Electronics 3), blow the rails (Demolition 4), or talk to Ezra on the gate intercom. The lamp sweeps the valley every forty seconds; keep to the rocks.',
+        done: (v) => any(v, 'panopticon.gate.open', 'panopticon.tower.open', 'panopticon.complete'),
+      },
+      {
+        id: 'cams', text: 'Blind the cameras on the tower', optional: true, at: 'panopticon',
+        hint: 'In the yard round the tower. Each camera watches another one\'s junction box. Cut the one nobody watches first. Ada knows the order.',
+        done: (v) => any(v, 'panopticon.cameras.off', 'panopticon.tower.open', 'panopticon.complete') || ['cam1', 'cam2', 'cam3', 'cam4'].every((c) => v.has(`panopticon.cam.${c}.off`)),
+      },
+      {
+        id: 'tower', text: 'Get into the tower', at: 'panopticon',
+        hint: 'The door is on the tower\'s west side. The keypad code means something to Ezra (Ada knows it), or SPLICE the archive controller (Electronics 4), or a big charge (Demolition 5).',
+        done: (v) => any(v, 'panopticon.tower.open', 'panopticon.complete'),
+      },
+      {
+        id: 'archive', text: 'Decide what happens to the archive', at: 'panopticon',
+        hint: 'In the tower room. Ezra is at his monitor wall; the drive is in the rack behind him.',
+        done: (v) => v.has('panopticon.archive'),
+      },
+      {
+        id: 'loot', text: 'Take the water', at: 'panopticon',
+        hint: 'In the tower room: the cistern under the hatch, the locker and the archive shelf. The water comes with you even if your pack is full.',
+        done: (v) => v.has('panopticon.complete'),
+      },
+    ],
+    reward: { xp: 500, items: [{ id: 'water', qty: 4 }, { id: 'emp', qty: 2 }, { id: 'medkit', qty: 1 }], rep: { compact: 2, creek: 2, mara: 1, doc: 1, ezra: -2 } },
+    wrap: {
+      speaker: 'Mara Voss',
+      text: 'Dez heard the lamp go out on the band. Come back to the fire and raise me on the radio. I want all of it, from the gate on.',
+    },
+  },
+
   // ------------------------------------------------------------------ Dry Creek
   {
     id: 'nia.short',

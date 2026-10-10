@@ -56,6 +56,12 @@ export interface BunkerShell {
   doors: Record<string, Door>;
   /** The sealed inside: lasers, "inside" for drones and the objective, interior mode. */
   innerBox: THREE.Box3;
+  /**
+   * A tighter "inside" than `innerBox` for buildings that aren't boxes (the Panopticon's drum: its
+   * box's corners are outdoors). `margin` grows it (metres). Used for `playerInside`, interior
+   * mode and the inside-only draws when present.
+   */
+  contains?(p: THREE.Vector3, margin?: number): boolean;
   /** The compound around it (yard). */
   groundsBox: THREE.Box3;
   tripwires: Tripwire[];

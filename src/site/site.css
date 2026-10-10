@@ -168,18 +168,20 @@ section { padding: 100px var(--pad); position: relative; }
 
 /* ---------- bunkers ---------- */
 .bunkers { background: linear-gradient(180deg, transparent, rgba(255, 122, 31, 0.05) 40%, transparent); }
-.bunker-cards { max-width: var(--max); margin: 0 auto; display: grid; grid-template-columns: 1fr 1fr; gap: 28px; }
+.bunker-cards { max-width: var(--max); margin: 0 auto; display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; }
 .bunker { border: 1px solid var(--hot); background: linear-gradient(180deg, rgba(40, 22, 10, 0.9), rgba(14, 9, 6, 0.95)); box-shadow: 0 30px 80px rgba(0, 0, 0, 0.5); }
-.bunker:nth-child(2) { transition-delay: 0.1s; }
+.bunker:nth-child(2) { transition-delay: 0.1s; } .bunker:nth-child(3) { transition-delay: 0.2s; }
 .bunker .shot { aspect-ratio: 16 / 8; }
 .bunker-copy { padding: 26px 30px 30px; }
 .tier { font-family: var(--mono); font-size: 12px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--amber); }
 .tier em { font-style: normal; color: #1a0d05; background: var(--teal); padding: 2px 7px; margin-left: 4px; font-weight: 700; }
-.bunker h3 { font-family: var(--display); font-weight: 900; font-size: 54px; line-height: 1; margin: 8px 0 4px; }
+.bunker h3 { font-family: var(--display); font-weight: 900; font-size: 46px; line-height: 1; margin: 8px 0 4px; }
+.bunker-copy p { font-size: 15.5px; }
+.bunker blockquote { font-size: 17px; }
 .owner { color: var(--faint); margin: 0 0 14px; font-size: 14px; letter-spacing: 0.04em; }
 .bunker p { color: var(--dim); margin: 0; }
 blockquote { margin: 20px 0 0; padding: 14px 20px; border-left: 3px solid var(--hot); background: rgba(255, 122, 31, 0.08); font-size: 19px; font-style: italic; color: var(--ink); }
-.ladder { list-style: none; padding: 0; margin: 28px auto 0; max-width: var(--max); display: grid; grid-template-columns: repeat(6, 1fr); gap: 12px; }
+.ladder { list-style: none; padding: 0; margin: 28px auto 0; max-width: var(--max); display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; }
 .ladder li { padding: 16px 16px 18px; border: 1px solid rgba(255, 255, 255, 0.07); background: rgba(255, 255, 255, 0.02); color: var(--faint); }
 .ladder span { display: block; font-family: var(--mono); font-size: 11px; letter-spacing: 0.2em; text-transform: uppercase; }
 .ladder b { display: block; font-family: var(--display); font-weight: 900; font-size: 24px; line-height: 1.05; margin: 6px 0; }
@@ -247,6 +249,7 @@ details pre { background: #050403; border: 1px solid var(--line); padding: 10px;
   .t-a, .t-e { grid-column: 1 / -1 !important; }
   .t-a { min-height: 420px; }
   .ladder { grid-template-columns: repeat(3, 1fr); }
+  .bunker-cards { grid-template-columns: 1fr 1fr; }
   .news-list { grid-template-columns: 1fr; }
 }
 @media (max-width: 860px) {

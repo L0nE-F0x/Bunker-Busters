@@ -25,8 +25,13 @@ export const DAEMONS: Record<string, DaemonDef> = {
   core: { id: 'core', name: 'CORE · RELEASE', blurb: 'The core room door slides open.' },
   solar: { id: 'solar', name: 'SOLAR · REROUTE', blurb: 'Bring the hall lights up from the solar island without walking out to the switchgear.' },
   ups: { id: 'ups', name: 'UPS · EJECT', blurb: 'The UPS cabinet ejects two charged lithium cells.' },
-  // --- Apex Vault (Tier 2 skeleton, content/bunkers/apex.ts: not in the game yet)
+  // --- Apex Vault (content/bunkers/apex.ts)
   airlock: { id: 'airlock', name: 'AIRLOCK · CYCLE', blurb: 'The airlock cycles open. It thinks you are a delivery.' },
+  // --- the Panopticon: Glimpse's staff list at the face gate, the archive controller by the tower
+  enrol: { id: 'enrol', name: 'STAFF LIST · ADD FACE', blurb: 'Your face goes on the staff list. The gate opens for staff.' },
+  poles: { id: 'poles', name: 'POLE CAMERAS · SLEEP', blurb: 'The three Glimpse poles in the valley stop recording.' },
+  tower: { id: 'tower', name: 'TOWER DOOR · RELEASE', blurb: 'The tower door unlatches. Ezra will know.' },
+  towercams: { id: 'towercams', name: 'YARD CAMERAS · OFF', blurb: 'The four cameras on the tower power down together.' },
   cameras: { id: 'cameras', name: 'CAMERAS · LOOP', blurb: 'The cameras loop yesterday\'s footage. Nobody was here yesterday.' },
 };
 

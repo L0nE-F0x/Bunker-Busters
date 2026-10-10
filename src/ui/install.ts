@@ -84,7 +84,7 @@ export function openInstallSheet(opts: SheetOpts): () => void {
       <button class="bb-install-x" aria-label="Close">×</button>
       <div class="bb-install-head">
         <img src="/icon-192.png" alt="" width="64" height="64" />
-        <div><h3 id="bb-install-title">Install Bunker Busters</h3><p>Free · about 50 MB</p></div>
+        <div><h3 id="bb-install-title">Install Bunker Busters</h3><p>Free · about 55 MB</p></div>
       </div>
       <p class="bb-install-why">It goes on your home screen like any other app. It opens full screen in landscape, and after the first launch it plays with no connection.</p>
       <div class="bb-install-body"></div>

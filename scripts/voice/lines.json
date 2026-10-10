@@ -1,5 +1,135 @@
 [
  {
+  "key": "061l26y",
+  "voice": "af_nicole",
+  "fx": "room",
+  "speed": 0.92,
+  "speaker": "Ada Ivers",
+  "words": "Dez read it on the band. I listened at this desk with the volume right down so nobody would see my face. He still signs off your annoying brother. I wasn't allowed to answer.",
+  "tts": "Dez read it on the band. I listened at this desk with the volume right down so nobody would see my face. He still signs off your annoying brother. I wasn't allowed to answer.",
+  "where": "src/content/bunkers/panopticon.ts"
+ },
+ {
+  "key": "1ee1wot",
+  "voice": "af_nicole",
+  "fx": "room",
+  "speed": 0.92,
+  "speaker": "Ada Ivers",
+  "words": "He has me doing his books. I've kept better books for worse men.",
+  "tts": "He has me doing his books. I've kept better books for worse men.",
+  "where": "src/content/bunkers/panopticon.ts"
+ },
+ {
+  "key": "0wvm5xm",
+  "voice": "af_nicole",
+  "fx": "room",
+  "speed": 0.92,
+  "speaker": "Ada Ivers",
+  "words": "He's alive? Of course he is. He'd say he was too busy. Tell him I'm eating. He'll ask.",
+  "tts": "He's alive? Of course he is. He'd say he was too busy. Tell him I'm eating. He'll ask.",
+  "where": "src/content/bunkers/panopticon.ts"
+ },
+ {
+  "key": "1u4zog5",
+  "voice": "af_nicole",
+  "fx": "room",
+  "speed": 0.92,
+  "speaker": "Ada Ivers",
+  "words": "I sleep with the light on. Not because of the dark. Because nobody's watching it.",
+  "tts": "I sleep with the light on. Not because of the dark. Because nobody's watching it.",
+  "where": "src/content/bunkers/panopticon.ts"
+ },
+ {
+  "key": "0fipoam",
+  "voice": "af_nicole",
+  "fx": "room",
+  "speed": 0.92,
+  "speaker": "Ada Ivers",
+  "words": "I'm going. Tell Doc I'm walking, not running. He'll want to know I'm not running.",
+  "tts": "I'm going. Tell Doc I'm walking, not running. He'll want to know I'm not running.",
+  "where": "src/content/bunkers/panopticon.ts"
+ },
+ {
+  "key": "08l0fct",
+  "voice": "af_nicole",
+  "fx": "room",
+  "speed": 0.92,
+  "speaker": "Ada Ivers",
+  "words": "If you go back up the valley, look at the lamp for me. I want to know if he still turns it.",
+  "tts": "If you go back up the valley, look at the lamp for me. I want to know if he still turns it.",
+  "where": "src/content/bunkers/panopticon.ts"
+ },
+ {
+  "key": "17951ud",
+  "voice": "af_nicole",
+  "fx": "room",
+  "speed": 0.92,
+  "speaker": "Ada Ivers",
+  "words": "It's my number. My place in the Everafter line. Two, two, one, two. He thinks that's a kindness.",
+  "tts": "It's my number. My place in the Everafter line. Two, two, one, two. He thinks that's a kindness.",
+  "where": "src/content/bunkers/panopticon.ts"
+ },
+ {
+  "key": "06sbvxn",
+  "voice": "af_nicole",
+  "fx": "room",
+  "speed": 0.92,
+  "speaker": "Ada Ivers",
+  "words": "My brother says I look thin. He has said that since I was nine.",
+  "tts": "My brother says I look thin. He has said that since I was nine.",
+  "where": "src/content/bunkers/panopticon.ts"
+ },
+ {
+  "key": "1xt8ofe",
+  "voice": "af_nicole",
+  "fx": "room",
+  "speed": 0.92,
+  "speaker": "Ada Ivers",
+  "words": "Nobody here has asked me what I wrote down at that desk. I keep waiting for someone to.",
+  "tts": "Nobody here has asked me what I wrote down at that desk. I keep waiting for someone to.",
+  "where": "src/content/bunkers/panopticon.ts"
+ },
+ {
+  "key": "1kwq3si",
+  "voice": "af_nicole",
+  "fx": "room",
+  "speed": 0.92,
+  "speaker": "Ada Ivers",
+  "words": "Not while he's at the wall. When someone's up in the tower talking to him, he stops watching for a while. He always does. I'll walk out then.",
+  "tts": "Not while he's at the wall. When someone's up in the tower talking to him, he stops watching for a while. He always does. I'll walk out then.",
+  "where": "src/content/bunkers/panopticon.ts"
+ },
+ {
+  "key": "0udrdjt",
+  "voice": "af_nicole",
+  "fx": "room",
+  "speed": 0.92,
+  "speaker": "Ada Ivers",
+  "words": "The four on the tower each watch another one's box. One watches two's box, two watches three's, three watches four's. Nothing watches one. Cut them in that order.",
+  "tts": "The four on the tower each watch another one's box. One watches two's box, two watches three's, three watches four's. Nothing watches one. Cut them in that order.",
+  "where": "src/content/bunkers/panopticon.ts"
+ },
+ {
+  "key": "15615l0",
+  "voice": "af_nicole",
+  "fx": "room",
+  "speed": 0.92,
+  "speaker": "Ada Ivers",
+  "words": "We watch the camps and write down what we see. Who drinks, who shares, who goes missing. Ezra reads all of it every night. He calls it a record. Most of it is people sitting round fires.",
+  "tts": "We watch the camps and write down what we see. Who drinks, who shares, who goes missing. Ezra reads all of it every night. He calls it a record. Most of it is people sitting round fires.",
+  "where": "src/content/bunkers/panopticon.ts"
+ },
+ {
+  "key": "0idoyw7",
+  "voice": "af_nicole",
+  "fx": "room",
+  "speed": 0.92,
+  "speaker": "Ada Ivers",
+  "words": "You're not staff. Staff knock. Stand by the pillar, the tower camera swings back this way every few seconds.",
+  "tts": "You're not staff. Staff knock. Stand by the pillar, the tower camera swings back this way every few seconds.",
+  "where": "src/content/bunkers/panopticon.ts"
+ },
+ {
   "key": "160xhh2",
   "voice": "af_aoede",
   "fx": "pa",
@@ -298,6 +428,16 @@
   "words": "Is that a loop? Did you loop them? I'm coming up there with a lunchbox. That pole deserves a lunchbox.",
   "tts": "Is that a loop? Did you loop them? I'm coming up there with a lunchbox. That pole deserves a lunchbox.",
   "where": "src/game/sites/stories.ts"
+ },
+ {
+  "key": "0r5fof5",
+  "voice": "af_river",
+  "fx": "radio",
+  "speed": 1,
+  "speaker": "Dez Marlow",
+  "words": "Kade came up the valley after you. I counted their trucks on the salt road. They went back with nobody.",
+  "tts": "Kade came up the valley after you. I counted their trucks on the salt road. They went back with nobody.",
+  "where": "src/content/story.ts"
  },
  {
   "key": "0imvx7q",
@@ -740,6 +880,16 @@
   "where": "src/content/camp.ts"
  },
  {
+  "key": "18bd9w8",
+  "voice": "af_river",
+  "fx": "radio",
+  "speed": 1,
+  "speaker": "Dez Marlow",
+  "words": "You put your own face on his staff list. As far as Glimpse knows, you still work there.",
+  "tts": "You put your own face on his staff list. As far as Glimpse knows, you still work there.",
+  "where": "src/content/story.ts"
+ },
+ {
   "key": "0qdee5c",
   "voice": "af_river",
   "fx": "radio",
@@ -757,6 +907,16 @@
   "speaker": "Dez Marlow",
   "words": "You spliced her airlock. Her own door thought you were a delivery. She's posted about zero trust eleven times since, and none of them make sense, which is how you know they're hers.",
   "tts": "You spliced her airlock. Her own door thought you were a delivery. She's posted about zero trust eleven times since, and none of them make sense, which is how you know they're hers.",
+  "where": "src/content/story.ts"
+ },
+ {
+  "key": "1ajfrv5",
+  "voice": "af_river",
+  "fx": "radio",
+  "speed": 1,
+  "speaker": "Dez Marlow",
+  "words": "You talked him into opening his own gate. First door anyone's opened for us in three years, and he opened it himself.",
+  "tts": "You talked him into opening his own gate. First door anyone's opened for us in three years, and he opened it himself.",
   "where": "src/content/story.ts"
  },
  {
@@ -787,6 +947,16 @@
   "speaker": "Dez Marlow",
   "words": "You went through her front door like it owed you water. Which, legally, it did.",
   "tts": "You went through her front door like it owed you water. Which, legally, it did.",
+  "where": "src/content/story.ts"
+ },
+ {
+  "key": "1f2u03a",
+  "voice": "af_river",
+  "fx": "radio",
+  "speed": 1,
+  "speaker": "Dez Marlow",
+  "words": "You went through his gate the hard way. I heard the rails go from here, and so did the Spire.",
+  "tts": "You went through his gate the hard way. I heard the rails go from here, and so did the Spire.",
   "where": "src/content/story.ts"
  },
  {
@@ -1250,6 +1420,116 @@
   "where": "src/game/sites/waitlist.ts"
  },
  {
+  "key": "0nnnn98",
+  "voice": "bm_fable",
+  "fx": "room",
+  "speed": 1.02,
+  "speaker": "Ezra",
+  "words": "After Apex I wanted the camp to know that somebody had noticed. It came out as a list. Most things I say come out as a list.",
+  "tts": "After Apex I wanted the camp to know that somebody had noticed. It came out as a list. Most things I say come out as a list.",
+  "where": "src/content/bunkers/panopticon.ts"
+ },
+ {
+  "key": "1r7mzkw",
+  "voice": "bm_fable",
+  "fx": "room",
+  "speed": 1.02,
+  "speaker": "Ezra",
+  "words": "Every camp at once. That isn't a court, that's weather. Go on, then.",
+  "tts": "Every camp at once. That isn't a court, that's weather. Go on, then.",
+  "where": "src/content/bunkers/panopticon.ts"
+ },
+ {
+  "key": "02ctrd8",
+  "voice": "bm_fable",
+  "fx": "room",
+  "speed": 1.02,
+  "speaker": "Ezra",
+  "words": "Glimpse was for lost dogs and car alarms and men trying door handles. Then the neighbourhoods went and the cameras kept running. Somebody had to keep looking. I'm the one who didn't stop.",
+  "tts": "Glimpse was for lost dogs and car alarms and men trying door handles. Then the neighbourhoods went and the cameras kept running. Somebody had to keep looking. I'm the one who didn't stop.",
+  "where": "src/content/bunkers/panopticon.ts"
+ },
+ {
+  "key": "0p9jwo4",
+  "voice": "bm_fable",
+  "fx": "room",
+  "speed": 1.02,
+  "speaker": "Ezra",
+  "words": "I know. I watched her pack. She folded the chair. Nobody else ever folded the chair.",
+  "tts": "I know. I watched her pack. She folded the chair. Nobody else ever folded the chair.",
+  "where": "src/content/bunkers/panopticon.ts"
+ },
+ {
+  "key": "0y1rd2s",
+  "voice": "bm_fable",
+  "fx": "room",
+  "speed": 1.02,
+  "speaker": "Ezra",
+  "words": "Take it to Mara, then. She wants a court. I'd like to see one.",
+  "tts": "Take it to Mara, then. She wants a court. I'd like to see one.",
+  "where": "src/content/bunkers/panopticon.ts"
+ },
+ {
+  "key": "1rouk6n",
+  "voice": "bm_fable",
+  "fx": "room",
+  "speed": 1.02,
+  "speaker": "Ezra",
+  "words": "The keeper's cistern, under the hatch, and what Vesper paid me for faces. Take it. I've worked out what I need to the litre. It isn't much.",
+  "tts": "The keeper's cistern, under the hatch, and what Vesper paid me for faces. Take it. I've worked out what I need to the litre. It isn't much.",
+  "where": "src/content/bunkers/panopticon.ts"
+ },
+ {
+  "key": "0dzahan",
+  "voice": "bm_fable",
+  "fx": "room",
+  "speed": 1.02,
+  "speaker": "Ezra",
+  "words": "Three years of every camp. Who gave and who took. Who ran the Everafter line and who sold places in it. Vesper's in there, and Tanner, and you. It's on the drive in the rack behind me. What happens to it now is up to you.",
+  "tts": "Three years of every camp. Who gave and who took. Who ran the Everafter line and who sold places in it. Vesper's in there, and Tanner, and you. It's on the drive in the rack behind me. What happens to it now is up to you.",
+  "where": "src/content/bunkers/panopticon.ts"
+ },
+ {
+  "key": "1b7ko3g",
+  "voice": "bm_fable",
+  "fx": "room",
+  "speed": 1.02,
+  "speaker": "Ezra",
+  "words": "You'd rather nobody saw it. I understand. It's the one thing I could never do.",
+  "tts": "You'd rather nobody saw it. I understand. It's the one thing I could never do.",
+  "where": "src/content/bunkers/panopticon.ts"
+ },
+ {
+  "key": "0o1cfmq",
+  "voice": "bm_fable",
+  "fx": "room",
+  "speed": 1.02,
+  "speaker": "Ezra",
+  "words": "You're back. I kept your chair.",
+  "tts": "You're back. I kept your chair.",
+  "where": "src/content/bunkers/panopticon.ts"
+ },
+ {
+  "key": "1916r45",
+  "voice": "bm_fable",
+  "fx": "room",
+  "speed": 1.02,
+  "speaker": "Ezra",
+  "words": "You're taller than on camera. Everyone is. There's a chair. Nobody's sat in it.",
+  "tts": "You're taller than on camera. Everyone is. There's a chair. Nobody's sat in it.",
+  "where": "src/content/bunkers/panopticon.ts"
+ },
+ {
+  "key": "192x39o",
+  "voice": "bm_fable",
+  "fx": "pa",
+  "speed": 1.04,
+  "speaker": "Ezra Seymour",
+  "words": "Desk seven. She's the best reviewer I have. She never misses anything, and she's never written down a thing that wasn't true.",
+  "tts": "Desk seven. She's the best reviewer I have. She never misses anything, and she's never written down a thing that wasn't true.",
+  "where": "src/content/bunkers/panopticon.ts"
+ },
+ {
   "key": "0wjxkll",
   "voice": "bm_fable",
   "fx": "pa",
@@ -1270,6 +1550,26 @@
   "where": "src/content/banter.ts"
  },
  {
+  "key": "0xt8l9b",
+  "voice": "bm_fable",
+  "fx": "pa",
+  "speed": 1.04,
+  "speaker": "Ezra Seymour",
+  "words": "Everyone stay at your desks, please. It's only a precaution.",
+  "tts": "Everyone stay at your desks, please. It's only a precaution.",
+  "where": "src/content/bunkers/panopticon.ts"
+ },
+ {
+  "key": "0av571c",
+  "voice": "bm_fable",
+  "fx": "pa",
+  "speed": 1.04,
+  "speaker": "Ezra Seymour",
+  "words": "Hello again. You came up the valley at a walk. Most people run the last part. Come in out of the sun.",
+  "tts": "Hello again. You came up the valley at a walk. Most people run the last part. Come in out of the sun.",
+  "where": "src/content/bunkers/panopticon.ts"
+ },
+ {
   "key": "1t87028",
   "voice": "bm_fable",
   "fx": "pa",
@@ -1278,6 +1578,26 @@
   "words": "Hollis waved at me this morning. With one finger. I'm counting it.",
   "tts": "Hollis waved at me this morning. With one finger. I'm counting it.",
   "where": "src/content/banter.ts"
+ },
+ {
+  "key": "0jqrbhq",
+  "voice": "bm_fable",
+  "fx": "pa",
+  "speed": 1.04,
+  "speaker": "Ezra Seymour",
+  "words": "I did. You stopped at the third pole and looked straight up at it. Nobody looks up.",
+  "tts": "I did. You stopped at the third pole and looked straight up at it. Nobody looks up.",
+  "where": "src/content/bunkers/panopticon.ts"
+ },
+ {
+  "key": "0z4arvi",
+  "voice": "bm_fable",
+  "fx": "pa",
+  "speed": 1.04,
+  "speaker": "Ezra Seymour",
+  "words": "I know that face. The gate only opens for staff, and you aren't staff.",
+  "tts": "I know that face. The gate only opens for staff, and you aren't staff.",
+  "where": "src/content/bunkers/panopticon.ts"
  },
  {
   "key": "0vld71q",
@@ -1290,6 +1610,26 @@
   "where": "src/game/sites/stories.ts"
  },
  {
+  "key": "0bjt7g2",
+  "voice": "bm_fable",
+  "fx": "pa",
+  "speed": 1.04,
+  "speaker": "Ezra Seymour",
+  "words": "Kade, I have someone in the yard. Gently.",
+  "tts": "Kade, I have someone in the yard. Gently.",
+  "where": "src/content/bunkers/panopticon.ts"
+ },
+ {
+  "key": "0ydpl8w",
+  "voice": "bm_fable",
+  "fx": "pa",
+  "speed": 1.04,
+  "speaker": "Ezra Seymour",
+  "words": "Lockdown. The tower stays shut until this is over.",
+  "tts": "Lockdown. The tower stays shut until this is over.",
+  "where": "src/content/bunkers/panopticon.ts"
+ },
+ {
   "key": "1cnlao3",
   "voice": "bm_fable",
   "fx": "pa",
@@ -1298,6 +1638,176 @@
   "words": "Oh! Hi. Wow. Nobody ever talks to the relays. Hi! You're the one from the gas station. You drink one point four bottles a day and you favour your left foot. That's not creepy. That's care.",
   "tts": "Oh! Hi. Wow. Nobody ever talks to the relays. Hi! You're the one from the gas station. You drink one point four bottles a day and you favour your left foot. That's not creepy. That's care.",
   "where": "src/game/sites/stories.ts"
+ },
+ {
+  "key": "1jfp49y",
+  "voice": "bm_fable",
+  "fx": "pa",
+  "speed": 1.04,
+  "speaker": "Ezra Seymour",
+  "words": "Somebody should. When the towns went, the cameras didn't, and I was the only one still looking. I wrote it all down. Who shared and who didn't.",
+  "tts": "Somebody should. When the towns went, the cameras didn't, and I was the only one still looking. I wrote it all down. Who shared and who didn't.",
+  "where": "src/content/bunkers/panopticon.ts"
+ },
+ {
+  "key": "1ubdpfi",
+  "voice": "bm_fable",
+  "fx": "pa",
+  "speed": 1.04,
+  "speaker": "Ezra Seymour",
+  "words": "Take it. It was always going to leave with somebody.",
+  "tts": "Take it. It was always going to leave with somebody.",
+  "where": "src/content/bunkers/panopticon.ts"
+ },
+ {
+  "key": "1hykzql",
+  "voice": "bm_fable",
+  "fx": "pa",
+  "speed": 1.04,
+  "speaker": "Ezra Seymour",
+  "words": "Thank you, Kofi. Go back to your desk.",
+  "tts": "Thank you, Kofi. Go back to your desk.",
+  "where": "src/content/bunkers/panopticon.ts"
+ },
+ {
+  "key": "0gjk0ja",
+  "voice": "bm_fable",
+  "fx": "pa",
+  "speed": 1.04,
+  "speaker": "Ezra Seymour",
+  "words": "That gate was the only thing in here that wasn't watching anyone.",
+  "tts": "That gate was the only thing in here that wasn't watching anyone.",
+  "where": "src/content/bunkers/panopticon.ts"
+ },
+ {
+  "key": "1xase30",
+  "voice": "bm_fable",
+  "fx": "pa",
+  "speed": 1.04,
+  "speaker": "Ezra Seymour",
+  "words": "That pole camera had been up for nine hundred days without a fault.",
+  "tts": "That pole camera had been up for nine hundred days without a fault.",
+  "where": "src/content/bunkers/panopticon.ts"
+ },
+ {
+  "key": "1tmshqm",
+  "voice": "bm_fable",
+  "fx": "pa",
+  "speed": 1.04,
+  "speaker": "Ezra Seymour",
+  "words": "The camera beside it saw you do that. They watch each other. I thought you'd noticed.",
+  "tts": "The camera beside it saw you do that. They watch each other. I thought you'd noticed.",
+  "where": "src/content/bunkers/panopticon.ts"
+ },
+ {
+  "key": "1w0ujwm",
+  "voice": "bm_fable",
+  "fx": "pa",
+  "speed": 1.04,
+  "speaker": "Ezra Seymour",
+  "words": "The lamp went straight over you. You're still filed as an empty forecourt. I never corrected it.",
+  "tts": "The lamp went straight over you. You're still filed as an empty forecourt. I never corrected it.",
+  "where": "src/content/bunkers/panopticon.ts"
+ },
+ {
+  "key": "1p6nms0",
+  "voice": "bm_fable",
+  "fx": "pa",
+  "speed": 1.04,
+  "speaker": "Ezra Seymour",
+  "words": "The yard's dark. I can still hear you. The floor is very old.",
+  "tts": "The yard's dark. I can still hear you. The floor is very old.",
+  "where": "src/content/bunkers/panopticon.ts"
+ },
+ {
+  "key": "1udfyll",
+  "voice": "bm_fable",
+  "fx": "pa",
+  "speed": 1.04,
+  "speaker": "Ezra Seymour",
+  "words": "There you are. I've let Kade know. They'll be gentle if you are.",
+  "tts": "There you are. I've let Kade know. They'll be gentle if you are.",
+  "where": "src/content/bunkers/panopticon.ts"
+ },
+ {
+  "key": "0jk90et",
+  "voice": "bm_fable",
+  "fx": "pa",
+  "speed": 1.04,
+  "speaker": "Ezra Seymour",
+  "words": "There. Mind the threshold, it sticks.",
+  "tts": "There. Mind the threshold, it sticks.",
+  "where": "src/content/bunkers/panopticon.ts"
+ },
+ {
+  "key": "14ip8yi",
+  "voice": "bm_fable",
+  "fx": "pa",
+  "speed": 1.04,
+  "speaker": "Ezra Seymour",
+  "words": "They do. I know how much, to the litre, camp by camp. It's in the record.",
+  "tts": "They do. I know how much, to the litre, camp by camp. It's in the record.",
+  "where": "src/content/bunkers/panopticon.ts"
+ },
+ {
+  "key": "1tix1zd",
+  "voice": "bm_fable",
+  "fx": "pa",
+  "speed": 1.04,
+  "speaker": "Ezra Seymour",
+  "words": "Two wrong numbers. Everyone in the ring heard the buzzer. They're pretending not to look.",
+  "tts": "Two wrong numbers. Everyone in the ring heard the buzzer. They're pretending not to look.",
+  "where": "src/content/bunkers/panopticon.ts"
+ },
+ {
+  "key": "1wu47by",
+  "voice": "bm_fable",
+  "fx": "pa",
+  "speed": 1.04,
+  "speaker": "Ezra Seymour",
+  "words": "Yes. That's it exactly. The gate's open. Come and look.",
+  "tts": "Yes. That's it exactly. The gate's open. Come and look.",
+  "where": "src/content/bunkers/panopticon.ts"
+ },
+ {
+  "key": "1ie3ulu",
+  "voice": "bm_fable",
+  "fx": "pa",
+  "speed": 1.04,
+  "speaker": "Ezra Seymour",
+  "words": "You came back. People always come back to look.",
+  "tts": "You came back. People always come back to look.",
+  "where": "src/content/bunkers/panopticon.ts"
+ },
+ {
+  "key": "1gu1s8e",
+  "voice": "bm_fable",
+  "fx": "pa",
+  "speed": 1.04,
+  "speaker": "Ezra Seymour",
+  "words": "You can talk normally. The gate hears everything.",
+  "tts": "You can talk normally. The gate hears everything.",
+  "where": "src/content/bunkers/panopticon.ts"
+ },
+ {
+  "key": "15ibjf4",
+  "voice": "bm_fable",
+  "fx": "pa",
+  "speed": 1.04,
+  "speaker": "Ezra Seymour",
+  "words": "You could have knocked.",
+  "tts": "You could have knocked.",
+  "where": "src/content/bunkers/panopticon.ts"
+ },
+ {
+  "key": "1r1moju",
+  "voice": "bm_fable",
+  "fx": "pa",
+  "speed": 1.04,
+  "speaker": "Ezra Seymour",
+  "words": "You're in the tower. Nobody has come up these steps since the keeper.",
+  "tts": "You're in the tower. Nobody has come up these steps since the keeper.",
+  "where": "src/content/bunkers/panopticon.ts"
  },
  {
   "key": "0100jbp",
@@ -1978,6 +2488,26 @@
   "words": "You traded a ledger for twenty jugs. I'd have got you thirty. Amateurs.",
   "tts": "You traded a ledger for twenty jugs. I'd have got you thirty. Amateurs.",
   "where": "src/game/town/Settlement.ts"
+ },
+ {
+  "key": "1cy3dx9",
+  "voice": "bf_alice",
+  "fx": "room",
+  "speed": 0.98,
+  "speaker": "Jun Ishida",
+  "words": "Desk seven is Ada. If you're here for anyone, it's her.",
+  "tts": "Desk seven is Ada. If you're here for anyone, it's her.",
+  "where": "src/content/bunkers/panopticon.ts"
+ },
+ {
+  "key": "0nokn3z",
+  "voice": "bf_alice",
+  "fx": "room",
+  "speed": 0.98,
+  "speaker": "Jun Ishida",
+  "words": "I didn't see you. I'm very busy.",
+  "tts": "I didn't see you. I'm very busy.",
+  "where": "src/content/bunkers/panopticon.ts"
  },
  {
   "key": "1qe1igf",
@@ -5020,6 +5550,26 @@
   "where": "src/content/recovery.ts"
  },
  {
+  "key": "05nk1uj",
+  "voice": "am_liam",
+  "fx": "room",
+  "speed": 1.02,
+  "speaker": "Kofi Boateng",
+  "words": "Don't stand there. He watches me watching you.",
+  "tts": "Don't stand there. He watches me watching you.",
+  "where": "src/content/bunkers/panopticon.ts"
+ },
+ {
+  "key": "0hsut37",
+  "voice": "am_liam",
+  "fx": "room",
+  "speed": 1.02,
+  "speaker": "Kofi Boateng",
+  "words": "Ezra? There's someone in the yard. No, I'm sure.",
+  "tts": "Ezra? There's someone in the yard. No, I'm sure.",
+  "where": "src/content/bunkers/panopticon.ts"
+ },
+ {
   "key": "1x2ff7l",
   "voice": "af_sarah",
   "fx": "radio",
@@ -5320,6 +5870,26 @@
   "where": "src/content/story.ts"
  },
  {
+  "key": "1ypbztj",
+  "voice": "af_sarah",
+  "fx": "radio",
+  "speed": 0.97,
+  "speaker": "Mara Voss",
+  "words": "Dez heard the lamp go out on the band. Come back to the fire and raise me on the radio. I want all of it, from the gate on.",
+  "tts": "Dez heard the lamp go out on the band. Come back to the fire and raise me on the radio. I want all of it, from the gate on.",
+  "where": "src/content/quests.ts"
+ },
+ {
+  "key": "1joagzf",
+  "voice": "af_sarah",
+  "fx": "radio",
+  "speed": 0.97,
+  "speaker": "Mara Voss",
+  "words": "Doc called on the band an hour ago. Ada walked into Dry Creek at dawn carrying a folded camp chair. He couldn't get the words out, so Nia said them for him.",
+  "tts": "Doc called on the band an hour ago. Ada walked into Dry Creek at dawn carrying a folded camp chair. He couldn't get the words out, so Nia said them for him.",
+  "where": "src/content/story.ts"
+ },
+ {
   "key": "12vixcn",
   "voice": "af_sarah",
   "fx": "radio",
@@ -5327,6 +5897,16 @@
   "speaker": "Mara Voss",
   "words": "Eight months later the creek stopped. The school is a crater now. I've been paying it back in jugs ever since. Don't tell Pip. Pip already knows. Pip knows everything.",
   "tts": "Eight months later the creek stopped. The school is a crater now. I've been paying it back in jugs ever since. Don't tell Pip. Pip already knows. Pip knows everything.",
+  "where": "src/content/story.ts"
+ },
+ {
+  "key": "1eu1rwy",
+  "voice": "af_sarah",
+  "fx": "radio",
+  "speed": 0.97,
+  "speaker": "Mara Voss",
+  "words": "Every camp heard it last night. Names, litres, who sold places in the Everafter line. Two camps on the ridge have stopped talking to each other. Three others have started.",
+  "tts": "Every camp heard it last night. Names, litres, who sold places in the Everafter line. Two camps on the ridge have stopped talking to each other. Three others have started.",
   "where": "src/content/story.ts"
  },
  {
@@ -5570,6 +6150,16 @@
   "where": "src/content/archetypes.ts"
  },
  {
+  "key": "1ry4dpc",
+  "voice": "af_sarah",
+  "fx": "radio",
+  "speed": 0.97,
+  "speaker": "Mara Voss",
+  "words": "No alarm. Ezra says nobody in the ring looked up from their desk. He would know.",
+  "tts": "No alarm. Ezra says nobody in the ring looked up from their desk. He would know.",
+  "where": "src/content/story.ts"
+ },
+ {
   "key": "0f652j7",
   "voice": "af_sarah",
   "fx": "radio",
@@ -5628,6 +6218,16 @@
   "words": "Paz, the shakes are back in the log. Try not to enjoy the door part more than the food part.",
   "tts": "Paz, the shakes are back in the log. Try not to enjoy the door part more than the food part.",
   "where": "src/content/archetypes.ts"
+ },
+ {
+  "key": "14fipmv",
+  "voice": "af_sarah",
+  "fx": "radio",
+  "speed": 0.97,
+  "speaker": "Mara Voss",
+  "words": "Prudence Ashby. The Alignment Spire. When you're ready, we'll talk about how. Mara, out.",
+  "tts": "Prudence Ashby. The Alignment Spire. When you're ready, we'll talk about how. Mara, out.",
+  "where": "src/content/story.ts"
  },
  {
   "key": "0ry1025",
@@ -5740,6 +6340,16 @@
   "where": "src/content/quests.ts"
  },
  {
+  "key": "0w9pfdq",
+  "voice": "af_sarah",
+  "fx": "radio",
+  "speed": 0.97,
+  "speaker": "Mara Voss",
+  "words": "That's Act III. When you left, Ezra said one more name. Prudence Ashby, the Alignment Spire. He said she'd be expecting you. Sleep.",
+  "tts": "That's Act III. When you left, Ezra said one more name. Prudence Ashby, the Alignment Spire. He said she'd be expecting you. Sleep.",
+  "where": "src/content/story.ts"
+ },
+ {
   "key": "0kxs1r3",
   "voice": "af_sarah",
   "fx": "radio",
@@ -5757,6 +6367,16 @@
   "speaker": "Mara Voss",
   "words": "The cistern's holding. Vesper posts about it every hour. Ezra hasn't said a word since he read our names, and that's worse.",
   "tts": "The cistern's holding. Vesper posts about it every hour. Ezra hasn't said a word since he read our names, and that's worse.",
+  "where": "src/content/story.ts"
+ },
+ {
+  "key": "0wteesn",
+  "voice": "af_sarah",
+  "fx": "radio",
+  "speed": 0.97,
+  "speaker": "Mara Voss",
+  "words": "The drive is in the ammo tin with the ledger and the chat. Three years of who gave and who took. If there's ever a court, it goes in first, and I'll be there to read it.",
+  "tts": "The drive is in the ammo tin with the ledger and the chat. Three years of who gave and who took. If there's ever a court, it goes in first, and I'll be there to read it.",
   "where": "src/content/story.ts"
  },
  {
@@ -5780,6 +6400,16 @@
   "where": "src/content/story.ts"
  },
  {
+  "key": "0kz1wet",
+  "voice": "af_sarah",
+  "fx": "radio",
+  "speed": 0.97,
+  "speaker": "Mara Voss",
+  "words": "The lamp's been dark three nights running. Wick says the ridge looks wrong without it.",
+  "tts": "The lamp's been dark three nights running. Wick says the ridge looks wrong without it.",
+  "where": "src/content/story.ts"
+ },
+ {
   "key": "0jfr1rh",
   "voice": "af_sarah",
   "fx": "radio",
@@ -5797,6 +6427,16 @@
   "speaker": "Mara Voss",
   "words": "The ledger is on the table. Vesper is listening. What do we do with it?",
   "tts": "The ledger is on the table. Vesper is listening. What do we do with it?",
+  "where": "src/content/story.ts"
+ },
+ {
+  "key": "12hepq2",
+  "voice": "af_sarah",
+  "fx": "radio",
+  "speed": 0.97,
+  "speaker": "Mara Voss",
+  "words": "The lighthouse water came down the valley this morning. Hollis carried the last jug in himself and wouldn't let anyone help.",
+  "tts": "The lighthouse water came down the valley this morning. Hollis carried the last jug in himself and wouldn't let anyone help.",
   "where": "src/content/story.ts"
  },
  {
@@ -5940,6 +6580,16 @@
   "where": "src/content/story.ts"
  },
  {
+  "key": "17hx0ra",
+  "voice": "af_sarah",
+  "fx": "radio",
+  "speed": 0.97,
+  "speaker": "Mara Voss",
+  "words": "You left the archive with him. He'll go on watching, and writing it down. I don't know yet whether that's good.",
+  "tts": "You left the archive with him. He'll go on watching, and writing it down. I don't know yet whether that's good.",
+  "where": "src/content/story.ts"
+ },
+ {
   "key": "0uajyno",
   "voice": "af_sarah",
   "fx": "radio",
@@ -5947,6 +6597,16 @@
   "speaker": "Mara Voss",
   "words": "You sound like someone who met him. The jugs are on Pip's ledger. I'm not going to applaud. I'm going to read.",
   "tts": "You sound like someone who met him. The jugs are on Pip's ledger. I'm not going to applaud. I'm going to read.",
+  "where": "src/content/story.ts"
+ },
+ {
+  "key": "1b5yxvm",
+  "voice": "af_sarah",
+  "fx": "radio",
+  "speed": 0.97,
+  "speaker": "Mara Voss",
+  "words": "You wiped it. I'd have kept it. But I wasn't standing in that room with him, and you were.",
+  "tts": "You wiped it. I'd have kept it. But I wasn't standing in that room with him, and you were.",
   "where": "src/content/story.ts"
  },
  {
