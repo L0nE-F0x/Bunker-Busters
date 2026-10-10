@@ -24,14 +24,22 @@ const doc = document as any;
 export const isFullscreen = () => !!(doc.fullscreenElement || doc.webkitFullscreenElement);
 /** Running as an installed home-screen app (already fullscreen, nothing to request). */
 export const isStandalone = () => matchMedia('(display-mode: fullscreen), (display-mode: standalone)').matches || (navigator as any).standalone === true;
+/** The installed app, at launch (no tap yet): landscape if the browser allows it without fullscreen. */
+export function lockLandscape() {
+  if (!isTouch || !isStandalone()) return;
+  Promise.resolve((screen.orientation as any)?.lock?.('landscape')).catch(() => {});
+}
 export const canFullscreen = () => !!(document.documentElement.requestFullscreen || (document.documentElement as any).webkitRequestFullscreen);
 
 /**
  * Fullscreen + landscape lock. Must run inside a user gesture (a tap); otherwise the browser
- * refuses, which is harmless: the next tap tries again.
+ * refuses, which is harmless: the next tap tries again. The installed app asks too: its manifest
+ * is `display: standalone` with no orientation (play.webmanifest), because Xiaomi's HyperOS/MIUI
+ * install a WebAPK that asks for fullscreen or a fixed orientation and then never launch it.
+ * iOS has no element fullscreen; its home-screen app is already chromeless.
  */
 export function enterFullscreen() {
-  if (!isTouch || isFullscreen() || isStandalone()) return;
+  if (!isTouch || isFullscreen()) return;
   const el = document.documentElement as any;
   const req: Promise<void> | undefined = el.requestFullscreen?.({ navigationUI: 'hide' }) ?? el.webkitRequestFullscreen?.();
   Promise.resolve(req)

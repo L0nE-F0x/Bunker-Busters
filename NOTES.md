@@ -1648,3 +1648,16 @@ The owner asked to start adding the missing bunkers "one by one, carefully". The
 - **Tests** (headless): two scripted playthroughs, 17 + 10 checks: refusal, enrol, inside test, chain order, Ada, lockdown, archive card, loot, Ada leaving, debrief, lamp→Kade, loop, poles, invite, Kofi, Jun, towercams. `?at=panopticon` starts a run down the valley from it.
 - **Site:** three bunker cards, "Three bunkers open. Five to go.", the ladder's next is the Alignment Spire. "What's new" now hides changelog sections newer than the running version (v0.7.0 is written and waits for the release).
 - **Not checked:** a real play by hand (the owner), the desktop release build's numbers, how the four new models look up close in motion over time (only stills and short runs).
+
+## 2026-10-10: the installed app wouldn't launch on Xiaomi-type phones
+
+The owner installed the PWA from Chrome on a phone with its own Android skin (Xiaomi, Oppo or OnePlus). The icon was plain (a real WebAPK) and the app was listed in Settings → Apps, but tapping it did nothing.
+
+- **Cause:** HyperOS/MIUI install a WebAPK whose manifest asks for `display: fullscreen` or a fixed `orientation`, then never launch it. A public report shows the same symptom with the same fix: standalone, no orientation (github.com/jpcpais01/new-game-/pull/14). Ours asked for both.
+- **Fix:**
+  - `play.webmanifest` is now `display: standalone` with no `orientation`, and Netlify serves it `no-cache`.
+  - `enterFullscreen()` no longer skips installed apps, so the first tap goes full screen and locks landscape.
+  - `lockLandscape()` tries the lock at launch in the installed app. The pause menu's Full screen button shows there too.
+- **Checked (headless):** installability has no errors on `/` and `/play/`; in phone emulation a tap goes full screen; an offline launch of exactly `/play/` boots to the title.
+- **Not checked:** a real Xiaomi phone (the owner, after a reinstall).
+- **The old install has to be removed and reinstalled:** its WebAPK carries the old manifest and won't launch to update itself.

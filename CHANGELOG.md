@@ -11,6 +11,7 @@ update notice (the first few bullets). `scripts/release.sh` refuses to release a
 - **More voices.** 66 new lines for Ezra, Ada and the reviewers
 - **Phones: a cleaner HUD.** The thumb buttons sit in one corner, Use only appears when there's something to use, the torch moved to the top bar, the objective folds to two lines, and empty hotbar slots are hidden
 - **Phones: install it, play offline.** Tapping Play on a phone offers to install the game. Android installs it in one tap; iPhone shows the three steps. Once installed it saves itself (about 55 MB, voices included) and plays with no connection
+- **Phones: the installed app opens everywhere.** On Xiaomi phones (HyperOS/MIUI) and some others, the home-screen icon did nothing when tapped. The app now asks for full screen and landscape on your first tap instead of in its install settings. If you installed it before, remove it and install it again
 - **A new website.** A gameplay video at the top, how a job goes, every place and bunker, and what's new, straight from this list
 
 ## v0.6.1

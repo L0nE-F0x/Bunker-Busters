@@ -22,7 +22,7 @@ import { HackGame, type HackOpts, type HackResult } from './Hack';
 import { Minimap, MapData, type MapMarker } from './Minimap';
 import { buildWorldMap, type WorldMapOpts, type MapViewState } from './WorldMap';
 import { mountUpdateNotice } from './Updater';
-import { isTouch, isStandalone, canFullscreen, isFullscreen, enterFullscreen } from '@/engine/device';
+import { isTouch, canFullscreen, isFullscreen, enterFullscreen } from '@/engine/device';
 import type { ArmsHud } from '@/game/combat/PlayerArms';
 import { DIFFICULTY } from '@/content/weapons';
 import { binds, actionGlyph, actionKey, actionWord, kbdGlyph, keyLabel, padName, type Action } from '@/engine/bindings';
@@ -797,7 +797,7 @@ export class UI implements UIBridge {
       add('Save game', () => { opts.onSave(); });
       add('Settings', () => { opts.onSettings(); });
       add('Controls', () => this.showControls());
-      if (isTouch && canFullscreen() && !isFullscreen() && !isStandalone()) add('Full screen', () => enterFullscreen());
+      if (isTouch && canFullscreen() && !isFullscreen()) add('Full screen', () => enterFullscreen());
       add('Quit to title', () => { close(); opts.onQuit(); });
       return m;
     }, opts.onResume);

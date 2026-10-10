@@ -1,6 +1,6 @@
 import './fonts';
 import { createRenderer } from '@/engine/renderer';
-import { isMobile } from '@/engine/device';
+import { isMobile, lockLandscape } from '@/engine/device';
 import { Game } from '@/game/Game';
 import { prefetchBootModels } from '@/game/bootModels';
 import { startOffline } from '@/engine/offline';
@@ -68,6 +68,7 @@ if (TRACE !== null) {
 // "Install the app" from the site lands here (/play/?install): show the steps over the loading screen.
 // Drop the flag from the address first: iOS saves the URL on screen as the home-screen icon's.
 initInstall();
+lockLandscape();
 {
   if (new URLSearchParams(location.search).has('install')) {
     // (by hand, so the other flags keep their exact spelling: `?webgl`, not `?webgl=`)

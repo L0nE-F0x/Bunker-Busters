@@ -35,10 +35,12 @@
   [headers.values]
     Cache-Control = "public, max-age=604800"
 
+# (no-cache: an installed app and a reinstall must see manifest changes, like the switch to standalone)
 [[headers]]
   for = "/play.webmanifest"
   [headers.values]
     Content-Type = "application/manifest+json"
+    Cache-Control = "no-cache"
 
 # The offline service worker (scripts/offline/sw.js): always check for a new one.
 [[headers]]
