@@ -62,7 +62,12 @@ WORLD.push(
   ['place-apex', free([-284, 1.6, -204], [-366, 12, -126], 50, 17.55)], // framed for the site's 21:9 crop
   // the jet down in the gouge under the cliff, low gold sun across the berms
   ['place-jet', free([-279, 1.4, 233], [-302, 4.5, 258], 54, 17.45)],
-  ['place-waitlist', free([352, 2.2, 286], [300, 6, 312], 58, 16.9)],
+  // Waitlist City from the south end of the queue, the old city's towers and the tube rail behind
+  ['place-waitlist', free([318, 1.6, 328], [310, 2.2, 296], 58, 17.7)],
+  // the Longshot's booster on its side in the north basin, pylons behind
+  ['place-longshot', free([100, 3, -262], [132, 3, -302], 50, 17.3)],
+  // Photon Park's panel rows at sunset, low along a row
+  ['place-solar', free([-178, 1.7, 296], [-212, 1.2, 316], 48, 17.6)],
 );
 
 const b = await launch();

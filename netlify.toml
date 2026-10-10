@@ -36,11 +36,12 @@
     Cache-Control = "public, max-age=604800"
 
 [[headers]]
-  for = "/site.webmanifest"
-  [headers.values]
-    Content-Type = "application/manifest+json"
-
-[[headers]]
   for = "/play.webmanifest"
   [headers.values]
     Content-Type = "application/manifest+json"
+
+# The offline service worker (scripts/offline/sw.js): always check for a new one.
+[[headers]]
+  for = "/play/sw.js"
+  [headers.values]
+    Cache-Control = "no-cache"

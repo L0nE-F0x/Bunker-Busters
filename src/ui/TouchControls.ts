@@ -52,13 +52,12 @@ export class TouchControls {
       `<div class="tb ${cls}" data-key="${key}">${glyph}${label ? `<span>${label}</span>` : ''}</div>`;
     root.innerHTML = `
       <div class="stick"><div class="ring"></div><div class="knob"></div><div class="run">SPRINT</div></div>
-      <div class="tbar">${btn('t-pause', 'Escape', GLYPH.pause)}${btn('t-kit', 'act:kit', GLYPH.kit)}${btn('t-map', 'act:map', GLYPH.map)}</div>
+      <div class="tbar">${btn('t-torch', 'act:torch', GLYPH.torch)}${btn('t-pause', 'Escape', GLYPH.pause)}${btn('t-kit', 'act:kit', GLYPH.kit)}${btn('t-map', 'act:map', GLYPH.map)}</div>
       <div class="cluster">
         ${btn('t-jump', 'act:jump', GLYPH.jump)}
         ${btn('t-crouch', 'act:crouch', GLYPH.crouch)}
         ${btn('t-use', 'act:interact', GLYPH.use)}
         ${btn('t-alt', 'act:alt', '', 'ALT')}
-        ${btn('t-torch', 'act:torch', GLYPH.torch)}
       </div>
       <div class="arms">
         ${btn('t-fire', 'act:fire', GLYPH.fire)}
@@ -115,8 +114,10 @@ export class TouchControls {
     // the HUD makes room for the weapon cluster: prompts move into the lane left of it (styles.css)
     cl(document.documentElement, 'armed', !!f.armed);
     cl(this.armsEl, 'melee', !f.gun);
+    // Use shows only when there's something to use: the prompt says what, the button sits under the thumb
     cl(this.useBtn, 'lit', f.use && !f.useNA);
-    cl(this.useBtn, 'dim', !f.use || f.useNA);
+    cl(this.useBtn, 'dim', f.use && !!f.useNA);
+    cl(this.useBtn, 'hide', !f.use);
     cl(this.altBtn, 'hide', !f.alt);
     cl(this.crouchBtn, 'lit', f.crouch);
     cl(this.torchBtn, 'lit', f.torch);

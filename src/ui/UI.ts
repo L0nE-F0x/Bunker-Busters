@@ -4,6 +4,8 @@ import type { Vector3 } from 'three/webgpu';
 import { ITEMS, HOTBAR_ITEMS } from '@/content/items';
 import { itemStatus, USE_LABEL, hotbarItem } from '@/content/items';
 import { openTill, type TillOpts } from './Trader';
+import { offlineLabel } from '@/engine/offline';
+import { openInstallSheet, isPhone, isInstalledApp } from './install';
 import { SKILLS, SKILL_ORDER, focusesFor, capstonesFor } from '@/content/skills';
 import { ARCHETYPES } from '@/content/archetypes';
 import { PEOPLE, standingTier, STANDING_WORD } from '@/content/people';
@@ -20,7 +22,7 @@ import { HackGame, type HackOpts, type HackResult } from './Hack';
 import { Minimap, MapData, type MapMarker } from './Minimap';
 import { buildWorldMap, type WorldMapOpts, type MapViewState } from './WorldMap';
 import { mountUpdateNotice } from './Updater';
-import { isTouch, isIOS, isStandalone, canFullscreen, isFullscreen, enterFullscreen } from '@/engine/device';
+import { isTouch, isStandalone, canFullscreen, isFullscreen, enterFullscreen } from '@/engine/device';
 import type { ArmsHud } from '@/game/combat/PlayerArms';
 import { DIFFICULTY } from '@/content/weapons';
 import { binds, actionGlyph, actionKey, actionWord, kbdGlyph, keyLabel, padName, type Action } from '@/engine/bindings';
@@ -87,6 +89,7 @@ export class UI implements UIBridge {
   private detCache: { show: boolean | null; color: string; width: string; text: string } = { show: null, color: '', width: '', text: '' };
   private minimapT = 0;
   private lastObjective = '';
+  private objectiveTimer = 0;
   private loadingEl: HTMLElement;
   private armsKey = '';
   private xhairKey = '';
@@ -134,8 +137,7 @@ export class UI implements UIBridge {
       </div>
       <div class="tagline">They locked the future. <b>The camps are still thirsty.</b></div>
       <div class="menu interactive"></div>
-      ${isTouch && isIOS && !isStandalone() ? '<div class="ios-tip">For full screen: tap <b>Share</b> → <b>Add to Home Screen</b>, then play from the icon.</div>' : ''}
-      <div class="title-foot"><span>v${__APP_VERSION__} · DAY 1,284 · ${opts.backend.toUpperCase()}</span><span class="press">STAY OUTSIDE</span></div>`);
+      <div class="title-foot"><span>v${__APP_VERSION__} · DAY 1,284 · ${opts.backend.toUpperCase()}<span class="offline-status">${offlineLabel()}</span></span><span class="press">STAY OUTSIDE</span></div>`);
     el.id = 'title';
     const menu = el.querySelector('.menu')!;
     const add = (label: string, fn: () => void, primary = false, disabled = false) => {
@@ -149,6 +151,8 @@ export class UI implements UIBridge {
     add('New Game', () => { el.remove(); opts.onNew(); }, !opts.canContinue);
     add('Settings', opts.onSettings);
     add('Controls', () => this.showControls());
+    // phones in the browser: put the game on the home screen (full screen, plays offline)
+    if (isTouch && isPhone && !isInstalledApp()) add('Install app', () => openInstallSheet({ onGamePage: true }));
     this.root.appendChild(el);
     void mountUpdateNotice(el, () => { this.audio.start(); this.audio.play('uiConfirm'); });
     // first interaction starts audio
@@ -381,7 +385,7 @@ export class UI implements UIBridge {
     (this.hud.querySelector('.xpbar i') as HTMLElement).style.width = `${(d.xp / this.state.xpToNext) * 100}%`;
     this.hud.querySelector('.arch')!.textContent = this.state.archetype.role.toUpperCase();
     this.hud.querySelector('.xptext')!.innerHTML = `<b>${d.xp}</b> / ${this.state.xpToNext} XP`;
-    this.hud.querySelector('.spwrap')!.innerHTML = d.skillPoints > 0 ? `<span class="sp-badge">${d.skillPoints} SKILL POINT${d.skillPoints > 1 ? 'S' : ''} · ${isTouch ? 'KIT' : device() === 'pad' ? `${padName(binds.pad('kit'))} → SKILLS` : actionKey('skills')}</span>` : '';
+    this.hud.querySelector('.spwrap')!.innerHTML = d.skillPoints > 0 ? `<span class="sp-badge"${isTouch ? ' data-key="act:kit"' : ''}>${d.skillPoints} SKILL POINT${d.skillPoints > 1 ? 'S' : ''} · ${isTouch ? 'KIT' : device() === 'pad' ? `${padName(binds.pad('kit'))} → SKILLS` : actionKey('skills')}</span>` : '';
   }
 
   refreshHotbar() {
@@ -464,7 +468,10 @@ export class UI implements UIBridge {
       this.els.objective.querySelector('.text')!.textContent = f.objective;
       this.els.objective.classList.remove('flash');
       void this.els.objective.offsetWidth;
-      this.els.objective.classList.add('flash');
+      this.els.objective.classList.add('flash', 'fresh');
+      // touch clamps the objective to two lines once it has been read (styles.css)
+      clearTimeout(this.objectiveTimer);
+      this.objectiveTimer = window.setTimeout(() => this.els.objective?.classList.remove('fresh'), 9000);
     }
     // detection (only touch the DOM when something visible changed: every write costs a style pass
     // and a recomposite of the overlay, which is what hurts in WebKitGTK)

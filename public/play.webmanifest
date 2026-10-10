@@ -1,7 +1,7 @@
 {
   "name": "Bunker Busters",
   "short_name": "Bunker Busters",
-  "description": "They built bunkers. You brought lockpicks.",
+  "description": "A free first-person heist game. The founders sealed the water into their bunkers; break in and bring it back to camp. Plays offline once installed.",
   "id": "/play/",
   "start_url": "/play/",
   "scope": "/play/",
@@ -9,8 +9,19 @@
   "orientation": "landscape",
   "background_color": "#0b0806",
   "theme_color": "#0b0806",
+  "categories": ["games"],
   "icons": [
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png" },
     { "src": "/apple-touch-icon.png", "sizes": "256x256", "type": "image/png" },
-    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png" }
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "screenshots": [
+    { "src": "/media/shot-1.jpg", "sizes": "1280x720", "type": "image/jpeg", "label": "A Kade Recovery contractor raises a shotgun in the desert scrub" },
+    { "src": "/media/shot-2.jpg", "sizes": "1280x720", "type": "image/jpeg", "label": "The camp's four around the fire under the gas station canopy" },
+    { "src": "/media/shot-3.jpg", "sizes": "1280x720", "type": "image/jpeg", "label": "SeedBot sweeps its searchlight over The Garage at night" },
+    { "src": "/media/shot-1.jpg", "sizes": "1280x720", "type": "image/jpeg", "form_factor": "wide", "label": "A Kade Recovery contractor raises a shotgun in the desert scrub" },
+    { "src": "/media/shot-2.jpg", "sizes": "1280x720", "type": "image/jpeg", "form_factor": "wide", "label": "The camp's four around the fire under the gas station canopy" },
+    { "src": "/media/shot-3.jpg", "sizes": "1280x720", "type": "image/jpeg", "form_factor": "wide", "label": "SeedBot sweeps its searchlight over The Garage at night" }
   ]
 }

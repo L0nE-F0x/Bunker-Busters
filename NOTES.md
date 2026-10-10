@@ -1578,3 +1578,44 @@ The owner asked for the written text (notes, clues, quests, info panels) to read
 - **Voices:** the extractor (`scripts/voice/extract.mjs`) now also finds lookups into object literals (`lines[stage(v)]`, `VESPER.x.text`), `x += ...` in the same function, `pivotNode(speaker, text)`, RUMOURS (Dez), TILL_LINES (Inez), archetype `briefing`/`coda` (Mara), bunker owner `line`/`greet`/`alarm`, and Settlement `news()`. All of that was cast dialogue shown without a voice. 730 → 865 clips; nothing previously voiced was lost (diffed against a baseline run of the old extractor). Rumours now show without the "Tonight on the band:" prefix, so their clips match.
 - **Bugs found on the way:** the Tube's unpowered pod screen was a stage direction under the POD-01 speaker, so the pod's voice read the narration (speaker is now 'Pod 01', silent). The Longshot was "the south basin" in the journal (north is −z: it's north of camp). The snakebite kit said a medkit does nothing for venom (it halves it). Inez's Pivot story contradicted itself. The drive-in note was signed as if by the projectionist (Ren); it's the manager's now.
 - **Checked:** typecheck, build, headless screenshots of the intel reader, a chat page, the Waitlist line log, the Longshot recorder, the journal's Story and Quests tabs. Runtime clip lookup checked with the game's own `clipsFor` on composed lines (hello + news, night prefixes, codas). **Not checked:** listening to the 135 new clips (durations are consistent with their text), the desktop app.
+
+## 2026-10-10: co-op plan parked (no code)
+
+The owner asked whether two people could play together without ruining the game. Decision: yes, later, and not as a shared sim. The plan is `COOP.md`. Nothing in the game changed.
+
+- **Viable shape:** the host's machine stays the game. A guest is a second kinematic body. The desert already matches across clients (`WORLD_SEED`). Only gameplay mutations sync, over a WebRTC data channel plus a tiny signaling rendezvous. Hitscan and flags live on the host. The guest predicts their own movement.
+- **Why not a server:** `Game.frame` is one variable-`dt` sim fused to the renderer. Rapier plus `Math.random` in the AI cannot lockstep. `Combat.target` is one body. Lifting `Game.ts` onto a headless server is a rewrite.
+- **What protects solo:** the host's save stays the story (the guest visits). Mara still briefs one person. Stealth sees both bodies. Prove it in the Garage before the wasteland.
+- **When:** after 1.0.0 is released and marketing is underway. Until then, do not start it. First spike on that day is `RTCPeerConnection` in the Linux app's WebKitGTK webview.
+
+## 2026-10-10: phone HUD decluttered, and the browser build plays offline
+
+The owner sent a phone screenshot ("the mobile browser UI is too cluttered") and asked whether the PWA works offline. It didn't: there was no service worker, so a home-screen launch with no connection got the browser's error page, and voice clips not yet heard went silent mid-run.
+
+- **Touch HUD** (`styles.css` `.touch …`, `TouchControls.ts`): every right-thumb button sits in one corner (Jump in the corner, Crouch beside it; with a gun out Fire sits over Jump, Aim/Reload/Swap around it). Before, the weapon group floated mid-screen. Use shows only when something is usable (left of Crouch, lit). The torch moved to the top bar. The objective shows in full for 9 s, then folds to two lines (`.fresh`). Vitals are 186 px wide without the class/XP line, and the skill-point badge opens the kit. Empty hotbar slots are hidden on touch. Smaller minimap, clock and stance. Desktop is untouched.
+- **Offline** (`src/engine/offline.ts`, `scripts/offline/sw.js`, `offlinePlugin` in `vite.config.ts`): after a build, the plugin lists every file the game page uses (the bundle minus the site's, woff2 fonts, models, voice, icons, manifest: 920 files, 49.9 MB) with its content hash and writes `dist/play/sw.js`. The game registers it after boot (not in dev, not in the desktop app), so the download doesn't compete with loading. The title footer shows `SAVING FOR OFFLINE n%` → `PLAYS OFFLINE`.
+  - Cache keys are path + content hash, and the game's URLs (`?v=` model hash, global voice rev) map onto them. A deploy downloads only the changed files, even when one re-voiced line moves the voice rev for all 865 clips.
+  - Navigations go to the network first (4 s timeout), then fall back to the saved page.
+  - **Updates:** the build stamps a deploy id into play/index.html (`<meta name="bb-offline">`), and the page registers `sw.js?v=<id>`. Relying on `reg.update()`/the browser's own check was flaky in tests (the update sometimes never fired).
+  - **Checked** (headless, a static server over `dist`): saved 920 files; offline reload → title; offline `?autostart` → playing with models; a voice clip served offline (200). A simulated deploy (page changed) installed in 3/3 runs, fetched only the changed file and pruned the old one.
+  - **Not checked:** a real phone, iOS Safari (storage quota; it should be fine at 50 MB).
+  - **Known gap:** the map's chart worker script went to the network in a headless test, so offline it would fall back to drawing the chart on the main thread (~0.3 s, once).
+  - Adding a file the game fetches at runtime outside `assets/`, `models/` or `voice/`? Add it to the plugin's list, or it won't be there offline.
+
+## 2026-10-10: the landing page rebuilt, and "Install the app" on phones
+
+The owner said the marketing page was one of the oldest parts of the project and asked for an overhaul. They also asked that tapping Play on a phone offer to install the PWA, doing as much of it as possible on Android and iOS.
+
+- **Page** (`index.html`, `src/site/site.ts`, `src/site/site.css`):
+  - Hero: a muted video loop behind the logo. `public/media/hero-loop.mp4` is 11.5 s, 1280×720, 2.1 MB, cut from the clean (subtitle-free) stretches of the v0.5.6 trailer by `scratchpad/loop.py`-style trims + crossfades. It shows the poster only with reduced motion or Save-Data, and pauses off screen.
+  - Then: a release chip; device-aware buttons; a numbers strip (2 bunkers, 12 places, 865 voiced lines, 4 characters, $0); "Scout. Get in. Get out."; a bento grid of seven features; a places carousel (8 places, now including the Longshot, Waitlist City and Photon Park); two bunker cards (Garage and Apex, both playable, with real owner lines) plus the ladder (the Panopticon next); "Play it anywhere"; **What's new**, generated from `CHANGELOG.md` at build time (`?raw`), so it can't go stale; download cards (the visitor's own platform first); footer.
+  - The old page still listed Apex as locked and claimed "everything procedural".
+  - Copy follows the Writing rule and was checked against the code (weapons, archetypes, owners' lines, 12 places, Longshot north). CHANGELOG v0.6.0's "south basin" was corrected, since the site shows that text.
+- **Media:** feature stills come from the v0.5.6 promo kit, cropped above its "v0.5.6" watermark (bottom 9%). The Longshot, Photon Park and Waitlist City were shot new; their framings are now in `marketing-shots.mjs`.
+- **Install** (`src/ui/install.ts` + `install.css`, used by the site and the game page): the landing page links `play.webmanifest`, so installing from the site installs the game. Checked with CDP `Page.getInstallabilityErrors` (no errors on `/` or `/play/`).
+  - Android: the sheet's Install button calls the stashed `beforeinstallprompt` (checked: it fires with `--bypass-app-banner-engagement-checks`, and the sheet shows the one-tap button). Without it (Chrome's ~30 s engagement rule), Install goes to `/play/?install`, which shows the ⋮ → Install app steps and upgrades to one tap if the offer arrives.
+  - iPhone: there's no API, so "Show me how" goes to `/play/?install`, where the steps (Share → Add to Home Screen → Add) show over the loading screen. The flag is stripped from the address first, because iOS saves the visible URL.
+  - In-app browsers (Instagram, X…) get "open in your browser" steps.
+  - The game's title has **Install app** on phones (it replaced the iOS tip).
+- **Manifest:** added a 192 px icon, a maskable icon (Android crops to a circle), a description, categories and screenshots (`media/shot-1..3.jpg`) for Android's richer install sheet. `site.webmanifest` was removed.
+- **Not checked:** a real phone (Android prompt, iOS steps), Safari's rendering of the page, how the video looks on a real connection.

@@ -1,6 +1,6 @@
-import { defineConfig } from 'vite';
+import { defineConfig, type Plugin } from 'vite';
 import { fileURLToPath, URL } from 'node:url';
-import { readFileSync, readdirSync } from 'node:fs';
+import { readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 
 // package.json is the single source of truth for the version shown in the game and on the site
@@ -19,7 +19,45 @@ const voice = createHash('sha1');
 for (const f of readdirSync(pub('voice')).sort()) voice.update(f).update(readFileSync(pub('voice') + f));
 const VOICE_REV = voice.digest('hex').slice(0, 10);
 
+// Offline play (src/engine/offline.ts): after a build, list every file the game page uses with its
+// content hash and write the service worker (scripts/offline/sw.js → dist/play/sw.js). The URLs are
+// exactly what the game requests (models and voice carry their `?v=`); the cache keys carry each
+// file's own hash, so a deploy re-downloads only what changed, even when the voice rev moves.
+function offlinePlugin(): Plugin {
+  let outDir = '';
+  return {
+    name: 'bb-offline',
+    apply: 'build',
+    configResolved(c) { outDir = c.build.outDir.startsWith('/') ? c.build.outDir : `${c.root}/${c.build.outDir}`; },
+    closeBundle() {
+      const files: [string, string, number][] = [];
+      const add = (url: string, file: string) => {
+        const b = readFileSync(`${outDir}/${file}`);
+        files.push([url, `/${file}?h=${hash(b)}`, b.length]);
+      };
+      // the site's own bundle stays out; browsers that run service workers all take woff2
+      for (const f of readdirSync(`${outDir}/assets`).sort()) if (!f.startsWith('site-') && !f.endsWith('.woff')) add(`/assets/${f}`, `assets/${f}`);
+      for (const f of readdirSync(`${outDir}/models`).sort()) if (f.endsWith('.glb')) add(`/models/${f}?v=${MODEL_REV[f.slice(0, -4)]?.v}`, `models/${f}`);
+      for (const f of readdirSync(`${outDir}/voice`).sort()) add(`/voice/${f}?v=${VOICE_REV}`, `voice/${f}`);
+      for (const f of ['play.webmanifest', 'apple-touch-icon.png', 'icon-192.png', 'icon-512.png', 'icon-maskable-512.png', 'favicon.ico', 'favicon-32.png']) add(`/${f}`, f);
+      // the page carries the deploy's id; it registers sw.js?v=<id>, so a new deploy installs on its first online launch
+      const page = `${outDir}/play/index.html`;
+      const html = readFileSync(page, 'utf8');
+      const id = hash(JSON.stringify(files) + html);
+      writeFileSync(page, html.replace('</head>', `  <meta name="bb-offline" content="${id}" />\n  </head>`));
+      add('/play/', 'play/index.html');
+      const sw = readFileSync(fileURLToPath(new URL('./scripts/offline/sw.js', import.meta.url)), 'utf8')
+        .replace('/* FILES */ []', JSON.stringify(files))
+        .replace("/* INDEX */ ''", JSON.stringify(files[files.length - 1][1]));
+      writeFileSync(`${outDir}/play/sw.js`, sw);
+      const mb = files.reduce((s, f) => s + f[2], 0) / 1e6;
+      console.log(`[offline] play/sw.js (${id}): ${files.length} files, ${mb.toFixed(1)} MB`);
+    },
+  };
+}
+
 export default defineConfig({
+  plugins: [offlinePlugin()],
   define: {
     __APP_VERSION__: JSON.stringify(pkg.version),
     __MODEL_REV__: JSON.stringify(MODEL_REV),

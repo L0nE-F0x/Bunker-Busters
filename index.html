@@ -2,19 +2,19 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Bunker Busters: a post-apocalyptic heist game</title>
-    <meta name="description" content="They built bunkers. You brought lockpicks, and a lever rifle. A free first-person heist game: sneak into billionaire doomsday bunkers, fight off their contractors and loot the vault. Linux, Windows and browser." />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title>Bunker Busters: a free post-apocalyptic heist game</title>
+    <meta name="description" content="They built bunkers. You brought lockpicks. A free first-person heist game: scout the founders' doomsday bunkers, get past their half-broken security and Kade's contractors, and bring the water back to camp. Linux, Windows, browser and phone." />
     <link rel="canonical" href="https://bunker-busters.netlify.app/" />
-    <meta name="theme-color" content="#ff7a1f" />
+    <meta name="theme-color" content="#0b0806" />
     <meta name="color-scheme" content="dark" />
 
     <!-- Open Graph (Facebook, Discord, Slack, WhatsApp, LinkedIn, iMessage…) -->
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="Bunker Busters" />
     <meta property="og:url" content="https://bunker-busters.netlify.app/" />
-    <meta property="og:title" content="Bunker Busters: a post-apocalyptic heist game" />
-    <meta property="og:description" content="They built bunkers. You brought lockpicks, and a lever rifle. A free first-person heist game: sneak into billionaire doomsday bunkers, fight off their contractors and loot the vault. Linux, Windows and browser." />
+    <meta property="og:title" content="Bunker Busters: a free post-apocalyptic heist game" />
+    <meta property="og:description" content="They built bunkers. You brought lockpicks. A free first-person heist game for Linux, Windows, the browser and your phone." />
     <meta property="og:image" content="https://bunker-busters.netlify.app/og.jpg" />
     <meta property="og:image:secure_url" content="https://bunker-busters.netlify.app/og.jpg" />
     <meta property="og:image:type" content="image/jpeg" />
@@ -25,15 +25,17 @@
 
     <!-- X / Twitter -->
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="Bunker Busters: a post-apocalyptic heist game" />
-    <meta name="twitter:description" content="They built bunkers. You brought lockpicks, and a lever rifle. A free first-person heist game: sneak into billionaire doomsday bunkers, fight off their contractors and loot the vault. Linux, Windows and browser." />
+    <meta name="twitter:title" content="Bunker Busters: a free post-apocalyptic heist game" />
+    <meta name="twitter:description" content="They built bunkers. You brought lockpicks. A free first-person heist game for Linux, Windows, the browser and your phone." />
     <meta name="twitter:image" content="https://bunker-busters.netlify.app/og.jpg" />
     <meta name="twitter:image:alt" content="Bunker Busters logo over a fenced doomsday bunker at sunset in the wasteland" />
 
     <link rel="icon" href="/favicon.ico" sizes="any" />
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
-    <link rel="manifest" href="/site.webmanifest" />
+    <!-- the game's manifest: installing from here installs the game (/play/), the same app as on the game page -->
+    <link rel="manifest" href="/play.webmanifest" />
+    <link rel="preload" as="image" href="/media/hero-loop.jpg" />
   </head>
   <body>
     <div class="grain"></div>
@@ -41,142 +43,259 @@
     <nav class="nav">
       <a class="brand" href="#top"><span class="mark"></span>BUNKER BUSTERS</a>
       <div class="links">
-        <a href="#features">Features</a>
+        <a href="#game">The game</a>
         <a href="#places">Places</a>
-        <a href="#garage">The Garage</a>
-        <a href="#ladder">Roadmap</a>
-        <a href="#download" class="cta-small">Download</a>
+        <a href="#bunkers">Bunkers</a>
+        <a href="#news">What's new</a>
+        <a href="#get" class="cta-small" id="nav-cta">Download</a>
       </div>
     </nav>
 
+    <!-- ===================== hero ===================== -->
     <header class="hero" id="top">
-      <div class="hero-bg" style="background-image: url('/media/hero.jpg')"></div>
+      <div class="hero-media">
+        <video class="hero-video" src="/media/hero-loop.mp4" poster="/media/hero-loop.jpg" autoplay muted loop playsinline preload="auto" aria-hidden="true"></video>
+      </div>
       <div class="hero-shade"></div>
       <div class="hero-inner">
-        <div class="kicker">A post-apocalyptic heist game</div>
+        <a class="release-chip" href="#news" id="release-chip"><span class="dot"></span><b id="chip-version">Out now</b><span>What's new →</span></a>
         <h1 class="logo"><span>BUNKER</span><span>BUSTERS</span></h1>
         <p class="tagline">They built bunkers. <b>You brought lockpicks.</b></p>
-        <p class="lede">The tech elite sealed themselves into luxury doomsday bunkers. Scout them, outwit their half-broken security, crack the vault and take what you need to survive.</p>
-        <div class="dl-row">
-          <a class="btn primary" id="dl-primary" href="#download">
+        <p class="lede">The founders saw the end coming and sealed themselves in with the region's water. You live outside, at a camp by a dead gas station. Scout their doors, get past their half-broken security, and carry what you can back to the fire.</p>
+        <div class="cta-row">
+          <a class="btn primary" id="dl-primary" href="#get">
             <span class="os-icon" id="dl-primary-icon"></span>
-            <span><b id="dl-primary-label">Download</b><small id="dl-primary-sub">Free · early access</small></span>
+            <span class="btn-text"><b id="dl-primary-label">Download</b><small id="dl-primary-sub">Free</small></span>
           </a>
-          <a class="btn ghost" href="#download">All platforms</a>
+          <a class="btn ghost" id="cta-second" href="/play/">Play in your browser</a>
         </div>
-        <a class="play-link" href="/play/">or play in your browser <span>→</span></a>
-      </div>
-      <div class="scroll-hint">scroll</div>
-    </header>
-
-    <section class="features" id="features">
-      <article class="feature">
-        <div class="shot" style="background-image: url('/media/night.jpg')"></div>
-        <div class="copy">
-          <div class="num">01</div>
-          <h3>Sneak, talk, or shoot</h3>
-          <p>Crouch past tin-can tripwires, wait out a guard drone's battery brown-outs, take a guard down from behind with a crowbar, or settle it with a lever rifle across the flats. Every layer of a bunker has more than one way through.</p>
-        </div>
-      </article>
-      <article class="feature rev">
-        <div class="shot" style="background-image: url('/media/lockpick.jpg')"></div>
-        <div class="copy">
-          <div class="num">02</div>
-          <h3>Pick every lock by feel</h3>
-          <p>A real pin-tumbler minigame: find the binding pin, set it at the shear line, don't overset or your pick snaps. Engineers can short keypads instead, and anyone can guess a founder's default PIN.</p>
-        </div>
-      </article>
-      <article class="feature">
-        <div class="shot" style="background-image: url('/media/camp.jpg')"></div>
-        <div class="copy">
-          <div class="num">03</div>
-          <h3>A living wasteland</h3>
-          <p>A full day/night cycle, dust storms rolling over the dunes, godrays through broken power lines and neon flickering out in the dark. The desert itself is generated in code, and the people in it sit round the same fires you do.</p>
-        </div>
-      </article>
-      <article class="feature rev">
-        <div class="shot" style="background-image: url('/media/combat.jpg')"></div>
-        <div class="copy">
-          <div class="num">04</div>
-          <h3>The road has teeth</h3>
-          <p>Wolf packs that hunt at night and flinch from your torch. Kade Holdings' Recovery crews who take cover, flank and lob "compliance charges". Polite sentries, drones and minefields around the outposts. Go down, and your pack stays where you fell.</p>
-        </div>
-      </article>
-    </section>
-
-    <section class="places" id="places">
-      <div class="kicker">The wasteland between bunkers</div>
-      <h2>Places worth the walk</h2>
-      <p class="lede">Every place has its own way in: a lock, a circuit, a conversation or a charge. Some of them talk back.</p>
-      <div class="place-grid">
-        <figure class="place wide">
-          <div class="shot" style="background-image: url('/media/place-creek.jpg')"></div>
-          <figcaption><b>Dry Creek</b>The last town on the highway. A diner, a clinic, a store with a locked closet and five people who all want something from you.</figcaption>
-        </figure>
-        <figure class="place">
-          <div class="shot" style="background-image: url('/media/place-jet.jpg')"></div>
-          <figcaption><b>The Exit Strategy</b>A founder's private jet that tried to leave early. The flight recorder knows the code to the hold.</figcaption>
-        </figure>
-        <figure class="place">
-          <div class="shot" style="background-image: url('/media/place-drivein.jpg')"></div>
-          <figcaption><b>Starlite Drive-In</b>Restart the projector and the last keynote plays again at night. Stay for the part where he thought the mic was off.</figcaption>
-        </figure>
-        <figure class="place">
-          <div class="shot" style="background-image: url('/media/place-coldstorage.jpg')"></div>
-          <figcaption><b>ColdStorage</b>Where the cloud came down to earth. The cold aisle is still frosted, and the assistant in the core room still answers.</figcaption>
-        </figure>
-        <figure class="place">
-          <div class="shot" style="background-image: url('/media/place-tube.jpg')"></div>
-          <figcaption><b>The Tube</b>A hyperloop test track. Power the station and the lights race down the line. Top speed achieved: one press release.</figcaption>
-        </figure>
-        <figure class="place wide">
-          <div class="shot" style="background-image: url('/media/place-apex.jpg')"></div>
-          <figcaption><b>Apex Vault</b>A rocket on the salt and a hangar cut into the cliff. 212 seats, forty of them spoken for. The owner is posting through it.</figcaption>
-        </figure>
-      </div>
-    </section>
-
-    <section class="garage" id="garage">
-      <div class="garage-bg" style="background-image: url('/media/interior.jpg')"></div>
-      <div class="garage-inner">
-        <div class="kicker">Tier 1 bunker</div>
-        <h2>The Garage</h2>
-        <p class="owner">Owner: <b>Tanner Pivotson</b>, founder &amp; Chief Visionary of Bunkr.ly <i>("Uber for Bunkers")</i></p>
-        <p>He raised $40M on a napkin and built exactly one bunker: his own. It's guarded by <b>SeedBot</b>, a refurbished security drone with 12% battery health, a padlock with a five-star rating, and a laser grid wired to a fuse box nobody labelled.</p>
-        <blockquote>"This property is pre-revenue but <em>post</em>-apocalypse. Leave."</blockquote>
-        <ul class="ticks">
-          <li>Razor-wire perimeter: pick the gate or find the gap the raccoons use</li>
-          <li>SeedBot patrols with a vision cone, gets suspicious, and tases on sight</li>
-          <li>Laser tripwires: jump the low beam, crouch under the high one</li>
-          <li>The Runway Room: loot crates, a safe and a 30-under-30 shrine</li>
+        <ul class="platforms" aria-label="Platforms">
+          <li><span class="os-icon linux"></span>Linux</li>
+          <li><span class="os-icon windows"></span>Windows</li>
+          <li><span class="os-icon web"></span>Browser</li>
+          <li><span class="os-icon phone"></span>Android &amp; iPhone</li>
         </ul>
       </div>
+      <a class="scroll-hint" href="#game" aria-label="Scroll down"><span></span></a>
+    </header>
+
+    <!-- ===================== numbers ===================== -->
+    <section class="stats" aria-label="At a glance">
+      <div><b>2</b><span>bunkers to rob,<br />six more planned</span></div>
+      <div><b>12</b><span>places off<br />the highway</span></div>
+      <div><b>865</b><span>voiced lines<br />of dialogue</span></div>
+      <div><b>4</b><span>characters,<br />four ways in</span></div>
+      <div><b>$0</b><span>free, no ads,<br />no account</span></div>
     </section>
 
-    <section class="ladder" id="ladder">
-      <div class="kicker">The road to Bunker Master</div>
-      <h2>Seven bunkers. One wasteland.</h2>
-      <ol class="tiers">
-        <li class="open"><span class="t">Tier 1</span><b>The Garage</b><small>Failed-startup prepper · padlocks &amp; a drone on 12%</small><em>Playable now</em></li>
-        <li><span class="t">Tier 2</span><b>Apex Vault</b><small>A mogul who tweets constantly · chaotic, half-broken automation</small></li>
-        <li><span class="t">Tier 3</span><b>The Panopticon</b><small>Surveillance-obsessed founder · cameras &amp; line-of-sight puzzles</small></li>
-        <li><span class="t">Tier 4</span><b>Alignment Spire</b><small>Safety-obsessed AI lab · ethics-quiz door locks, polite turrets</small></li>
-        <li><span class="t">Tier 5</span><b>Singularity Dome</b><small>A rogue AI runs the bunker · defences that learn your habits</small></li>
-        <li><span class="t">Tier 6</span><b>Cloud Cathedral</b><small>Logistics emperor · conveyor mazes &amp; drone swarms</small></li>
-        <li><span class="t">Tier 7</span><b>The Chip Fortress</b><small>GPU baron · heat, power &amp; cooling puzzles</small></li>
-        <li class="final"><span class="t">Final</span><b>Bunker Zero</b><small>The Bunker Master's legacy</small></li>
+    <!-- ===================== the job ===================== -->
+    <section class="job" id="game">
+      <div class="section-head">
+        <div class="kicker">How a job goes</div>
+        <h2>Scout. Get in. Get out.</h2>
+      </div>
+      <ol class="steps">
+        <li class="step reveal">
+          <div class="shot" style="background-image: url('/media/place-apex.jpg')"></div>
+          <div class="step-copy">
+            <span class="num">01</span>
+            <h3>Scout</h3>
+            <p>Glass the place from a ridge. Binoculars tag every camera, tripwire, laser and contractor on the fence. Notes, logs and gossip give away the codes the owners thought were clever.</p>
+          </div>
+        </li>
+        <li class="step reveal">
+          <div class="shot" style="background-image: url('/media/lockpick.jpg')"></div>
+          <div class="step-copy">
+            <span class="num">02</span>
+            <h3>Get in</h3>
+            <p>Every door has more than one answer. Pick the lock by feel, splice the terminal, short the keypad, talk your way past the intercom, or set a charge and accept that everyone heard it.</p>
+          </div>
+        </li>
+        <li class="step reveal">
+          <div class="shot" style="background-image: url('/media/f-shotgun.jpg')"></div>
+          <div class="step-copy">
+            <span class="num">03</span>
+            <h3>Get out</h3>
+            <p>The alarm calls Kade Recovery. Their crews take cover, flank and radio for help while you carry the loot, and the water, back across the flats to camp.</p>
+          </div>
+        </li>
       </ol>
     </section>
 
-    <section class="download" id="download">
-      <div class="kicker">Free download</div>
-      <h2>Get Bunker Busters</h2>
-      <p class="rel" id="release-info">Checking for the latest release…</p>
+    <!-- ===================== features (bento) ===================== -->
+    <section class="bento" aria-label="Features">
+      <article class="tile t-a reveal">
+        <div class="shot" style="background-image: url('/media/f-seedbot.jpg')"></div>
+        <div class="tile-copy">
+          <div class="kicker">Security</div>
+          <h3>Security on a budget</h3>
+          <p>SeedBot patrols the Garage on 12% battery health and a taser. Cameras sweep, lasers hang off unlabelled fuse boxes, and the owner shouts at you over the speakers while you work.</p>
+        </div>
+      </article>
+      <article class="tile t-b reveal">
+        <div class="shot" style="background-image: url('/media/f-splice.jpg')"></div>
+        <div class="tile-copy">
+          <div class="kicker">Hacking</div>
+          <h3>SPLICE</h3>
+          <p>A terminal minigame at every Kade outpost: switch off sentries, land drones, call in a resupply, open a vault.</p>
+        </div>
+      </article>
+      <article class="tile t-c reveal">
+        <div class="shot" style="background-image: url('/media/f-kade.jpg')"></div>
+        <div class="tile-copy">
+          <div class="kicker">Enemies</div>
+          <h3>Kade Recovery</h3>
+          <p>Contractors in hard hats and respirators. They take cover, flank, rush you while you reload, and sometimes put their hands up. Marksmen on the towers give themselves away with a scope glint. Breachers walk straight through your cover.</p>
+        </div>
+      </article>
+      <article class="tile t-d reveal">
+        <div class="shot" style="background-image: url('/media/f-wolf.jpg')"></div>
+        <div class="tile-copy">
+          <div class="kicker">Wildlife</div>
+          <h3>The desert bites</h3>
+          <p>Wolf packs hunt at night and flinch from your torch. Rattlesnakes, scorpions, coyotes, and vultures over whatever you leave behind. Food and water run down as you walk.</p>
+        </div>
+      </article>
+      <article class="tile t-e reveal">
+        <div class="shot" style="background-image: url('/media/f-camp.jpg')"></div>
+        <div class="tile-copy">
+          <div class="kicker">Story</div>
+          <h3>Every line is spoken</h3>
+          <p>Two acts so far, and 865 voiced lines: Mara's briefings at the fire, Dez's rumours on the radio, Dry Creek's diner gossip, and bunker owners who narrate your break-in as it happens.</p>
+        </div>
+      </article>
+      <article class="tile t-f reveal">
+        <div class="shot" style="background-image: url('/media/f-storm.jpg')"></div>
+        <div class="tile-copy">
+          <div class="kicker">World</div>
+          <h3>A desert that keeps time</h3>
+          <p>A full day and night, dust storms you can see coming, and a survey map that fills in as you explore. Fast travel between camps costs the food and water the walk would have.</p>
+        </div>
+      </article>
+      <article class="tile t-g reveal">
+        <div class="tile-copy">
+          <div class="kicker">Your kit</div>
+          <h3>Four characters, five guns</h3>
+          <p>An Infiltrator, an Engineer, a Brute or a Fixer, each with their own skills. A crowbar, the Six-Shooter, the Pump Twelve, a Lever .30-30 and the suppressed Hush .22, with a scope, a choke and a speedloader made at the fire. Molotovs, binoculars, plates and bandages.</p>
+          <ul class="kit-list">
+            <li><b>Rue Calder</b>Infiltrator</li>
+            <li><b>Nash Okonkwo</b>Engineer</li>
+            <li><b>Paz Duarte</b>Brute</li>
+            <li><b>Len Cho</b>Fixer</li>
+          </ul>
+        </div>
+      </article>
+    </section>
+
+    <!-- ===================== places ===================== -->
+    <section class="places" id="places">
+      <div class="section-head">
+        <div class="kicker">Between the bunkers</div>
+        <h2>Places worth the walk</h2>
+        <p class="lede">Every place has a way in, something to read and something to take. Some of them still have people.</p>
+      </div>
+      <div class="rail" tabindex="0" aria-label="Places">
+        <figure class="place reveal"><div class="shot" style="background-image: url('/media/place-creek.jpg')"></div><figcaption><b>Dry Creek</b>The last town on the highway. A diner, a clinic, Inez's shop with stock that changes daily, and people who keep their own hours.</figcaption></figure>
+        <figure class="place reveal"><div class="shot" style="background-image: url('/media/place-jet.jpg')"></div><figcaption><b>The Exit Strategy</b>A founder's private jet that tried to leave early. The flight recorder knows the code to the hold.</figcaption></figure>
+        <figure class="place reveal"><div class="shot" style="background-image: url('/media/place-longshot.jpg')"></div><figcaption><b>The Longshot</b>A Kade booster on its side in the north basin. It was supposed to land on a pad west of the salt.</figcaption></figure>
+        <figure class="place reveal"><div class="shot" style="background-image: url('/media/place-drivein.jpg')"></div><figcaption><b>Starlite Drive-In</b>Restart the projector and the last keynote plays again after dark.</figcaption></figure>
+        <figure class="place reveal"><div class="shot" style="background-image: url('/media/place-waitlist.jpg')"></div><figcaption><b>Waitlist City</b>Four thousand people queued here for a bunker called Everafter. The board over the door still says NOW SERVING 0001.</figcaption></figure>
+        <figure class="place reveal"><div class="shot" style="background-image: url('/media/place-coldstorage.jpg')"></div><figcaption><b>ColdStorage</b>A data centre, still cold inside. The assistant in the core room still answers.</figcaption></figure>
+        <figure class="place reveal"><div class="shot" style="background-image: url('/media/place-solar.jpg')"></div><figcaption><b>Photon Park</b>Seven rows of panels and four cleaning robots, still working for a customer who hasn't paid in three years.</figcaption></figure>
+        <figure class="place reveal"><div class="shot" style="background-image: url('/media/place-tube.jpg')"></div><figcaption><b>The Tube</b>A hyperloop test track. Power the station and the lights run down the line.</figcaption></figure>
+      </div>
+      <div class="rail-nav"><button class="rail-prev" aria-label="Previous places">←</button><button class="rail-next" aria-label="Next places">→</button></div>
+    </section>
+
+    <!-- ===================== bunkers ===================== -->
+    <section class="bunkers" id="bunkers">
+      <div class="section-head">
+        <div class="kicker">The road to Bunker Zero</div>
+        <h2>Two bunkers open. Six to go.</h2>
+      </div>
+      <div class="bunker-cards">
+        <article class="bunker reveal">
+          <div class="shot" style="background-image: url('/media/night.jpg')"></div>
+          <div class="bunker-copy">
+            <div class="tier">Tier 1 · Act I · <em>Playable</em></div>
+            <h3>The Garage</h3>
+            <p class="owner">Tanner Pivotson, founder of Bunkr.ly</p>
+            <p>A padlocked yard, SeedBot on patrol, a laser grid on a fuse box nobody labelled, and the Runway Room vault behind a keypad Tanner is very proud of.</p>
+            <blockquote>“I have eleven months of runway and a very large padlock.”</blockquote>
+          </div>
+        </article>
+        <article class="bunker reveal">
+          <div class="shot" style="background-image: url('/media/place-apex.jpg')"></div>
+          <div class="bunker-copy">
+            <div class="tier">Tier 2 · Act II · <em>Playable</em></div>
+            <h3>Apex Vault</h3>
+            <p class="owner">Vesper Kade, streaming live</p>
+            <p>A rocket hangar cut into the cliff west of the salt flat. Go through the hangar door, the airlock, a vent on the hill, or past her intercom with the right words. She streams all of it.</p>
+            <blockquote>“Oh! A visitor. Hold on, I'm going live.”</blockquote>
+          </div>
+        </article>
+      </div>
+      <ol class="ladder">
+        <li class="next"><span>Tier 3</span><b>The Panopticon</b><small>Ezra Seymour and eleven hundred cameras, somewhere north of the salt. Next.</small></li>
+        <li><span>Tier 4</span><b>Alignment Spire</b><small>A safety-obsessed AI lab</small></li>
+        <li><span>Tier 5</span><b>Singularity Dome</b><small>A bunker run by its AI</small></li>
+        <li><span>Tier 6</span><b>Cloud Cathedral</b><small>Conveyors and drone swarms</small></li>
+        <li><span>Tier 7</span><b>The Chip Fortress</b><small>Heat, power and cooling</small></li>
+        <li class="final"><span>Final</span><b>Bunker Zero</b><small>The Bunker Master</small></li>
+      </ol>
+    </section>
+
+    <!-- ===================== play anywhere ===================== -->
+    <section class="anywhere" id="anywhere">
+      <div class="section-head">
+        <div class="kicker">One game, three ways to play</div>
+        <h2>Play it anywhere</h2>
+      </div>
+      <div class="ways">
+        <div class="way reveal">
+          <span class="os-icon desktop"></span>
+          <h3>Desktop app</h3>
+          <p>Linux and Windows. The best performance, and it updates itself from the title screen.</p>
+          <a class="btn ghost" href="#get">Download</a>
+        </div>
+        <div class="way reveal">
+          <span class="os-icon web"></span>
+          <h3>In your browser</h3>
+          <p>Nothing to install. WebGPU where your browser has it, WebGL2 everywhere else. Best in Chrome or Edge.</p>
+          <a class="btn ghost" href="/play/">Play now</a>
+        </div>
+        <div class="way reveal">
+          <span class="os-icon phone"></span>
+          <h3>On your phone</h3>
+          <p>Touch controls in landscape. Install it to your home screen and it plays with no connection.</p>
+          <button class="btn ghost" id="install-btn" type="button">Install on this phone</button>
+          <p class="way-note" id="install-note">On your phone, open <b>bunker-busters.netlify.app/play</b></p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== what's new ===================== -->
+    <section class="news" id="news">
+      <div class="section-head">
+        <div class="kicker">Updated often</div>
+        <h2>What's new</h2>
+      </div>
+      <div class="news-list" id="news-list"></div>
+      <a class="news-more" href="https://github.com/L0nE-F0x/Bunker-Busters/releases" target="_blank" rel="noopener">Every release on GitHub →</a>
+    </section>
+
+    <!-- ===================== download ===================== -->
+    <section class="download" id="get">
+      <div class="section-head">
+        <div class="kicker">Free download</div>
+        <h2>Get Bunker Busters</h2>
+        <p class="rel" id="release-info">Checking for the latest release…</p>
+      </div>
       <div class="dl-cards">
-        <div class="dl-card" data-os="linux">
-          <div class="os"><span class="os-icon linux"></span>Linux</div>
-          <p>Omarchy, Arch and most distros. Hybrid NVIDIA laptops automatically render on the NVIDIA GPU.</p>
-          <a class="btn primary" data-asset="BunkerBusters-linux-x86_64.tar.gz">Omarchy / Arch <small>.tar.gz · uses system WebKitGTK</small></a>
+        <div class="dl-card reveal" data-os="linux">
+          <div class="os"><span class="os-icon linux"></span>Linux<span class="yours-tag">Your system</span></div>
+          <p>Omarchy, Arch and most distros. On laptops with an NVIDIA GPU it renders on the NVIDIA card automatically.</p>
+          <a class="btn primary" data-asset="BunkerBusters-linux-x86_64.tar.gz">Omarchy / Arch <small>.tar.gz · system WebKitGTK</small></a>
           <a class="btn ghost" data-asset="BunkerBusters-linux-x86_64.AppImage">AppImage <small>any distro</small></a>
           <a class="btn ghost" data-asset="BunkerBusters-linux-amd64.deb">.deb <small>Debian / Ubuntu</small></a>
           <details>
@@ -184,29 +303,31 @@
             <pre>sudo pacman -S --needed webkit2gtk-4.1
 tar xzf BunkerBusters-linux-x86_64.tar.gz
 ./bunker-busters/install.sh</pre>
-            <p>Adds <b>Bunker Busters</b> to your app launcher. For the AppImage: <code>chmod +x</code> it and run.</p>
+            <p>Adds <b>Bunker Busters</b> to your app launcher. For the AppImage: <code>chmod +x</code> it and run it.</p>
           </details>
         </div>
-        <div class="dl-card" data-os="windows">
-          <div class="os"><span class="os-icon windows"></span>Windows</div>
-          <p>Windows 10 / 11, 64-bit. The installer isn't code-signed yet, so SmartScreen may warn you: <i>More info → Run anyway</i>.</p>
+        <div class="dl-card reveal" data-os="windows">
+          <div class="os"><span class="os-icon windows"></span>Windows<span class="yours-tag">Your system</span></div>
+          <p>Windows 10 and 11, 64-bit. The installer isn't code-signed yet, so SmartScreen may stop it: choose <i>More info → Run anyway</i>.</p>
           <a class="btn primary" data-asset="BunkerBusters-windows-x64-setup.exe">Installer <small>.exe · x64</small></a>
         </div>
-        <div class="dl-card web">
-          <div class="os"><span class="os-icon web"></span>Browser</div>
-          <p>No install. Runs on WebGPU where your browser supports it, otherwise WebGL2. Best in Chrome or Edge.</p>
-          <a class="btn ghost" href="/play/">Play in browser</a>
+        <div class="dl-card reveal" data-os="mobile">
+          <div class="os"><span class="os-icon phone"></span>Browser &amp; phone<span class="yours-tag">Your system</span></div>
+          <p>Play straight away in the browser, or install it on your phone's home screen to play full screen and offline.</p>
+          <a class="btn primary" href="/play/" data-play>Play in the browser</a>
+          <button class="btn ghost install-open" type="button">Install on a phone</button>
         </div>
       </div>
       <div class="reqs">
-        <div><b>Controls</b>WASD · mouse · Shift sprint · C crouch · Space jump · E/F interact · L flashlight · Tab kit · M map</div>
-        <div><b>Graphics</b>A dedicated GPU is recommended · integrated graphics run well on the Low/Medium preset (Settings)</div>
+        <div><b>Keyboard &amp; mouse</b>WASD · mouse · Shift sprint · C crouch · Space jump · E use · L torch · Tab kit · M map. Every key can be rebound.</div>
+        <div><b>Controllers</b>Play and navigate every menu with a gamepad, with aim assist.</div>
+        <div><b>Graphics</b>A dedicated GPU runs it best. Integrated graphics are fine on the Low or Medium preset.</div>
       </div>
     </section>
 
     <footer class="foot">
       <div class="brand"><span class="mark"></span>BUNKER BUSTERS</div>
-      <div><span id="site-version">Early access</span> · built with Three.js, TSL &amp; Rapier · everything procedural</div>
+      <div class="foot-mid"><span id="site-version">Early access</span> · made with Three.js, TSL and Rapier · the desert is generated in code</div>
       <a href="https://github.com/L0nE-F0x/Bunker-Busters" target="_blank" rel="noopener">GitHub →</a>
     </footer>
 

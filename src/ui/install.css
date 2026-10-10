@@ -1,0 +1,46 @@
+/* Install sheet (src/ui/install.ts): the site and the game page. Self-contained colours, and no
+   blur or blend modes (the game page runs over a live canvas on phones). */
+.bb-install { position: fixed; inset: 0; z-index: 200; display: flex; align-items: flex-end; justify-content: center; font-family: 'Chakra Petch', system-ui, sans-serif; color: #f3e9d8; }
+.bb-install-shade { position: absolute; inset: 0; background: rgba(5, 3, 2, 0.72); opacity: 0; transition: opacity 0.25s; }
+.bb-install-card {
+  position: relative; width: min(460px, 100%); max-height: 94vh; overflow-y: auto; padding: 22px 22px calc(18px + env(safe-area-inset-bottom));
+  background: linear-gradient(180deg, #24170e, #120c08); border: 1px solid rgba(255, 179, 71, 0.3); border-bottom: none;
+  border-radius: 18px 18px 0 0; box-shadow: 0 -20px 60px rgba(0, 0, 0, 0.6);
+  transform: translateY(100%); transition: transform 0.3s cubic-bezier(0.2, 0.9, 0.25, 1);
+}
+.bb-install.open .bb-install-shade { opacity: 1; }
+.bb-install.open .bb-install-card { transform: none; }
+.bb-install-x { position: absolute; top: 10px; right: 10px; width: 40px; height: 40px; border: none; background: none; color: #b9ab95; font-size: 26px; line-height: 1; cursor: pointer; }
+.bb-install-head { display: flex; align-items: center; gap: 14px; }
+.bb-install-head img { width: 64px; height: 64px; border-radius: 15px; box-shadow: 0 4px 18px rgba(255, 122, 31, 0.25); }
+.bb-install-head h3 { margin: 0; font-family: 'Big Shoulders Stencil Display', Impact, sans-serif; font-weight: 900; font-size: 30px; line-height: 1; letter-spacing: 0.02em; }
+.bb-install-head p { margin: 4px 0 0; font-size: 13px; color: #b9ab95; letter-spacing: 0.06em; }
+.bb-install-why { margin: 16px 0 14px; font-size: 15px; line-height: 1.5; color: #d9cbb4; }
+.bb-install-go {
+  display: flex; width: 100%; align-items: center; justify-content: center; gap: 10px; padding: 15px; border: none; border-radius: 10px; cursor: pointer;
+  font: 700 16px 'Chakra Petch', system-ui, sans-serif; letter-spacing: 0.12em; text-transform: uppercase; color: #1a0d05;
+  background: linear-gradient(90deg, #ff9a3a, #ff6a1a); box-shadow: 0 6px 24px rgba(255, 106, 26, 0.35);
+}
+.bb-install-go svg { width: 22px; height: 22px; }
+.bb-install-go:active { transform: scale(0.98); }
+.bb-install-note { margin: 10px 0 0; font-size: 13px; color: #9d907b; text-align: center; }
+.bb-install-steps { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.bb-install-steps li { display: flex; gap: 12px; align-items: flex-start; padding: 12px 14px; border-radius: 10px; background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 179, 71, 0.14); font-size: 15px; line-height: 1.45; }
+.bb-install-steps .n { flex: none; width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; font-weight: 700; font-size: 14px; color: #1a0d05; background: #ffb347; }
+.bb-install-steps svg, .bb-install-done svg { width: 20px; height: 20px; vertical-align: -4px; color: #3ff2e0; }
+.bb-install-steps b { color: #fff; }
+.bb-install-done { display: flex; gap: 12px; align-items: center; padding: 14px; border-radius: 10px; background: rgba(63, 242, 224, 0.08); border: 1px solid rgba(63, 242, 224, 0.35); font-size: 15px; }
+.bb-install-done svg { width: 26px; height: 26px; flex: none; }
+.bb-install-play { display: block; width: 100%; margin-top: 12px; padding: 12px; border: 1px solid rgba(255, 220, 170, 0.25); border-radius: 10px; background: none; color: #d9cbb4; font: 600 14px 'Chakra Petch', system-ui, sans-serif; letter-spacing: 0.1em; text-transform: uppercase; cursor: pointer; }
+/* landscape phones (the game page): a centred card instead of a tall sheet */
+@media (orientation: landscape) and (max-height: 560px) {
+  .bb-install { align-items: center; }
+  .bb-install-card { width: min(560px, 92vw); border-radius: 16px; border-bottom: 1px solid rgba(255, 179, 71, 0.3); padding: 16px 20px; transform: translateY(30px); opacity: 0; transition: transform 0.25s, opacity 0.25s; }
+  .bb-install.open .bb-install-card { opacity: 1; }
+  .bb-install-why { margin: 10px 0; font-size: 13.5px; }
+  .bb-install-steps { gap: 6px; }
+  .bb-install-steps li { padding: 8px 12px; font-size: 13.5px; }
+  .bb-install-head img { width: 48px; height: 48px; border-radius: 11px; }
+  .bb-install-head h3 { font-size: 24px; }
+  .bb-install-play { margin-top: 8px; padding: 9px; }
+}

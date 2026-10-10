@@ -659,8 +659,6 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #000; color:
 .modal header .close-x { margin-left: auto; width: 40px; height: 40px; padding: 0; text-align: center; font-size: 18px; flex: none; }
 .modal header .close-x:hover:not(:disabled) { padding-left: 0; }
 .modal header .close-x:hover::before { content: none; }
-.ios-tip { margin-top: 14px; max-width: 340px; font-size: 12px; color: var(--ink-faint); line-height: 1.45; }
-.ios-tip b { color: var(--ink-dim); }
 
 /* ---------- touch devices (phones, tablets): html.touch, set by src/engine/device.ts ---------- */
 #touch, #rotate { display: none; }
@@ -695,30 +693,30 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #000; color:
 #touch .tb.lit { color: #1a0d05; background: linear-gradient(135deg, #ffcf7a, #ff7a1a); border-color: #ffd28a; }
 #touch .tb.dim { opacity: 0.35; }
 #touch .tb.hide { opacity: 0; pointer-events: none; }
-/* right-thumb cluster, anchored bottom-right */
-#touch .cluster { position: absolute; right: var(--sr); bottom: var(--sb); width: 216px; height: 196px; }
-#touch .t-jump { right: 0; bottom: 4px; width: 84px; height: 84px; }
-#touch .t-crouch { right: 96px; bottom: 0; width: 64px; height: 64px; }
-#touch .t-use { right: 8px; bottom: 100px; width: 70px; height: 70px; }
+/* right thumb: one corner, bottom-right. Jump in the corner, Crouch beside it, Use (only when there
+   is something to use) beside that; with a gun out, Fire sits over Jump with Aim, Reload and Swap
+   around it. Everything stays under the minimap's clock and stance lines (a phone is ~390 px tall). */
+#touch .cluster, #touch .arms { position: absolute; right: var(--sr); bottom: var(--sb); width: 0; height: 0; }
+#touch .t-jump { right: 0; bottom: 4px; width: 78px; height: 78px; }
+#touch .t-crouch { right: 90px; bottom: 0; width: 56px; height: 56px; }
+#touch .t-use { right: 158px; bottom: 0; width: 62px; height: 62px; }
 #touch .t-use.lit { box-shadow: 0 0 22px rgba(255, 138, 42, 0.6); animation: useGlow 1.4s ease-in-out infinite; }
 @keyframes useGlow { 50% { box-shadow: 0 0 8px rgba(255, 138, 42, 0.3); } }
-#touch .t-alt { right: 88px; bottom: 120px; width: 50px; height: 50px; }
-#touch .t-torch { right: 160px; bottom: 76px; width: 52px; height: 52px; }
-/* system buttons, top right, left of the minimap */
-/* weapons: a compact group left of the thumb cluster (a landscape phone has no height to spare) */
-#touch .arms { position: absolute; right: calc(var(--sr) + 214px); bottom: calc(var(--sb) + 66px); width: 140px; height: 140px; transition: opacity 0.2s; }
+#touch .t-alt { right: 166px; bottom: 72px; width: 46px; height: 46px; }
+#touch .arms { transition: opacity 0.2s; }
 #touch .arms.hide { opacity: 0; }
 #touch .arms.hide .tb { pointer-events: none; }
-#touch .t-fire { right: 0; bottom: 0; width: 76px; height: 76px; border-color: rgba(255, 90, 60, 0.6); }
-#touch .t-fire span { position: absolute; bottom: 6px; font-size: 11px; color: var(--amber); }
-#touch .t-aim { right: 84px; bottom: 6px; width: 52px; height: 52px; }
-#touch .t-reload { right: 8px; bottom: 86px; width: 42px; height: 42px; }
-#touch .t-swap { right: 60px; bottom: 96px; width: 42px; height: 42px; }
+#touch .t-fire { right: 4px; bottom: 96px; width: 74px; height: 74px; border-color: rgba(255, 90, 60, 0.6); }
+#touch .t-fire span { position: absolute; bottom: 5px; font-size: 10.5px; color: var(--amber); }
+#touch .t-aim { right: 88px; bottom: 78px; width: 50px; height: 50px; }
+#touch .t-reload { right: 86px; bottom: 140px; width: 40px; height: 40px; }
+#touch .t-swap { right: 136px; bottom: 130px; width: 40px; height: 40px; }
 #touch .arms.melee .t-aim, #touch .arms.melee .t-reload { opacity: 0.25; pointer-events: none; }
 /* the ammo count rides on the Fire button instead */
 .touch .weapon { display: none; }
-#touch .tbar { position: absolute; top: var(--st); right: calc(var(--sr) + 132px); display: flex; gap: 10px; }
-#touch .tbar .tb { position: relative; width: 44px; height: 44px; border-radius: 10px; }
+/* torch and system buttons, top right, left of the minimap */
+#touch .tbar { position: absolute; top: var(--st); right: calc(var(--sr) + 114px); display: flex; gap: 8px; }
+#touch .tbar .tb { position: relative; width: 40px; height: 40px; border-radius: 10px; }
 /* floating move stick: positioned at the touch point by TouchControls */
 #touch .stick { position: absolute; left: 0; top: 0; width: 0; height: 0; opacity: 0; transition: opacity 0.15s; }
 #touch .stick.held { opacity: 1; transition: none; }
@@ -742,41 +740,57 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #000; color:
 @keyframes rot { 0%, 30% { transform: rotate(0); } 60%, 100% { transform: rotate(-90deg); } }
 
 /* HUD on touch: compact, clear of both thumbs */
-.touch .objective { top: var(--st); left: var(--sl); max-width: min(380px, 40vw); padding: 8px 12px; }
-.touch .objective .text { font-size: 14px; }
-.touch .toasts { top: calc(var(--st) + 84px); left: var(--sl); width: min(330px, 36vw); }
-.touch .toast { font-size: 12.5px; padding: 6px 10px; }
+.touch .objective { top: var(--st); left: var(--sl); max-width: min(330px, 36vw); padding: 6px 10px 7px 12px; }
+.touch .objective .label { font-size: 10px; }
+.touch .objective .text { font-size: 13px; line-height: 1.3; margin-top: 2px; }
+/* a new objective shows in full, then folds to its first two lines (the first sentence says where to go) */
+.touch .objective:not(.fresh) .text { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden; }
+.touch .toasts { top: calc(var(--st) + 76px); left: var(--sl); width: min(300px, 34vw); }
+.touch .toast { font-size: 12px; padding: 5px 9px; }
 .touch .toasts .toast:nth-last-child(n+4) { display: none; }
-.touch .minimap { top: var(--st); right: var(--sr); width: 112px; height: 112px; }
-.touch .minimap .ring { inset: -5px; }
-.touch .minimap .compass { inset: -16px; }
-.touch .clock { top: calc(var(--st) + 122px); right: var(--sr); width: 160px; text-align: right; font-size: 10px; letter-spacing: 0.08em; white-space: nowrap; }
-.touch .vitals { left: var(--sl); bottom: var(--sb); width: 230px; }
-.touch .lvl { width: 40px; height: 40px; font-size: 22px; }
-.touch .hp { height: 10px; }
-.touch .vitals .meta { font-size: 10px; }
-/* crouch and sprint show on their own buttons; venom and IN SHADOW / LIT sit under the clock */
-.touch .stance { top: calc(var(--st) + 140px); bottom: auto; right: var(--sr); gap: 6px; font-size: 9.5px; letter-spacing: 0.12em; }
-.touch .stance .pill { padding: 3px 7px; }
+.touch .minimap { top: var(--st); right: var(--sr); width: 96px; height: 96px; }
+.touch .minimap .ring { inset: -4px; }
+.touch .minimap .compass { inset: -13px; }
+.touch .minimap .compass span { font-size: 9px; }
+.touch .clock { top: calc(var(--st) + 112px); right: var(--sr); width: 160px; text-align: right; font-size: 9.5px; letter-spacing: 0.08em; white-space: nowrap; }
+.touch .vitals { left: var(--sl); bottom: var(--sb); width: 186px; }
+.touch .vitals .row { gap: 8px; }
+.touch .lvl { width: 32px; height: 32px; font-size: 18px; }
+.touch .hp { height: 8px; gap: 2px; }
+.touch .needs { gap: 2px; margin-top: 5px; }
+.touch .needs .nrow { font-size: 8.5px; letter-spacing: 0.1em; gap: 6px; }
+.touch .needs .nrow span { width: 34px; }
+.touch .needs .track { height: 3px; }
+/* class and XP numbers live in the kit; the XP bar stays */
+.touch .vitals .meta { display: none; }
+.touch .sp-badge { margin-top: 6px; font-size: 10px; padding: 3px 7px; }
+.touch #hud .sp-badge { pointer-events: auto; touch-action: none; }
+
+.touch .stance { top: calc(var(--st) + 128px); bottom: auto; right: var(--sr); gap: 6px; font-size: 9px; letter-spacing: 0.12em; }
+.touch .stance .pill { padding: 2px 6px; }
 .touch .stance .pill.crouch, .touch .stance .pill.sprint { display: none; }
-.touch .hotbar { left: 50%; right: auto; bottom: var(--sb); transform: translateX(-50%); gap: 10px; }
-.touch #hud .hotbar .slot { width: 52px; height: 52px; pointer-events: auto; touch-action: none; }
+.touch .hotbar { left: 50%; right: auto; bottom: var(--sb); transform: translateX(-50%); gap: 8px; }
+.touch #hud .hotbar .slot { width: 46px; height: 46px; pointer-events: auto; touch-action: none; }
+.touch .slot svg { width: 28px; height: 28px; }
+.touch .slot .q { font-size: 11px; }
+/* nothing to use: no slot (keyboards keep them as a reminder of the binding) */
+.touch .slot.empty { display: none; }
 .touch .slot .k { display: none; }
-.touch .prompt { top: auto; bottom: 84px; }
+.touch .prompt { top: auto; bottom: calc(var(--sb) + 58px); }
 .touch #hud .prompt .p { pointer-events: auto; touch-action: none; font-size: 14px; padding: 9px 14px 9px 8px; }
 .touch .prompt .p { white-space: normal; flex-wrap: wrap; max-width: min(420px, 40vw); row-gap: 2px; }
 .touch .prompt .p small { flex-basis: 100%; margin-left: 0; font-size: 11px; line-height: 1.3; }
 .touch .prompt .p .kbd { font-size: 10px; letter-spacing: 0.08em; background: var(--amber); color: #1a0d05; border-color: #ffd28a; }
 .touch .prompt .p.na .kbd { background: rgba(0,0,0,0.45); color: var(--ink-dim); border-color: rgba(255,220,170,0.4); }
 /* clear of two stacked prompts below it */
-.touch .subtitle { bottom: calc(var(--sb) + 178px); font-size: 14px; max-width: min(620px, 60vw); padding: 8px 14px; }
-/* gun out: the weapon cluster (#touch .arms) takes the right of centre, so prompts sit in the lane
-   between the vitals (230 px) and the cluster (right: --sr + 214, 140 wide), right-aligned against
-   it; the subtitle takes the same side of the screen (from the left edge to the cluster) above them */
-.touch.armed .prompt { left: calc(var(--sl) + 242px); right: calc(var(--sr) + 366px); transform: none; align-items: flex-end; }
+.touch .subtitle { bottom: calc(var(--sb) + 160px); font-size: 14px; max-width: min(620px, 60vw); padding: 8px 14px; }
+/* gun out: the weapon buttons take the right corner up to ~230 px in, so prompts sit in the lane
+   between the vitals (186 px) and the buttons, right-aligned against them; the subtitle takes the
+   same side of the screen above them */
+.touch.armed .prompt { left: calc(var(--sl) + 198px); right: calc(var(--sr) + 236px); transform: none; align-items: flex-end; }
 .touch.armed #hud .prompt .p { max-width: 100%; font-size: 13px; display: grid; grid-template-columns: auto 1fr; column-gap: 8px; line-height: 1.25; padding: 7px 10px 7px 7px; }
 .touch.armed .prompt .p small { grid-column: 1 / -1; }
-.touch.armed .subtitle { left: var(--sl); right: calc(var(--sr) + 366px); transform: none; max-width: none; bottom: calc(var(--sb) + 196px); }
+.touch.armed .subtitle { left: var(--sl); right: calc(var(--sr) + 236px); transform: none; max-width: none; bottom: calc(var(--sb) + 196px); }
 .touch .detect { top: calc(var(--st) + 4px); }
 .touch .detect svg { width: 48px; height: 30px; }
 .touch .banner { top: 20vh; }
@@ -794,7 +808,6 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #000; color:
   .menu { gap: 6px; width: min(300px, 70vw); }
   .menu .btn { padding: 9px 18px; font-size: 13px; }
   .title-foot { bottom: 12px; font-size: 9px; }
-  .ios-tip { margin-top: 8px; }
   .update-card { bottom: 36px; }
   #loading .logo-sm { font-size: 44px; }
   #loading .tip { bottom: 16px; font-size: 11px; }

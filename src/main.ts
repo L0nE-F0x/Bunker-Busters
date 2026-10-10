@@ -3,6 +3,8 @@ import { createRenderer } from '@/engine/renderer';
 import { isMobile } from '@/engine/device';
 import { Game } from '@/game/Game';
 import { prefetchBootModels } from '@/game/bootModels';
+import { startOffline } from '@/engine/offline';
+import { initInstall, openInstallSheet, isPhone, isInstalledApp } from '@/ui/install';
 
 // Uncaught errors → console, so the desktop app (whose console goes to stdout) shows them in a terminal.
 const describe = (e: unknown) => (e instanceof Error ? `${e.message}\n${e.stack ?? ''}` : String(e));
@@ -63,6 +65,18 @@ if (TRACE !== null) {
   if (q === '1' || (q === null && (webkitGtk || isMobile))) document.documentElement.classList.add('lowfx');
 }
 
+// "Install the app" from the site lands here (/play/?install): show the steps over the loading screen.
+// Drop the flag from the address first: iOS saves the URL on screen as the home-screen icon's.
+initInstall();
+{
+  if (new URLSearchParams(location.search).has('install')) {
+    // (by hand, so the other flags keep their exact spelling: `?webgl`, not `?webgl=`)
+    const rest = location.search.slice(1).split('&').filter((kv) => kv && kv.split('=')[0] !== 'install').join('&');
+    history.replaceState(null, '', location.pathname + (rest ? `?${rest}` : '') + location.hash);
+    if (isPhone && !isInstalledApp()) openInstallSheet({ onGamePage: true });
+  }
+}
+
 async function boot() {
   // the models download while the renderer starts and the world is built (Game.build parses them)
   prefetchBootModels();
@@ -73,6 +87,8 @@ async function boot() {
   game.backendLabel = backendLabel;
   (window as unknown as { game: Game }).game = game;
   await game.build();
+  // after the boot, so saving the game for offline play doesn't compete with loading it
+  startOffline();
 }
 
 boot().catch((err) => {
