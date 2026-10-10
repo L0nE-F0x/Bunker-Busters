@@ -55,17 +55,17 @@ export const AWAY: Record<string, { label: string; speaker: string; text: string
   nia: {
     label: 'Read the note on the counter',
     speaker: 'Note on the counter',
-    text: 'Gone to bed. Coffee is in the pot, the pot is on the stove, the stove remembers you. Pay the jar. Back at five. N.',
+    text: 'Gone to bed. Coffee\'s in the pot on the stove, should still be warm. Pay the jar. Back at 5. N.',
   },
   doc: {
     label: 'Read the note on the desk',
     speaker: 'Note on the desk',
-    text: 'ON A CALL. If you are bleeding, bleed toward the diner. If you are dying, do it slowly and I will be back at first light. Do not touch the generator. It knows what you did. Dr. I.',
+    text: 'ON A CALL. If you\'re bleeding, go to the diner, Nia knows where I am. If it can wait, I\'m back at first light. DO NOT touch the generator. Dr. I.',
   },
   inez: {
     label: 'Read the sign on the Till',
     speaker: 'Sign on the Till',
-    text: 'CLOSED. THE TILL REMEMBERS. BACK AT SEVEN. KNOCK IF ON FIRE.',
+    text: 'CLOSED. BACK AT 7. KNOCK IF ON FIRE.',
     knock: { label: 'Knock anyway.', speaker: 'Inez Quill', text: 'We\'re closed. ...You\'re not on fire. Fine. Fine! I\'m coming down. Don\'t touch anything I can hear.' },
   },
 };

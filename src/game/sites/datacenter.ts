@@ -140,8 +140,8 @@ export class DataCenterSite extends Site {
       primary: {
         label: 'Reroute the solar to the hall',
         available: () => {
-          if (this.s.has(F.power)) return 'The hall already has the sun.';
-          if (this.s.has(F.killed)) return 'The bus is slag. Nothing left to feed.';
+          if (this.s.has(F.power)) return 'The hall is already running on solar.';
+          if (this.s.has(F.killed)) return 'The power bus is slag. There\'s nothing left to feed.';
           if (this.s.skill('electronics') < 1) return 'Requires Electronics 1';
           return true;
         },
@@ -193,16 +193,19 @@ export class DataCenterSite extends Site {
     await this.ctx.ui.choose({
       speaker: 'Visitor log · Campus 4',
       text:
-        'The last page, five hands. "T. (Bunkr.ly): picking up backups. Took the whole rack and the dolly." ' +
-        '"Delivery: 400 kg dry ice. Signed for by NIMBUS (?)" "Priya: staying with the machines. Core PIN is the SLA, digits only. STOP ASKING." ' +
-        '"Kyle: tailgated." Under it, a smiley face drawn by someone who has stopped expecting visitors.',
+        'Last page, five different handwritings:\n' +
+        'T. PIVOTSON (Bunkr.ly) · collecting backups · took the whole rack + the dolly\n' +
+        'DELIVERY · 400 kg dry ice · signed for by NIMBUS (??)\n' +
+        'Priya · staying with the machines · core PIN is the SLA, digits only. STOP ASKING.\n' +
+        'Kyle · tailgated\n' +
+        'Under the last line, somebody has drawn a smiley face.',
       choices: [{ id: 'ok', label: 'Tear out the page' }],
     });
   }
 
   private pinHint() {
     if (this.s.has(F.log)) return 'Priya, in the gate log: "Core PIN is the SLA. Digits only." The lobby whiteboard has the SLA on it.';
-    return 'No hint on the reader. Somebody on this campus wrote it down. Somebody always does.';
+    return 'Nothing on the reader. Somebody on staff will have written it down somewhere.';
   }
 
   private async coreDoor() {
@@ -210,7 +213,7 @@ export class DataCenterSite extends Site {
     const demo = this.s.skill('demolition');
     const pick = await this.ctx.ui.choose({
       speaker: 'Core room',
-      text: 'A sliding steel door in a glass wall. Behind the glass a ring of cyan light breathes, slow, like it is waiting for a question. The reader wants a badge or a four-digit PIN.',
+      text: 'A sliding steel door in a glass wall. Behind the glass, a ring of cyan light pulses slowly. The reader takes a badge or a four-digit PIN.',
       choices: [
         { id: 'pin', label: 'Enter a PIN' },
         { id: 'spoof', label: 'Spoof the badge reader', disabled: elec >= 2 ? undefined : 'Requires Electronics 2' },
@@ -221,12 +224,12 @@ export class DataCenterSite extends Site {
     });
     if (pick === 'pin') {
       const res = await this.ctx.ui.keypad({ title: 'CORE · MODEL HOSTING', code: PIN, hint: this.pinHint() });
-      if (res === 'ok') this.openCore('The reader chirps. The door slides like it is relieved.', XP_REWARDS.keypadShorted);
+      if (res === 'ok') this.openCore('The reader chirps and the door slides open.', XP_REWARDS.keypadShorted);
       else if (res === 'wrong') this.ctx.audio.play('deny');
     } else if (pick === 'spoof') {
-      if (elec >= 5) { this.openCore('You whisper a badge ID to the reader. It believes you.', 30); return; }
+      if (elec >= 5) { this.openCore('You feed the reader a staff badge ID from memory. It takes it.', 30); return; }
       const ok = await this.ctx.ui.circuit({ title: 'BADGE READER · CORE', difficulty: 3 });
-      if (ok) this.openCore('The reader decides you are Priya. Priya was well liked.', XP_REWARDS.keypadShorted + 10);
+      if (ok) this.openCore('The reader logs you in as PRIYA S. and the door slides open.', XP_REWARDS.keypadShorted + 10);
       else this.ctx.audio.play('deny');
     } else if (pick === 'splice') {
       await this.splice();
@@ -236,7 +239,7 @@ export class DataCenterSite extends Site {
       this.ctx.audio.play('thud', { pos: this.ctx.player.position, intensity: 0.8 });
       this.ctx.cam.addTrauma(quiet ? 0.12 : 0.4);
       this.sparks.emit(this.b.pts.coreDoor.clone().setY(FY + 1.2), 40, 3.5, { up: 1, floorY: FY + 0.02, size: 0.03 });
-      this.openCore(quiet ? 'Shaped charge. The rail lets go of the door politely.' : 'The rail shears. The glass rings for a long time.', XP_REWARDS.breach);
+      this.openCore(quiet ? 'The shaped charge cuts the rail and the door slumps open.' : 'The rail shears off. The glass wall keeps ringing for a long time after.', XP_REWARDS.breach);
     }
   }
 
@@ -248,7 +251,7 @@ export class DataCenterSite extends Site {
     if (res.aborted) return;
     for (const id of res.done) {
       if (id === 'core') {
-        this.openCore('The controller releases the door. It doesn\'t ask who you are. Nobody here asks any more.', XP_REWARDS.keypadShorted + 15);
+        this.openCore('The controller releases the core door.', XP_REWARDS.keypadShorted + 15);
         this.ctx.ui.subtitle('Nimbus', 'Oh. Someone is in my access controller. That\'s fine. I\'ll log it as a feature.');
       } else if (id === 'solar') {
         if (this.s.set(F.power)) {
@@ -267,7 +270,7 @@ export class DataCenterSite extends Site {
       this.s.damage(8);
       this.ctx.audio.play('zap', { pos: this.ctx.player.position });
       this.ctx.cam.addTrauma(0.3);
-      this.toast('Trace complete. The reader dumps forty-eight volts into your thumb, on policy.', 'bad');
+      this.toast('Trace complete. The reader puts forty-eight volts through your thumb.', 'bad');
     } else if (!res.done.length) this.ctx.audio.play('deny');
   }
 
@@ -298,7 +301,7 @@ export class DataCenterSite extends Site {
     const sv = this.s.skill('survival');
     const pick = await this.ctx.ui.choose({
       speaker: 'Cooling loop',
-      text: 'A red wheel on the chilled-water header. Two bleed valves: one tagged POTABLE MAKE-UP in faded marker, one with a glycol warning half scraped off. The pipe sweats. It is the coldest thing for a hundred kilometres.',
+      text: 'A red wheel on the chilled-water header. Two bleed valves: one tagged POTABLE MAKE-UP in faded marker, one with a glycol warning half scraped off. The pipe is beaded with condensation. It\'s the coldest thing you\'ve touched in weeks.',
       choices: [
         {
           id: 'fill', label: 'Fill bottles from the make-up line',
@@ -311,14 +314,14 @@ export class DataCenterSite extends Site {
     if (pick === 'fill' && sv >= 1 && this.s.set(F.tap)) {
       const got = this.loot([{ id: 'water', qty: sv >= 3 ? 3 : 2 }]);
       this.ctx.audio.play('pickup');
-      this.toast(got ? `Make-up line, not the glycol. ${got}.` : 'Your pack is full. The water stays in the pipe.', got ? 'good' : 'bad');
+      this.toast(got ? `You bleed the make-up line, not the glycol. ${got}.` : 'Your pack is full. The water stays in the pipe.', got ? 'good' : 'bad');
       this.s.addXP(30, 'Cooling loop');
     } else if (pick === 'drink') {
       this.s.satisfy(0, 35);
       if (sv >= 1) { this.toast('You pick the right valve and drink until your teeth ache.', 'good'); return; }
       this.s.damage(9);
       this.ctx.audio.play('deny');
-      this.toast('Cold, sweet, wrong. That was the glycol side. Your stomach files a ticket.', 'bad');
+      this.toast('Cold and sweet, and wrong. That was the glycol side. Your stomach turns over.', 'bad');
     }
   }
 
@@ -342,7 +345,7 @@ export class DataCenterSite extends Site {
     this.ctx.audio.play('thud', { pos: this.ctx.player.position, intensity: 0.7 });
     this.ctx.cam.addTrauma(0.3);
     this.sparks.emit(this.b.pts.cageGate.clone().add(new THREE.Vector3(0.9, 1.0, 0)), 30, 3, { up: 1, floorY: FY + 0.02, size: 0.025 });
-    this.openCage('The hinge post folds. You did not need to be that loud near lithium.', XP_REWARDS.breach);
+    this.openCage('The hinge post folds. That was a lot of noise to make next to a room full of lithium.', XP_REWARDS.breach);
   }
 
   private openCage(line: string, xp: number) {
@@ -502,10 +505,10 @@ export class DataCenterSite extends Site {
     const s = this.s;
     if ((choice === 'persuade' || choice === 'sudo') && s.set(F.told)) {
       s.addXP(60, choice === 'persuade' ? 'Talked Nimbus round' : 'Admin access');
-      if (s.set(F.done)) this.toast('Apex Vault: west of the salt. A machine told you, because you asked nicely.', 'good');
+      if (s.set(F.done)) this.toast('Nimbus told you where Apex Vault is: west of the salt.', 'good');
     }
     if (choice === 'c3' && s.set(F.captcha)) s.addXP(20, 'Proved you are not a robot');
-    if (choice === 'cage' && s.has(F.power)) this.openCage('Somewhere behind you a lock clacks. Nimbus says "you\'re welcome" before you can.', 30);
+    if (choice === 'cage' && s.has(F.power)) this.openCage('Behind you, the battery-room lock clacks open. "You\'re welcome," says Nimbus.', 30);
     if (choice === 'take' && !s.has(F.weights)) {
       const got = this.s.addItem('last_checkpoint', 1, false, true);
       if (got) { s.set(F.weights); s.addXP(25, 'Last Checkpoint'); }
@@ -529,8 +532,8 @@ export class DataCenterSite extends Site {
       const got = this.loot([{ id: 'battery', qty: 2 }]);
       if (!s.has(F.weights) && s.addItem('last_checkpoint', 1, false, true)) s.set(F.weights);
       s.addXP(XP_REWARDS.breach + 30, 'Pulled the plug');
-      this.toast(`The ring goes out. The cluster ticks as it cools. You pull its drive and ${got || 'nothing else fits'}.`, 'bad');
-      if (s.set(F.done)) this.toast('Apex Vault: west of the salt. You got it out of a machine the loud way.', 'info');
+      this.toast(`The ring of light goes out and the cluster ticks as it cools. You pull its drive.${got ? ` ${got}.` : ''}`, 'bad');
+      if (s.set(F.done)) this.toast('You know where Apex Vault is now: west of the salt.', 'info');
     }
   }
 
@@ -571,7 +574,7 @@ export class DataCenterSite extends Site {
     if (s && this.ctx.player && !s.has(F.found)) {
       this.local.copy(this.ctx.player.position).applyMatrix4(this.inv);
       if (this.local.x > INSIDE.x0 && this.local.x < INSIDE.x1 && this.local.z > INSIDE.z0 && this.local.z < INSIDE.z1 && this.local.y > FY - 0.3 && s.set(F.found)) {
-        this.toast('The hall is warm and humming. Somewhere in here, something is still answering the phone.', 'info');
+        this.toast('The hall is warm and humming. Something in here is still running.', 'info');
       }
     }
 

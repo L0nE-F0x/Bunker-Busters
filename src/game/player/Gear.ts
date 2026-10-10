@@ -206,7 +206,7 @@ export class Gear {
         this.hands.eat(() => {
           s.satisfy(6, 30, 3);
           this.audio.play('eat');
-          this.toast('Raw kombucha. Less thirsty. Your stomach has opened a ticket.', 'good');
+          this.toast('You drink the kombucha. Less thirsty, though your stomach isn\'t happy about it.', 'good');
         });
         return true;
       }
@@ -217,7 +217,7 @@ export class Gear {
           this.focusT = FOCUS_S;
           s.data.thirst = Math.max(0, s.data.thirst - 6);
           this.audio.play('eat');
-          this.toast('Founder Focus. Your hands go still. Your thoughts go fast. Two minutes.', 'good');
+          this.toast('Founder Focus kicks in. Your hands go steady for two minutes.', 'good');
         });
         return true;
       }
@@ -291,7 +291,7 @@ export class Gear {
     this.t += dt;
     if (this.focusT > 0) {
       this.focusT -= dt;
-      if (this.focusT <= 0) this.toast('Founder Focus wears off. You are very thirsty and slightly less of a genius.', 'info');
+      if (this.focusT <= 0) this.toast('Founder Focus wears off. You\'re very thirsty.', 'info');
     }
     if (this.regen > 0) {
       // a point at a time, so the vitals bar isn't rewritten every frame

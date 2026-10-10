@@ -34,13 +34,13 @@ export interface PersonDef {
 export const PEOPLE: PersonDef[] = [
   {
     id: 'mara', accent: '#ffb347', name: 'Mara Voss', role: 'Last Chance radio', place: 'Last Chance Gas',
-    bio: 'Ran the county\'s water before the Pivot. Runs Last Chance\'s radio, rations and patience now. Dry, kind, and tired in a way that sounds like a joke until you listen.',
+    bio: 'Ran the county\'s water before the Pivot. Now she runs Last Chance\'s radio and its rations. Dry sense of humour, very tired, and the one everyone at the fire listens to.',
     known: (v) => v.has('briefed'),
     about: [
       { who: 'ezra', line: 'A man who watches everything is either the worst person in the valley or the only witness.', when: (v) => v.has('q.cam.hello') || v.has('q.chat.mara') },
       { who: 'pip', line: 'She hoped she\'d have a pool. I held the chalk.', when: (v) => v.has('q.capsule.mara') },
-      { who: 'tanner', line: 'He\'s not a monster. He\'s a middleman. That\'s worse. There are more of them.' },
-      { who: 'vesper', line: 'She talks like a product launch and plans like a dam.', when: (v) => v.has('debriefed') || v.has('tanner.kade') },
+      { who: 'tanner', line: 'He\'s a middleman. I want whoever he\'s paying.' },
+      { who: 'vesper', line: 'Don\'t listen to how she talks. Watch where the water goes.', when: (v) => v.has('debriefed') || v.has('tanner.kade') },
       { who: 'pip', line: 'Pip counts the jugs so I don\'t have to look.' },
     ],
     ofYou: [
@@ -52,11 +52,11 @@ export const PEOPLE: PersonDef[] = [
   },
   {
     id: 'hollis', accent: '#ff8a2a', name: 'Hollis Grange', role: 'Keeps the sign lit', place: 'Last Chance Gas',
-    bio: 'Drove long-haul for thirty years. Keeps the neon sign alive off a solar panel Tanner\'s contractor walked away from. Believes in the sign more than in most people, and is usually right to.',
+    bio: 'Drove long-haul for thirty years. Keeps the neon sign running off a solar panel Tanner\'s contractor left behind, and won\'t hear of switching it off.',
     known: (v) => v.has('briefed'),
     about: [
       { who: 'ezra', line: 'Three years that camera watched me fix a sign. Hope he learned something.', when: (v) => v.has('q.cam.told') },
-      { who: 'sol', line: 'Never met him. I heard his wife sing a man off the road once. Well. Play a song. Same thing.', when: (v) => v.has('q.song.hollis') },
+      { who: 'sol', line: 'Never met him. Heard his wife on the radio once, the afternoon it all went. I pulled over for her song.', when: (v) => v.has('q.song.hollis') },
       { who: 'mara', line: 'She signed something once. She\'s been paying for it in jugs ever since.', when: (v) => v.has('lore.permit') || v.has('debriefed') },
       { who: 'mara', line: 'Best dispatcher I ever had, and she never once lied about the weather.' },
       { who: 'pip', line: 'Kid\'s sharper than the knife I gave her.' },
@@ -70,7 +70,7 @@ export const PEOPLE: PersonDef[] = [
   },
   {
     id: 'pip', accent: '#7ec8d4', name: 'Pip Okafor', role: 'Keeps the jug ledger · age 12', place: 'Last Chance Gas',
-    bio: 'Keeps the camp\'s water ledger in a notebook with a unicorn on the cover. Counts everything twice. Asks the questions the adults are too tired to.',
+    bio: 'Twelve years old. Keeps the camp\'s water ledger in a notebook with a unicorn on the cover, and counts everything twice. Asks the questions the adults are too tired to.',
     known: (v) => v.has('briefed'),
     about: [
       { who: 'mara', line: 'Mara held the chalk. She\'s bad at ladders.', when: (v) => v.has('q.capsule.mara') },
@@ -88,7 +88,7 @@ export const PEOPLE: PersonDef[] = [
   },
   {
     id: 'dez', accent: '#3ff2e0', name: 'Dez Marlow', role: 'Radio and wires', place: 'Last Chance Gas',
-    bio: 'Built the camp radio out of a karaoke machine and spite. Distrusts founders, satellites, and anyone who says "ecosystem". Swears Vesper Kade listens on our band. Is right.',
+    bio: 'Built the camp radio out of a karaoke machine. Doesn\'t trust founders, satellites, or anyone who says "ecosystem". Swears Vesper Kade listens in on the band, and he\'s right.',
     known: (v) => v.has('briefed'),
     about: [
       { who: 'vesper', line: 'Since I read the chat on air she doesn\'t breathe between songs anymore. She holds it.', when: (v) => v.has('q.chat.air') },
@@ -106,7 +106,7 @@ export const PEOPLE: PersonDef[] = [
   },
   {
     id: 'nia', accent: '#e8a65a', name: 'Nia Pell', role: 'Cook, the diner', place: 'Dry Creek',
-    bio: 'Feeds Dry Creek from a ledger and a stove that only lights if you talk to it nicely. Writes everything down. Forgives almost anything once it\'s written down.',
+    bio: 'Runs the diner and feeds Dry Creek on credit, off a stove that only lights if you talk to it nicely. Writes everything down. Once a thing is written down, she can usually forgive it.',
     known: (v) => v.has('creek.talk.nia'),
     about: [
       { who: 'doc', line: 'Doc\'s family now. The irritating kind.', when: (v) => v.has('q.nia.peace') },
@@ -118,17 +118,17 @@ export const PEOPLE: PersonDef[] = [
     ofYou: [
       'You eat, you pay, you go. That\'s the menu for you.',
       'You have the radio look. Sit down before you fall down.',
-      'There\'s a plate with your name on it. Metaphorically. Also literally, I wrote on it.',
+      'There\'s a plate with your name on it. I wrote it on in marker.',
       'You\'re in the ledger in ink. Nobody\'s in it in ink.',
     ],
   },
   {
     id: 'doc', accent: '#7fe0a0', name: 'Doc Ivers', role: 'The clinic', place: 'Dry Creek',
-    bio: 'The only doctor within a day\'s walk. Proud, short-tempered, quietly generous. Patched up half of Tanner\'s customers when their bunker health plan turned out to be a tote bag.',
+    bio: 'The only doctor within a day\'s walk. Proud, short-tempered and quietly generous. He patched up half of Tanner\'s customers when their bunker health plan turned out to be a tote bag.',
     known: (v) => v.has('creek.talk.doc'),
     about: [
       { who: 'nia', line: 'She feeds this town on credit. I patch it on credit. We are the economy.' },
-      { who: 'wick', line: 'Wick has a cough I can hear from here, and pride I can hear from further.' },
+      { who: 'wick', line: 'Wick has a cough I can hear from down here. He won\'t come in for it.' },
       { who: 'tanner', line: 'Sold a health plan with a bunker attached. Neither one existed.' },
     ],
     ofYou: [
@@ -140,7 +140,7 @@ export const PEOPLE: PersonDef[] = [
   },
   {
     id: 'inez', accent: '#c896ff', name: 'Inez Quill', role: 'The Till', place: 'Dry Creek',
-    bio: 'Runs the Till: part store, part pawn shop, part confession booth. Locks rooms she says are empty. Sold forty hyperloop tickets before the Pivot and has never offered a refund.',
+    bio: 'Runs the Till, which is part store and part pawn shop. Keeps rooms locked that she says are empty. Sold forty hyperloop tickets before the Pivot and has never given a refund.',
     known: (v) => v.has('creek.talk.inez'),
     about: [
       { who: 'sol', line: 'Sol picked locks for money. Now he does it for gossip. Same hands.' },
@@ -156,7 +156,7 @@ export const PEOPLE: PersonDef[] = [
   },
   {
     id: 'sol', accent: '#ff6a3c', name: 'Sol Varga', role: 'Keeps the street fire', place: 'Dry Creek',
-    bio: 'Thirty years a locksmith. Keeps the street fire now and knows every tired lock in town. Locked himself out of his own motel room, and would prefer that not come up.',
+    bio: 'A locksmith for thirty years. Keeps the street fire going now and knows every lock in town. Recently locked himself out of his own motel room, and would rather you didn\'t mention it.',
     known: (v) => v.has('creek.talk.sol'),
     about: [
       { who: 'hollis', line: 'The trucker heard her. On the road, that afternoon. Somebody heard her. Mm.', when: (v) => v.has('q.song.hollis') },
@@ -174,7 +174,7 @@ export const PEOPLE: PersonDef[] = [
   },
   {
     id: 'ren', accent: '#b9ab95', name: 'Ren Oka', role: 'Sits by the road', place: 'Dry Creek',
-    bio: 'Ran the projector at the Starlite Drive-In. Walked out of the last screening before it ended, and nobody else came out after. Has been sitting by the road ever since, counting things.',
+    bio: 'Ran the projector at the Starlite Drive-In. Walked out of the last show before it ended, and nobody else came out after. Has sat by the road ever since, counting things.',
     known: (v) => v.has('creek.talk.ren'),
     about: [
       { who: 'creek', line: 'We\'re not a town. We\'re a pause between thirsts.' },
@@ -190,7 +190,7 @@ export const PEOPLE: PersonDef[] = [
   },
   {
     id: 'wick', accent: '#a8b878', name: 'Wick', role: 'Lives in the Cut', place: 'The Cut, south ridge',
-    bio: 'Lives in the cave on the south ridge because the view was free. Answers the radio with silence. Watched Vesper Kade stand in his cave and decide not to buy it.',
+    bio: 'Lives in a cave on the south ridge, because the view was free. Answers the radio by not answering. Once watched Vesper Kade stand in his cave and decide not to buy it.',
     known: (v) => v.has('creek.talk.wick'),
     about: [
       { who: 'vesper', line: 'She looked at my view like she was pricing it. Then she didn\'t buy. I\'m still insulted.' },
@@ -205,7 +205,7 @@ export const PEOPLE: PersonDef[] = [
   },
   {
     id: 'tanner', accent: '#ff3a6e', name: 'Tanner Pivotson', role: 'Founder, Bunkr.ly', place: 'The Garage',
-    bio: 'Sold seats in other people\'s bunkers. Built one himself out of the demo unit. Pays his rent to Vesper Kade in other people\'s water. Still sends an investor update every Monday.',
+    bio: 'Sold seats in other people\'s bunkers, then built his own out of the demo unit. Pays rent to Vesper Kade in other people\'s water. Still sends an investor update every Monday.',
     known: (v) => v.has('seen:garage'),
     about: [
       { who: 'vesper', line: 'She\'s my partner. I\'m her vendor. Those are different words for a reason.', when: (v) => v.has('tanner.kade') },
@@ -220,7 +220,7 @@ export const PEOPLE: PersonDef[] = [
   },
   {
     id: 'vesper', accent: '#f2f2ff', name: 'Vesper Kade', role: 'Apex Vault', place: 'West of the salt',
-    bio: 'Rocket money, a megaphone made of satellites, and a vault west of the salt. Thinks the camps are the free tier. Thinks she is saving the species. Listens on the Compact\'s band.',
+    bio: 'Rocket money, satellites, eleven million followers and a vault west of the salt. Thinks the camps are the free tier, and that she\'s saving the species. Listens in on the Compact\'s band.',
     known: (v) => v.has('debriefed') || v.has('tanner.kade') || v.has('cave.wick.vesper'),
     about: [
       { who: 'tanner', line: 'A reseller with a megaphone.' },
@@ -235,7 +235,7 @@ export const PEOPLE: PersonDef[] = [
   },
   {
     id: 'ezra', accent: '#6f9cff', name: 'Ezra Seymour', role: 'Founder, Glimpse', place: 'The Panopticon, north of the salt',
-    bio: 'Built Glimpse, the neighbourhood app that never forgot a face, then a bunker with eleven hundred cameras in it. Named the Pivot. Watches every camp he can reach, because he cares, which is the problem.',
+    bio: 'Built Glimpse, the neighbourhood app that never forgot a face, and then a bunker with eleven hundred cameras in it. Came up with the name "the Pivot". Watches every camp he can reach, and honestly believes it\'s because he cares.',
     known: (v) => v.has('q.cam.hello') || v.has('lore.panopticon'),
     about: [
       { who: 'vesper', line: 'Vesper thinks she owns the water. I own the footage of her owning the water. Guess which one lasts.' },
@@ -251,7 +251,7 @@ export const PEOPLE: PersonDef[] = [
   },
   {
     id: 'creek', accent: '#e0a050', name: 'Dry Creek', role: 'The town', place: 'West of the highway', faction: true,
-    bio: 'A diner, a clinic, a store and a motel that used to sit on a creek. The creek stopped the summer before the Pivot. The people didn\'t.',
+    bio: 'A diner, a clinic, a store and a motel that used to sit on a creek. The creek stopped the summer before the Pivot. The people stayed.',
     known: (v) => v.has('seen:creek'),
     about: [],
     ofYou: [
@@ -263,7 +263,7 @@ export const PEOPLE: PersonDef[] = [
   },
   {
     id: 'compact', accent: '#ffb347', name: 'The Surface Compact', role: 'The camps that still answer', place: 'On the radio', faction: true,
-    bio: 'Not an army. A radio net between camps that still answer, held together by Mara, a karaoke machine, and the rule on the receipt.',
+    bio: 'Not an army. A radio net between the camps that still answer, held together by Mara, a karaoke machine and the rule on the receipt.',
     known: (v) => v.has('briefed'),
     about: [],
     ofYou: [

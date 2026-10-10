@@ -407,9 +407,12 @@ export class CourierSite extends Site {
     const pick = await this.ctx.ui.choose({
       speaker: 'Dropt · Rider 9 · ★ 4.9',
       text:
-        'ACTIVE ORDER #88-1047 · 1× stove igniter (universal) → N. Pell, Dry Creek Diner · ETA 10 min · RUNNING LATE. ' +
-        'Rider notes, voice to text: "Day 1,276. Front wheel\'s gone. Ankle\'s gone. App says I\'m on a roll. Solar keeps the phone up, so the order stays open, and you don\'t drop an order. ' +
-        'Day 1,279. Told Hollis on 19 I\'d be late. He laughed. Good. Day 1,281. If you\'re reading this, you\'re the next rider. Ten minutes or free. Make it free."',
+        'ACTIVE ORDER #88-1047\n' +
+        '1× stove igniter (universal) → N. Pell, Dry Creek Diner · ETA 10 min · RUNNING LATE\n' +
+        'Rider notes (voice to text):\n' +
+        'day 1276. front wheels gone. ankles gone. app says im on a roll. solar keeps the phone up so the order stays open and you dont drop an order\n' +
+        'day 1279. told hollis on 19 id be late. he laughed. good\n' +
+        'day 1281. if youre reading this youre the next rider. 10 minutes or free. make it free',
       choices: first
         ? [
           { id: 'take', label: 'Take the last order.' },
@@ -440,7 +443,7 @@ export class CourierSite extends Site {
       if (n) got.push(`${n}× ${ITEMS[it.id]?.name ?? it.id}`);
     }
     this.ctx.audio.play('pickup');
-    this.toast(`The insulated box kept what he didn't get to. And the bike's battery, still half full. ${got.join(', ')}`, 'good');
+    this.toast(`What he never got to deliver is still in the insulated box, and the bike battery is half full. ${got.join(', ')}`, 'good');
     s.addXP(20, 'Cargo box');
   }
 
@@ -448,7 +451,7 @@ export class CourierSite extends Site {
     const s = this.s;
     if (!s.set(F.blanket)) return;
     s.addXP(10, 'Rider 9');
-    this.toast('You tuck the blanket back under his boots. A splint made from a bike pump. A five-star sticker on his helmet, peeling.', 'info');
+    this.toast('You tuck the blanket back in round his boots. His ankle is splinted with a bike pump, and there\'s a peeling five-star sticker on his helmet.', 'info');
   }
 
   update(dt: number, cam: THREE.Vector3) {

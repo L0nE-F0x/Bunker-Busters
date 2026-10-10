@@ -811,7 +811,7 @@ export class Recovery implements HostileProvider {
     if (this.host.flag(`outpost.${op.def.id}.cleared`)) {
       this.host.banner('OUTPOST CLEARED', `${op.def.name}. The footlocker's yours, and so is whatever water they were sitting on.`);
       this.host.xp([0, 50, 90, 140][op.def.tier], `Cleared ${op.def.name}`);
-    } else this.host.toast(`${op.def.name} cleared again. Kade will send more. Kade always sends more.`, 'good');
+    } else this.host.toast(`${op.def.name} cleared again, for now. Kade will send more.`, 'good');
   }
 
   // ------------------------------------------------------------------ under fire

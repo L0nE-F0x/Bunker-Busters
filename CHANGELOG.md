@@ -3,6 +3,12 @@
 Each `## vX.Y.Z` section becomes the GitHub release notes and the "what's new" list in the in-app
 update notice (the first few bullets). `scripts/release.sh` refuses to release a version without one.
 
+## v0.6.1
+- **Everything you read, rewritten.** Every note, log, letter, poster, quest, journal entry, item and character bio got a pass so it reads like it was written by the person who wrote it: county forms read like forms, tired guards write in lowercase, the founders' group chat looks like a real group chat, and a man walking west writes like a man, not a novelist. Fewer punchlines, more detail
+- **Documents look like documents.** Station logs, flight recorders, field books and letters keep their line breaks
+- **More of the cast speaks.** 135 more voiced lines: Dez's rumours on the band, Mara's briefing for each character, what Dry Creek says when you come back, everyone's "where were you that afternoon", the camp's greetings, and Tanner's and Vesper's shouts over the speakers
+- **Fixes:** the Tube's pod read a stage direction aloud in its own voice; the Longshot was described as south of camp (it's north); a medkit's venom effect was described wrong
+
 ## v0.6.0
 - **Apex Vault is open.** Act II plays to the end: cross the salt flat in the far west to Vesper Kade's rocket hangar and get in through the hangar door, the airlock (her code is the launch clock), a vent on the hill, or past her intercom with the right words. Lasers, cameras, a Kade gatehouse, an ambush on the way out with her water, and a merch drone. Mara debriefs you at the fire and names the next door: the Panopticon
 - **Five new favours, fifteen things to read.** Piece together the founders' leaked #LIFEBOAT group chat, dig up Pip's time capsule at the ruined Kade Kids Academy, deal with the Glimpse camera watching the camp (and the man behind it), find the song Sol's wife played on the last day, and help Doc look for his sister in the Everafter line. The journal has a new Papers tab

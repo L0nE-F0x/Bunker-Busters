@@ -92,10 +92,10 @@ export class KadeTerminals {
     if (res.traced) {
       s.damage(6);
       this.h.audio.play('zap');
-      this.h.toast('Trace complete. The laptop spits a spark into your thumb, and somewhere a radio crackles your description.', 'bad');
+      this.h.toast('Trace complete. The laptop shocks you, and somewhere a Kade radio starts reading out your description.', 'bad');
       this.h.recovery.alertOutpost(op.def.id, op.build.terminal);
       this.h.subtitle('Kade Recovery', 'Field unit just logged an intrusion. Somebody go check the laptop.', { pos: op.build.terminal.clone(), variant: 1 });
-    } else if (!res.done.length) this.h.toast('Nothing took. The terminal logs you out, politely.', 'info');
+    } else if (!res.done.length) this.h.toast('Nothing went through. The terminal logs you out.', 'info');
   }
 
   private apply(op: Outpost, id: string, fresh: boolean) {
@@ -111,7 +111,7 @@ export class KadeTerminals {
       }
       case 'perimeter': {
         const n = this.h.machines.perimeterSafe(at);
-        if (fresh) this.h.toast(n ? 'Perimeter safed. The red blinks in the dirt stop, and the Hornet goes looking for its pad.' : 'Nothing on the perimeter left to switch off.', 'good');
+        if (fresh) this.h.toast(n ? 'Perimeter safe. The red lights in the dirt go out, and the Hornet drops back to its pad.' : 'Nothing on the perimeter left to switch off.', 'good');
         break;
       }
       case 'requisition': {
@@ -134,7 +134,7 @@ export class KadeTerminals {
         let n = 0;
         for (const o of OUTPOSTS) if (s.set(`seen:${o.id}`)) n++;
         this.h.audio.play('intel');
-        this.h.toast(n ? `Roster dumped. ${n} more Kade camp${n > 1 ? 's' : ''} on your map${actionWord('map') ? ` (${actionWord('map')})` : ''}.` : 'Roster dumped. You knew every camp on it already.', 'good');
+        this.h.toast(n ? `Roster dumped. ${n} more Kade camp${n > 1 ? 's' : ''} on your map${actionWord('map') ? ` (${actionWord('map')})` : ''}.` : 'Roster dumped. You already had every outpost on it.', 'good');
         break;
       }
       case 'ids': {

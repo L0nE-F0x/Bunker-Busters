@@ -774,7 +774,7 @@ export class DriveInSite extends Site {
         available: () => (this.s.count('battery') > 0 ? true : 'Need a Lithium Cell'),
         run: () => {
           if (powered() || !this.s.removeItem('battery', 1)) return;
-          this.powerOn('The cell takes. The generator coughs, then commits. Somewhere a popcorn machine remembers what it is for.');
+          this.powerOn('The cell takes. The generator coughs twice and catches. Inside the snack bar, the popcorn machine starts to hum.');
         },
       },
     });
@@ -793,12 +793,12 @@ export class DriveInSite extends Site {
       visible: () => !this.s?.has('site.drivein.key'),
       primary: {
         label: 'Search the manager\'s wagon',
-        available: () => (this.s.skill('survival') >= 1 ? true : 'Requires Survival 1. You don\'t know where people hide things in cars.'),
+        available: () => (this.s.skill('survival') >= 1 ? true : 'Requires Survival 1. You don\'t know where people hide things in a car.'),
         run: () => {
           if (!this.s.set('site.drivein.key')) return;
           const got = this.loot([{ id: 'scrap', qty: 2 }]);
           this.ctx.audio.play('pickup');
-          this.toast(`Under the sun visor: a lanyard, STARLITE STAFF, and a key with PROJ on masking tape. ${got}`, 'good');
+          this.toast(`Under the sun visor: a STARLITE STAFF lanyard, and a key with PROJ written on masking tape. ${got}`, 'good');
           this.s.addXP(XP_REWARDS.cache, 'Staff key');
         },
       },
@@ -826,7 +826,7 @@ export class DriveInSite extends Site {
           const got = this.loot([{ id: 'keynote_reel', qty: 1 }], true);
           this.ctx.audio.play('loot');
           this.s.addXP(40, 'The uncut reel');
-          this.toast(`R2/2, UNCUT. The theatrical cut is still threaded. This one is the part he wanted gone. ${got}`, 'good');
+          this.toast(`The can is marked R2/2 UNCUT. The theatrical cut is still on the projector. This is the one with the hot mic. ${got}`, 'good');
         },
       },
     });
@@ -849,7 +849,7 @@ export class DriveInSite extends Site {
           if (!this.s.set('site.drivein.snacks')) return;
           const got = this.loot([{ id: 'ration', qty: 2 }]);
           this.ctx.audio.play('pickup');
-          this.toast(`Popcorn, technically. Two sealed tins under the register, labelled INTERMISSION. ${got}`, 'good');
+          this.toast(`Two sealed tins under the register, labelled INTERMISSION. Popcorn, mostly. ${got}`, 'good');
           this.s.addXP(XP_REWARDS.cache, 'Snack bar');
         },
       },
@@ -871,7 +871,7 @@ export class DriveInSite extends Site {
           if (!ok) { this.ctx.audio.play('deny'); return; }
         }
         this.s.addXP(XP_REWARDS.keypadShorted, 'Generator');
-        this.powerOn('Bypassed the dead relay. The generator coughs, then commits. Behind the wall, fluorescent tubes argue about it.');
+        this.powerOn('You bypass the dead relay. The generator coughs twice and catches, and the strip lights behind the wall flicker on.');
       },
     };
   }
@@ -894,7 +894,7 @@ export class DriveInSite extends Site {
         return true;
       },
       run: async () => {
-        if (this.s.has('site.drivein.key')) { this.openBooth('The key turns like it has been waiting. PROJECTION · STAFF ONLY.'); return; }
+        if (this.s.has('site.drivein.key')) { this.openBooth('The key turns. PROJECTION · STAFF ONLY.'); return; }
         const pins = 4 - (this.s.focus('lockpicking') === 'feeler' ? 1 : 0);
         const res = await this.ctx.ui.lockpick({
           pins, title: 'PROJECTION · STAFF ONLY',
@@ -908,7 +908,7 @@ export class DriveInSite extends Site {
           this.s.data.stats.picks++;
           this.ctx.audio.play('unlock', { pos: this.ctx.player.position });
           this.s.addXP(XP_REWARDS.lockPicked + pins * 5, 'Lock picked');
-          this.openBooth('Four pins and a door that smells of acetate.');
+          this.openBooth('The lock gives. The booth smells of film stock and dust.');
         }
       },
     };
@@ -929,7 +929,7 @@ export class DriveInSite extends Site {
     this.ctx.cam.addTrauma(quiet ? 0.12 : 0.4);
     this.ctx.puffs?.emit(p, 14, 0.9, 0.6, 0.5);
     this.s.addXP(XP_REWARDS.breach, 'Breached');
-    this.openBooth(quiet ? 'Shaped. The door steps aside.' : 'The booth door goes through the snack bar. The popcorn machine takes it personally.');
+    this.openBooth(quiet ? 'The shaped charge pops the door off its hinges.' : 'The booth door blows clean off and lands in the snack bar.');
   }
 
   private openBooth(line: string) {
@@ -964,7 +964,7 @@ export class DriveInSite extends Site {
         this.ctx.audio.play('unlock', { pos: this.ctx.player.position });
         this.s.addXP(XP_REWARDS.lockPicked + pins * 5, 'Cash drawer');
         const got = this.loot([{ id: 'scrap', qty: 3 }, { id: 'battery', qty: 1 }, { id: 'lockpick', qty: 1 }]);
-        this.toast(`The night's take: IOUs, a card reader with a good cell in it, and a hairpin. ${got}`, 'good');
+        this.toast(`The last night\'s takings: a stack of IOUs, a card reader with a good cell in it, and a hairpin. ${got}`, 'good');
       },
     };
   }
@@ -979,20 +979,20 @@ export class DriveInSite extends Site {
       this.cue = 0;
       this.ctx.audio.play('click');
       const night = (this.ctx.atmo.uNight.value as number) > 0.5;
-      this.toast(night ? 'The lamp strikes. Fifty metres away, a man in a turtleneck appears on a torn screen.' : 'The lamp strikes. In daylight the screen barely notices. It will be something else after dark.', 'good');
+      this.toast(night ? 'The lamp strikes. Fifty metres away, a man in a turtleneck appears on the torn screen.' : 'The lamp strikes. In daylight you can barely see the picture. It\'ll be clearer after dark.', 'good');
       if (this.s.set('site.drivein.started')) this.s.addXP(XP_REWARDS.talk, 'Projector');
     } else {
       this.s.data.flags = this.s.data.flags.filter((f) => f !== 'site.drivein.screening');
       this.ctx.audio.play('click');
-      this.toast('The lamp dies down. The screen goes back to being a ruin.', 'info');
+      this.toast('The lamp cools and the screen goes dark.', 'info');
     }
   }
 
   private async readNote() {
-    if (this.s.set('site.drivein.note')) this.s.addXP(15, 'Projectionist\'s note');
+    if (this.s.set('site.drivein.note')) this.s.addXP(15, 'The booth note');
     await this.ctx.ui.choose({
       speaker: 'Note on the booth wall',
-      text: '"DO NOT SCREEN the uncut reel. The theatrical cut is threaded, the uncut is in the can on the bench. The mic was hot after he walked off and the camera kept rolling. He knows. His people came for the reel the next morning and took the wrong can. Wheels up was eleven. I heard it from the speaker posts like everybody else. — D."',
+      text: 'DO NOT SCREEN THE UNCUT REEL.\nTheatrical cut is threaded. Uncut is in the can on the bench. The mic stayed hot after he walked off and the camera kept rolling, and he knows it. His people came for the reel this morning and took the wrong can.\nWheels up at eleven. Everybody in the lot heard it on the speaker posts.\nRen, if you come back, I\'m sorry. Lock up when you go. D. (mgr)',
       choices: [{ id: 'ok', label: 'Leave it pinned' }],
     });
   }
@@ -1002,7 +1002,7 @@ export class DriveInSite extends Site {
       const c = [...CUES].reverse().find((q) => q.at <= this.kt) ?? CUES[CUES.length - 1];
       this.ctx.ui.subtitle(c.speaker, c.text);
     } else {
-      this.ctx.ui.subtitle('SPEAKER POST', this.s.has('site.drivein.power') ? 'Hiss. A hum, very far away, waiting for a picture.' : 'Nothing. Then, faintly, the wind through the screen.');
+      this.ctx.ui.subtitle('SPEAKER POST', this.s.has('site.drivein.power') ? 'Hiss, and a low hum. The projector isn\'t running.' : 'Nothing. Just the wind through the torn screen.');
     }
   }
 
@@ -1119,7 +1119,7 @@ export class DriveInSite extends Site {
       const hp = this.frame.p(this.heart.x, 0, this.heart.z);
       if (Math.hypot(pl.x - hp.x, pl.z - hp.z) < 22) {
         s.set('site.drivein.found');
-        this.toast(powered ? 'Rows of rust facing a torn screen. The speakers are humming.' : 'Rows of rust, all facing a torn screen. Every speaker is still on its post.', 'info');
+        this.toast(powered ? 'Rows of rusted cars facing a torn screen. The speaker posts are humming.' : 'Rows of rusted cars, all facing a torn screen. Every speaker is still on its post.', 'info');
       }
     }
   }

@@ -208,7 +208,7 @@ export class Garage extends Bunker<GarageBuilder> {
     if (s.has(F.complete)) return '';
     const near = this.playerInside || this.playerOnGrounds || d2(this.ctx.player.position, this.b.origin) < 70 * 70;
     if (!near) return '';
-    if (s.has(F.vault)) return 'Loot the Runway Room. The water is the point. The manifest is the map.';
+    if (s.has(F.vault)) return 'Loot the Runway Room. Water first, then the manifest.';
     if (this.playerInside) {
       if (!s.has(F.lasers)) return 'Lasers in the hall. Jump the low beams, crouch the high ones, or kill them at the fuse box.';
       if (s.has('social.code')) return 'The vault. He said 1234. The lockpick still works if you don\'t trust him.';
@@ -217,7 +217,7 @@ export class Garage extends Bunker<GarageBuilder> {
     }
     if (s.has(F.side)) return 'Get inside. SeedBot doesn\'t follow you through the door.';
     if (this.playerOnGrounds) return 'Side door is on the east wall. The intercom inside the gate still reaches Tanner.';
-    if (s.has(F.gate) || s.has(F.gap)) return 'You\'re through the fence. The drone is the tax on being bright or loud.';
+    if (s.has(F.gate) || s.has(F.gap)) return 'You\'re through the fence. The drone goes for light and noise, so keep both down.';
     const gap = s.has(F.intelGap) ? ', use the loose panel on the north-east fence,' : '';
     return `Get past the fence: pick the gate${gap} or hail Tanner on the intercom beside it.`;
   }

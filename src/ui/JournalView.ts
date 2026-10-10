@@ -211,7 +211,7 @@ export function journalHTML(s: GameState, src: JournalSource, sel: JournalSel) {
     const lb = LORE_SERIES.lifeboat;
     const got = lb.ids.filter((id) => s.has(`intel:${id}`)).length;
     left = `<div class="jl-arch">${monogram('dez', 'Dez Marlow', true)}<div><b>${esc(lb.title)}</b><small>The founders' group chat · ${got} of ${lb.ids.length} pages</small></div></div>
-      <p class="jl-motive">${got >= lb.ids.length ? 'Every page. Seven founders, one group chat, and Tanner, rejoining.' : got ? 'Every device that died out here kept its last page. Dez hears them try to sync at three in the morning.' : 'Paper turns up where people left in a hurry. Read what you find.'}</p>`;
+      <p class="jl-motive">${got >= lb.ids.length ? 'All eight pages. Seven founders, and Tanner, who kept rejoining.' : got ? 'Every device that died out here kept its last page. Dez hears them try to sync at three in the morning.' : 'Paper turns up where people left in a hurry. Read what you find.'}</p>`;
     right = `<div class="intel-list journal papers">${papersHTML(s)}</div>`;
   } else {
     const entries = journalEntries({ has: (f) => s.has(f), archetype: s.archetype });

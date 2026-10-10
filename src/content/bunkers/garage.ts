@@ -110,14 +110,14 @@ export const GARAGE: Bunker = {
       },
       {
         id: 'gap', point: 'gap', radius: 2.6, doors: ['gap'], needs: 'garage.gap',
-        primary: { kind: 'open', label: 'Peel back the loose fence', xp: 20, reason: 'Found another way in', toast: 'The raccoons were right.' },
+        primary: { kind: 'open', label: 'Peel back the loose fence', xp: 20, reason: 'Found another way in', toast: 'The corner panel was only tied on with wire. You peel it back and squeeze through.' },
         line: null,
       },
       {
         id: 'side', point: 'sideDoor', radius: 2.0, doors: ['side'],
         primary: { kind: 'lockpick', pins: 4, title: 'SIDE DOOR PADLOCK' },
         secondary: {
-          label: 'Another way through the door', speaker: 'Side door', text: 'The padlock is the patient way. These are the other two.', leave: 'Leave it',
+          label: 'Another way through the door', speaker: 'Side door', text: 'Besides the padlock, there\'s a keypad wired up beside the door. Or there\'s always a charge.', leave: 'Leave it',
           methods: [
             { kind: 'circuit', id: 'short', label: 'Short the keypad', title: 'KEYPAD BYPASS', difficulty: 1, electronics: 1, xp: XP_REWARDS.keypadShorted, reason: 'Keypad shorted' },
             { kind: 'charge', label: 'Place a breach charge', demolition: 3, quiet: true, loud: 'Breach charge. Everyone heard that.' },
@@ -129,7 +129,7 @@ export const GARAGE: Bunker = {
         id: 'vault', point: 'vaultDoor', radius: 2.0, doors: ['vault'],
         primary: { kind: 'lockpick', pins: 5, title: 'VAULT LOCK' },
         secondary: {
-          label: 'Keypad, or something louder', speaker: 'Runway Room', text: 'Five pins, or a keypad Tanner is very proud of, or a noise.', leave: 'Step back',
+          label: 'Keypad, or something louder', speaker: 'Runway Room', text: 'Five pins, or the keypad Tanner is so proud of, or a charge.', leave: 'Step back',
           methods: [
             {
               kind: 'keypad', id: 'pad', label: 'Use the keypad', title: 'RUNWAY ROOM', code: '1234',
@@ -137,7 +137,7 @@ export const GARAGE: Bunker = {
               hints: [
                 { when: ['social.code'], text: 'He said it out loud. 1 2 3 4.' },
                 { when: ['social.digit'], text: 'Tanner slipped. It starts with 1, then 2. He said the rest was obvious.' },
-                { when: ['social.told', 'garage.drone'], text: 'Everyone who knows him says the code is obvious. Nobody wrote the digits down.' },
+                { when: ['social.told', 'garage.drone'], text: 'Everyone who knows Tanner says the code is obvious. Nobody wrote it down.' },
               ],
               hint: 'No hint on the housing. Three wrong codes and it locks you out.',
               xp: 40, reason: 'Vault code cracked',
@@ -145,9 +145,9 @@ export const GARAGE: Bunker = {
             {
               kind: 'splice', label: 'Splice the keypad controller', title: 'RUNWAY ROOM', host: 'PIVOTSON HOME SECURITY', difficulty: 2, electronics: 2,
               daemons: ['vault', 'seedbot', 'lasers'], xpEach: 15, reason: 'Spliced Tanner\'s keypad',
-              traced: 'Trace complete. The keypad screams your IP address.',
+              traced: 'Trace complete. The keypad starts shrieking.',
             },
-            { kind: 'charge', label: 'Place a breach charge', demolition: 5, quiet: false, loud: 'The vault door leaves in pieces.' },
+            { kind: 'charge', label: 'Place a breach charge', demolition: 5, quiet: false, loud: 'The vault door comes apart.' },
           ],
         },
         line: 'NO. Not the Runway Room. That is where I keep my runway!',
@@ -171,8 +171,8 @@ export const GARAGE: Bunker = {
       disarm: { label: 'Disarm tripwire', electronics: 1, lacking: 'Requires Electronics 1 — or {crouch} to step over' },
       yank: {
         label: 'Yank the wire', demolition: 3, lacking: 'Requires Demolition 3 — or crouch over it',
-        quiet: 'You eased the cans down. The alarm stayed asleep.', quietReason: 'Tripwire eased out',
-        loud: 'You ripped a tripwire out. The cans noticed.',
+        quiet: 'You eased the cans down without a sound.', quietReason: 'Tripwire eased out',
+        loud: 'You ripped the tripwire out. Cans everywhere.',
       },
       tripped: 'You tripped a wire! Tin cans everywhere.',
       stepped: 'Carefully stepped over a tripwire.',
@@ -184,15 +184,15 @@ export const GARAGE: Bunker = {
       power: {
         id: 'fuse', point: 'fuseBox', radius: 1.8, label: 'Cut power to the lasers',
         circuit: { title: 'FUSE BOX', difficulty: 0 },
-        expert: 5, expertToast: 'You know this box. The lasers die quietly.',
+        expert: 5, expertToast: 'You know this kind of fuse box. The lasers cut out.',
         xp: 20, reason: 'Lasers disabled',
-        shock: { damage: 15, toast: 'You yanked every wire. Lasers off. So is your hair.' },
+        shock: { damage: 15, toast: 'You yanked every wire and took a jolt for it. The lasers are off.' },
         sparkOffset: [-0.45, 0.3, 0],
       },
     },
     drones: {
       spotted: 'SeedBot spotted you!',
-      zapped: 'SeedBot tased you. You wake up outside the fence, lighter by one lockpick.',
+      zapped: 'SeedBot tased you. You came to outside the fence, one lockpick short.',
       empReason: 'SeedBot fried',
       sputter: { speaker: 'SeedBot', text: '*bzzt* LOW BATTERY. ENTERING POWER-SAVE. *whirr*' },
       reboot: { speaker: 'SeedBot', text: 'REBOOT COMPLETE. HAVE I MISSED ANY INVESTOR CALLS?' },
@@ -205,7 +205,7 @@ export const GARAGE: Bunker = {
         { id: 'crate_b', label: 'Open supply crate', take: [4] },
         { id: 'safe', label: 'Crack Tanner\'s safe', take: 'guaranteed' },
       ],
-      overburdened: 'Overburdened. The water is the point. Drop the junk.',
+      overburdened: 'You\'re overloaded. Drop some junk, the water matters more.',
       busted: {
         reason: 'BUNKER BUSTED: The Garage',
         banner: 'The cistern is open. Radio Mara at the campfire. She wants the names read out loud.',

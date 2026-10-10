@@ -184,7 +184,7 @@ export class Errands {
     this.relay.visible = true;
     this.ctx.audio.play('unlock', { pos: this.ctx.player.position });
     s.addXP(30, 'Dez\'s relay');
-    this.toast('Red to red. The lunchbox hums, and a green light starts counting.', 'good');
+    this.toast('Red to red. The lunchbox starts to hum, and a green light blinks on.', 'good');
     setTimeout(() => this.ctx.ui.subtitle('Dez Marlow · radio', 'I\'ve got a carrier. Oh, I\'ve got so many carriers. Come back to the fire. Bring snacks.'), 1800);
   }
 
@@ -194,9 +194,11 @@ export class Errands {
     await this.ctx.ui.choose({
       speaker: 'Kade field book',
       text:
-        'KADE HOLDINGS · SURVEY CAMP · RIDGE. Seep below the Cut: 0.4 L/hr, steady. Class: DATA ASSET. ' +
-        'Resident: one (1), male, loud. Owns a view. Action: stake the route Friday, fence by Q3, rebrand as Kade Spring. ' +
-        'Resident: offer relocation package (tote bag). Margin, in red: "V.K. wants depth readings, not flow. What\'s UNDER the ridge."',
+        'KADE HOLDINGS · SURVEY CAMP · RIDGE\n' +
+        'Seep below the Cut: 0.4 L/hr, steady. Class: DATA ASSET.\n' +
+        'Resident: one (1), male, loud. Owns a view.\n' +
+        'Action: stake the route Friday, fence by Q3, rebrand as Kade Spring. Offer resident relocation package (tote bag).\n' +
+        'In the margin, in red pen: V.K. wants depth readings, not flow. What\'s UNDER the ridge.',
       choices: [{ id: 'ok', label: 'Pocket the book.' }],
     });
     if (!s.set('q.wick.book')) return;
@@ -213,7 +215,7 @@ export class Errands {
     const left = STAKES.filter((f) => !s.has(f)).length;
     this.ctx.audio.play('pickup');
     s.addXP(10, 'Survey stake');
-    this.toast(left ? `Stake pulled, tape and all. ${left} to go.` : 'Last stake. The ridge is unmeasured again.', 'good');
+    this.toast(left ? `Stake pulled, tape and all. ${left} to go.` : 'That\'s the last of the stakes.', 'good');
   }
 
   // ------------------------------------------------------------------ camp choices (Game.campTalk)

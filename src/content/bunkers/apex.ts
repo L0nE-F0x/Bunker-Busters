@@ -116,7 +116,7 @@ export const APEX: Bunker = {
         id: 'hangar', point: 'hangar', radius: 2.6, doors: ['hangarL', 'hangarR'], lockMesh: 'hangar',
         primary: { kind: 'lockpick', pins: 5, title: 'HANGAR DOOR' },
         secondary: {
-          label: 'Another way through the hangar door', speaker: 'Hangar door', text: 'A padlock on a door that costs more than the camp. Or its controller, behind a panel that says DO NOT. Or a noise.', leave: 'Leave it',
+          label: 'Another way through the hangar door', speaker: 'Hangar door', text: 'Besides the padlock, there\'s the door controller, behind a panel marked DO NOT OPEN. Or a charge.', leave: 'Leave it',
           methods: [
             { kind: 'circuit', id: 'short', label: 'Short the door controller', title: 'HANGAR CONTROLLER', difficulty: 2, electronics: 2, xp: 45, reason: 'Controller shorted' },
             { kind: 'charge', label: 'Place a breach charge', demolition: 3, quiet: true, loud: 'Breach charge. The whole apron heard it.', line: VESPER.hangarLoud.text },
@@ -145,13 +145,13 @@ export const APEX: Bunker = {
         // know it's there; everyone else reads the shift note)
         id: 'vent', point: 'vent', radius: 1.9, doors: ['vent'], needs: 'apex.vent',
         primary: { kind: 'lockpick', pins: 3, title: 'VENT GRATE' },
-        secondary: { kind: 'charge', label: 'Blow the grate', demolition: 2, quiet: true, loud: 'The grate goes into the duct with a bang. The hill hums with it.' },
+        secondary: { kind: 'charge', label: 'Blow the grate', demolition: 2, quiet: true, loud: 'The grate blows into the duct with a bang that echoes through the hill.' },
         line: VESPER.vent.text,
       },
       {
         id: 'vault', point: 'vaultDoor', radius: 2.3, doors: ['vault'],
         primary: { kind: 'lockpick', pins: 6, title: 'CISTERN ROOM' },
-        secondary: { kind: 'charge', label: 'Place a breach charge', demolition: 5, quiet: false, loud: 'The vault door comes off its hinges. Somewhere, a post goes up.', line: VESPER.vaultLoud.text },
+        secondary: { kind: 'charge', label: 'Place a breach charge', demolition: 5, quiet: false, loud: 'The vault door comes off its hinges. Up on the hangar screen, a new post goes up.', line: VESPER.vaultLoud.text },
         line: VESPER.vault.text,
         trauma: 0.25,
       },
@@ -174,13 +174,13 @@ export const APEX: Bunker = {
       power: {
         id: 'breaker', point: 'breaker', radius: 1.8, label: 'Kill the laser breaker',
         circuit: { title: 'BREAKER', difficulty: 2 },
-        expert: 5, expertToast: 'Overbuilt and under-labelled. You find the right breaker anyway.',
+        expert: 5, expertToast: 'The panel is a mess of unlabelled breakers. You find the right one anyway.',
         xp: 30, reason: 'Lasers disabled',
-        shock: { damage: 20, toast: 'Three-phase. Your teeth hum. The lasers are off.' },
+        shock: { damage: 20, toast: 'Three-phase. The jolt rattles your teeth, but the lasers are off.' },
         sparkOffset: [0.3, 0.3, 0],
       },
     },
-    cameras: { tripped: 'A camera saw you. Somewhere, a post goes up.', detectTime: 1.6 },
+    cameras: { tripped: 'A camera caught you. You\'re on Vesper\'s feed.', detectTime: 1.6 },
     loot: {
       behind: 'vault',
       containers: [
@@ -188,7 +188,7 @@ export const APEX: Bunker = {
         { id: 'tank_b', label: 'Open the crew locker', take: [3] },
         { id: 'cistern', label: 'Open the cistern tap', take: 'guaranteed' },
       ],
-      overburdened: 'Overburdened. The water is the point.',
+      overburdened: 'You\'re overloaded. Drop some junk, the water matters more.',
       busted: {
         reason: 'BUNKER BUSTED: Apex Vault',
         banner: 'The cistern runs east tonight.',

@@ -141,7 +141,7 @@ export class TubeSite extends Site {
       radius: 2.0,
       primary: {
         label: 'Wake Station Zero',
-        available: () => (this.s.has(F.power) ? 'Station Zero is awake. It will not stop telling you.' : true),
+        available: () => (this.s.has(F.power) ? 'Station Zero is already powered.' : true),
         run: () => this.powerPanel(),
       },
     });
@@ -194,7 +194,7 @@ export class TubeSite extends Site {
       primary: {
         label: 'Breach the founders\' locker',
         available: () => {
-          if (this.s.skill('demolition') < 2) return 'Requires Demolition 2. The padlock is rated for founders.';
+          if (this.s.skill('demolition') < 2) return 'Requires Demolition 2. It\'s a serious padlock.';
           if (this.s.count('charge') < 1) return 'Need a breach charge';
           return true;
         },
@@ -244,8 +244,8 @@ export class TubeSite extends Site {
     this.ctx.audio.play('door', { pos: this.ctx.player.position });
     this.ctx.cam.addTrauma(0.12);
     this.ctx.puffs?.emit(this.frame.p((AIRLOCK.x0 + AIRLOCK.x1) / 2, AIRLOCK.floor + 1, TZ - 1.4), 8, 0.6, 0.3, 0.5);
-    if (this.s.has(F.power)) this.toast('The door equalises with a sigh and swings out. The tube breathes stale air at you.', 'info');
-    else this.toast('You spin the wheel. The tube inhales; sand rattles somewhere far down the line.', 'info');
+    if (this.s.has(F.power)) this.toast('The pressure equalises with a long hiss and the door swings out. The air inside is stale.', 'info');
+    else this.toast('You spin the wheel. Air rushes into the tube, and sand rattles somewhere far down the line.', 'info');
     this.s.addXP(15, 'Airlock');
   }
 
@@ -297,8 +297,8 @@ export class TubeSite extends Site {
   private async screen() {
     if (!this.s.has(F.power)) {
       await this.ctx.ui.choose({
-        speaker: 'POD-01 "MOMENTUM"',
-        text: 'The screen is black. Under the front seat, a bright orange box ticks quietly to itself. Everything in here is waiting for the station to wake up.',
+        speaker: 'Pod 01',
+        text: 'The screen is black. Under the front seat, a bright orange box ticks quietly. Nothing in here will work until the station has power.',
         choices: [{ id: 'ok', label: 'Leave it' }],
       });
       return;
@@ -310,7 +310,7 @@ export class TubeSite extends Site {
       onChoice: (_n, c) => {
         if (c === 'blackbox' && this.s.set(F.blackbox)) {
           this.s.addXP(60, 'Flight recorder');
-          if (this.s.set(F.done)) this.toast('The Tube was never going to San Francisco. It goes into the hill, to somebody\'s door.', 'good');
+          if (this.s.set(F.done)) this.toast('The Tube was never going to San Francisco. The private extension runs into the hill, to the founder\'s own door.', 'good');
         }
         if (c === 'go') ride = true;
       },
@@ -342,7 +342,7 @@ export class TubeSite extends Site {
       case 'blackbox':
         return {
           speaker: 'Flight recorder · Run 001',
-          text: 'Launch 09:00. Target speed 1,100 km/h. Peak speed 41 km/h. Track ends at 0.3 km; pod stops; founder exits and walks back. 09:40: press release, "LOOPR completes historic first passenger run." 10:15: Series B closes. Appended later, founder voice note: "Phase two is the private extension. Station Zero to the Terminus, through the hill. Not on the investor map. The door\'s on my side."',
+          text: 'RUN 001\n09:00 Launch. Target speed 1,100 km/h.\n09:01 Peak speed 41 km/h.\n09:02 End of track (0.3 km). Pod stops. Founder exits and walks back.\n09:40 Press release: "LOOPR completes historic first passenger run."\n10:15 Series B closes.\nAppended later, a founder voice note: "Phase two is the private extension. Station Zero to the Terminus, through the hill. Not on the investor map. The door\'s on my side."',
           choices: [back, { id: 'bye', label: 'Pocket the recorder\'s card.' }],
         };
       case 'ride':
@@ -381,7 +381,7 @@ export class TubeSite extends Site {
         post.fade.value = 0;
         this.ride = null;
         if (this.s?.set(F.ride)) this.s.addXP(30, 'Run 002');
-        this.s?.events.emit('toast', { text: 'Run 002 complete. Top speed: 41 km/h. The pod asks for five stars, then goes home without you.', kind: 'info' });
+        this.s?.events.emit('toast', { text: 'Run 002 complete. Top speed 41 km/h. The pod asks you to rate your trip, then heads back without you.', kind: 'info' });
       }
     }
   }
@@ -475,7 +475,7 @@ export class TubeSite extends Site {
       const L = this.local;
       const onDeck = L.y > DECK - 0.4 && L.x > STATION.x0 && L.x < STATION.x1 && L.z > STATION.z0 && L.z < STATION.z1;
       const inTube = L.x > INNER.x0 - 13 && L.x < INNER.x1 && Math.abs(L.z - TZ) < 1.4 && L.y > 0;
-      if ((onDeck || inTube) && s.set(F.found)) this.toast('Station Zero. Departures: none. The future is a long dark tube with a view.', 'info');
+      if ((onDeck || inTube) && s.set(F.found)) this.toast('Station Zero. The departures board is blank.', 'info');
     }
 
     // doors

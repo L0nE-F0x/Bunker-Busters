@@ -28,23 +28,23 @@ export const RUMOURS: Rumour[] = [
   // ---- the new road: the Longshot, Waitlist City, Photon Park, Apex, and what's past it
   {
     id: 'longshot', when: (v) => !v.has('site.booster.done'),
-    text: 'Kade\'s reusable rocket came down out past the drive-in, north-east, in two pieces, which I\'m told is one more piece than it was built in. Something in the crew pod still has a recorder running. Kids say you can hear it count down if you put your ear to the hull.',
+    text: 'Kade\'s reusable rocket came down out past the drive-in, north-east, in two pieces. Something in the crew pod is still recording. Kids on the north band say if you put your ear to the hull you can hear it counting down.',
   },
   {
     id: 'waitlist', when: (v) => !v.has('site.waitlist.done'),
-    text: 'Waitlist City, in the basin south-east past the Tube. Four thousand people queued for a bunker called Everafter. The sign over the door still says now serving number one. Somebody up there still keeps a fire, and the line still moves. Backwards.',
+    text: 'There\'s a place in the basin south-east of the Tube they call Waitlist City. Four thousand people queued for a bunker called Everafter. The board over the door still says now serving number one. Somebody up there still keeps a fire going.',
   },
   {
     id: 'solar', when: (v) => !v.has('site.solar.cut'),
-    text: 'Photon Park, south of here, east of the jet. Seven rows of glass and four robots wiping them for a customer who stopped paying. The robots don\'t know. Somebody on the east band says that farm is what keeps Everafter\'s door shut. Cut one, the other lets go.',
+    text: 'Photon Park, south of here, east of the jet. Seven rows of panels and four robots wiping them for a customer who stopped paying. Somebody on the east band reckons that farm is what keeps Everafter\'s door shut. Cut the power and the door lets go.',
   },
   {
     id: 'apex', when: (v) => v.has('debriefed') && !v.has('apex.complete'),
-    text: 'Camps on the salt road say Apex has a hangar door you could fly a city through, and an airlock that changes its code on a schedule. Vesper reads the schedule out on her feed, because she thinks nobody listens to her feed. I listen to her feed.',
+    text: 'Camps on the salt road say Apex has a hangar door you could drive a town through, and an airlock that changes its code on a schedule. Vesper reads the schedule out on her feed, because she thinks nobody listens to her feed. I listen to her feed.',
   },
   {
     id: 'panopticon', when: (v) => v.has('q:act2:done') || v.has('apex.complete'),
-    text: 'The band\'s gone strange since the cistern turned. There\'s a carrier from the old coast, north of the salt, that reads out camp names, all of ours, in order, before anybody says them. Mara wants to know who\'s keeping the list. I think we know who keeps lists.',
+    text: 'The band\'s been strange since the cistern turned. There\'s a carrier from the old coast, north of the salt, that reads out camp names. All of ours, in order, before anybody\'s said them. Mara wants to know who\'s keeping the list. I think we know.',
   },
   // ---- the places themselves (a Kade outpost goes on the map when the band names it)
   {
@@ -53,31 +53,31 @@ export const RUMOURS: Rumour[] = [
   },
   {
     id: 'wellhead', op: 'wellhead', when: (v) => !v.has('outpost.wellhead.cleared'),
-    text: 'The Wellhead crew changes shift at dawn, south-west of Dry Creek. Twenty minutes where the tank is guarded by one sentry that says sorry first. Twenty minutes is a lot of water.',
+    text: 'The Wellhead crew changes shift at dawn, south-west of Dry Creek. For about twenty minutes the tank\'s only got one sentry on it, and it apologises before it shoots. Twenty minutes is a lot of water.',
   },
   {
     id: 'pipeline', op: 'pipeline', when: (v) => !v.has('seen:pipeline'),
-    text: 'Pipeline Camp 3 put a Hornet drone up. It circles the pad at night and sulks at dawn. The ground round it is mined. Somebody planted daisies on the mines. Corporate thought it would help.',
+    text: 'Pipeline Camp 3 put a Hornet drone up. It circles the pad all night and lands at dawn. The ground round it is mined. Somebody in corporate had daisies planted on the mines, for morale.',
   },
   {
     id: 'survey', op: 'survey', when: (v) => !v.has('q.wick.book'),
-    text: 'The survey crew on the slope below the Cut leaves its lunch on the folding table at noon. Somebody keeps taking the pudding. Kade has opened an investigation. The field book sits right next to the pudding.',
+    text: 'The survey crew on the slope below the Cut leaves its lunch on the folding table at noon. Somebody keeps taking the pudding, and Kade has opened an investigation. The field book sits right next to the pudding.',
   },
   {
     id: 'jet', when: (v) => !v.has('site.jet.done'),
-    text: 'A camp out in the south-west dunes says the tail fin catches the sun at four o\'clock, like a sundial for rich people. There\'s a go-bag aboard, they say. Nobody\'s been brave enough to unzip it.',
+    text: 'A camp out in the south-west dunes says the jet\'s tail fin catches the sun around four o\'clock. There\'s a go-bag aboard, apparently. Nobody\'s been brave enough to open it.',
   },
   {
     id: 'drivein', when: (v) => !v.has('site.drivein.done'),
-    text: 'Kids on the north band dare each other to sit in the Starlite at night. The screen lights up for some of them. They won\'t say what it shows. They come back very polite.',
+    text: 'Kids on the north band dare each other to sit in the Starlite after dark. The screen lights up for some of them. They won\'t say what it shows.',
   },
   {
     id: 'coldstorage', when: (v) => !v.has('site.datacenter.done'),
-    text: 'Somebody out by ColdStorage swears the building said "please" to them. Out loud, through a door. They walked home very fast and haven\'t said please since.',
+    text: 'Somebody out by ColdStorage swears the building said please to them. Out loud, through a door. They walked home very fast.',
   },
   {
     id: 'tube', when: (v) => !v.has('site.tube.done'),
-    text: 'There\'s a pod in the Tube, east of the Spire, that still says "Now boarding". It\'s said it for three years. Inez sold somebody a ticket for it. She won\'t say who.',
+    text: 'There\'s a pod in the Tube, east of the Spire, that still says now boarding. Three years it\'s been saying that. Inez sold somebody a ticket for it, and she won\'t say who.',
   },
   {
     id: 'garage', when: (v) => v.has('intel:intel.gas.note') && !v.has('garage.complete'),
@@ -85,20 +85,20 @@ export const RUMOURS: Rumour[] = [
   },
   {
     id: 'capsule', when: (v) => !v.has('q.capsule.dug'),
-    text: 'Somebody\'s been poking round the old Kade Kids sign, west of Dry Creek, short of the highway. Kids\' things in the ground, they say. A time capsule. Pip went very quiet when she heard.',
+    text: 'Somebody\'s been poking around the old Kade Kids sign, west of Dry Creek, short of the highway. Says there\'s kids\' stuff in the ground. A time capsule. Pip went very quiet when she heard.',
   },
   {
     id: 'relay', when: (v) => !v.has('q.cam.cut') && !v.has('q.cam.loop') && !v.has('q.cam.hello'),
-    text: 'There\'s a mast on the rise south-east of this fire with two dishes on it. One of them is pointed right at us. I\'ve been sitting with my back to it for a year. I would like to stop.',
+    text: 'There\'s a mast on the rise south-east of here with two dishes on it, and one of them is pointed straight at us. I\'ve been sitting with my back to it for a year. I\'d like to stop.',
   },
   {
     id: 'wick', when: (v) => v.has('cave.known'),
-    text: 'Wick says nothing on the radio every night at nine. You can hear him not saying it. It\'s the most reliable signal on the band.',
+    text: 'Wick says nothing on the radio every night at nine. You can hear him not saying it. Most reliable signal on the band.',
   },
   // ---- what the paperwork points at
   {
     id: 'drone', intel: 'intel.chat.8',
-    text: 'Camp up on the ridge road says a white drone came down under the Spire, way back, and its little blue light still blinks at night. Glimpse drones carry memory cards. Memory cards carry memories. That\'s the whole business model.',
+    text: 'A camp up on the ridge road says a white drone came down under the Spire, way back, and its little blue light still blinks at night. Glimpse drones carry memory cards. I would very much like that memory card.',
   },
   {
     id: 'walker', intel: 'intel.west.letter',
@@ -106,31 +106,31 @@ export const RUMOURS: Rumour[] = [
   },
   {
     id: 'briefcase', intel: 'intel.chat.4',
-    text: 'Trucker on 19 swears there\'s a briefcase on the east highway shoulder, by a wreck past Recovery Point 7, and it glows at night. He won\'t touch it. He calls it "founder luggage" and crosses himself.',
+    text: 'Trucker on 19 swears there\'s a briefcase on the east highway shoulder, by a wreck past Recovery Point 7, and it glows at night. He won\'t touch it. He calls it founder luggage.',
   },
   {
     id: 'watch', intel: 'intel.chat.7',
-    text: 'Somebody\'s watch buzzes out on the west highway at three every morning. You can hear it if the wind\'s right. The wind is never right. The watch doesn\'t care.',
+    text: 'Somebody\'s watch buzzes out on the west highway at three every morning. You can hear it from the road if the wind\'s right.',
   },
   {
     id: 'poster', intel: 'intel.kade.poster',
-    text: 'Kade\'s break room at Pipeline Camp 3 has a motivational poster. I would like a photo of it. For morale. Theirs, not ours. Ours is fine.',
+    text: 'Kade\'s break room at Pipeline Camp 3 has a motivational poster up. If you\'re ever passing, I want to know what it says.',
   },
   {
     id: 'pod', intel: 'intel.chat.6',
-    text: 'Inez sold forty tickets for the Tube. One of the pods out there still has a lit screen, if the kids on the east band are telling the truth, and they never are, except about this.',
+    text: 'Inez sold forty tickets for the Tube. Kids on the east band say one of the pods out there still has its screen lit. They lie about most things. I believe them about this one.',
   },
   {
     id: 'kdry', intel: 'intel.kdry.log',
-    text: 'Dry Creek had a radio station, before. KDRY, 1340 on the dial. The log is still sitting on a crate by the road out of town, they say. Ask Sol about it. Actually, don\'t ask Sol about it.',
+    text: 'Dry Creek had a radio station, before. KDRY, 1340 on the dial. Word is the log\'s still sitting on a crate by the road out of town. Ask Sol about it. Actually, maybe don\'t ask Sol about it.',
   },
   {
     id: 'tablet', intel: 'intel.chat.3',
-    text: 'The Wellhead crew lost a site manager\'s tablet the week they moved in. Kade billed him for it. He\'s still paying it off in shifts. It\'s under a tree by the tank, if you\'re feeling brave and armed.',
+    text: 'The Wellhead crew lost a site manager\'s tablet the week they moved in. Kade billed him for it, and he\'s still working it off. It\'s under a tree by the tank, if you\'re feeling brave.',
   },
   {
     id: 'flyer', intel: 'intel.glimpse.flyer',
-    text: 'Somebody\'s zip-tied a Glimpse flyer to a pole on the highway, past Greg\'s call box. Neighbourhood watch. There\'s no neighbourhood. There\'s still watch.',
+    text: 'Somebody\'s zip-tied a Glimpse flyer to a pole on the highway, past Greg\'s call box. Neighbourhood watch. There\'s no neighbourhood any more, but somebody\'s still watching.',
   },
 ];
 
@@ -510,7 +510,7 @@ export const CAMP: CampMember[] = [
         return {
           speaker: 'Dez Marlow',
           text: r
-            ? `${v.night ? 'Tonight' : 'Last night'} on the band: ${r.text}`
+            ? r.text
             : 'Quiet on the band. Everybody\'s rumours have come true or gone to sleep. I\'m playing the karaoke machine to nobody. It\'s nice.',
           choices: [{ id: 'back', label: r ? 'I\'ll look into it.' : 'Play it to me.', next: 'hello' }],
         };

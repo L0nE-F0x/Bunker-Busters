@@ -577,7 +577,7 @@ export class WaitlistSite extends Site {
           if (this.s.set(F.ticket)) {
             this.s.addXP(10, 'Took a number');
             this.ctx.audio.play('click');
-            this.toast('The dispenser grinds out a ticket: 4,013. Over the door, the board says NOW SERVING 0001. The ticket says you will be contacted.', 'info');
+            this.toast('The dispenser grinds out ticket 4,013: "You will be contacted." Over the door, the board says NOW SERVING 0001.', 'info');
           } else {
             this.toast('Still 4,013. The board still says 0001. Nobody has contacted you.', 'info');
           }
@@ -606,14 +606,14 @@ export class WaitlistSite extends Site {
       primary: {
         get label() { return site.dark ? 'Pull the service door open' : 'Enter the service code'; },
         available: () => true,
-        run: () => (this.dark ? this.openService('No power, no maglock. The door swings out on its own weight.') : this.serviceKeypad()),
+        run: () => (this.dark ? this.openService('With the power out, the maglock is dead. The door swings open on its own weight.') : this.serviceKeypad()),
       },
       secondary: {
         label: 'Short the keypad',
         available: () => (this.s.skill('electronics') >= 2 ? true : 'Requires Electronics 2'),
         run: async () => {
           const ok = await this.ctx.ui.circuit({ title: 'EVERAFTER · SERVICE ENTRANCE', difficulty: 3 });
-          if (ok) this.openService('The keypad blinks, apologises for the inconvenience, and lets you in.');
+          if (ok) this.openService('The keypad flashes SORRY FOR THE INCONVENIENCE and unlocks.');
           else this.ctx.audio.play('deny');
         },
       },
@@ -628,7 +628,7 @@ export class WaitlistSite extends Site {
           if (!this.s.set(F.tent)) return;
           const got = this.loot([{ id: 'water', qty: 1 }, { id: 'ration', qty: 1 }, { id: 'lockpick', qty: 1 }]);
           this.ctx.audio.play('pickup');
-          this.toast(`A sleeping bag for two, one side never unzipped. A note: SAVING FOR MOM. ${got}`, 'good');
+          this.toast(`A double sleeping bag, one side never unzipped. There\'s a note pinned to it: SAVING THIS SPOT FOR MOM. ${got}`, 'good');
           this.s.addXP(XP_REWARDS.cache, '#2,201\'s tent');
         },
       },
@@ -643,7 +643,7 @@ export class WaitlistSite extends Site {
           if (!this.s.set(F.cooler)) return;
           const got = this.loot([{ id: 'ration', qty: 1 }, { id: 'ammo38', qty: 6 }]);
           this.ctx.audio.play('pickup');
-          this.toast(`No ice since year one. Tins, and a box of rounds wrapped in a sock, for whoever held the spot. ${got}`, 'good');
+          this.toast(`There hasn\'t been ice in it for years. A few tins, and a box of rounds wrapped in a sock. ${got}`, 'good');
           this.s.addXP(XP_REWARDS.cache, 'Cooler');
         },
       },
@@ -658,7 +658,7 @@ export class WaitlistSite extends Site {
           if (!this.s.set(F.cart)) return;
           const got = this.loot([{ id: 'scrap', qty: 2 }, { id: 'battery', qty: 1 }]);
           this.ctx.audio.play('pickup');
-          this.toast(`A whole life, by weight: a lamp, a framed diploma, a toaster, a bag of cables. ${got}`, 'good');
+          this.toast(`Someone\'s whole house in a shopping cart: a lamp, a framed diploma, a toaster, a bag of cables. ${got}`, 'good');
           this.s.addXP(10, 'Shopping cart');
         },
       },
@@ -669,7 +669,7 @@ export class WaitlistSite extends Site {
     if (this.s.set(F.poster)) this.s.addXP(10, 'Everafter poster');
     await this.ctx.ui.choose({
       speaker: 'Poster · Everafter',
-      text: '"EVERAFTER. The rest of your life, catered. Climate-stable suites, a hydroponic omakase, and a wellness team trained for every outcome. GRAND OPENING 04·01. All members seated by appointment." Under it, in marker, dozens of hands: "WHICH YEAR". "STILL WAITING". "04·01 IS A JOKE DAY". "IT IS NOT A JOKE, IT IS A DATE — #0001".',
+      text: 'EVERAFTER\nThe rest of your life, catered. Climate-stable suites, a hydroponic omakase, and a wellness team trained for every outcome.\nGRAND OPENING 04·01. All members seated by appointment.\nWritten underneath in marker, in a dozen different hands: WHICH YEAR · STILL WAITING · 04·01 IS APRIL FOOLS · IT\'S NOT A JOKE, IT\'S A DATE (#0001)',
       choices: [{ id: 'ok', label: 'Leave it on the board' }],
     });
   }
@@ -681,11 +681,14 @@ export class WaitlistSite extends Site {
     await this.ctx.ui.choose({
       speaker: 'Line log · #0003, line monitor',
       text:
-        'Day 1. Four thousand of us. Concierge says appointments open shortly. Day 40. #0001 is a lawyer. He says our tickets are a binding contract, so we wait. ' +
-        'Day 300. The door opened ten centimetres for a delivery drone. Everyone stood up. Day 301. Everyone sat down. ' +
-        'Day 900. Elected a line monitor. Me. Day 1,100. A drone lands at the service door every Thursday. Kade jugs. Somebody in there is drinking. ' +
-        'Day 1,200. #0001 says the service code is the opening date off the poster. Says nobody has tried it because nobody reads posters. He won\'t try it either. He says it would be cutting. ' +
-        'Day 1,283. The line moved. #0002 died. So technically, it moved.',
+        'Day 1. About four thousand of us. Concierge says appointments open shortly.\n' +
+        'Day 40. #0001 is a lawyer. Says our tickets are a binding contract, so we wait.\n' +
+        'Day 300. Door opened ten centimetres for a delivery drone. Everybody stood up.\n' +
+        'Day 301. Everybody sat down.\n' +
+        'Day 900. Elected a line monitor. Me.\n' +
+        'Day 1,100. A drone lands at the service door every Thursday with Kade jugs. Somebody in there is drinking.\n' +
+        'Day 1,200. #0001 says the service code is the opening date off the poster. Says nobody\'s tried it because nobody reads posters. He won\'t try it either. Says it would be cutting in line.\n' +
+        'Day 1,283. #0002 died in the night. So the line moved.',
       choices: [{ id: 'ok', label: s.has(F.poster) ? 'Zero four zero one.' : 'Put the log back on the crate' }],
     });
   }
@@ -760,7 +763,7 @@ export class WaitlistSite extends Site {
     this.ctx.audio.play('unlock', { pos: this.ctx.player.position });
     const got = this.loot([{ id: 'water', qty: 3 }, { id: 'medkit', qty: 1 }, { id: 'ration', qty: 1 }, { id: 'battery', qty: 1 }]);
     s.addXP(XP_REWARDS.keypadShorted + 30, 'Priority Access');
-    this.toast(`${line} Shelves of Kade jugs, a drop chute for the Thursday drone, and a delivery slip: "40 / wk · EVERAFTER (12 residents)". ${got}`, 'good');
+    this.toast(`${line} Inside: shelves of Kade jugs, a drop chute for the Thursday drone, and a delivery slip reading "40 / wk · EVERAFTER (12 residents)". ${got}`, 'good');
   }
 
   // ================================================================ per frame
@@ -818,7 +821,7 @@ export class WaitlistSite extends Site {
         const door = this.frame.p(0, 0, WALL_Z + 8);
         if (Math.hypot(pl.x - door.x, pl.z - door.z) < 12) {
           s.set(F.found);
-          this.toast('NOW SERVING 0001. The line behind you goes back further than you walked.', 'info');
+          this.toast('NOW SERVING 0001. The line of camp chairs runs back further than you can see.', 'info');
         }
       }
     }

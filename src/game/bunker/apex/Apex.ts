@@ -58,7 +58,7 @@ export class Apex extends Bunker<ApexBuilder> {
       if (k) got.push(`${k}× ${name}`);
     }
     this.s.addXP(25, 'Merch');
-    this.ctx.ui.banner('APEX MERCH', `A hoodie in every size at once, and ${got.join(', ') || 'nothing you can carry'}. The tag says "limited to you".`, 'good');
+    this.ctx.ui.banner('APEX MERCH', `One hoodie in every size, and ${got.join(', ') || 'nothing you can carry'}. The tag says LIMITED EDITION · LIMITED TO YOU.`, 'good');
   }
 
   override applyFlags(instant = false) {
@@ -322,7 +322,7 @@ export class Apex extends Bunker<ApexBuilder> {
     const near = p.distanceTo(this.b.origin) < 120;
     // an Infiltrator reads a building by its vents: the duct on the hill's east side is on their map
     if (near && this.s.archetype.id === 'infiltrator' && this.s.set(F.vent)) {
-      this.s.events.emit('toast', { text: 'You clock a vent on the east side of the hill, under the solar. Ducts like that go somewhere.', kind: 'info' });
+      this.s.events.emit('toast', { text: 'There\'s a vent on the east side of the hill, under the solar panels. It has to lead somewhere inside.', kind: 'info' });
     }
     // the feed: a new post for each breach (and she posts it out loud, more or less)
     const post = this.currentPost();
@@ -437,7 +437,7 @@ export class Apex extends Bunker<ApexBuilder> {
     const near = this.playerInside || this.playerOnGrounds || Math.hypot(p.x - this.b.origin.x, p.z - this.b.origin.z) < 80;
     if (!near) return '';
     const s = this.s;
-    if (this.isOpen('vault')) return 'The Cistern Room. Open the tap and the two lockers. The water is the point.';
+    if (this.isOpen('vault')) return 'The Cistern Room. Open the tap and the two lockers. The water matters most.';
     if (this.playerInside) {
       if (this.lasers && !this.lasers.off) return 'Three beams: jump the low ones, crouch the high one, or kill the breaker by the inner door.';
       return 'The vault door at the end of the corridor. Six pins, or a big charge (Demolition 5).';

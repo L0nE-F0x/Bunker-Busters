@@ -120,6 +120,26 @@
   "where": "src/game/combat/Machines.ts"
  },
  {
+  "key": "0qycsbf",
+  "voice": "af_river",
+  "fx": "radio",
+  "speed": 1,
+  "speaker": "Dez Marlow",
+  "words": "A camp out in the south-west dunes says the jet's tail fin catches the sun around four o'clock. There's a go-bag aboard, apparently. Nobody's been brave enough to open it.",
+  "tts": "A camp out in the south-west dunes says the jet's tail fin catches the sun around four o'clock. There's a go-bag aboard, apparently. Nobody's been brave enough to open it.",
+  "where": "src/content/camp.ts"
+ },
+ {
+  "key": "0g0azn7",
+  "voice": "af_river",
+  "fx": "radio",
+  "speed": 1,
+  "speaker": "Dez Marlow",
+  "words": "A camp up on the ridge road says a white drone came down under the Spire, way back, and its little blue light still blinks at night. Glimpse drones carry memory cards. I would very much like that memory card.",
+  "tts": "A camp up on the ridge road says a white drone came down under the Spire, way back, and its little blue light still blinks at night. Glimpse drones carry memory cards. I would very much like that memory card.",
+  "where": "src/content/camp.ts"
+ },
+ {
   "key": "1bz9khi",
   "voice": "af_river",
   "fx": "radio",
@@ -150,6 +170,16 @@
   "where": "src/content/quests.ts"
  },
  {
+  "key": "14izj4x",
+  "voice": "af_river",
+  "fx": "radio",
+  "speed": 1,
+  "speaker": "Dez Marlow",
+  "words": "Camps on the salt road say Apex has a hangar door you could drive a town through, and an airlock that changes its code on a schedule. Vesper reads the schedule out on her feed, because she thinks nobody listens to her feed. I listen to her feed.",
+  "tts": "Camps on the salt road say Apex has a hangar door you could drive a town through, and an airlock that changes its code on a schedule. Vesper reads the schedule out on her feed, because she thinks nobody listens to her feed. I listen to her feed.",
+  "where": "src/content/camp.ts"
+ },
+ {
   "key": "0ni36fb",
   "voice": "af_river",
   "fx": "radio",
@@ -168,6 +198,26 @@
   "words": "Crew channel says a pair is starting a shift on the highway by you. Mood: aligned. Get off the road.",
   "tts": "Crew channel says a pair is starting a shift on the highway by you. Mood: aligned. Get off the road.",
   "where": "src/game/sites/errands.ts"
+ },
+ {
+  "key": "1e72j75",
+  "voice": "af_river",
+  "fx": "radio",
+  "speed": 1,
+  "speaker": "Dez Marlow",
+  "words": "Dez. Radio. Don't touch the karaoke machine, it's load-bearing. And don't say anything on the band you wouldn't say to Vesper Kade's face.",
+  "tts": "Dez. Radio. Don't touch the karaoke machine, it's load-bearing. And don't say anything on the band you wouldn't say to Vesper Kade's face.",
+  "where": "src/content/camp.ts"
+ },
+ {
+  "key": "1jjwk2y",
+  "voice": "af_river",
+  "fx": "radio",
+  "speed": 1,
+  "speaker": "Dez Marlow",
+  "words": "Dry Creek had a radio station, before. KDRY, 1340 on the dial. Word is the log's still sitting on a crate by the road out of town. Ask Sol about it. Actually, maybe don't ask Sol about it.",
+  "tts": "Dry Creek had a radio station, before. Kdry, 1340 on the dial. Word is the log's still sitting on a crate by the road out of town. Ask Sol about it. Actually, maybe don't ask Sol about it.",
+  "where": "src/content/camp.ts"
  },
  {
   "key": "0g3n2ps",
@@ -230,6 +280,16 @@
   "where": "src/game/sites/errands.ts"
  },
  {
+  "key": "073mdoa",
+  "voice": "af_river",
+  "fx": "radio",
+  "speed": 1,
+  "speaker": "Dez Marlow",
+  "words": "Inez sold forty tickets for the Tube. Kids on the east band say one of the pods out there still has its screen lit. They lie about most things. I believe them about this one.",
+  "tts": "Inez sold forty tickets for the Tube. Kids on the east band say one of the pods out there still has its screen lit. They lie about most things. I believe them about this one.",
+  "where": "src/content/camp.ts"
+ },
+ {
   "key": "01c94kc",
   "voice": "af_river",
   "fx": "radio",
@@ -247,6 +307,56 @@
   "speaker": "Dez Marlow",
   "words": "Kade lanyards. Every crew reads its badge numbers onto the air at shift change, because policy. Those badges have chips in them, and chips talk. Bring me three and I'll find the channel they talk on.",
   "tts": "Kade lanyards. Every crew reads its badge numbers onto the air at shift change, because policy. Those badges have chips in them, and chips talk. Bring me three and I'll find the channel they talk on.",
+  "where": "src/content/camp.ts"
+ },
+ {
+  "key": "11apg3i",
+  "voice": "af_river",
+  "fx": "radio",
+  "speed": 1,
+  "speaker": "Dez Marlow",
+  "words": "Kade's break room at Pipeline Camp 3 has a motivational poster up. If you're ever passing, I want to know what it says.",
+  "tts": "Kade's break room at Pipeline Camp 3 has a motivational poster up. If you're ever passing, I want to know what it says.",
+  "where": "src/content/camp.ts"
+ },
+ {
+  "key": "015bptg",
+  "voice": "af_river",
+  "fx": "radio",
+  "speed": 1,
+  "speaker": "Dez Marlow",
+  "words": "Kade's reusable rocket came down out past the drive-in, north-east, in two pieces. Something in the crew pod is still recording. Kids on the north band say if you put your ear to the hull you can hear it counting down.",
+  "tts": "Kade's reusable rocket came down out past the drive-in, north-east, in two pieces. Something in the crew pod is still recording. Kids on the north band say if you put your ear to the hull you can hear it counting down.",
+  "where": "src/content/camp.ts"
+ },
+ {
+  "key": "0n775vs",
+  "voice": "af_river",
+  "fx": "radio",
+  "speed": 1,
+  "speaker": "Dez Marlow",
+  "words": "Kids on the north band dare each other to sit in the Starlite after dark. The screen lights up for some of them. They won't say what it shows.",
+  "tts": "Kids on the north band dare each other to sit in the Starlite after dark. The screen lights up for some of them. They won't say what it shows.",
+  "where": "src/content/camp.ts"
+ },
+ {
+  "key": "0q2p0vx",
+  "voice": "af_river",
+  "fx": "radio",
+  "speed": 1,
+  "speaker": "Dez Marlow",
+  "words": "My loop is still running on Glimpse. Twelve hundred hours of an empty forecourt. Critics are calling it restful.",
+  "tts": "My loop is still running on Glimpse. Twelve hundred hours of an empty forecourt. Critics are calling it restful.",
+  "where": "src/content/camp.ts"
+ },
+ {
+  "key": "0s8goxb",
+  "voice": "af_river",
+  "fx": "radio",
+  "speed": 1,
+  "speaker": "Dez Marlow",
+  "words": "Night's the good band. Everybody out there gets honest after dark.",
+  "tts": "Night's the good band. Everybody out there gets honest after dark.",
   "where": "src/content/camp.ts"
  },
  {
@@ -280,6 +390,26 @@
   "where": "src/content/camp.ts"
  },
  {
+  "key": "0nwdijy",
+  "voice": "af_river",
+  "fx": "radio",
+  "speed": 1,
+  "speaker": "Dez Marlow",
+  "words": "People used to walk west on Bunkrly receipts. Ren counted forty in one week, back when Ren counted things for fun. Somebody sat down on the shoulder of the west road and never got up. Check his pack. He'd want it used.",
+  "tts": "People used to walk west on Bunker dot lee receipts. Ren counted forty in one week, back when Ren counted things for fun. Somebody sat down on the shoulder of the west road and never got up. Check his pack. He'd want it used.",
+  "where": "src/content/camp.ts"
+ },
+ {
+  "key": "0kxgbzy",
+  "voice": "af_river",
+  "fx": "radio",
+  "speed": 1,
+  "speaker": "Dez Marlow",
+  "words": "Photon Park, south of here, east of the jet. Seven rows of panels and four robots wiping them for a customer who stopped paying. Somebody on the east band reckons that farm is what keeps Everafter's door shut. Cut the power and the door lets go.",
+  "tts": "Photon Park, south of here, east of the jet. Seven rows of panels and four robots wiping them for a customer who stopped paying. Somebody on the east band reckons that farm is what keeps Everafter's door shut. Cut the power and the door lets go.",
+  "where": "src/content/camp.ts"
+ },
+ {
   "key": "0a75192",
   "voice": "af_river",
   "fx": "radio",
@@ -310,6 +440,16 @@
   "where": "src/content/camp.ts"
  },
  {
+  "key": "0d1y6rr",
+  "voice": "af_river",
+  "fx": "radio",
+  "speed": 1,
+  "speaker": "Dez Marlow",
+  "words": "Pipeline Camp 3 put a Hornet drone up. It circles the pad all night and lands at dawn. The ground round it is mined. Somebody in corporate had daisies planted on the mines, for morale.",
+  "tts": "Pipeline Camp 3 put a Hornet drone up. It circles the pad all night and lands at dawn. The ground round it is mined. Somebody in corporate had daisies planted on the mines, for morale.",
+  "where": "src/content/camp.ts"
+ },
+ {
   "key": "1qfn1qp",
   "voice": "af_river",
   "fx": "radio",
@@ -330,6 +470,76 @@
   "where": "src/content/camp.ts"
  },
  {
+  "key": "18bnldi",
+  "voice": "af_river",
+  "fx": "radio",
+  "speed": 1,
+  "speaker": "Dez Marlow",
+  "words": "Recovery Point 7 is stacking pianos again. Kade repossesses anything with keys. Somebody's grandmother's upright is out there under a tarp, next to a vending machine that still takes coins. East of the Garage, off the highway.",
+  "tts": "Recovery Point 7 is stacking pianos again. Kade repossesses anything with keys. Somebody's grandmother's upright is out there under a tarp, next to a vending machine that still takes coins. East of the Garage, off the highway.",
+  "where": "src/content/camp.ts"
+ },
+ {
+  "key": "114ka4t",
+  "voice": "af_river",
+  "fx": "radio",
+  "speed": 1,
+  "speaker": "Dez Marlow",
+  "words": "SeedBot's firmware pings every ninety seconds like it's asking to be loved. Bring me its battery and I'll make you something mean.",
+  "tts": "Seed Bot's firmware pings every ninety seconds like it's asking to be loved. Bring me its battery and I'll make you something mean.",
+  "where": "src/content/camp.ts"
+ },
+ {
+  "key": "0mmydci",
+  "voice": "af_river",
+  "fx": "radio",
+  "speed": 1,
+  "speaker": "Dez Marlow",
+  "words": "Somebody is going to hear about this on the band. I'd bet a cell it's someone we didn't invite.",
+  "tts": "Somebody is going to hear about this on the band. I'd bet a cell it's someone we didn't invite.",
+  "where": "src/content/camp.ts"
+ },
+ {
+  "key": "1g3f87y",
+  "voice": "af_river",
+  "fx": "radio",
+  "speed": 1,
+  "speaker": "Dez Marlow",
+  "words": "Somebody out by ColdStorage swears the building said please to them. Out loud, through a door. They walked home very fast.",
+  "tts": "Somebody out by ColdStorage swears the building said please to them. Out loud, through a door. They walked home very fast.",
+  "where": "src/content/camp.ts"
+ },
+ {
+  "key": "036vjik",
+  "voice": "af_river",
+  "fx": "radio",
+  "speed": 1,
+  "speaker": "Dez Marlow",
+  "words": "Somebody's been poking around the old Kade Kids sign, west of Dry Creek, short of the highway. Says there's kids' stuff in the ground. A time capsule. Pip went very quiet when she heard.",
+  "tts": "Somebody's been poking around the old Kade Kids sign, west of Dry Creek, short of the highway. Says there's kids' stuff in the ground. A time capsule. Pip went very quiet when she heard.",
+  "where": "src/content/camp.ts"
+ },
+ {
+  "key": "1icvdhw",
+  "voice": "af_river",
+  "fx": "radio",
+  "speed": 1,
+  "speaker": "Dez Marlow",
+  "words": "Somebody's watch buzzes out on the west highway at three every morning. You can hear it from the road if the wind's right.",
+  "tts": "Somebody's watch buzzes out on the west highway at three every morning. You can hear it from the road if the wind's right.",
+  "where": "src/content/camp.ts"
+ },
+ {
+  "key": "1tkjsdv",
+  "voice": "af_river",
+  "fx": "radio",
+  "speed": 1,
+  "speaker": "Dez Marlow",
+  "words": "Somebody's zip-tied a Glimpse flyer to a pole on the highway, past Greg's call box. Neighbourhood watch. There's no neighbourhood any more, but somebody's still watching.",
+  "tts": "Somebody's zip-tied a Glimpse flyer to a pole on the highway, past Greg's call box. Neighbourhood watch. There's no neighbourhood any more, but somebody's still watching.",
+  "where": "src/content/camp.ts"
+ },
+ {
   "key": "0znjoek",
   "voice": "af_river",
   "fx": "radio",
@@ -340,6 +550,56 @@
   "where": "src/content/camp.ts"
  },
  {
+  "key": "19q0x5h",
+  "voice": "af_river",
+  "fx": "radio",
+  "speed": 1,
+  "speaker": "Dez Marlow",
+  "words": "Tanner's megaphone carries on a still night. He's been rehearsing an apology to Vesper. It's forty minutes long and it has a Q and A.",
+  "tts": "Tanner's megaphone carries on a still night. He's been rehearsing an apology to Vesper. It's forty minutes long and it has a Q and A.",
+  "where": "src/content/camp.ts"
+ },
+ {
+  "key": "0jrgihp",
+  "voice": "af_river",
+  "fx": "radio",
+  "speed": 1,
+  "speaker": "Dez Marlow",
+  "words": "The band's been strange since the cistern turned. There's a carrier from the old coast, north of the salt, that reads out camp names. All of ours, in order, before anybody's said them. Mara wants to know who's keeping the list. I think we know.",
+  "tts": "The band's been strange since the cistern turned. There's a carrier from the old coast, north of the salt, that reads out camp names. All of ours, in order, before anybody's said them. Mara wants to know who's keeping the list. I think we know.",
+  "where": "src/content/camp.ts"
+ },
+ {
+  "key": "1vg6de7",
+  "voice": "af_river",
+  "fx": "radio",
+  "speed": 1,
+  "speaker": "Dez Marlow",
+  "words": "The survey crew on the slope below the Cut leaves its lunch on the folding table at noon. Somebody keeps taking the pudding, and Kade has opened an investigation. The field book sits right next to the pudding.",
+  "tts": "The survey crew on the slope below the Cut leaves its lunch on the folding table at noon. Somebody keeps taking the pudding, and Kade has opened an investigation. The field book sits right next to the pudding.",
+  "where": "src/content/camp.ts"
+ },
+ {
+  "key": "1hp6y52",
+  "voice": "af_river",
+  "fx": "radio",
+  "speed": 1,
+  "speaker": "Dez Marlow",
+  "words": "The Wellhead crew changes shift at dawn, south-west of Dry Creek. For about twenty minutes the tank's only got one sentry on it, and it apologises before it shoots. Twenty minutes is a lot of water.",
+  "tts": "The Wellhead crew changes shift at dawn, south-west of Dry Creek. For about twenty minutes the tank's only got one sentry on it, and it apologises before it shoots. Twenty minutes is a lot of water.",
+  "where": "src/content/camp.ts"
+ },
+ {
+  "key": "0xgtlwd",
+  "voice": "af_river",
+  "fx": "radio",
+  "speed": 1,
+  "speaker": "Dez Marlow",
+  "words": "The Wellhead crew lost a site manager's tablet the week they moved in. Kade billed him for it, and he's still working it off. It's under a tree by the tank, if you're feeling brave.",
+  "tts": "The Wellhead crew lost a site manager's tablet the week they moved in. Kade billed him for it, and he's still working it off. It's under a tree by the tank, if you're feeling brave.",
+  "where": "src/content/camp.ts"
+ },
+ {
   "key": "1bx528x",
   "voice": "af_river",
   "fx": "radio",
@@ -347,6 +607,36 @@
   "speaker": "Dez Marlow",
   "words": "There's a carrier on our band that doesn't belong to any camp. It breathes between songs. Mara thinks I'm paranoid. Mara is wrong. I know exactly how that sounds.",
   "tts": "There's a carrier on our band that doesn't belong to any camp. It breathes between songs. Mara thinks I'm paranoid. Mara is wrong. I know exactly how that sounds.",
+  "where": "src/content/camp.ts"
+ },
+ {
+  "key": "176e6l3",
+  "voice": "af_river",
+  "fx": "radio",
+  "speed": 1,
+  "speaker": "Dez Marlow",
+  "words": "There's a mast on the rise south-east of here with two dishes on it, and one of them is pointed straight at us. I've been sitting with my back to it for a year. I'd like to stop.",
+  "tts": "There's a mast on the rise south-east of here with two dishes on it, and one of them is pointed straight at us. I've been sitting with my back to it for a year. I'd like to stop.",
+  "where": "src/content/camp.ts"
+ },
+ {
+  "key": "09xqxws",
+  "voice": "af_river",
+  "fx": "radio",
+  "speed": 1,
+  "speaker": "Dez Marlow",
+  "words": "There's a place in the basin south-east of the Tube they call Waitlist City. Four thousand people queued for a bunker called Everafter. The board over the door still says now serving number one. Somebody up there still keeps a fire going.",
+  "tts": "There's a place in the basin south-east of the Tube they call Waitlist City. Four thousand people queued for a bunker called Everafter. The board over the door still says now serving number one. Somebody up there still keeps a fire going.",
+  "where": "src/content/camp.ts"
+ },
+ {
+  "key": "12p5m6v",
+  "voice": "af_river",
+  "fx": "radio",
+  "speed": 1,
+  "speaker": "Dez Marlow",
+  "words": "There's a pod in the Tube, east of the Spire, that still says now boarding. Three years it's been saying that. Inez sold somebody a ticket for it, and she won't say who.",
+  "tts": "There's a pod in the Tube, east of the Spire, that still says now boarding. Three years it's been saying that. Inez sold somebody a ticket for it, and she won't say who.",
   "where": "src/content/camp.ts"
  },
  {
@@ -387,6 +677,56 @@
   "speaker": "Dez Marlow",
   "words": "They smile because the policy says so. Okay. The chips ping on a crew channel, but the karaoke machine can't hear it from down here. Take this relay up to the Spire and patch it into the generator by the shack. Red to red. Don't lick anything.",
   "tts": "They smile because the policy says so. Okay. The chips ping on a crew channel, but the karaoke machine can't hear it from down here. Take this relay up to the Spire and patch it into the generator by the shack. Red to red. Don't lick anything.",
+  "where": "src/content/camp.ts"
+ },
+ {
+  "key": "0v3vg85",
+  "voice": "af_river",
+  "fx": "radio",
+  "speed": 1,
+  "speaker": "Dez Marlow",
+  "words": "Told you she listens. Nobody ever believes the radio guy until the radio guy is right.",
+  "tts": "Told you she listens. Nobody ever believes the radio guy until the radio guy is right.",
+  "where": "src/content/camp.ts"
+ },
+ {
+  "key": "13h1qvh",
+  "voice": "af_river",
+  "fx": "radio",
+  "speed": 1,
+  "speaker": "Dez Marlow",
+  "words": "Trucker on 19 swears there's a briefcase on the east highway shoulder, by a wreck past Recovery Point 7, and it glows at night. He won't touch it. He calls it founder luggage.",
+  "tts": "Trucker on 19 swears there's a briefcase on the east highway shoulder, by a wreck past Recovery Point 7, and it glows at night. He won't touch it. He calls it founder luggage.",
+  "where": "src/content/camp.ts"
+ },
+ {
+  "key": "0bkm6nc",
+  "voice": "af_river",
+  "fx": "radio",
+  "speed": 1,
+  "speaker": "Dez Marlow",
+  "words": "Vesper hasn't said a word on the band since I read the chat. I can hear her not saying it. It's my favourite song.",
+  "tts": "Vesper hasn't said a word on the band since I read the chat. I can hear her not saying it. It's my favourite song.",
+  "where": "src/content/camp.ts"
+ },
+ {
+  "key": "0732loj",
+  "voice": "af_river",
+  "fx": "radio",
+  "speed": 1,
+  "speaker": "Dez Marlow",
+  "words": "Vesper's feed says she's pivoting. I recorded it. All of it. I'm going to play it back to her at the trial. That was Pip's idea, and it's the best one anyone's had.",
+  "tts": "Vesper's feed says she's pivoting. I recorded it. All of it. I'm going to play it back to her at the trial. That was Pip's idea, and it's the best one anyone's had.",
+  "where": "src/content/camp.ts"
+ },
+ {
+  "key": "01wbhtl",
+  "voice": "af_river",
+  "fx": "radio",
+  "speed": 1,
+  "speaker": "Dez Marlow",
+  "words": "Wick says nothing on the radio every night at nine. You can hear him not saying it. Most reliable signal on the band.",
+  "tts": "Wick says nothing on the radio every night at nine. You can hear him not saying it. Most reliable signal on the band.",
   "where": "src/content/camp.ts"
  },
  {
@@ -450,6 +790,16 @@
   "where": "src/content/story.ts"
  },
  {
+  "key": "16xa32p",
+  "voice": "am_adam",
+  "fx": "room",
+  "speed": 0.96,
+  "speaker": "Doc Ivers",
+  "words": "A ledger in an ammo tin. That's a prescription I understand.",
+  "tts": "A ledger in an ammo tin. That's a prescription I understand.",
+  "where": "src/game/town/Settlement.ts"
+ },
+ {
   "key": "0wd7krx",
   "voice": "am_adam",
   "fx": "room",
@@ -458,6 +808,16 @@
   "words": "Boil the Kade jugs. I don't care what the label says. Especially what the label says.",
   "tts": "Boil the Kade jugs. I don't care what the label says. Especially what the label says.",
   "where": "src/content/townBarks.ts"
+ },
+ {
+  "key": "0hcyzk2",
+  "voice": "am_adam",
+  "fx": "room",
+  "speed": 0.96,
+  "speaker": "Doc Ivers",
+  "words": "Breakfast. Nia insists. In writing.",
+  "tts": "Breakfast. Nia insists. In writing.",
+  "where": "src/game/town/Settlement.ts"
  },
  {
   "key": "1n0bam6",
@@ -510,6 +870,16 @@
   "where": "src/content/townBarks.ts"
  },
  {
+  "key": "0lqt6ef",
+  "voice": "am_adam",
+  "fx": "room",
+  "speed": 0.96,
+  "speaker": "Doc Ivers",
+  "words": "Evenings I come out to Sol's fire. It's cheaper than a waiting room and the patients are already sitting down.",
+  "tts": "Evenings I come out to Sol's fire. It's cheaper than a waiting room and the patients are already sitting down.",
+  "where": "src/game/town/Settlement.ts"
+ },
+ {
   "key": "0i7dpes",
   "voice": "am_adam",
   "fx": "room",
@@ -538,6 +908,16 @@
   "words": "Gunshots. I'll boil the instruments.",
   "tts": "Gunshots. I'll boil the instruments.",
   "where": "src/content/townBarks.ts"
+ },
+ {
+  "key": "0k7aq7u",
+  "voice": "am_adam",
+  "fx": "room",
+  "speed": 0.96,
+  "speaker": "Doc Ivers",
+  "words": "Half the names you read on the radio were my patients. I crossed them off, then I crossed them back on. They're alive. That should count.",
+  "tts": "Half the names you read on the radio were my patients. I crossed them off, then I crossed them back on. They're alive. That should count.",
+  "where": "src/game/town/Settlement.ts"
  },
  {
   "key": "0383gy7",
@@ -600,6 +980,16 @@
   "where": "src/content/townBarks.ts"
  },
  {
+  "key": "042d27t",
+  "voice": "am_adam",
+  "fx": "room",
+  "speed": 0.96,
+  "speaker": "Doc Ivers",
+  "words": "Night call. His lungs are better. His manners aren't.",
+  "tts": "Night call. His lungs are better. His manners aren't.",
+  "where": "src/game/town/Settlement.ts"
+ },
+ {
   "key": "1vy6ffd",
   "voice": "am_adam",
   "fx": "room",
@@ -608,6 +998,16 @@
   "words": "Put that away. I've stitched enough people who were only holding one.",
   "tts": "Put that away. I've stitched enough people who were only holding one.",
   "where": "src/content/townBarks.ts"
+ },
+ {
+  "key": "0o2vqlb",
+  "voice": "am_adam",
+  "fx": "room",
+  "speed": 0.96,
+  "speaker": "Doc Ivers",
+  "words": "Setting a broken wrist. The lights went, then the X-ray, then the patient's phone in the middle of a sentence. I set it by feel. He paid me in a chicken. The chicken is still the most reliable investor Dry Creek ever had.",
+  "tts": "Setting a broken wrist. The lights went, then the X-ray, then the patient's phone in the middle of a sentence. I set it by feel. He paid me in a chicken. The chicken is still the most reliable investor Dry Creek ever had.",
+  "where": "src/game/town/Settlement.ts"
  },
  {
   "key": "0dv7i0y",
@@ -660,6 +1060,16 @@
   "where": "src/game/town/Settlement.ts"
  },
  {
+  "key": "04mzjoz",
+  "voice": "am_adam",
+  "fx": "room",
+  "speed": 0.96,
+  "speaker": "Doc Ivers",
+  "words": "The coast. Of course she went to the coast. She always wanted to be seen.",
+  "tts": "The coast. Of course she went to the coast. She always wanted to be seen.",
+  "where": "src/game/town/Settlement.ts"
+ },
+ {
   "key": "0vf12m1",
   "voice": "am_adam",
   "fx": "room",
@@ -677,6 +1087,16 @@
   "speaker": "Doc Ivers",
   "words": "The summer before the Pivot, the county let Kade Holdings run a pilot on our aquifer. We got a school with a rocket on the sign. Eight months later the creek stopped. They called it a drought. Droughts don't come with a pump station.",
   "tts": "The summer before the Pivot, the county let Kade Holdings run a pilot on our aquifer. We got a school with a rocket on the sign. Eight months later the creek stopped. They called it a drought. Droughts don't come with a pump station.",
+  "where": "src/game/town/Settlement.ts"
+ },
+ {
+  "key": "132ua3r",
+  "voice": "am_adam",
+  "fx": "room",
+  "speed": 0.96,
+  "speaker": "Doc Ivers",
+  "words": "Twenty jugs a week. Tell Mara to boil them. I don't trust water with a logo.",
+  "tts": "Twenty jugs a week. Tell Mara to boil them. I don't trust water with a logo.",
   "where": "src/game/town/Settlement.ts"
  },
  {
@@ -700,6 +1120,16 @@
   "where": "src/content/townBarks.ts"
  },
  {
+  "key": "0pcdvtd",
+  "voice": "am_adam",
+  "fx": "room",
+  "speed": 0.96,
+  "speaker": "Doc Ivers",
+  "words": "Water from Apex. I tested it twice. It's just water. That's the best news I've had in three years.",
+  "tts": "Water from Apex. I tested it twice. It's just water. That's the best news I've had in three years.",
+  "where": "src/game/town/Settlement.ts"
+ },
+ {
   "key": "01sxig5",
   "voice": "am_adam",
   "fx": "room",
@@ -718,6 +1148,16 @@
   "words": "Wick's cough is down to a rumble. Don't tell him I asked.",
   "tts": "Wick's cough is down to a rumble. Don't tell him I asked.",
   "where": "src/content/townBarks.ts"
+ },
+ {
+  "key": "1y7jg6d",
+  "voice": "am_adam",
+  "fx": "room",
+  "speed": 0.96,
+  "speaker": "Doc Ivers",
+  "words": "Wick's cough is down to a rumble. I can hear it from here. It's a better rumble.",
+  "tts": "Wick's cough is down to a rumble. I can hear it from here. It's a better rumble.",
+  "where": "src/game/town/Settlement.ts"
  },
  {
   "key": "1q62x4z",
@@ -870,6 +1310,16 @@
   "where": "src/content/camp.ts"
  },
  {
+  "key": "1wbgmby",
+  "voice": "am_onyx",
+  "fx": "radio",
+  "speed": 0.94,
+  "speaker": "Hollis Grange",
+  "words": "And you found Mara's paper. She told me years ago. Don't hold it against her longer than she does. Nobody could.",
+  "tts": "And you found Mara's paper. She told me years ago. Don't hold it against her longer than she does. Nobody could.",
+  "where": "src/content/camp.ts"
+ },
+ {
   "key": "1pc5ld7",
   "voice": "am_onyx",
   "fx": "radio",
@@ -920,6 +1370,36 @@
   "where": "src/content/quests.ts"
  },
  {
+  "key": "0zr4oql",
+  "voice": "am_onyx",
+  "fx": "radio",
+  "speed": 0.94,
+  "speaker": "Hollis Grange",
+  "words": "Late. The neon hums louder at night, or I listen harder.",
+  "tts": "Late. The neon hums louder at night, or I listen harder.",
+  "where": "src/content/camp.ts"
+ },
+ {
+  "key": "1oytj25",
+  "voice": "am_onyx",
+  "fx": "radio",
+  "speed": 0.94,
+  "speaker": "Hollis Grange",
+  "words": "Mara checks the ammo tin every morning like it's an engine. The sign stays on. Free trial or not.",
+  "tts": "Mara checks the ammo tin every morning like it's an engine. The sign stays on. Free trial or not.",
+  "where": "src/content/camp.ts"
+ },
+ {
+  "key": "03h86l6",
+  "voice": "am_onyx",
+  "fx": "radio",
+  "speed": 0.94,
+  "speaker": "Hollis Grange",
+  "words": "Name's Hollis. I keep the sign lit. Thirty years of driving, and the only thing I ever owned outright is that neon. Off you go. The road doesn't get shorter by looking at it.",
+  "tts": "Name's Hollis. I keep the sign lit. Thirty years of driving, and the only thing I ever owned outright is that neon. Off you go. The road doesn't get shorter by looking at it.",
+  "where": "src/content/camp.ts"
+ },
+ {
   "key": "00tqwv8",
   "voice": "am_onyx",
   "fx": "radio",
@@ -927,6 +1407,16 @@
   "speaker": "Hollis Grange",
   "words": "Pulled it, did you. Light's out. Huh. The forecourt sounds different. Quieter, like a truck stop at four in the morning. Here. Rounds, and scrap for the next thing that blinks.",
   "tts": "Pulled it, did you. Light's out. Huh. The forecourt sounds different. Quieter, like a truck stop at four in the morning. Here. Rounds, and scrap for the next thing that blinks.",
+  "where": "src/content/camp.ts"
+ },
+ {
+  "key": "0ss7v6w",
+  "voice": "am_onyx",
+  "fx": "radio",
+  "speed": 0.94,
+  "speaker": "Hollis Grange",
+  "words": "Sleeping better since that light went out.",
+  "tts": "Sleeping better since that light went out.",
   "where": "src/content/camp.ts"
  },
  {
@@ -960,6 +1450,16 @@
   "where": "src/content/camp.ts"
  },
  {
+  "key": "0dy3mki",
+  "voice": "am_onyx",
+  "fx": "radio",
+  "speed": 0.94,
+  "speaker": "Hollis Grange",
+  "words": "The Garage is up the spur. I drove past it once, before. He had a banner out front: DISRUPTING DOOMSDAY. He spelled doomsday wrong.",
+  "tts": "The Garage is up the spur. I drove past it once, before. He had a banner out front: Disrupting Doomsday. He spelled doomsday wrong.",
+  "where": "src/content/camp.ts"
+ },
+ {
   "key": "1hjk1a2",
   "voice": "am_onyx",
   "fx": "radio",
@@ -968,6 +1468,36 @@
   "words": "Three years that thing watched me fix a sign. Hope it learned something.",
   "tts": "Three years that thing watched me fix a sign. Hope it learned something.",
   "where": "src/content/quests.ts"
+ },
+ {
+  "key": "188rezd",
+  "voice": "am_onyx",
+  "fx": "radio",
+  "speed": 0.94,
+  "speaker": "Hollis Grange",
+  "words": "Twenty jugs a week, on her schedule. I drink them. I don't thank her. The sign stays on for everybody, even the drone that brings them.",
+  "tts": "Twenty jugs a week, on her schedule. I drink them. I don't thank her. The sign stays on for everybody, even the drone that brings them.",
+  "where": "src/content/camp.ts"
+ },
+ {
+  "key": "14ne6ux",
+  "voice": "am_onyx",
+  "fx": "radio",
+  "speed": 0.94,
+  "speaker": "Hollis Grange",
+  "words": "Two weeks of water and every camp on the band angry at the same woman. I've driven on worse fuel. The sign stays on.",
+  "tts": "Two weeks of water and every camp on the band angry at the same woman. I've driven on worse fuel. The sign stays on.",
+  "where": "src/content/camp.ts"
+ },
+ {
+  "key": "0dz7xl7",
+  "voice": "am_onyx",
+  "fx": "radio",
+  "speed": 0.94,
+  "speaker": "Hollis Grange",
+  "words": "Water coming east from Apex. First time in three years that sign's been lighting the way to something worth finding.",
+  "tts": "Water coming east from Apex. First time in three years that sign's been lighting the way to something worth finding.",
+  "where": "src/content/camp.ts"
  },
  {
   "key": "0iilrin",
@@ -997,6 +1527,16 @@
   "speaker": "Hollis Grange",
   "words": "You talked to him. A man in a hole north of the salt, who knows how I take my coffee. Fine. Let him watch. He can watch me keep a sign lit for people who aren't him.",
   "tts": "You talked to him. A man in a hole north of the salt, who knows how I take my coffee. Fine. Let him watch. He can watch me keep a sign lit for people who aren't him.",
+  "where": "src/content/camp.ts"
+ },
+ {
+  "key": "18zwvfc",
+  "voice": "am_onyx",
+  "fx": "radio",
+  "speed": 0.94,
+  "speaker": "Hollis Grange",
+  "words": "You've got the walk of somebody carrying water. Best walk there is. Go tell Mara before Pip counts it twice.",
+  "tts": "You've got the walk of somebody carrying water. Best walk there is. Go tell Mara before Pip counts it twice.",
   "where": "src/content/camp.ts"
  },
  {
@@ -1090,6 +1630,16 @@
   "where": "src/game/town/Settlement.ts"
  },
  {
+  "key": "1agzu2w",
+  "voice": "af_kore",
+  "fx": "room",
+  "speed": 1,
+  "speaker": "Inez Quill",
+  "words": "Browse. Don't palm anything. These are stranger prices, and right now you're a stranger.",
+  "tts": "Browse. Don't palm anything. These are stranger prices, and right now you're a stranger.",
+  "where": "src/content/trade.ts"
+ },
+ {
   "key": "1mdwgxw",
   "voice": "af_kore",
   "fx": "room",
@@ -1130,6 +1680,16 @@
   "where": "src/content/townBarks.ts"
  },
  {
+  "key": "055lxfh",
+  "voice": "af_kore",
+  "fx": "room",
+  "speed": 1,
+  "speaker": "Inez Quill",
+  "words": "Everafter. I sold three people folding chairs for that line. Premium folding. I'd like to stop thinking about it.",
+  "tts": "Everafter. I sold three people folding chairs for that line. Premium folding. I'd like to stop thinking about it.",
+  "where": "src/game/town/Settlement.ts"
+ },
+ {
   "key": "1ridq2s",
   "voice": "af_kore",
   "fx": "room",
@@ -1148,6 +1708,16 @@
   "words": "Founder phones are going for six scrap on the east band. Bring me one. I won't ask where.",
   "tts": "Founder phones are going for six scrap on the east band. Bring me one. I won't ask where.",
   "where": "src/content/townBarks.ts"
+ },
+ {
+  "key": "0ebt7qk",
+  "voice": "af_kore",
+  "fx": "room",
+  "speed": 1,
+  "speaker": "Inez Quill",
+  "words": "Free advertising for every name on that list. Shame it was all bad press.",
+  "tts": "Free advertising for every name on that list. Shame it was all bad press.",
+  "where": "src/game/town/Settlement.ts"
  },
  {
   "key": "1rv7fwg",
@@ -1190,6 +1760,26 @@
   "where": "src/content/townBarks.ts"
  },
  {
+  "key": "0n4kso1",
+  "voice": "af_kore",
+  "fx": "room",
+  "speed": 1,
+  "speaker": "Inez Quill",
+  "words": "Leverage. Finally, somebody at Last Chance understands commerce.",
+  "tts": "Leverage. Finally, somebody at Last Chance understands commerce.",
+  "where": "src/game/town/Settlement.ts"
+ },
+ {
+  "key": "0gvz0d4",
+  "voice": "af_kore",
+  "fx": "room",
+  "speed": 1,
+  "speaker": "Inez Quill",
+  "words": "My Till, my slate, my pencil. You get the good number. Don't make me regret the pencil.",
+  "tts": "My Till, my slate, my pencil. You get the good number. Don't make me regret the pencil.",
+  "where": "src/content/trade.ts"
+ },
+ {
   "key": "13t9tsy",
   "voice": "af_kore",
   "fx": "room",
@@ -1208,6 +1798,26 @@
   "words": "Scrap talks. Everything else just stands there.",
   "tts": "Scrap talks. Everything else just stands there.",
   "where": "src/content/townBarks.ts"
+ },
+ {
+  "key": "0kvbi0m",
+  "voice": "af_kore",
+  "fx": "room",
+  "speed": 1,
+  "speaker": "Inez Quill",
+  "words": "Selling the forty-first ticket for the Tube. The card reader said DECLINED, and then everything did. So she never paid. Out of forty-one, she's the only one I don't owe a refund. I think about that more than I should.",
+  "tts": "Selling the forty-first ticket for the Tube. The card reader said Declined, and then everything did. So she never paid. Out of forty-one, she's the only one I don't owe a refund. I think about that more than I should.",
+  "where": "src/game/town/Settlement.ts"
+ },
+ {
+  "key": "1lxcpp4",
+  "voice": "af_kore",
+  "fx": "room",
+  "speed": 1,
+  "speaker": "Inez Quill",
+  "words": "Somebody's selling founder phones on the east band. I'm not saying it was me. It wasn't. I wish it was.",
+  "tts": "Somebody's selling founder phones on the east band. I'm not saying it was me. It wasn't. I wish it was.",
+  "where": "src/game/town/Settlement.ts"
  },
  {
   "key": "0t6iedd",
@@ -1260,6 +1870,26 @@
   "where": "src/content/townBarks.ts"
  },
  {
+  "key": "1a62lt5",
+  "voice": "af_kore",
+  "fx": "room",
+  "speed": 1,
+  "speaker": "Inez Quill",
+  "words": "Town prices. The town voted. I counted the votes. Funny how that works.",
+  "tts": "Town prices. The town voted. I counted the votes. Funny how that works.",
+  "where": "src/content/trade.ts"
+ },
+ {
+  "key": "1wk4w68",
+  "voice": "af_kore",
+  "fx": "room",
+  "speed": 1,
+  "speaker": "Inez Quill",
+  "words": "Water prices crashed overnight. I'm ruined. I'm delighted. Don't quote me on either.",
+  "tts": "Water prices crashed overnight. I'm ruined. I'm delighted. Don't quote me on either.",
+  "where": "src/game/town/Settlement.ts"
+ },
+ {
   "key": "0vo1ult",
   "voice": "af_kore",
   "fx": "room",
@@ -1268,6 +1898,16 @@
   "words": "Water's free now. I've had to diversify. Into what, I don't know yet. Gloating, possibly.",
   "tts": "Water's free now. I've had to diversify. Into what, I don't know yet. Gloating, possibly.",
   "where": "src/content/townBarks.ts"
+ },
+ {
+  "key": "1rllbij",
+  "voice": "af_kore",
+  "fx": "room",
+  "speed": 1,
+  "speaker": "Inez Quill",
+  "words": "We're closed. Unless you're buying.",
+  "tts": "We're closed. Unless you're buying.",
+  "where": "src/game/town/Settlement.ts"
  },
  {
   "key": "19k51zq",
@@ -1327,6 +1967,16 @@
   "speaker": "Inez Quill",
   "words": "Whoever is still here. I'm still here. Thank you. Bottles are two scrap for you from now on. Don't tell Sol. Sol thinks I have a heart and I like him confused.",
   "tts": "Whoever is still here. I'm still here. Thank you. Bottles are two scrap for you from now on. Don't tell Sol. Sol thinks I have a heart and I like him confused.",
+  "where": "src/game/town/Settlement.ts"
+ },
+ {
+  "key": "1jj66x1",
+  "voice": "af_kore",
+  "fx": "room",
+  "speed": 1,
+  "speaker": "Inez Quill",
+  "words": "You traded a ledger for twenty jugs. I'd have got you thirty. Amateurs.",
+  "tts": "You traded a ledger for twenty jugs. I'd have got you thirty. Amateurs.",
   "where": "src/game/town/Settlement.ts"
  },
  {
@@ -4830,6 +5480,26 @@
   "where": "archetypes"
  },
  {
+  "key": "1rivebg",
+  "voice": "af_sarah",
+  "fx": "radio",
+  "speed": 0.97,
+  "speaker": "Mara Voss",
+  "words": "Juno Reyes. You walked that creek bed the summer it died and wrote not drought, extraction. The county filed it, and the filing cabinet's under a dune now. You can go further on less than anyone in this camp. Walk to the Garage. Then keep walking until you find where the creek went.",
+  "tts": "Juno Reyes. You walked that creek bed the summer it died and wrote not drought, extraction. The county filed it, and the filing cabinet's under a dune now. You can go further on less than anyone in this camp. Walk to the Garage. Then keep walking until you find where the creek went.",
+  "where": "src/content/archetypes.ts"
+ },
+ {
+  "key": "0ci8si7",
+  "voice": "af_sarah",
+  "fx": "radio",
+  "speed": 0.97,
+  "speaker": "Mara Voss",
+  "words": "Juno, you were right about the creek all along. Get some sleep.",
+  "tts": "Juno, you were right about the creek all along. Get some sleep.",
+  "where": "src/content/archetypes.ts"
+ },
+ {
   "key": "1afpm15",
   "voice": "af_sarah",
   "fx": "radio",
@@ -4838,6 +5508,26 @@
   "words": "Len Cho.",
   "tts": "Len Cho.",
   "where": "archetypes"
+ },
+ {
+  "key": "1gcr66i",
+  "voice": "af_sarah",
+  "fx": "radio",
+  "speed": 0.97,
+  "speaker": "Mara Voss",
+  "words": "Len Cho. You sat on mute through every one of Tanner's investor calls while he promised bunkers to people who got tote bags. You know how he folds: cheerful at the start, agreeing with you by the end. That gate is just another call. Get him talking. And try not to enjoy it more than the water.",
+  "tts": "Len Cho. You sat on mute through every one of Tanner's investor calls while he promised bunkers to people who got tote bags. You know how he folds: cheerful at the start, agreeing with you by the end. That gate is just another call. Get him talking. And try not to enjoy it more than the water.",
+  "where": "src/content/archetypes.ts"
+ },
+ {
+  "key": "18j80tc",
+  "voice": "af_sarah",
+  "fx": "radio",
+  "speed": 0.97,
+  "speaker": "Mara Voss",
+  "words": "Len, you talked a man out of his own gate. Useful. Don't make a habit of enjoying it.",
+  "tts": "Len, you talked a man out of his own gate. Useful. Don't make a habit of enjoying it.",
+  "where": "src/content/archetypes.ts"
  },
  {
   "key": "1rsve3t",
@@ -4858,6 +5548,26 @@
   "words": "Nash Okonkwo.",
   "tts": "Nash Okonkwo.",
   "where": "archetypes"
+ },
+ {
+  "key": "0wi42pp",
+  "voice": "af_sarah",
+  "fx": "radio",
+  "speed": 0.97,
+  "speaker": "Mara Voss",
+  "words": "Nash Okonkwo. You wrote the brown-out. Twelve percent battery, and Tanner sold it as a green feature. He took your name off the repo the same week he took our water. That drone still runs your code. It was meant to last twelve minutes on a stage. It was never meant to tase anyone.",
+  "tts": "Nash Okonkwo. You wrote the brown-out. Twelve percent battery, and Tanner sold it as a green feature. He took your name off the repo the same week he took our water. That drone still runs your code. It was meant to last twelve minutes on a stage. It was never meant to tase anyone.",
+  "where": "src/content/archetypes.ts"
+ },
+ {
+  "key": "0c8ibb7",
+  "voice": "af_sarah",
+  "fx": "radio",
+  "speed": 0.97,
+  "speaker": "Mara Voss",
+  "words": "Nash, you switched off your own code. Next time somebody asks for a demo, ask what it's for.",
+  "tts": "Nash, you switched off your own code. Next time somebody asks for a demo, ask what it's for.",
+  "where": "src/content/archetypes.ts"
  },
  {
   "key": "0f652j7",
@@ -4900,6 +5610,26 @@
   "where": "archetypes"
  },
  {
+  "key": "0zn13jo",
+  "voice": "af_sarah",
+  "fx": "radio",
+  "speed": 0.97,
+  "speaker": "Mara Voss",
+  "words": "Paz Duarte. You ran the warehouse that fed this camp, until the layoff came by email with a confetti emoji. Then SeedBot peeled our name off a pallet of shakes. Bring the water. Bring the shakes too, and if you want to be loud about the door, I won't stop you.",
+  "tts": "Paz Duarte. You ran the warehouse that fed this camp, until the layoff came by email with a confetti emoji. Then Seed Bot peeled our name off a pallet of shakes. Bring the water. Bring the shakes too, and if you want to be loud about the door, I won't stop you.",
+  "where": "src/content/archetypes.ts"
+ },
+ {
+  "key": "0hi8qo0",
+  "voice": "af_sarah",
+  "fx": "radio",
+  "speed": 0.97,
+  "speaker": "Mara Voss",
+  "words": "Paz, the shakes are back in the log. Try not to enjoy the door part more than the food part.",
+  "tts": "Paz, the shakes are back in the log. Try not to enjoy the door part more than the food part.",
+  "where": "src/content/archetypes.ts"
+ },
+ {
   "key": "0ry1025",
   "voice": "af_sarah",
   "fx": "radio",
@@ -4908,6 +5638,26 @@
   "words": "Rue Calder.",
   "tts": "Rue Calder.",
   "where": "archetypes"
+ },
+ {
+  "key": "15mmt5s",
+  "voice": "af_sarah",
+  "fx": "radio",
+  "speed": 0.97,
+  "speaker": "Mara Voss",
+  "words": "Rue Calder. You carried Tanner's last pallet to his door: meal shakes, with Last Chance on the label. He signed for it through a gap and shut the gap on your fingers. You watched him film himself putting that padlock on. So bring the pallet home. Late is still delivered.",
+  "tts": "Rue Calder. You carried Tanner's last pallet to his door: meal shakes, with Last Chance on the label. He signed for it through a gap and shut the gap on your fingers. You watched him film himself putting that padlock on. So bring the pallet home. Late is still delivered.",
+  "where": "src/content/archetypes.ts"
+ },
+ {
+  "key": "04swk9h",
+  "voice": "af_sarah",
+  "fx": "radio",
+  "speed": 0.97,
+  "speaker": "Mara Voss",
+  "words": "Rue, you finished the delivery. Two years late, and you still beat the postal service.",
+  "tts": "Rue, you finished the delivery. Two years late, and you still beat the postal service.",
+  "where": "src/content/archetypes.ts"
  },
  {
   "key": "0uzco3z",
@@ -5090,6 +5840,16 @@
   "where": "archetypes"
  },
  {
+  "key": "0cgk1k1",
+  "voice": "af_sarah",
+  "fx": "radio",
+  "speed": 0.97,
+  "speaker": "Mara Voss",
+  "words": "Theo Vance. You raised a seed round for the end of the world, and then it came. You had a seat in Apex. You saw the line outside and what it was made of, and you walked back out. The camp isn't sure about you yet. Tanner will treat you like an old friend. Use that, and then stop.",
+  "tts": "Theo Vance. You raised a seed round for the end of the world, and then it came. You had a seat in Apex. You saw the line outside and what it was made of, and you walked back out. The camp isn't sure about you yet. Tanner will treat you like an old friend. Use that, and then stop.",
+  "where": "src/content/archetypes.ts"
+ },
+ {
   "key": "0lbk5df",
   "voice": "af_sarah",
   "fx": "radio",
@@ -5098,6 +5858,16 @@
   "words": "Theo, you're on here too. Crossed out, in red, with WALKED next to it. Somebody at Apex has a sense of humour, or a grudge.",
   "tts": "Theo, you're on here too. Crossed out, in red, with Walked next to it. Somebody at Apex has a sense of humour, or a grudge.",
   "where": "src/content/story.ts"
+ },
+ {
+  "key": "04i77ye",
+  "voice": "af_sarah",
+  "fx": "radio",
+  "speed": 0.97,
+  "speaker": "Mara Voss",
+  "words": "Theo, your name is still on that list. Keep giving them reasons to cross it out.",
+  "tts": "Theo, your name is still on that list. Keep giving them reasons to cross it out.",
+  "where": "src/content/archetypes.ts"
  },
  {
   "key": "1069qeb",
@@ -5280,6 +6050,16 @@
   "where": "src/content/townBarks.ts"
  },
  {
+  "key": "094vslw",
+  "voice": "af_heart",
+  "fx": "room",
+  "speed": 0.95,
+  "speaker": "Nia Pell",
+  "words": "Heard Dez read that founders' chat on the band. Water is the new water. I had to sit down. I'm still sitting down.",
+  "tts": "Heard Dez read that founders' chat on the band. Water is the new water. I had to sit down. I'm still sitting down.",
+  "where": "src/game/town/Settlement.ts"
+ },
+ {
   "key": "1oyufwq",
   "voice": "af_heart",
   "fx": "room",
@@ -5297,6 +6077,16 @@
   "speaker": "Nia Pell",
   "words": "I cook what shows up. Today that isn't much.",
   "tts": "I cook what shows up. Today that isn't much.",
+  "where": "src/game/town/Settlement.ts"
+ },
+ {
+  "key": "0rrbqah",
+  "voice": "af_heart",
+  "fx": "room",
+  "speed": 0.95,
+  "speaker": "Nia Pell",
+  "words": "I heard every name on the radio. My cousin's on page four. Paid in full. Got the tote bag.",
+  "tts": "I heard every name on the radio. My cousin's on page four. Paid in full. Got the tote bag.",
   "where": "src/game/town/Settlement.ts"
  },
  {
@@ -5330,6 +6120,16 @@
   "where": "src/content/townBarks.ts"
  },
  {
+  "key": "0lgywgz",
+  "voice": "af_heart",
+  "fx": "room",
+  "speed": 0.95,
+  "speaker": "Nia Pell",
+  "words": "Kitchen's closed. The coffee isn't.",
+  "tts": "Kitchen's closed. The coffee isn't.",
+  "where": "src/game/town/Settlement.ts"
+ },
+ {
   "key": "0fjewoa",
   "voice": "af_heart",
   "fx": "room",
@@ -5360,6 +6160,26 @@
   "where": "src/game/town/Settlement.ts"
  },
  {
+  "key": "0typ9vv",
+  "voice": "af_heart",
+  "fx": "room",
+  "speed": 0.95,
+  "speaker": "Nia Pell",
+  "words": "Making soup. The power went, then the phones, then the sky went a colour I didn't have a name for. I kept stirring. Soup doesn't care what the sky does. Twelve people came in that night and I fed every one of them on credit. That's how the ledger started.",
+  "tts": "Making soup. The power went, then the phones, then the sky went a colour I didn't have a name for. I kept stirring. Soup doesn't care what the sky does. Twelve people came in that night and I fed every one of them on credit. That's how the ledger started.",
+  "where": "src/game/town/Settlement.ts"
+ },
+ {
+  "key": "1osrvoa",
+  "voice": "af_heart",
+  "fx": "room",
+  "speed": 0.95,
+  "speaker": "Nia Pell",
+  "words": "Mara's keeping their ledger in a tin, I hear. Good. Make them pay rent for once.",
+  "tts": "Mara's keeping their ledger in a tin, I hear. Good. Make them pay rent for once.",
+  "where": "src/game/town/Settlement.ts"
+ },
+ {
   "key": "11xse79",
   "voice": "af_heart",
   "fx": "room",
@@ -5368,6 +6188,16 @@
   "words": "Not in my diner! Not near my diner! Not in view of my diner!",
   "tts": "Not in my diner! Not near my diner! Not in view of my diner!",
   "where": "src/content/townBarks.ts"
+ },
+ {
+  "key": "1r9tu2b",
+  "voice": "af_heart",
+  "fx": "room",
+  "speed": 0.95,
+  "speaker": "Nia Pell",
+  "words": "Pip has a pool now? Tell her the diner has a puddle. We could be sister cities.",
+  "tts": "Pip has a pool now? Tell her the diner has a puddle. We could be sister cities.",
+  "where": "src/game/town/Settlement.ts"
  },
  {
   "key": "1y2036p",
@@ -5387,6 +6217,16 @@
   "speaker": "Nia Pell",
   "words": "Somebody has to feed you on the way. Yes. I'm bringing the stove. The stove is coming whether it likes it or not.",
   "tts": "Somebody has to feed you on the way. Yes. I'm bringing the stove. The stove is coming whether it likes it or not.",
+  "where": "src/game/town/Settlement.ts"
+ },
+ {
+  "key": "1unfqx0",
+  "voice": "af_heart",
+  "fx": "room",
+  "speed": 0.95,
+  "speaker": "Nia Pell",
+  "words": "Somebody played Rosa's song on the radio at sunset. The whole street stopped. Sol pretended he had smoke in his eye.",
+  "tts": "Somebody played Rosa's song on the radio at sunset. The whole street stopped. Sol pretended he had smoke in his eye.",
   "where": "src/game/town/Settlement.ts"
  },
  {
@@ -5420,6 +6260,16 @@
   "where": "src/content/townBarks.ts"
  },
  {
+  "key": "1fjq01d",
+  "voice": "af_heart",
+  "fx": "room",
+  "speed": 0.95,
+  "speaker": "Nia Pell",
+  "words": "The tap behind the diner coughed last night, ran brown, then clear. I cried into the soup. Don't tell anyone. Everyone saw.",
+  "tts": "The tap behind the diner coughed last night, ran brown, then clear. I cried into the soup. Don't tell anyone. Everyone saw.",
+  "where": "src/game/town/Settlement.ts"
+ },
+ {
   "key": "020pbsb",
   "voice": "af_heart",
   "fx": "room",
@@ -5447,6 +6297,16 @@
   "speaker": "Nia Pell",
   "words": "There you are. Sit.",
   "tts": "There you are. Sit.",
+  "where": "src/game/town/Settlement.ts"
+ },
+ {
+  "key": "1fen9xu",
+  "voice": "af_heart",
+  "fx": "room",
+  "speed": 0.95,
+  "speaker": "Nia Pell",
+  "words": "Twenty jugs a week to Last Chance, I hear. Must be nice. Dry Creek gets the dust.",
+  "tts": "Twenty jugs a week to Last Chance, I hear. Must be nice. Dry Creek gets the dust.",
   "where": "src/game/town/Settlement.ts"
  },
  {
@@ -5690,6 +6550,16 @@
   "where": "src/game/sites/datacenter.ts"
  },
  {
+  "key": "078nvws",
+  "voice": "af_sky",
+  "fx": "radio",
+  "speed": 1.02,
+  "speaker": "Pip Okafor",
+  "words": "And I heard what you told Hollis about Rider 9. I wrote it down. I wrote down why, too.",
+  "tts": "And I heard what you told Hollis about Rider 9. I wrote it down. I wrote down why, too.",
+  "where": "src/content/camp.ts"
+ },
+ {
   "key": "1sqebih",
   "voice": "af_sky",
   "fx": "radio",
@@ -5697,6 +6567,36 @@
   "speaker": "Pip Okafor",
   "words": "At least you said. Most grown-ups don't say. I hope you have a pool. That's so stupid. You're in a column now. I'm not telling you which.",
   "tts": "At least you said. Most grown-ups don't say. I hope you have a pool. That's so stupid. You're in a column now. I'm not telling you which.",
+  "where": "src/content/camp.ts"
+ },
+ {
+  "key": "02rr96j",
+  "voice": "af_sky",
+  "fx": "radio",
+  "speed": 1.02,
+  "speaker": "Pip Okafor",
+  "words": "Did you find his water yet? I left a line in the ledger for it. It's empty. It looks at me.",
+  "tts": "Did you find his water yet? I left a line in the ledger for it. It's empty. It looks at me.",
+  "where": "src/content/camp.ts"
+ },
+ {
+  "key": "10yyks6",
+  "voice": "af_sky",
+  "fx": "radio",
+  "speed": 1.02,
+  "speaker": "Pip Okafor",
+  "words": "Don't walk on my pool.",
+  "tts": "Don't walk on my pool.",
+  "where": "src/content/camp.ts"
+ },
+ {
+  "key": "1in3cwr",
+  "voice": "af_sky",
+  "fx": "radio",
+  "speed": 1.02,
+  "speaker": "Pip Okafor",
+  "words": "Her jugs came on time. I wrote them in pencil. Mara says pencil is for things you don't trust.",
+  "tts": "Her jugs came on time. I wrote them in pencil. Mara says pencil is for things you don't trust.",
   "where": "src/content/camp.ts"
  },
  {
@@ -5717,6 +6617,36 @@
   "speaker": "Pip Okafor",
   "words": "I was in the car with my mom. We were going to get my teeth looked at. Everything stopped, the lights and the phones and the road, all at once, like someone pulled a plug. Mom said huh. That's the last normal thing anyone said. I wrote it down. Huh.",
   "tts": "I was in the car with my mom. We were going to get my teeth looked at. Everything stopped, the lights and the phones and the road, all at once, like someone pulled a plug. Mom said huh. That's the last normal thing anyone said. I wrote it down. Huh.",
+  "where": "src/content/camp.ts"
+ },
+ {
+  "key": "0ht3qat",
+  "voice": "af_sky",
+  "fx": "radio",
+  "speed": 1.02,
+  "speaker": "Pip Okafor",
+  "words": "I'm not tired. I'm counting stars. It's the same as counting jugs but they don't run out.",
+  "tts": "I'm not tired. I'm counting stars. It's the same as counting jugs but they don't run out.",
+  "where": "src/content/camp.ts"
+ },
+ {
+  "key": "0q7cfni",
+  "voice": "af_sky",
+  "fx": "radio",
+  "speed": 1.02,
+  "speaker": "Pip Okafor",
+  "words": "I'm Pip. I do the ledger. Three days of water, two if Hollis keeps washing his face. Bring some back and I'll write you in the good column.",
+  "tts": "I'm Pip. I do the ledger. Three days of water, two if Hollis keeps washing his face. Bring some back and I'll write you in the good column.",
+  "where": "src/content/camp.ts"
+ },
+ {
+  "key": "1hxvvih",
+  "voice": "af_sky",
+  "fx": "radio",
+  "speed": 1.02,
+  "speaker": "Pip Okafor",
+  "words": "Is that the cistern water? Is it clean? How many? Don't answer, I'm counting.",
+  "tts": "Is that the cistern water? Is it clean? How many? Don't answer, I'm counting.",
   "where": "src/content/camp.ts"
  },
  {
@@ -5770,6 +6700,46 @@
   "where": "src/content/camp.ts"
  },
  {
+  "key": "0ehhi4u",
+  "voice": "af_sky",
+  "fx": "radio",
+  "speed": 1.02,
+  "speaker": "Pip Okafor",
+  "words": "The ledger goes further now. Not far enough. Mara says that's what west is for.",
+  "tts": "The ledger goes further now. Not far enough. Mara says that's what west is for.",
+  "where": "src/content/camp.ts"
+ },
+ {
+  "key": "1pzaepa",
+  "voice": "af_sky",
+  "fx": "radio",
+  "speed": 1.02,
+  "speaker": "Pip Okafor",
+  "words": "The ledger has a new column. It's called ENOUGH. It has one line in it so far. I'm being careful with it.",
+  "tts": "The ledger has a new column. It's called Enough. It has one line in it so far. I'm being careful with it.",
+  "where": "src/content/camp.ts"
+ },
+ {
+  "key": "0tastpj",
+  "voice": "af_sky",
+  "fx": "radio",
+  "speed": 1.02,
+  "speaker": "Pip Okafor",
+  "words": "The ledger's in the ammo tin now, under the radio. I made a copy. Mara doesn't know. Now you know. Don't tell her.",
+  "tts": "The ledger's in the ammo tin now, under the radio. I made a copy. Mara doesn't know. Now you know. Don't tell her.",
+  "where": "src/content/camp.ts"
+ },
+ {
+  "key": "149gob4",
+  "voice": "af_sky",
+  "fx": "radio",
+  "speed": 1.02,
+  "speaker": "Pip Okafor",
+  "words": "THE OTHER COLUMN is four pages now. I'm practising the voices for the trial.",
+  "tts": "The Other Column is four pages now. I'm practising the voices for the trial.",
+  "where": "src/content/camp.ts"
+ },
+ {
   "key": "0lr5omb",
   "voice": "af_sky",
   "fx": "radio",
@@ -5790,6 +6760,16 @@
   "where": "src/content/camp.ts"
  },
  {
+  "key": "1y3ck9m",
+  "voice": "af_sky",
+  "fx": "radio",
+  "speed": 1.02,
+  "speaker": "Pip Okafor",
+  "words": "You're still in the column. Don't walk on the pool.",
+  "tts": "You're still in the column. Don't walk on the pool.",
+  "where": "src/content/camp.ts"
+ },
+ {
   "key": "13oimti",
   "voice": "af_alloy",
   "fx": "pa",
@@ -5807,16 +6787,6 @@
   "speaker": "POD-01 \"MOMENTUM\"",
   "words": "Run 002 is ready to board! Destination: the end of the finished track. Estimated top speed: 41 km/h. Please note: the return trip has not been funded.",
   "tts": "Run 002 is ready to board! Destination: the end of the finished track. Estimated top speed: 41 km/h. Please note: the return trip has not been funded.",
-  "where": "src/game/sites/tube.ts"
- },
- {
-  "key": "06o0is5",
-  "voice": "af_alloy",
-  "fx": "pa",
-  "speed": 1,
-  "speaker": "POD-01 \"MOMENTUM\"",
-  "words": "The screen is black. Under the front seat, a bright orange box ticks quietly to itself. Everything in here is waiting for the station to wake up.",
-  "tts": "The screen is black. Under the front seat, a bright orange box ticks quietly to itself. Everything in here is waiting for the station to wake up.",
   "where": "src/game/sites/tube.ts"
  },
  {
@@ -5868,6 +6838,16 @@
   "words": "Could you not? My mug and I are trying to relax.",
   "tts": "Could you not? My mug and I are trying to relax.",
   "where": "src/content/townBarks.ts"
+ },
+ {
+  "key": "0lp2c5r",
+  "voice": "am_eric",
+  "fx": "room",
+  "speed": 0.97,
+  "speaker": "Ren Oka",
+  "words": "Count today: one Kade truck going west, empty. One cistern coming east, full. Best count I've ever had.",
+  "tts": "Count today: one Kade truck going west, empty. One cistern coming east, full. Best count I've ever had.",
+  "where": "src/game/town/Settlement.ts"
  },
  {
   "key": "1t9753d",
@@ -5930,6 +6910,16 @@
   "where": "src/content/camp.ts"
  },
  {
+  "key": "18x3xiu",
+  "voice": "am_eric",
+  "fx": "room",
+  "speed": 0.97,
+  "speaker": "Ren Oka",
+  "words": "I counted the names when Mara read them. Four hundred and six. I lost count at the senators.",
+  "tts": "I counted the names when Mara read them. Four hundred and six. I lost count at the senators.",
+  "where": "src/game/town/Settlement.ts"
+ },
+ {
   "key": "09nz6kk",
   "voice": "am_eric",
   "fx": "room",
@@ -5960,6 +6950,16 @@
   "where": "src/content/townBarks.ts"
  },
  {
+  "key": "16g7zk9",
+  "voice": "am_eric",
+  "fx": "room",
+  "speed": 0.97,
+  "speaker": "Ren Oka",
+  "words": "I watched that rocket come down, back then. Counted the pieces. Two. Kade said one.",
+  "tts": "I watched that rocket come down, back then. Counted the pieces. Two. Kade said one.",
+  "where": "src/game/town/Settlement.ts"
+ },
+ {
   "key": "02fy9sr",
   "voice": "am_eric",
   "fx": "room",
@@ -5980,6 +6980,16 @@
   "where": "src/game/town/Settlement.ts"
  },
  {
+  "key": "124tw6g",
+  "voice": "am_eric",
+  "fx": "room",
+  "speed": 0.97,
+  "speaker": "Ren Oka",
+  "words": "In the booth at the Starlite, threading the reel for the keynote. One more thing, he said, and I walked out, because there's always one more thing. Behind me the screen went white and stayed white. Nobody else came out. I've been counting things ever since. It keeps the white out.",
+  "tts": "In the booth at the Starlite, threading the reel for the keynote. One more thing, he said, and I walked out, because there's always one more thing. Behind me the screen went white and stayed white. Nobody else came out. I've been counting things ever since. It keeps the white out.",
+  "where": "src/game/town/Settlement.ts"
+ },
+ {
   "key": "08w2ttg",
   "voice": "am_eric",
   "fx": "room",
@@ -5988,6 +6998,16 @@
   "words": "Kade drone count this week: one. Jug count: nineteen. It's always nineteen.",
   "tts": "Kade drone count this week: one. Jug count: nineteen. It's always nineteen.",
   "where": "src/content/townBarks.ts"
+ },
+ {
+  "key": "1i84kcr",
+  "voice": "am_eric",
+  "fx": "room",
+  "speed": 0.97,
+  "speaker": "Ren Oka",
+  "words": "Kade drone went over on Tuesday, toward Last Chance. Twenty jugs, they said. I counted nineteen. It's always nineteen.",
+  "tts": "Kade drone went over on Tuesday, toward Last Chance. Twenty jugs, they said. I counted nineteen. It's always nineteen.",
+  "where": "src/game/town/Settlement.ts"
  },
  {
   "key": "0t46o23",
@@ -6060,6 +7080,16 @@
   "where": "src/content/townBarks.ts"
  },
  {
+  "key": "11xq1k8",
+  "voice": "am_eric",
+  "fx": "room",
+  "speed": 0.97,
+  "speaker": "Ren Oka",
+  "words": "Watched the free-trial drone go over. It came with a survey asking how likely we were to recommend thirst.",
+  "tts": "Watched the free-trial drone go over. It came with a survey asking how likely we were to recommend thirst.",
+  "where": "src/game/town/Settlement.ts"
+ },
+ {
   "key": "08grii2",
   "voice": "am_eric",
   "fx": "room",
@@ -6078,6 +7108,16 @@
   "words": "Whoa. Okay. I'll count that as a no.",
   "tts": "Whoa. Okay. I'll count that as a no.",
   "where": "src/content/townBarks.ts"
+ },
+ {
+  "key": "1j2ln09",
+  "voice": "am_eric",
+  "fx": "room",
+  "speed": 0.97,
+  "speaker": "Ren Oka",
+  "words": "You found someone on the west road, didn't you. I counted forty walk out that way, one week. I stopped counting the ones coming back. There was nothing to count.",
+  "tts": "You found someone on the west road, didn't you. I counted forty walk out that way, one week. I stopped counting the ones coming back. There was nothing to count.",
+  "where": "src/game/town/Settlement.ts"
  },
  {
   "key": "1cd0z97",
@@ -6190,6 +7230,16 @@
   "where": "src/content/townBarks.ts"
  },
  {
+  "key": "1md6tgy",
+  "voice": "am_echo",
+  "fx": "room",
+  "speed": 0.94,
+  "speaker": "Sol Varga",
+  "words": "Every name on the radio. Took you an hour. Took them three years to earn it.",
+  "tts": "Every name on the radio. Took you an hour. Took them three years to earn it.",
+  "where": "src/game/town/Settlement.ts"
+ },
+ {
   "key": "0lholli",
   "voice": "am_echo",
   "fx": "room",
@@ -6207,6 +7257,16 @@
   "speaker": "Sol Varga",
   "words": "Fire's communal. The news isn't. You want locks, or the version where we're all fine?",
   "tts": "Fire's communal. The news isn't. You want locks, or the version where we're all fine?",
+  "where": "src/game/town/Settlement.ts"
+ },
+ {
+  "key": "1bd6evh",
+  "voice": "am_echo",
+  "fx": "room",
+  "speed": 0.94,
+  "speaker": "Sol Varga",
+  "words": "Heard it on the band at sunset, with the whole street. Thank you for that. I'll say it once.",
+  "tts": "Heard it on the band at sunset, with the whole street. Thank you for that. I'll say it once.",
   "where": "src/game/town/Settlement.ts"
  },
  {
@@ -6280,6 +7340,16 @@
   "where": "src/game/town/Settlement.ts"
  },
  {
+  "key": "1gw31ib",
+  "voice": "am_echo",
+  "fx": "room",
+  "speed": 0.94,
+  "speaker": "Sol Varga",
+  "words": "Night's for listening.",
+  "tts": "Night's for listening.",
+  "where": "src/game/town/Settlement.ts"
+ },
+ {
   "key": "0p731pv",
   "voice": "am_echo",
   "fx": "room",
@@ -6288,6 +7358,16 @@
   "words": "Night's for listening. The desert talks more after dark.",
   "tts": "Night's for listening. The desert talks more after dark.",
   "where": "src/content/townBarks.ts"
+ },
+ {
+  "key": "1gebqpi",
+  "voice": "am_echo",
+  "fx": "room",
+  "speed": 0.94,
+  "speaker": "Sol Varga",
+  "words": "Out on a call. A woman locked out of her car at the feed store, keys on the seat. I had it open in a minute. Then nothing opened again: not the pumps, not the bank, not the phone in my pocket. Rosa was on the radio that afternoon. KDRY. I didn't hear her. I was busy with a door.",
+  "tts": "Out on a call. A woman locked out of her car at the feed store, keys on the seat. I had it open in a minute. Then nothing opened again: not the pumps, not the bank, not the phone in my pocket. Rosa was on the radio that afternoon. Kdry. I didn't hear her. I was busy with a door.",
+  "where": "src/game/town/Settlement.ts"
  },
  {
   "key": "1ynh2ut",
@@ -6360,6 +7440,16 @@
   "where": "src/content/townBarks.ts"
  },
  {
+  "key": "0fksxhu",
+  "voice": "am_echo",
+  "fx": "room",
+  "speed": 0.94,
+  "speaker": "Sol Varga",
+  "words": "The creek bed made a sound last night. Not water yet. The sound before water.",
+  "tts": "The creek bed made a sound last night. Not water yet. The sound before water.",
+  "where": "src/game/town/Settlement.ts"
+ },
+ {
   "key": "0qah5vn",
   "voice": "am_echo",
   "fx": "room",
@@ -6377,6 +7467,16 @@
   "speaker": "Sol Varga",
   "words": "Thirty years of other people's doors. One more won't kill me. It might. Yes.",
   "tts": "Thirty years of other people's doors. One more won't kill me. It might. Yes.",
+  "where": "src/game/town/Settlement.ts"
+ },
+ {
+  "key": "1bgwhjp",
+  "voice": "am_echo",
+  "fx": "room",
+  "speed": 0.94,
+  "speaker": "Sol Varga",
+  "words": "Twenty jugs. Mm. A lock that opens when she says so is still a lock.",
+  "tts": "Twenty jugs. Mm. A lock that opens when she says so is still a lock.",
   "where": "src/game/town/Settlement.ts"
  },
  {
@@ -6410,6 +7510,16 @@
   "where": "src/content/townBarks.ts"
  },
  {
+  "key": "1yufx85",
+  "voice": "am_puck",
+  "fx": "megaphone",
+  "speed": 1.05,
+  "speaker": "Tanner Pivotson",
+  "words": "A park ranger? At my door? Is this about the report? I never read the report. Nobody read the report. That's what made it such a good report.",
+  "tts": "A park ranger? At my door? Is this about the report? I never read the report. Nobody read the report. That's what made it such a good report.",
+  "where": "src/content/dialogue.ts"
+ },
+ {
   "key": "0h0mm2t",
   "voice": "am_puck",
   "fx": "megaphone",
@@ -6418,6 +7528,16 @@
   "words": "A reseller. With a megaphone. That's two nouns. She thought about me long enough for two nouns. If you get to Apex, tell her Bunkrly delivered. Even if it didn't.",
   "tts": "A reseller. With a megaphone. That's two nouns. She thought about me long enough for two nouns. If you get to Apex, tell her Bunker dot lee delivered. Even if it didn't.",
   "where": "src/content/dialogue.ts"
+ },
+ {
+  "key": "0p4dk0k",
+  "voice": "am_puck",
+  "fx": "megaphone",
+  "speed": 1.05,
+  "speaker": "Tanner Pivotson",
+  "words": "Alarm! Somebody tell my lawyer! Oh right.",
+  "tts": "Alarm! Somebody tell my lawyer! Oh right.",
+  "where": "src/content/bunkers/garage.ts"
  },
  {
   "key": "1ri4zqu",
@@ -6440,6 +7560,16 @@
   "where": "src/content/bunkers/garage.ts"
  },
  {
+  "key": "1nqvjpm",
+  "voice": "am_puck",
+  "fx": "megaphone",
+  "speed": 1.05,
+  "speaker": "Tanner Pivotson",
+  "words": "Fine. FINE. I am pivoting. To grief.",
+  "tts": "Fine. Fine. I am pivoting. To grief.",
+  "where": "src/content/bunkers/garage.ts"
+ },
+ {
   "key": "0pf13ui",
   "voice": "am_puck",
   "fx": "megaphone",
@@ -6458,6 +7588,16 @@
   "words": "Have we met? I meet a lot of people. Most of them are markets.",
   "tts": "Have we met? I meet a lot of people. Most of them are markets.",
   "where": "src/content/dialogue.ts"
+ },
+ {
+  "key": "13dgvuk",
+  "voice": "am_puck",
+  "fx": "megaphone",
+  "speed": 1.05,
+  "speaker": "Tanner Pivotson",
+  "words": "Hey! You! This is a PRIVATE apocalypse. Members only.",
+  "tts": "Hey! You! This is a Private apocalypse. Members only.",
+  "where": "src/content/bunkers/garage.ts"
  },
  {
   "key": "1piypn8",
@@ -6500,6 +7640,16 @@
   "where": "src/content/bunkers/garage.ts"
  },
  {
+  "key": "1mon7vf",
+  "voice": "am_puck",
+  "fx": "megaphone",
+  "speed": 1.05,
+  "speaker": "Tanner Pivotson",
+  "words": "INTRUDER! SeedBot, disrupt them!",
+  "tts": "Intruder! Seed Bot, disrupt them!",
+  "where": "src/content/bunkers/garage.ts"
+ },
+ {
   "key": "1yr98tv",
   "voice": "am_puck",
   "fx": "megaphone",
@@ -6510,6 +7660,36 @@
   "where": "src/content/dialogue.ts"
  },
  {
+  "key": "0zyys8o",
+  "voice": "am_puck",
+  "fx": "megaphone",
+  "speed": 1.05,
+  "speaker": "Tanner Pivotson",
+  "words": "Len. Don't use the voice. I invented the voice. If you say the terms out loud I'll agree to them, and I'm trying to grow as a person who doesn't do that.",
+  "tts": "Len. Don't use the voice. I invented the voice. If you say the terms out loud I'll agree to them, and I'm trying to grow as a person who doesn't do that.",
+  "where": "src/content/dialogue.ts"
+ },
+ {
+  "key": "0dq5cwj",
+  "voice": "am_puck",
+  "fx": "megaphone",
+  "speed": 1.05,
+  "speaker": "Tanner Pivotson",
+  "words": "My gate! That padlock had a five-star rating!",
+  "tts": "My gate! That padlock had a five-star rating!",
+  "where": "src/content/bunkers/garage.ts"
+ },
+ {
+  "key": "1hia1lr",
+  "voice": "am_puck",
+  "fx": "megaphone",
+  "speed": 1.05,
+  "speaker": "Tanner Pivotson",
+  "words": "MY GATE. That was not in the terms of service!",
+  "tts": "My Gate. That was not in the terms of service!",
+  "where": "src/content/bunkers/garage.ts"
+ },
+ {
   "key": "1b437y9",
   "voice": "am_puck",
   "fx": "megaphone",
@@ -6517,6 +7697,26 @@
   "speaker": "Tanner Pivotson",
   "words": "My waitlist position is confidential and also improving!",
   "tts": "My waitlist position is confidential and also improving!",
+  "where": "src/content/bunkers/garage.ts"
+ },
+ {
+  "key": "106u4w0",
+  "voice": "am_puck",
+  "fx": "megaphone",
+  "speed": 1.05,
+  "speaker": "Tanner Pivotson",
+  "words": "Nash. Buddy. The brown-out is our greenest feature. Twelve percent battery is a lifestyle. I'll add you back to the repo. The repo is in my head now.",
+  "tts": "Nash. Buddy. The brown-out is our greenest feature. Twelve percent battery is a lifestyle. I'll add you back to the repo. The repo is in my head now.",
+  "where": "src/content/dialogue.ts"
+ },
+ {
+  "key": "1oqq3h6",
+  "voice": "am_puck",
+  "fx": "megaphone",
+  "speed": 1.05,
+  "speaker": "Tanner Pivotson",
+  "words": "NO. Not the Runway Room. That is where I keep my runway!",
+  "tts": "No. Not the Runway Room. That is where I keep my runway!",
   "where": "src/content/bunkers/garage.ts"
  },
  {
@@ -6540,6 +7740,16 @@
   "where": "src/content/dialogue.ts"
  },
  {
+  "key": "0efsqp6",
+  "voice": "am_puck",
+  "fx": "megaphone",
+  "speed": 1.05,
+  "speaker": "Tanner Pivotson",
+  "words": "Paz, logistics is a feeling. SeedBot felt those shakes belonged near a ring light. I hear you. I am not un-scanning anything. Un-scanning is not a verb I funded.",
+  "tts": "Paz, logistics is a feeling. Seed Bot felt those shakes belonged near a ring light. I hear you. I am not un-scanning anything. Un-scanning is not a verb I funded.",
+  "where": "src/content/dialogue.ts"
+ },
+ {
   "key": "1fa9d9d",
   "voice": "am_puck",
   "fx": "megaphone",
@@ -6547,6 +7757,26 @@
   "speaker": "Tanner Pivotson",
   "words": "Please hold. Your break-in is important to us.",
   "tts": "Please hold. Your break-in is important to us.",
+  "where": "src/content/bunkers/garage.ts"
+ },
+ {
+  "key": "1cptnoi",
+  "voice": "am_puck",
+  "fx": "megaphone",
+  "speed": 1.05,
+  "speaker": "Tanner Pivotson",
+  "words": "Rue! You never filed the delivery exception. That pallet was a marketing sample. The camp can have the tote bag. The tote bag is emotionally available.",
+  "tts": "Rue! You never filed the delivery exception. That pallet was a marketing sample. The camp can have the tote bag. The tote bag is emotionally available.",
+  "where": "src/content/dialogue.ts"
+ },
+ {
+  "key": "1ubjzzj",
+  "voice": "am_puck",
+  "fx": "megaphone",
+  "speed": 1.05,
+  "speaker": "Tanner Pivotson",
+  "words": "Security breach! This is going in the investor update!",
+  "tts": "Security breach! This is going in the investor update!",
   "where": "src/content/bunkers/garage.ts"
  },
  {
@@ -6568,6 +7798,16 @@
   "words": "SeedBot! Dock! Run a battery diagnostic and do NOT apprehend the guest until I finish my thought. SeedBot? He's docking. He loves diagnostics. It's the only performance review he gets.",
   "tts": "Seed Bot! Dock! Run a battery diagnostic and do Not apprehend the guest until I finish my thought. Seed Bot? He's docking. He loves diagnostics. It's the only performance review he gets.",
   "where": "src/content/dialogue.ts"
+ },
+ {
+  "key": "0by7nzh",
+  "voice": "am_puck",
+  "fx": "megaphone",
+  "speed": 1.05,
+  "speaker": "Tanner Pivotson",
+  "words": "That door was load-bearing! Emotionally!",
+  "tts": "That door was load-bearing! Emotionally!",
+  "where": "src/content/bunkers/garage.ts"
  },
  {
   "key": "0eor0t1",
@@ -6597,6 +7837,16 @@
   "speaker": "Tanner Pivotson",
   "words": "The water is a premium tier. You're on the free tier, which is dust. The Seed Manifest is confidential. It's a list of who paid. It is mostly a list of who paid. The vault code is obvious. Obvious is a feature. Users hate passwords.",
   "tts": "The water is a premium tier. You're on the free tier, which is dust. The Seed Manifest is confidential. It's a list of who paid. It is mostly a list of who paid. The vault code is obvious. Obvious is a feature. Users hate passwords.",
+  "where": "src/content/dialogue.ts"
+ },
+ {
+  "key": "0ajzr4w",
+  "voice": "am_puck",
+  "fx": "megaphone",
+  "speed": 1.05,
+  "speaker": "Tanner Pivotson",
+  "words": "Theo Vance! Brother! You walked out of Apex, which, respect, very counter-cultural. Come in! Not literally. The door is a metaphor. The lock is very literal.",
+  "tts": "Theo Vance! Brother! You walked out of Apex, which, respect, very counter-cultural. Come in! Not literally. The door is a metaphor. The lock is very literal.",
   "where": "src/content/dialogue.ts"
  },
  {
@@ -6750,6 +8000,26 @@
   "where": "src/content/bunkers/apex.ts"
  },
  {
+  "key": "0ya5tp2",
+  "voice": "bf_emma",
+  "fx": "radio",
+  "speed": 0.96,
+  "speaker": "Vesper Kade",
+  "words": "Intruder on the apron. Posting it. Pinning it.",
+  "tts": "Intruder on the apron. Posting it. Pinning it.",
+  "where": "src/content/bunkers/apex.ts"
+ },
+ {
+  "key": "13doyk6",
+  "voice": "bf_emma",
+  "fx": "radio",
+  "speed": 0.96,
+  "speaker": "Vesper Kade",
+  "words": "Kade Recovery, cleanup on the apron. Bill the camps.",
+  "tts": "Kade Recovery, cleanup on the apron. Bill the camps.",
+  "where": "src/content/bunkers/apex.ts"
+ },
+ {
   "key": "0b4b7xg",
   "voice": "bf_emma",
   "fx": "radio",
@@ -6827,6 +8097,16 @@
   "speaker": "Vesper Kade",
   "words": "Posting this. Local man discovers door. Engagement is through the roof.",
   "tts": "Posting this. Local man discovers door. Engagement is through the roof.",
+  "where": "src/content/bunkers/apex.ts"
+ },
+ {
+  "key": "1bi6bma",
+  "voice": "bf_emma",
+  "fx": "radio",
+  "speed": 0.96,
+  "speaker": "Vesper Kade",
+  "words": "Security! Somebody is touching my things!",
+  "tts": "Security! Somebody is touching my things!",
   "where": "src/content/bunkers/apex.ts"
  },
  {
@@ -7020,6 +8300,16 @@
   "where": "src/content/townBarks.ts"
  },
  {
+  "key": "07vlpnv",
+  "voice": "bm_lewis",
+  "fx": "room",
+  "speed": 0.92,
+  "speaker": "Wick",
+  "words": "Fire's small on purpose.",
+  "tts": "Fire's small on purpose.",
+  "where": "src/game/town/Settlement.ts"
+ },
+ {
   "key": "0ut3r69",
   "voice": "bm_lewis",
   "fx": "room",
@@ -7068,6 +8358,16 @@
   "words": "Heard the pipe sing last night, all the way up here. First song it's sung in years.",
   "tts": "Heard the pipe sing last night, all the way up here. First song it's sung in years.",
   "where": "src/content/townBarks.ts"
+ },
+ {
+  "key": "0q101lv",
+  "voice": "bm_lewis",
+  "fx": "room",
+  "speed": 0.92,
+  "speaker": "Wick",
+  "words": "Heard you on the radio, reading names. Didn't hear mine. Good.",
+  "tts": "Heard you on the radio, reading names. Didn't hear mine. Good.",
+  "where": "src/game/town/Settlement.ts"
  },
  {
   "key": "1hg2m8i",
@@ -7220,6 +8520,16 @@
   "where": "src/game/town/Settlement.ts"
  },
  {
+  "key": "0xhl5wu",
+  "voice": "bm_lewis",
+  "fx": "room",
+  "speed": 0.92,
+  "speaker": "Wick",
+  "words": "Something with a blue light flew over the ridge last night, slow, from the north. Like it was reading.",
+  "tts": "Something with a blue light flew over the ridge last night, slow, from the north. Like it was reading.",
+  "where": "src/game/town/Settlement.ts"
+ },
+ {
   "key": "05ymsyj",
   "voice": "bm_lewis",
   "fx": "room",
@@ -7237,6 +8547,16 @@
   "speaker": "Wick",
   "words": "The highway. The Garage's neon, when he remembers to pay for it. And southwest, out in the dunes, a tail fin. A private jet tried to leave the week of the Pivot. The desert said no.",
   "tts": "The highway. The Garage's neon, when he remembers to pay for it. And southwest, out in the dunes, a tail fin. A private jet tried to leave the week of the Pivot. The desert said no.",
+  "where": "src/game/town/Settlement.ts"
+ },
+ {
+  "key": "112gl6m",
+  "voice": "bm_lewis",
+  "fx": "room",
+  "speed": 0.92,
+  "speaker": "Wick",
+  "words": "The salt doesn't glow as much tonight. Maybe that was you. Don't let it go to your head.",
+  "tts": "The salt doesn't glow as much tonight. Maybe that was you. Don't let it go to your head.",
   "where": "src/game/town/Settlement.ts"
  },
  {
@@ -7260,6 +8580,16 @@
   "where": "src/game/town/Settlement.ts"
  },
  {
+  "key": "1d8hye3",
+  "voice": "bm_lewis",
+  "fx": "room",
+  "speed": 0.92,
+  "speaker": "Wick",
+  "words": "Up here, same as now. I watched the lights go out down the valley in order, west to east, like somebody walking through a house at bedtime. The Garage's neon went last. Of course it did. Then a song came up from Dry Creek on somebody's radio, and then nothing came up at all.",
+  "tts": "Up here, same as now. I watched the lights go out down the valley in order, west to east, like somebody walking through a house at bedtime. The Garage's neon went last. Of course it did. Then a song came up from Dry Creek on somebody's radio, and then nothing came up at all.",
+  "where": "src/game/town/Settlement.ts"
+ },
+ {
   "key": "1jpibzr",
   "voice": "bm_lewis",
   "fx": "room",
@@ -7268,6 +8598,16 @@
   "words": "Visitor. That's two this year. Getting crowded.",
   "tts": "Visitor. That's two this year. Getting crowded.",
   "where": "src/content/townBarks.ts"
+ },
+ {
+  "key": "1li6i96",
+  "voice": "bm_lewis",
+  "fx": "room",
+  "speed": 0.92,
+  "speaker": "Wick",
+  "words": "Whatever you did with that ledger, the salt still glows at night. Do better next time.",
+  "tts": "Whatever you did with that ledger, the salt still glows at night. Do better next time.",
+  "where": "src/game/town/Settlement.ts"
  },
  {
   "key": "0ob1tyq",

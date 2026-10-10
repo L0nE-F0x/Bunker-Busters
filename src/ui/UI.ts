@@ -99,7 +99,7 @@ export class UI implements UIBridge {
       <div class="logo-sm">BUNKER BUSTERS</div>
       <div class="bar"><i></i></div>
       <div class="msg">BOOTING</div>
-      <div class="tip">Tip: crouch to step over tripwires. SeedBot's battery is at 12% — it naps more than you'd think.</div>`);
+      <div class="tip">Tip: crouch to step over tripwires. SeedBot is running on 12% battery, so it powers down more often than you'd think.</div>`);
     this.loadingEl.id = 'loading';
     document.body.appendChild(this.loadingEl);
     // a controller picked up (or put down): the hotbar and badges change their glyphs
@@ -711,7 +711,7 @@ export class UI implements UIBridge {
                   <div class="cat">${sel.category}</div><h4>${esc(sel.name)}</h4>
                   <p>${esc(proseKeys(sel.description))}</p>${itemStatus(sel.id, s) ? `<p class="gear-status">${esc(itemStatus(sel.id, s))}</p>` : ''}${sel.flavor ? `<p class="flavor">${esc(sel.flavor)}</p>` : ''}
                   <div class="stats"><span>WT ${sel.weight}kg</span><span>VALUE ${sel.value}</span><span>×${s.count(sel.id)}</span></div>
-                  <div class="rowbtns">${sel.usable ? `<button class="btn use">${USE_LABEL[sel.id] ?? 'Use'}</button>` : sel.category === 'weapon' ? '<button class="btn use">Equip</button>' : ''}<button class="btn drop">Drop 1</button><button class="btn drop-all">Drop stack</button></div>` : '<p>Empty pockets. The camp can fix that, or the highway can.</p>'}
+                  <div class="rowbtns">${sel.usable ? `<button class="btn use">${USE_LABEL[sel.id] ?? 'Use'}</button>` : sel.category === 'weapon' ? '<button class="btn use">Equip</button>' : ''}<button class="btn drop">Drop 1</button><button class="btn drop-all">Drop stack</button></div>` : '<p>Nothing in your pockets yet.</p>'}
                 </div>
                 <div class="kit-build">
                   <div class="label">Build · ${d.skillPoints} point${d.skillPoints === 1 ? '' : 's'} to spend</div>
@@ -965,7 +965,7 @@ export class UI implements UIBridge {
       panel.classList.toggle('intrude', speaker.startsWith('Vesper'));
       panel.innerHTML = `<div class="scan"></div>
         ${this.speakerHead(speaker)}
-        <p>${esc(text)}</p>
+        <p>${esc(text).replace(/\n/g, '<br>')}</p>
         <div class="choices">${(() => { let n = 0; return choices.map((c) => `<button class="btn choice" data-id="${esc(c.id)}" ${c.disabled ? 'disabled' : ''}><span class="n">${c.disabled ? '·' : ++n}</span><span><b>${esc(c.label)}</b>${c.disabled ? `<small>${esc(c.disabled)}</small>` : ''}</span></button>`).join(''); })()}</div>
         <div class="brief-foot"><span>Esc ${speaker.includes('Tanner') ? 'hangs up' : 'leaves'}</span><span>${enabled.length ? 'Number keys work' : ''}</span></div>`;
       panel.querySelectorAll('.choice').forEach((b) => {
@@ -1050,7 +1050,7 @@ export class UI implements UIBridge {
     const panel = h('div', 'panel camp-panel modal interactive');
     ov.appendChild(panel);
     this.root.appendChild(ov);
-    let note = 'The fire is real. The full heal is not, unless you\'ve learned how to sleep.';
+    let note = 'Resting saves your game and patches you up a little. A full heal from one rest takes Survival 5.';
     let rgroup = '';
     return new Promise((resolve) => {
       const finish = (why: string) => {
@@ -1095,7 +1095,7 @@ export class UI implements UIBridge {
             </div>
           </div>
           <footer><span class="kb"><span class="kbd">Esc</span> back to the fire</span></footer>`;
-        (panel.querySelector('.rest') as HTMLButtonElement).onclick = () => { this.audio.play('uiConfirm'); opts.onRest(); note = 'You sit with it. Not new. Better than you were.'; paint(); };
+        (panel.querySelector('.rest') as HTMLButtonElement).onclick = () => { this.audio.play('uiConfirm'); opts.onRest(); note = 'You rest for a while by the fire. Saved.'; paint(); };
         const radio = panel.querySelector('.radio') as HTMLButtonElement;
         radio.onclick = () => { if (radio.disabled) return; this.audio.play('uiConfirm'); finish('radio'); };
         (panel.querySelector('.travel') as HTMLButtonElement).onclick = () => { this.audio.play('ui'); finish('travel'); };
@@ -1104,7 +1104,7 @@ export class UI implements UIBridge {
         panel.querySelectorAll('.craft').forEach((b) => (b as HTMLButtonElement).onclick = () => {
           const err = opts.onCraft((b as HTMLElement).dataset.id ?? '');
           this.audio.play(err ? 'deny' : 'uiConfirm');
-          note = err ?? 'Made. It looks like it will work, which is the standard out here.';
+          note = err ?? 'Done. It should work.';
           paint();
         });
         const x = h('button', 'btn close-x', '✕');

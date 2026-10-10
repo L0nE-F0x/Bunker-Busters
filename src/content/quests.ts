@@ -76,32 +76,32 @@ export const QUESTS: QuestDef[] = [
     giver: 'mara',
     where: 'Last Chance → The Garage',
     blurb:
-      'Last Chance has about three days of water. Tanner Pivotson\'s drone has been lifting the camp\'s jugs off the highway. Mara wants his cistern, and the ledger in his vault he calls the Seed Manifest.',
+      'Last Chance is down to about three days of water. Tanner Pivotson\'s drone keeps taking the camp\'s jugs off the highway. Mara wants the water in his cistern, and the ledger in his vault that he calls the Seed Manifest.',
     start: (v) => v.has('briefed'),
     steps: [
       {
         id: 'note', text: 'Read the note on the pump island', at: 'gas',
-        hint: 'By the dead pumps at Last Chance, a few steps from the fire. The cooler behind them still has water in it.',
+        hint: 'It\'s pinned to the dead pumps at Last Chance, a few steps from the fire. There\'s still water in the cooler behind them.',
         done: (v) => v.has('intel:intel.gas.note') || v.has('seen:garage') || v.has('garage.complete'),
       },
       {
         id: 'garage', text: 'Find the Garage', at: 'garage',
-        hint: 'Northeast of camp, up the dirt spur off the highway. Neon, razor wire, and a man with a megaphone.',
+        hint: 'Northeast of camp, up the dirt spur off the highway. Look for the neon and the razor wire.',
         done: (v) => any(v, 'seen:garage', 'garage.gate.open', 'garage.gap.open', 'garage.complete'),
       },
       {
         id: 'fence', text: 'Get past the fence', at: 'garage',
-        hint: 'Pick the gate padlock, blow it, talk Tanner into opening it on the intercom, or find the loose panel the Spire blueprint mentions.',
+        hint: 'Pick the padlock on the gate, blow it, or talk Tanner into opening it on the intercom. The blueprint at the Spire mentions a loose panel, too.',
         done: (v) => any(v, 'garage.gate.open', 'garage.gap.open', 'garage.side.open', 'garage.vault.open', 'garage.complete'),
       },
       {
         id: 'vault', text: 'Open the Runway Room', at: 'garage',
-        hint: 'Inside, past the laser hall. Five pins, a keypad with an "obvious" code, or a charge at Demolition 5.',
+        hint: 'It\'s inside, past the laser hall. Five pins, a keypad with an "obvious" code, or a charge at Demolition 5.',
         done: (v) => any(v, 'garage.vault.open', 'garage.complete'),
       },
       {
         id: 'loot', text: 'Take the water and the Seed Manifest', at: 'garage',
-        hint: 'The safe and both crates in the vault. The water comes with you even if the pack complains.',
+        hint: 'The safe and both crates in the vault. The water comes with you even if your pack is full.',
         done: (v) => v.has('garage.complete'),
       },
       {
@@ -111,12 +111,12 @@ export const QUESTS: QuestDef[] = [
       },
       {
         id: 'permit', text: 'Find out why Dry Creek is dry', optional: true,
-        hint: 'A county clipboard on the highway, west of camp. Doc Ivers remembers that summer too, if you ask him.',
+        hint: 'There\'s a county clipboard on the highway, west of camp. Doc Ivers in Dry Creek remembers that summer, too.',
         done: (v) => any(v, 'lore.permit', 'creek.doc.permit'),
       },
       {
         id: 'debrief', text: 'Radio Mara from the campfire', at: 'gas',
-        hint: 'Back at Last Chance, open the camp and raise Mara. She wants the names read out loud.',
+        hint: 'Back at Last Chance, open the camp and call Mara. She wants the names read out.',
         done: (v) => any(v, 'act1.broadcast', 'act1.leverage', 'act1.deal'),
       },
     ],
@@ -124,19 +124,19 @@ export const QUESTS: QuestDef[] = [
       {
         flag: 'act1.broadcast',
         label: 'You read every name on the open net.',
-        text: 'Every camp on the band heard who sold them. Vesper closed the spur valve in reply. The cistern has about two weeks in it, and for once every camp is angry at the same person.',
+        text: 'Every camp on the band heard who sold them out. Vesper shut the spur valve that night. The cistern has about two weeks left in it, and right now every camp is angry at the same person.',
         reward: { xp: 150, items: [{ id: 'charge', qty: 1 }, { id: 'emp', qty: 1 }], rep: { compact: 3, creek: 1, mara: 1, vesper: -2 } },
       },
       {
         flag: 'act1.leverage',
-        label: 'You kept the ledger quiet, and let Vesper pay for the silence.',
+        label: 'You kept the ledger quiet and let Vesper pay for it.',
         text: 'Vesper sent a drone drop and called it a free trial. Mara keeps the ledger in the ammo tin under the radio. When the trial runs out, the camp goes west.',
         reward: { xp: 150, items: [{ id: 'water', qty: 6 }, { id: 'medkit', qty: 2 }], rep: { compact: 1, vesper: 1 } },
       },
       {
         flag: 'act1.deal',
         label: 'You sent the ledger back for her water.',
-        text: 'Twenty jugs a week, "forever-ish". The camp drinks, and Mara hates it every time. Nobody believes the jugs will keep coming.',
+        text: 'Twenty jugs a week, "forever-ish". The camp drinks. Mara hates every jug, and nobody thinks they\'ll keep coming.',
         reward: { xp: 120, items: [{ id: 'water', qty: 10 }, { id: 'ration', qty: 3 }], rep: { vesper: 2, compact: -1, mara: -2 } },
       },
     ],
@@ -149,27 +149,27 @@ export const QUESTS: QuestDef[] = [
     giver: 'mara',
     where: 'West of the salt',
     blurb:
-      'Apex Vault is on the far shore of the salt, at the foot of the range, and it holds what is left of the valley\'s water. Vesper Kade is on the other end of every camera there, live. Find out who would walk west with you, then find her road.',
+      'Apex Vault sits on the far shore of the salt, at the foot of the range, and it holds most of what\'s left of the valley\'s water. Vesper Kade watches every camera there herself. Find out who in Dry Creek would walk west with you, then find her road.',
     start: (v) => v.has('debriefed'),
     steps: [
       {
         id: 'crew', text: 'Ask Dry Creek who would come west', at: 'creek',
-        hint: 'Anyone who trusts you (standing 2 or more) will say yes. Finish their favours first.',
+        hint: 'Anyone at standing 2 or better will say yes. Doing their favours is the quickest way there.',
         done: (v) => CREW.some((f) => v.has(f)) || v.has('apex.complete'),
       },
       {
         id: 'crew2', text: 'Find a second pair of hands', optional: true, at: 'creek',
-        hint: 'Two people who trust you beat one who trusts you a lot.',
+        hint: 'Two people who trust you are better than one.',
         done: (v) => CREW.filter((f) => v.has(f)).length >= 2,
       },
       {
         id: 'road', text: 'Reach Apex Vault, west of the salt', at: 'apex',
-        hint: 'Her road leaves the highway at its west end and runs south past Dry Creek, along the salt. Kade keeps a gatehouse on it. Look for the rocket.',
+        hint: 'Her road leaves the highway at its west end and runs south past Dry Creek, along the salt. Kade has a gatehouse on it. Look for the rocket.',
         done: (v) => any(v, 'seen:apex', 'apex.hangar.open', 'apex.airlock.open', 'apex.complete'),
       },
       {
         id: 'code', text: 'Learn how the airlock code works', optional: true, at: 'apex',
-        hint: 'A shift note near the end of her road, or ask Vesper on the intercom like it\'s a feature request (Social 5). Or skip the code: SPLICE the airlock at Electronics 3.',
+        hint: 'There\'s a shift note near the end of her road. Or ask Vesper on the intercom like it\'s a feature request (Social 5), or skip the code and SPLICE the airlock at Electronics 3.',
         done: (v) => any(v, 'apex.code', 'apex.airlock.open', 'apex.complete'),
       },
       {
@@ -179,17 +179,17 @@ export const QUESTS: QuestDef[] = [
       },
       {
         id: 'airlock', text: 'Get through the airlock', at: 'apex',
-        hint: 'The code is the launch clock over the door, hours and minutes, and it counts down. Or splice the controller: door, cameras and lasers in one go. Or crawl in through the vent on the hill\'s east side, if you know about it.',
+        hint: 'The code is the launch clock over the door, hours and minutes, and it counts down. Splicing the controller gets you the door, the cameras and the lasers at once. There\'s also a vent on the hill\'s east side, if you know about it.',
         done: (v) => any(v, 'apex.airlock.open', 'apex.vent.open', 'apex.vault.open', 'apex.complete'),
       },
       {
         id: 'vault', text: 'Open the Cistern Room', at: 'apex',
-        hint: 'Down the launch corridor: jump the low beams, crouch the high one, or kill the breaker by the inner door. Then six pins, or a big charge (Demolition 5).',
+        hint: 'Down the launch corridor. Jump the low beams and crouch under the high one, or kill the breaker by the inner door. Then six pins, or a big charge (Demolition 5).',
         done: (v) => any(v, 'apex.vault.open', 'apex.complete'),
       },
       {
         id: 'loot', text: 'Take the water', at: 'apex',
-        hint: 'The cistern tap and both lockers. The water comes with you even if the pack complains.',
+        hint: 'The cistern tap and both lockers. The water comes with you even if your pack is full.',
         done: (v) => v.has('apex.complete'),
       },
     ],
@@ -207,17 +207,17 @@ export const QUESTS: QuestDef[] = [
     title: 'Two Bottles Short',
     giver: 'nia',
     where: 'Dry Creek · the diner',
-    blurb: 'Somebody is taking water from under Nia\'s counter, two bottles at a time. She keeps a ledger, and the ledger is upset.',
+    blurb: 'Someone has been taking water from under Nia\'s counter, two bottles at a time. She writes every bottle down, so she knows exactly how much is gone.',
     start: (v) => v.has('creek.talk.nia'),
     steps: [
       {
         id: 'who', text: 'Find out who is taking Nia\'s water', at: 'creek',
-        hint: 'Sol keeps the street fire at night and sees who walks past. Or ask Doc straight out (Social 2).',
+        hint: 'Sol sits up with the street fire at night and sees who goes past. Or ask Doc straight out (Social 2).',
         done: (v) => v.has('q.nia.who'),
       },
       {
         id: 'tell', text: 'Decide what Nia hears', at: 'creek',
-        hint: 'Talk to Nia. Tell her the truth, cover for him with two bottles of your own, or sit them both down (Social 3).',
+        hint: 'Talk to Nia. Tell her the truth, cover for him with two bottles of your own, or get the two of them in one room (Social 3).',
         done: (v) => any(v, 'q.nia.told', 'q.nia.covered', 'q.nia.peace'),
       },
     ],
@@ -225,19 +225,19 @@ export const QUESTS: QuestDef[] = [
       {
         flag: 'q.nia.told',
         label: 'You told Nia it was Doc.',
-        text: 'Nia had words with Doc. Loud ones. Her ledger balances again, and there\'s a plate at the counter with your name on it: a free meal every time you\'ve rested.',
+        text: 'Nia had it out with Doc, loudly, in the street. The ledger balances again, and there\'s a free plate for you at the counter after every rest.',
         reward: { xp: 60, items: [{ id: 'ration', qty: 2 }], rep: { nia: 2, doc: -1 } },
       },
       {
         flag: 'q.nia.covered',
-        label: 'You covered for Doc with two bottles of your own.',
-        text: 'Nia\'s ledger balances and she never found out. Doc did. He makes house calls for you now: patched up every time you\'ve rested, not just once.',
+        label: 'You covered for Doc with two of your own bottles.',
+        text: 'Nia\'s ledger balanced and she never found out. Doc knows what you did. He patches you up after every rest now, not just the once.',
         reward: { xp: 60, items: [{ id: 'medkit', qty: 1 }], rep: { doc: 2 } },
       },
       {
         flag: 'q.nia.peace',
         label: 'You sat them both down.',
-        text: 'Doc needed the water for the clinic\'s sterilizer and was too proud to ask. Now Nia stores it for him, in writing. You get the plate and the house calls. They both owe you, and they both hate that.',
+        text: 'Doc needed the water for the clinic\'s sterilizer and was too proud to ask. Now Nia puts some aside for him and writes it down. You get the plate and the house calls.',
         reward: { xp: 90, items: [{ id: 'ration', qty: 1 }, { id: 'medkit', qty: 1 }], rep: { nia: 1, doc: 1, creek: 1 } },
       },
     ],
@@ -248,12 +248,12 @@ export const QUESTS: QuestDef[] = [
     title: 'The Cough on the Ridge',
     giver: 'doc',
     where: 'Dry Creek · the clinic → the Cut',
-    blurb: 'Wick has a cough Doc can hear from the clinic. Wick won\'t come down. Doc has a medkit, and no knees left for that wash.',
+    blurb: 'Wick has a cough Doc can hear from the clinic, and Wick won\'t come down off the ridge. Doc has a medkit for him, but his knees won\'t take that wash.',
     start: (v) => v.has('creek.talk.doc'),
     steps: [
       {
         id: 'power', text: 'Get the clinic\'s power back', at: 'creek',
-        hint: 'The generator on the clinic\'s east side wants Electronics 1. Or hand Doc a lithium cell and let him swear at it himself.',
+        hint: 'The generator is on the clinic\'s east side and needs Electronics 1. Or give Doc a lithium cell and he\'ll fix it himself.',
         done: (v) => v.has('creek.power'),
       },
       {
@@ -263,7 +263,7 @@ export const QUESTS: QuestDef[] = [
       },
       {
         id: 'wick', text: 'Get the medkit to Wick, or don\'t', at: 'cave',
-        hint: 'The Cut is south of the Spire, up the posted wash. Wick sits by his fire.',
+        hint: 'The Cut is south of the Spire, up the wash with the posts in it. Wick sits by his fire.',
         done: (v) => any(v, 'q.doc.delivered', 'q.doc.kept'),
       },
     ],
@@ -271,13 +271,13 @@ export const QUESTS: QuestDef[] = [
       {
         flag: 'q.doc.delivered',
         label: 'You gave Wick the medkit.',
-        text: 'Wick coughed, complained, and used it. Then he told you what he can see from the ridge. Doc has stopped glaring at the hills.',
+        text: 'Wick coughed, complained and used it. Afterwards he told you what he can see from up on the ridge.',
         reward: { xp: 70, items: [{ id: 'water', qty: 2 }], rep: { wick: 2, doc: 1 } },
       },
       {
         flag: 'q.doc.kept',
         label: 'You kept the medkit.',
-        text: 'You told Wick that Doc says hello, and kept the kit. Wick said hello back. Doc found out. Doctors always find out.',
+        text: 'You told Wick that Doc says hello, and kept the kit. Doc heard about it.',
         reward: { xp: 20, rep: { doc: -1, wick: -1 } },
       },
     ],
@@ -288,12 +288,12 @@ export const QUESTS: QuestDef[] = [
     title: 'Whose Till Is It?',
     giver: 'inez',
     where: 'Dry Creek · the Till',
-    blurb: 'The Till\'s landlord left before the Pivot and never came back. Inez runs the place like she owns it. Somewhere up the stair, a deed says who actually does.',
+    blurb: 'The Till\'s landlord left before the Pivot and never came back. Inez has run the place as if it were hers ever since. Somewhere upstairs there\'s a deed that says whose it really is.',
     start: (v) => any(v, 'creek.talk.inez', 'creek.loft'),
     steps: [
       {
         id: 'stair', text: 'Get up the Till\'s stair', at: 'creek',
-        hint: 'The "closet" behind the counter is a stair. Lockpicking 3, a charge at Demolition 2, or talk Inez into admitting she has the key (Social 4).',
+        hint: 'The "closet" behind the counter is really a stair. Lockpicking 3, a charge at Demolition 2, or get Inez to admit she has the key (Social 4).',
         done: (v) => v.has('creek.stair'),
       },
       {
@@ -303,7 +303,7 @@ export const QUESTS: QuestDef[] = [
       },
       {
         id: 'give', text: 'Give the deed to Inez, or to the town', at: 'creek',
-        hint: 'Inez at the Till, or Nia at the diner, who keeps the town\'s papers.',
+        hint: 'Inez is at the Till. Nia keeps the town\'s papers at the diner.',
         done: (v) => any(v, 'q.inez.inez', 'q.inez.town'),
       },
     ],
@@ -311,13 +311,13 @@ export const QUESTS: QuestDef[] = [
       {
         flag: 'q.inez.inez',
         label: 'You gave Inez the deed.',
-        text: 'Inez owns the Till now, legally, in pencil. She gave you the good prices (a bottle for 2 scrap) and a look you\'d call grateful if it were anyone else.',
+        text: 'The Till is legally Inez\'s now, in pencil. You get her best price, a bottle for 2 scrap, and a look that might be gratitude.',
         reward: { xp: 70, items: [{ id: 'battery', qty: 1 }, { id: 'lockpick', qty: 2 }], rep: { inez: 2, creek: -1 } },
       },
       {
         flag: 'q.inez.town',
         label: 'You gave the deed to the town.',
-        text: 'Nia pinned it to the diner wall. The Till belongs to Dry Creek now. Inez opened the back room to everyone, then raised your price to 4 scrap a bottle, out of spite.',
+        text: 'Nia pinned it to the diner wall, so the Till belongs to Dry Creek now. Inez opened the back room to everyone and put your price up to 4 scrap a bottle.',
         reward: { xp: 70, items: [{ id: 'water', qty: 2 }, { id: 'ration', qty: 1 }, { id: 'medkit', qty: 1 }], rep: { creek: 2, nia: 1, inez: -1 } },
       },
     ],
@@ -328,22 +328,22 @@ export const QUESTS: QuestDef[] = [
     title: 'Sol\'s Roll',
     giver: 'sol',
     where: 'Dry Creek · the motel',
-    blurb: 'Sol left his pick roll in motel room 2, then locked himself out. Thirty years a locksmith. He would like this kept between the two of you.',
+    blurb: 'Sol left his pick roll in motel room 2 and then locked himself out. He was a locksmith for thirty years. He\'d like this to stay between the two of you.',
     start: (v) => v.has('creek.talk.sol'),
     steps: [
       {
         id: 'room', text: 'Open motel room 2', at: 'creek',
-        hint: 'The middle door at the motel. Three pins, Lockpicking 1.',
+        hint: 'It\'s the middle door at the motel. Three pins, Lockpicking 1.',
         done: (v) => v.has('creek.motel.b'),
       },
       {
         id: 'roll', text: 'Find Sol\'s roll', at: 'creek',
-        hint: 'Search the room once the door is open.',
+        hint: 'Search the room once you\'re in.',
         done: (v) => v.has('creek.motel.b.loot'),
       },
       {
         id: 'give', text: 'Give it back, or keep it', at: 'creek',
-        hint: 'Sol is at the street fire. Or use the roll from your kit for five picks.',
+        hint: 'Sol is at the street fire. Or unroll it from your kit for five picks.',
         done: (v) => any(v, 'q.sol.returned', 'q.sol.kept'),
       },
     ],
@@ -351,13 +351,13 @@ export const QUESTS: QuestDef[] = [
       {
         flag: 'q.sol.returned',
         label: 'You gave Sol his roll.',
-        text: 'Sol checked every pick twice and did not cry. Then he showed you how to bend a better one: the camp\'s pick recipe makes 3 now.',
+        text: 'Sol checked every pick twice. Then he showed you a better way to bend them: the camp\'s pick recipe makes 3 now.',
         reward: { xp: 60, items: [{ id: 'lockpick', qty: 2 }], rep: { sol: 2 } },
       },
       {
         flag: 'q.sol.kept',
         label: 'You kept the roll.',
-        text: 'Five good picks, and a locksmith at the street fire who knows exactly whose hands they\'re in.',
+        text: 'Five good picks. Sol knows who has them.',
         reward: { xp: 30, rep: { sol: -1 } },
       },
     ],
@@ -368,22 +368,22 @@ export const QUESTS: QuestDef[] = [
     title: 'The Last Screening',
     giver: 'ren',
     where: 'Dry Creek → Starlite Drive-In',
-    blurb: 'Ren ran the projector at the Starlite Drive-In. The last screening was a keynote. Ren walked out before the end, and nobody else ever came out. Ren would like to know how it ended.',
+    blurb: 'Ren ran the projector at the Starlite Drive-In. The last show was a keynote. Ren walked out before the end, and nobody else ever came out. Ren wants to know how it ended.',
     start: (v) => any(v, 'creek.talk.ren', 'seen:drivein'),
     steps: [
       {
         id: 'find', text: 'Find the Starlite Drive-In', at: 'drivein',
-        hint: 'North of the highway, between Dry Creek and the Garage. Look for a screen the size of a building.',
+        hint: 'North of the highway, between Dry Creek and the Garage. You can see the screen from a long way off.',
         done: (v) => v.has('seen:drivein'),
       },
       {
-        id: 'inside', text: 'Get to the heart of the drive-in', at: 'drivein',
-        hint: 'Whatever is left of the screening. Walk in and look around.',
+        id: 'inside', text: 'Look around the drive-in', at: 'drivein',
+        hint: 'Walk in among the parked cars and see what\'s left of the screening.',
         done: (v) => v.has('site.drivein.found'),
       },
       {
         id: 'end', text: 'Find out how the keynote ended', at: 'drivein',
-        hint: 'Something there still has the last word.',
+        hint: 'The projector in the booth still has a reel in it. The generator behind the snack bar is dead.',
         done: (v) => v.has('site.drivein.done'),
       },
       {
@@ -396,13 +396,13 @@ export const QUESTS: QuestDef[] = [
       {
         flag: 'q.ren.truth',
         label: 'You told Ren how it ended.',
-        text: 'Ren listened to all of it without blinking, then laughed for the first time in two years. In the morning Ren started walking to Last Chance. The camp has a lookout now.',
+        text: 'Ren listened to all of it without looking away, then laughed for the first time in two years. In the morning Ren walked to Last Chance and took over as the camp\'s lookout.',
         reward: { xp: 90, items: [{ id: 'ration', qty: 1 }, { id: 'water', qty: 2 }], rep: { ren: 2, compact: 1 } },
       },
       {
         flag: 'q.ren.spare',
-        label: 'You told Ren it was static.',
-        text: 'Ren nodded like they believed you. Maybe they did. They gave you the projector\'s last cells and went back to counting the road.',
+        label: 'You told Ren it was just static.',
+        text: 'Ren nodded as if they believed you. Maybe they did. They gave you the projector\'s last cells and went back to counting the road.',
         reward: { xp: 60, items: [{ id: 'battery', qty: 2 }], rep: { ren: 1 } },
       },
     ],
@@ -413,12 +413,12 @@ export const QUESTS: QuestDef[] = [
     title: 'Prototype Adjacent',
     giver: 'wick',
     where: 'The Cut',
-    blurb: 'Vesper Kade stood in Wick\'s cave once, priced it, and left a crate behind the rockfall with her initials on it. Wick would like to know what she thinks she left.',
+    blurb: 'Vesper Kade came up to Wick\'s cave once, looked it over like she was pricing it, and left a crate behind the rockfall with her initials on it. Wick wants to know what she left.',
     start: (v) => v.has('creek.talk.wick'),
     steps: [
       {
         id: 'rocks', text: 'Get past the rockfall in the side passage', at: 'cave',
-        hint: 'A charge at Demolition 2. Or ask Wick to help you shift it by hand (Survival 3 or Social 3).',
+        hint: 'A charge at Demolition 2, or ask Wick to help you move it by hand (Survival 3 or Social 3).',
         done: (v) => v.has('cave.pocket'),
       },
       {
@@ -431,13 +431,13 @@ export const QUESTS: QuestDef[] = [
       {
         flag: 'q.wick.took',
         label: 'You took Vesper\'s crate.',
-        text: 'Water, cells, scrap. Wick watched you carry it out and said nothing, which from Wick is a paragraph.',
+        text: 'Water, cells, scrap. Wick watched you carry it out and didn\'t say a word.',
         reward: { xp: 40, rep: { wick: -1 } },
       },
       {
         flag: 'q.wick.left',
         label: 'You left the crate for Wick.',
-        text: 'Wick painted over her initials with his own. The seep at the back of the cave is yours too now: a bottle every time you\'ve rested.',
+        text: 'Wick painted over her initials with his own, and showed you the seep at the back of the cave. There\'s a bottle for you there after every rest.',
         reward: { xp: 70, rep: { wick: 2 } },
       },
     ],
@@ -450,17 +450,17 @@ export const QUESTS: QuestDef[] = [
     title: 'Fill the Ledger',
     giver: 'pip',
     where: 'Last Chance',
-    blurb: 'Pip keeps the camp\'s water ledger. Every bottle you bring home goes in the good column. Every bottle you drink on the road goes in a column Pip refuses to name.',
+    blurb: 'Pip keeps the camp\'s water ledger. Bottles you bring home go in the good column. Bottles you drink on the road go in another column, and Pip won\'t tell you what it\'s called.',
     start: (v) => v.has('briefed'),
     steps: [
       {
         id: 'first', text: 'Give Pip two bottles for the camp', at: 'gas',
-        hint: 'At the campfire, open the camp and talk to Pip.',
+        hint: 'Open the camp at the fire and talk to Pip.',
         done: (v) => v.has('q.pip.1'),
       },
       {
         id: 'second', text: 'Give Pip two more', at: 'gas',
-        hint: 'Garages, freezers and generous people all have bottles.',
+        hint: 'Try garages, freezers and coolers. Some people will give you a bottle if you ask.',
         done: (v) => v.has('q.pip.2'),
       },
     ],
@@ -475,22 +475,22 @@ export const QUESTS: QuestDef[] = [
     title: 'The Exit Strategy',
     giver: 'wick',
     where: 'The dunes, southwest',
-    blurb: 'The week of the Pivot, Wick watched a private jet try to leave. It came down in the dunes to the southwest. Somebody bought an exit strategy, and the desert sent it back.',
+    blurb: 'The week of the Pivot, Wick watched a private jet take off and come down again in the dunes to the southwest. Whoever was on it had paid to get out early.',
     start: (v) => any(v, 'wick.jet', 'seen:jet'),
     steps: [
       {
         id: 'find', text: 'Find the jet in the dunes', at: 'jet',
-        hint: 'Southwest of Last Chance, out in the dunes. Look for a tail fin in the sand.',
+        hint: 'Southwest of Last Chance, out in the dunes. Look for a tail fin sticking out of the sand.',
         done: (v) => v.has('seen:jet'),
       },
       {
         id: 'inside', text: 'Get aboard', at: 'jet',
-        hint: 'Find the way into the wreck.',
+        hint: 'Walk round the wreck and find a way into the cabin.',
         done: (v) => v.has('site.jet.found'),
       },
       {
-        id: 'secret', text: 'Find out what the founder was running from', at: 'jet',
-        hint: 'Whatever they packed for the end of the world is still aboard.',
+        id: 'secret', text: 'Find out what happened to the founder', at: 'jet',
+        hint: 'Whatever he packed for the end of the world is still in the baggage hold.',
         done: (v) => v.has('site.jet.done'),
       },
     ],
@@ -503,12 +503,12 @@ export const QUESTS: QuestDef[] = [
     title: 'Still Warm',
     giver: 'mara',
     where: 'ColdStorage, far northeast',
-    blurb: 'Mara wants to know why ColdStorage is still warm. A data centre that\'s warm is drawing power, and out here, power means somebody is still paying for it.',
+    blurb: 'ColdStorage is still warm. A warm data centre is drawing power, which means somebody is paying for it, and Mara wants to know who.',
     start: (v) => any(v, 'mara.coldstorage', 'seen:datacenter'),
     steps: [
       {
         id: 'find', text: 'Find ColdStorage', at: 'datacenter',
-        hint: 'Far northeast, past the Garage. A long white building that hums.',
+        hint: 'Far northeast, past the Garage. A long white building. You can hear it humming from outside.',
         done: (v) => v.has('seen:datacenter'),
       },
       {
@@ -518,7 +518,7 @@ export const QUESTS: QuestDef[] = [
       },
       {
         id: 'secret', text: 'Find out what is still running', at: 'datacenter',
-        hint: 'Follow the warmth.',
+        hint: 'There\'s a terminal in the hall that still answers. Get the lights on first.',
         done: (v) => v.has('site.datacenter.done'),
       },
     ],
@@ -531,27 +531,27 @@ export const QUESTS: QuestDef[] = [
     title: 'Refund Policy',
     giver: 'inez',
     where: 'The Tube, east of the Spire',
-    blurb: 'Before the Pivot, Inez sold forty tickets for the hyperloop out east. Nobody asked for a refund, because nobody ever arrived. She\'d like to know whether she owes anybody.',
+    blurb: 'Before the Pivot, Inez sold forty tickets for the hyperloop out east. Nobody has asked for a refund, because nobody ever rode it. She wants to know if she owes anyone.',
     start: (v) => any(v, 'inez.tube', 'seen:tube'),
     steps: [
       {
         id: 'find', text: 'Find the Tube', at: 'tube',
-        hint: 'East of the Spire. A long silver pipe on legs, going nowhere fast.',
+        hint: 'East of the Spire. A long silver pipe up on legs.',
         done: (v) => v.has('seen:tube'),
       },
       {
         id: 'inside', text: 'Get into the test track', at: 'tube',
-        hint: 'Find the way in.',
+        hint: 'Station Zero is at the near end of the track.',
         done: (v) => v.has('site.tube.found'),
       },
       {
         id: 'secret', text: 'Find out how fast it ever went', at: 'tube',
-        hint: 'Somebody kept the records.',
+        hint: 'The pod has a flight recorder under the front seat.',
         done: (v) => v.has('site.tube.done'),
       },
     ],
     reward: { xp: 90, items: [{ id: 'scrap', qty: 4 }], rep: { inez: 1 } },
-    wrap: { speaker: 'You', text: 'Forty tickets to nowhere. I\'ll tell Inez she can stop worrying about refunds.' },
+    wrap: { speaker: 'You', text: 'Forty-one kilometres an hour, and only the founder ever rode it. Inez doesn\'t owe anyone a refund.' },
   },
 
   // ------------------------------------------------------------------ the road's other favours
@@ -563,7 +563,7 @@ export const QUESTS: QuestDef[] = [
     title: 'Ten Minutes or Free',
     giver: 'hollis',
     where: 'Last Chance → the north flats → Dry Creek',
-    blurb: 'Rider 9 delivered for Dropt ("anything, anywhere, ten minutes or it\'s free") and never stopped, because the app never told him to. He checked in on Hollis\'s CB every week for two years. He has missed four.',
+    blurb: 'Rider 9 delivered for Dropt ("anything, anywhere, ten minutes or it\'s free") and kept going after the Pivot, because the app never told him to stop. He checked in on Hollis\'s CB every week for two years. He\'s missed the last four.',
     start: (v) => any(v, 'hollis.rider', 'seen:courier'),
     steps: [
       {
@@ -573,31 +573,31 @@ export const QUESTS: QuestDef[] = [
       },
       {
         id: 'log', text: 'Read his delivery log', at: 'courier',
-        hint: 'His phone is still on. Of course it is.',
+        hint: 'His phone is still on, on the handlebars.',
         done: (v) => v.has('q.rider.log'),
       },
       {
         id: 'deliver', text: 'Deliver his last order', at: 'creek',
-        hint: 'A stove igniter for Nia Pell at the Dry Creek diner. She is behind the counter.',
+        hint: 'A stove igniter for Nia Pell at the Dry Creek diner. She\'s behind the counter.',
         done: (v) => v.has('q.rider.delivered'),
       },
       {
         id: 'tell', text: 'Tell Hollis', at: 'gas',
-        hint: 'At the camp fire. Say it straight, or say it kind.',
+        hint: 'He\'s at the camp fire.',
         done: (v) => any(v, 'q.rider.truth', 'q.rider.west'),
       },
     ],
     outcomes: [
       {
         flag: 'q.rider.truth',
-        label: 'You told Hollis how Rider 9 ended.',
-        text: 'Hollis stood by the sign for an hour. In the morning he handed you his last box of .38s and said the kid never dropped an order in his life. Channel 19 is quiet now. He leaves it on anyway.',
+        label: 'You told Hollis what happened to Rider 9.',
+        text: 'Hollis stood out by the sign for an hour. In the morning he gave you his last box of .38s and said the kid never dropped an order in his life. Channel 19 has been quiet since. He still leaves it on.',
         reward: { xp: 90, items: [{ id: 'ammo38', qty: 12 }, { id: 'ration', qty: 1 }], rep: { hollis: 2, compact: 1 } },
       },
       {
         flag: 'q.rider.west',
         label: 'You told Hollis that Rider 9 rode west.',
-        text: 'Hollis smiled like he believed it, and keeps channel 19 open for the day a bell rings on it. Pip watched your face the whole time and wrote something down.',
+        text: 'Hollis smiled like he believed it, and he keeps channel 19 open in case the kid ever calls in. Pip watched your face the whole time and wrote something down.',
         reward: { xp: 70, items: [{ id: 'ammo38', qty: 8 }], rep: { hollis: 1 } },
       },
     ],
@@ -609,22 +609,22 @@ export const QUESTS: QuestDef[] = [
     title: 'Badge Access',
     giver: 'dez',
     where: 'Last Chance → the Spire',
-    blurb: 'Kade crews read their badge numbers onto the air at every shift change, because the policy says so. Dez thinks the lanyards talk on a channel of their own. He needs three to find it, and somewhere high to listen from.',
+    blurb: 'Kade crews read their badge numbers out over the radio at every shift change, because it\'s policy. Dez thinks the lanyards talk on a channel of their own. He needs three of them to find it, and somewhere high to listen from.',
     start: (v) => v.has('briefed') && (v.has('dez.badges') || v.count('kade_badge') > 0),
     steps: [
       {
         id: 'badges', text: 'Bring Dez three Recovery Lanyards', at: 'gas',
-        hint: 'Kade contractors wear them, and Kade crates sometimes hold a spare. Dez is at the camp fire.',
+        hint: 'Kade contractors wear them, and Kade crates sometimes have a spare. Dez is at the camp fire.',
         done: (v) => v.has('q.dez.badges'),
       },
       {
         id: 'relay', text: 'Patch Dez\'s relay into the Spire', at: 'spire',
-        hint: 'The fallen 5G tower, northeast of camp. Its generator by the shack still runs. Red to red.',
+        hint: 'The fallen 5G tower, northeast of camp. The generator by the shack still runs. Red to red.',
         done: (v) => v.has('q.dez.relay'),
       },
       {
         id: 'listen', text: 'Listen in with Dez', at: 'gas',
-        hint: 'Back at the fire. Dez has the headphones warm.',
+        hint: 'Back at the fire.',
         done: (v) => any(v, 'q.dez.ears', 'q.dez.karaoke'),
       },
     ],
@@ -632,13 +632,13 @@ export const QUESTS: QuestDef[] = [
       {
         flag: 'q.dez.ears',
         label: 'You kept quiet and listened.',
-        text: 'Dez sits on Kade\'s crew channel now. When a road pair clocks in near you, he calls it on the radio before they ever see you.',
+        text: 'Dez listens to Kade\'s crew channel now. When a road pair clocks in near you, he calls it on the radio before they see you.',
         reward: { xp: 90, items: [{ id: 'emp', qty: 1 }], rep: { dez: 2, compact: 1 } },
       },
       {
         flag: 'q.dez.karaoke',
         label: 'You played the karaoke machine into their channel.',
-        text: 'Four minutes of a power ballad on every Kade radio in the valley. HR opened a ticket. Kade changed channels by morning, and Dez has never been happier.',
+        text: 'Four minutes of power ballad on every Kade radio in the valley. Somebody in HR opened a ticket. Kade changed channels by morning, and Dez hasn\'t stopped grinning since.',
         reward: { xp: 80, items: [{ id: 'emp', qty: 2 }, { id: 'battery', qty: 1 }], rep: { dez: 2, pip: 1 } },
       },
     ],
@@ -650,17 +650,17 @@ export const QUESTS: QuestDef[] = [
     title: 'Survey Says',
     giver: 'wick',
     where: 'The Cut → Kade Survey Camp',
-    blurb: 'Men in white hard hats came up the wash with a tripod and tied orange tape to Wick\'s ridge. Wick would like the tape gone, and he would like to know what they think they measured.',
+    blurb: 'Men in white hard hats came up the wash with a tripod and tied orange tape along Wick\'s ridge. Wick wants the tape gone, and he wants to know what they were measuring.',
     start: (v) => v.has('wick.survey'),
     steps: [
       {
         id: 'stakes', text: 'Pull Kade\'s three survey stakes', at: 'survey',
-        hint: 'Orange tape on pale stakes, strung up the slope from the Kade Survey Camp toward the Cut. Mind the camp.',
+        hint: 'Pale stakes with orange tape, running up the slope from the Kade Survey Camp toward the Cut. Watch out for the camp.',
         done: (v) => STAKES.every((f) => v.has(f)),
       },
       {
         id: 'book', text: 'Take the field book from the Kade Survey Camp', at: 'survey',
-        hint: 'Three tents and a theodolite, west of the wash. The book is on the folding table by the tripod. Quietly, or not.',
+        hint: 'Three tents and a theodolite, west of the wash. The book is on the folding table by the tripod.',
         done: (v) => v.has('q.wick.book'),
       },
       {
@@ -673,13 +673,13 @@ export const QUESTS: QuestDef[] = [
       {
         flag: 'q.wick.burned',
         label: 'You let Wick burn the field book.',
-        text: 'Wick read every page, then fed them to his fire one at a time, slowly, like a man eating something good. The seep is still his. Kade will have to measure it again, and he\'ll be waiting.',
+        text: 'Wick read every page, then fed them to his fire one at a time. The seep is still his. Kade will have to survey it again, and he\'ll be sitting on it when they come.',
         reward: { xp: 80, items: [{ id: 'water', qty: 2 }, { id: 'ration', qty: 1 }], rep: { wick: 2 } },
       },
       {
         flag: 'q.wick.kept',
         label: 'You kept the field book for Mara.',
-        text: 'Wick let you take it, eventually. Mara read the numbers on the radio twice and went quiet. Kade isn\'t surveying the ridge. They\'re surveying what\'s under it.',
+        text: 'Wick let you take it, in the end. Mara read the numbers over the radio twice and went quiet. Kade isn\'t surveying the ridge. They\'re surveying the water underneath it.',
         reward: { xp: 90, items: [{ id: 'battery', qty: 1 }, { id: 'ammo3030', qty: 6 }], rep: { mara: 1, compact: 1, wick: 1 } },
       },
     ],
@@ -696,27 +696,27 @@ export const QUESTS: QuestDef[] = [
     giver: 'dez',
     where: 'The whole valley → Last Chance',
     blurb:
-      'A founders\' group chat called LIFEBOAT is still trying to sync on the Compact\'s band, at three every morning, in pieces. Every phone, watch and tablet that died out here kept its last page. Dez wants all eight. He has never wanted anything more, including the karaoke machine.',
+      'A founders\' group chat called LIFEBOAT still tries to sync on the Compact\'s band at three every morning, in pieces. Every phone, watch and tablet that died out here kept its last page. Dez wants all eight.',
     start: (v) => v.has('briefed') && (v.has('dez.lifeboat') || LIFEBOAT_PAGES.some((id) => v.has(`intel:${id}`))),
     steps: [
       {
         id: 'one', text: 'Find a page of the LIFEBOAT chat', at: 'lifeboat',
-        hint: 'Dez triangulates the next one at three in the morning: it\'s on your map. Founders dropped their devices where they ran.',
+        hint: 'Dez listens for the next one at three in the morning and marks it on your map. Founders dropped their devices wherever they ran.',
         done: (v) => lifeboatCount(v) >= 1,
       },
       {
         id: 'half', text: 'Find four pages', at: 'lifeboat',
-        hint: 'The jet, the drive-in, Kade\'s sites, the Tube. The map marks the nearest one Dez can hear.',
+        hint: 'Try the jet, the drive-in, Kade\'s sites and the Tube. The map marks the nearest one Dez can hear.',
         done: (v) => lifeboatCount(v) >= 4,
       },
       {
         id: 'all', text: 'Find all eight pages', at: 'lifeboat',
-        hint: 'The last ones went far: the west road, the far side of the highway, under the Spire.',
+        hint: 'The last ones are further out: the west road, the far side of the highway, under the Spire.',
         done: (v) => lifeboatCount(v) >= 8,
       },
       {
         id: 'dez', text: 'Decide with Dez what the chat is for', at: 'gas',
-        hint: 'At the camp fire. Dez has cleared a whole shelf for it.',
+        hint: 'At the camp fire.',
         done: (v) => any(v, 'q.chat.air', 'q.chat.mara', 'q.chat.pip'),
       },
     ],
@@ -724,19 +724,19 @@ export const QUESTS: QuestDef[] = [
       {
         flag: 'q.chat.air',
         label: 'You let Dez read it on the open net.',
-        text: 'Dez read all eight pages on the open band, and did the voices. Every camp heard the founders name the Pivot like a product. Vesper\'s carrier went quiet for a whole day, which Dez counts as a scream.',
+        text: 'Dez read all eight pages on the open band and did all the voices. Every camp heard the founders name the Pivot like a product launch. Vesper\'s carrier went silent for a whole day.',
         reward: { xp: 150, items: [{ id: 'emp', qty: 1 }, { id: 'battery', qty: 2 }], rep: { compact: 2, dez: 2, vesper: -1 } },
       },
       {
         flag: 'q.chat.mara',
         label: 'You gave the chat to Mara.',
-        text: 'Mara read it twice and put it in the ammo tin with the rest of the evidence. "Eleven hundred cameras," she said. "Somebody up north has watched every camp for three years. That\'s not a threat. That\'s a witness."',
+        text: 'Mara read it twice and put it in the ammo tin with the ledger. If there\'s ever a court again, she says, it goes in first. She keeps coming back to Ezra\'s eleven hundred cameras. Somebody up north has watched every camp for three years.',
         reward: { xp: 140, items: [{ id: 'medkit', qty: 1 }, { id: 'water', qty: 2 }], rep: { mara: 2, compact: 1 } },
       },
       {
         flag: 'q.chat.pip',
         label: 'You gave the chat to Pip, for the ledger.',
-        text: 'Pip copied every line into the back of the ledger under a heading in capitals: THE OTHER COLUMN. "When there\'s a trial," she says, "I\'m reading it out." Nobody at the fire doubts her.',
+        text: 'Pip copied every line into the back of the ledger under a heading in capitals, THE OTHER COLUMN. She says that when there\'s a trial, she\'s going to read it out.',
         reward: { xp: 140, items: [{ id: 'ration', qty: 2 }, { id: 'noisemaker', qty: 1 }], rep: { pip: 2, compact: 1 } },
       },
     ],
@@ -749,22 +749,22 @@ export const QUESTS: QuestDef[] = [
     giver: 'pip',
     where: 'Last Chance → the old school, west of Dry Creek',
     blurb:
-      'Mara traded Dry Creek\'s aquifer for a school with a rocket on the sign. Pip went there, for eleven days. The first week, the class buried a time capsule, sponsored by Kade Holdings, to be opened in 2046. Pip would like her letter back now. She wrote something stupid in it and she wants to know how stupid.',
+      'Mara traded Dry Creek\'s aquifer for a school with a rocket on the sign. Pip went there for eleven days. In the first week the class buried a time capsule, paid for by Kade Holdings, to be opened in 2046. Pip wants her letter back now. She wrote something stupid in it and she wants to know how stupid.',
     start: (v) => v.has('pip.capsule'),
     steps: [
       {
         id: 'site', text: 'Find what\'s left of Kade Kids Academy', at: 'capsule',
-        hint: 'West of Dry Creek, short of the highway. A rocket on a sign, bent over. The school is a crater now.',
+        hint: 'West of Dry Creek, short of the highway. The rocket sign is bent over. The school itself is a crater.',
         done: (v) => any(v, 'seen:capsule', 'q.capsule.dug'),
       },
       {
         id: 'dig', text: 'Dig up the time capsule', at: 'capsule',
-        hint: 'Under the plaque. It isn\'t deep. Kade buried it to be found.',
+        hint: 'Under the plaque. It isn\'t buried deep.',
         done: (v) => v.has('q.capsule.dug'),
       },
       {
         id: 'give', text: 'Get Pip her letter', at: 'gas',
-        hint: 'At the camp fire. Sealed, or not. Or let Mara be the one to hand it over.',
+        hint: 'She\'s at the camp fire. Sealed or not. Or let Mara be the one to give it to her.',
         done: (v) => any(v, 'q.capsule.sealed', 'q.capsule.peeked', 'q.capsule.mara'),
       },
     ],
@@ -772,19 +772,19 @@ export const QUESTS: QuestDef[] = [
       {
         flag: 'q.capsule.sealed',
         label: 'You gave Pip her letter, sealed.',
-        text: 'Pip read it behind the pumps, alone. "Dear future me, I hope you have a pool." Then she drew one in chalk on the forecourt, two metres long, with a ladder. Nobody is allowed to walk on it. Nobody does.',
+        text: 'Pip read it behind the pumps, on her own. "Dear future me, I hope you have a pool." Afterwards she drew one in chalk on the forecourt, two metres long, with a ladder. Nobody walks on it.',
         reward: { xp: 90, items: [{ id: 'ration', qty: 1 }, { id: 'lockpick', qty: 2 }], rep: { pip: 2, compact: 1 } },
       },
       {
         flag: 'q.capsule.peeked',
         label: 'You read Pip\'s letter first, and told her.',
-        text: 'You read it before she did, and said so. Pip looked at you for a long time. "At least you said." She drew the pool anyway, and wrote you into the ledger in a column she won\'t name.',
+        text: 'Pip looked at you for a long time. "At least you said." She drew the pool anyway, and put you in a column of the ledger she won\'t name.',
         reward: { xp: 60, items: [{ id: 'ration', qty: 1 }], rep: { pip: 1 } },
       },
       {
         flag: 'q.capsule.mara',
         label: 'You let Mara give Pip the letter.',
-        text: 'Mara walked it over to Pip herself, and they sat behind the pumps for an hour. Afterwards Pip drew a pool on the forecourt and Mara held the chalk. Mara has stopped saying "later" when she means "no water".',
+        text: 'Mara walked it over to Pip herself, and they sat behind the pumps for an hour. Afterwards Pip drew a pool on the forecourt while Mara held the chalk. Mara doesn\'t say "later" any more when she means "no water".',
         reward: { xp: 100, items: [{ id: 'water', qty: 2 }], rep: { mara: 2, pip: 1, compact: 1 } },
       },
     ],
@@ -797,7 +797,7 @@ export const QUESTS: QuestDef[] = [
     giver: 'hollis',
     where: 'Last Chance → the relay on the rise',
     blurb:
-      'There\'s a little camera on a pole by the road, past the pumps. Blue light. It has been blinking at Hollis for three years, and Hollis doesn\'t like things that blink at him unless they\'re signs. Somebody is watching the camp. He\'d like to know who, and he\'d like them to stop.',
+      'There\'s a little camera on a pole by the road, past the pumps, with a blue light. It\'s been blinking at Hollis for three years and he\'s had enough. Somebody is watching the camp. He wants to know who, and he wants it to stop.',
     start: (v) => v.has('briefed') && any(v, 'hollis.camera', 'lore.glimpse', 'q.cam.seen'),
     steps: [
       {
@@ -807,7 +807,7 @@ export const QUESTS: QuestDef[] = [
       },
       {
         id: 'relay', text: 'Find where it uploads to', at: 'glimpserelay',
-        hint: 'Its little antenna points south-east, at a solar mast on the rise toward the Survey Camp. Decide there what whoever watches gets to see.',
+        hint: 'Its antenna points south-east, at a solar mast on the rise toward the Survey Camp. Decide there what whoever is watching gets to see.',
         done: (v) => any(v, 'q.cam.cut', 'q.cam.loop', 'q.cam.hello'),
       },
       {
@@ -820,19 +820,19 @@ export const QUESTS: QuestDef[] = [
       {
         flag: 'q.cam.cut',
         label: 'You cut the uplink.',
-        text: 'The blue light went out at three in the morning. Hollis noticed first: he says the forecourt sounds different unwatched. He sleeps through the night now, and the sign stays on for everybody, including the people it isn\'t recording.',
+        text: 'The blue light went out at three in the morning. Hollis noticed first. He says the forecourt sounds different now, and he\'s been sleeping through the night.',
         reward: { xp: 90, items: [{ id: 'ammo38', qty: 8 }, { id: 'scrap', qty: 3 }], rep: { hollis: 2 } },
       },
       {
         flag: 'q.cam.loop',
         label: 'You looped the feed.',
-        text: 'Somewhere north of the salt, a screen shows an empty forecourt at dusk, forever. The blue light still blinks, and Dez\'s lunchbox hangs off the pole under it. Whoever watches the camp is watching a picture of it.',
+        text: 'Somewhere north of the salt, a screen shows an empty forecourt at dusk, over and over. The blue light still blinks, and Dez has hung his lunchbox on the pole under it.',
         reward: { xp: 110, items: [{ id: 'emp', qty: 1 }, { id: 'battery', qty: 1 }], rep: { hollis: 1, dez: 1, compact: 1 } },
       },
       {
         flag: 'q.cam.hello',
         label: 'You said hello to whoever was watching.',
-        text: 'Ezra Seymour answered. He knew your water ration and which foot you favour. He lives north of the salt, in something he calls the Panopticon, and he says he\'ll know when you\'re close. The blue light still blinks. Now you know whose eye it is.',
+        text: 'Ezra Seymour answered. He knew your water ration and which foot you favour. He lives north of the salt in a place he calls the Panopticon, and he says he\'ll know when you\'re close. The light still blinks. Now you know whose it is.',
         reward: { xp: 120, items: [{ id: 'battery', qty: 2 }], rep: { ezra: 2 } },
       },
     ],
@@ -845,12 +845,12 @@ export const QUESTS: QuestDef[] = [
     giver: 'sol',
     where: 'Dry Creek → Last Chance → Dry Creek',
     blurb:
-      'KDRY\'s log was signed R. Varga. Rosa Varga ran the station out of the back of the feed store, and the afternoon of the Pivot she stayed on the air until the generator quit. She played one song at the end. Sol was out on a call, opening somebody\'s car. He never heard which song.',
+      'KDRY\'s station log was signed R. Varga: Rosa Varga, Sol\'s wife. She ran the station out of the back of the feed store, and on the afternoon of the Pivot she stayed on the air until the generator quit. She played one last song. Sol was out on a call, opening somebody\'s car, and he never heard which one.',
     start: (v) => v.has('q.song.asked'),
     steps: [
       {
         id: 'hollis', text: 'Ask Hollis what he heard on the radio that afternoon', at: 'gas',
-        hint: 'Hollis was on the road the afternoon of the Pivot, with the radio on. Ask him at the camp fire.',
+        hint: 'Hollis was driving that afternoon with the radio on. He\'s at the camp fire.',
         done: (v) => any(v, 'q.song.hollis', 'q.song.band', 'q.song.quiet'),
       },
       {
@@ -860,7 +860,7 @@ export const QUESTS: QuestDef[] = [
       },
       {
         id: 'sol', text: 'Tell Sol', at: 'creek',
-        hint: 'Sol keeps the street fire in Dry Creek. Give him the name, or let the whole valley hear it the way Rosa played it.',
+        hint: 'Sol keeps the street fire in Dry Creek. Give him the name, or have Dez play it for the whole valley the way Rosa did.',
         done: (v) => any(v, 'q.song.band', 'q.song.quiet'),
       },
     ],
@@ -868,13 +868,13 @@ export const QUESTS: QuestDef[] = [
       {
         flag: 'q.song.band',
         label: 'Dez played it on the open band at sunset.',
-        text: 'Dez put "Still Here" on every frequency the karaoke machine could reach, at sunset, the way Rosa did. In Dry Creek the street stopped to listen. Sol stood by his fire and didn\'t sing. Everyone else did.',
+        text: 'Dez put "Still Here" out on every frequency the karaoke machine could reach, at sunset, the way Rosa had. In Dry Creek the whole street stopped to listen. Sol stood by his fire and didn\'t sing along. Everyone else did.',
         reward: { xp: 90, items: [{ id: 'lockpick', qty: 3 }], rep: { sol: 2, creek: 1, compact: 1 } },
       },
       {
         flag: 'q.song.quiet',
         label: 'You told Sol the song, just him.',
-        text: 'You gave him the name, and the words Dez wrote on the back of a Kade lanyard. Sol keeps them in his pick roll. He hums it at the fire when he thinks nobody\'s listening. Everybody\'s listening.',
+        text: 'You gave him the name, and the words Dez wrote out on the back of a Kade lanyard. Sol keeps them in his pick roll. He hums it at the fire when he thinks nobody can hear.',
         reward: { xp: 80, items: [{ id: 'lockpick', qty: 2 }, { id: 'ration', qty: 1 }], rep: { sol: 3 } },
       },
     ],
@@ -890,17 +890,17 @@ QUESTS.push({
   giver: 'doc',
   where: 'Dry Creek → Waitlist City',
   blurb:
-    'Doc\'s sister Ada queued for Everafter, the bunker at the head of Waitlist City. Number 2,212. She wrote to the clinic every month for a year, from her camp chair, about the weather and the people either side of her. Then the letters stopped.',
+    'Doc\'s sister Ada joined the queue for Everafter, the bunker at the head of Waitlist City. She was number 2,212. For a year she wrote to the clinic every month from her camp chair, about the weather and the people either side of her. Then the letters stopped.',
   start: (v) => v.has('doc.ada') || v.has('q.ada.found'),
   steps: [
     {
       id: 'find', text: 'Find number 2,212 in the Everafter line', at: 'adachair',
-      hint: 'Waitlist City, in the basin south-east past the Tube. Her chair might not be in the line any more. Look along its edge.',
+      hint: 'Waitlist City is in the basin south-east, past the Tube. Her chair may not be in the line any more. Check along the edges.',
       done: (v) => v.has('q.ada.found'),
     },
     {
       id: 'tell', text: 'Tell Doc what you found', at: 'creek',
-      hint: 'At the clinic by day, at Sol\'s fire in the evening.',
+      hint: 'He\'s at the clinic by day, and at Sol\'s fire in the evening.',
       done: (v) => v.has('q.ada.told') || v.has('q.ada.kind'),
     },
   ],
@@ -908,13 +908,13 @@ QUESTS.push({
     {
       flag: 'q.ada.told',
       label: 'You gave Doc his sister\'s letter.',
-      text: 'Doc read it twice, folded it into his coat and went back to work. That night he wrote one of his own, addressed to "the Panopticon, the old coast, attn: Ada Ivers", and asked Dez to read it on the band. He doesn\'t expect an answer. He expects her to hear it.',
+      text: 'Doc read it twice, folded it into his coat and went back to work. That night he wrote a letter of his own, addressed to "Ada Ivers, the Panopticon, the old coast", and asked Dez to read it on the band. He doesn\'t expect an answer. He just wants her to hear it.',
       reward: { xp: 90, items: [{ id: 'medkit', qty: 1 }], rep: { doc: 2, creek: 1 } },
     },
     {
       flag: 'q.ada.kind',
       label: 'You told Doc she got a seat inside.',
-      text: 'Doc said "good" twice, like a man checking a pulse. Her number is on the clinic wall now: 2,212, SEATED. You still have the letter. It weighs more than it should.',
+      text: 'Doc said "good", twice. Her number is up on the clinic wall now: 2,212, SEATED. You still have the letter.',
       reward: { xp: 60, items: [{ id: 'medkit', qty: 1 }], rep: { doc: 1 } },
     },
   ],

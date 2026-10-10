@@ -410,7 +410,7 @@ export class SolarSite extends Site {
           if (!this.s.set(F.cabinet)) return;
           this.ctx.audio.play('thud', { pos: this.ctx.player.position, intensity: 0.9 });
           const got = this.loot([{ id: 'battery', qty: 1 }, { id: 'scrap', qty: 2 }]);
-          this.toast(`The door folds. So does one of the cells inside. ${got}`, 'good');
+          this.toast(`The cabinet door folds, and so does one of the cells inside. ${got}`, 'good');
           this.s.addXP(XP_REWARDS.cache, 'Spares cabinet');
         },
       },
@@ -439,9 +439,10 @@ export class SolarSite extends Site {
     await this.ctx.ui.choose({
       speaker: 'Fleet log · Photon Park',
       text:
-        'SHINE fleet, daily summary (auto). Panels cleaned: 4,096. Energy exported to EVERAFTER: 100%. Invoices paid by EVERAFTER: 0. Technician visits: 0. ' +
-        'Note, technician, last entry, day 9 after the Pivot: "They pay in water now, apparently. Not to us. Contract says we keep the lights on until they say stop. Nobody in there has said stop. Main breaker\'s by the door if anybody ever wants to ask them in person." ' +
-        'SHINE-5: row 6 obstructed. Awaiting technician. SHINE-1 to 4: nominal. Morale: n/a.',
+        'SHINE FLEET · DAILY SUMMARY (AUTO)\n' +
+        'Panels cleaned: 4,096 · Energy exported to EVERAFTER: 100% · Invoices paid by EVERAFTER: 0 · Technician visits: 0\n' +
+        'SHINE-1 to 4: nominal. SHINE-5: row 6 obstructed, awaiting technician.\n' +
+        'Technician\'s note, last entry, day 9 after the Pivot: "They pay in water now, apparently. Not to us. Contract says we keep the lights on until they tell us to stop, and nobody in there has said stop. Main breaker\'s by the door if anyone ever wants to go and ask them in person."',
       choices: [{ id: 'ok', label: 'Put it back on the desk' }],
     });
   }
@@ -451,7 +452,7 @@ export class SolarSite extends Site {
     if (s.has(F.cut)) {
       s.data.flags = s.data.flags.filter((f) => f !== F.cut);
       this.ctx.audio.play('zap', { pos: this.ctx.player.position });
-      this.toast('The breaker slams home. Far to the east, somewhere, a bunker hums back to life and does not say thank you.', 'info');
+      this.toast('The breaker slams home. Far off to the east, Everafter has power again.', 'info');
       return;
     }
     const pick = await this.ctx.ui.choose({
@@ -465,7 +466,7 @@ export class SolarSite extends Site {
     this.ctx.audio.play('zap', { pos: this.ctx.player.position });
     this.ctx.cam.addTrauma(0.15);
     if (s.set(F.done)) s.addXP(50, 'Pulled the plug');
-    this.toast('The arc is a flat blue bang. The robots keep cleaning. On the other side of the valley, Everafter has just gone dark.', 'good');
+    this.toast('The breaker opens with a flat blue bang. The robots keep cleaning. On the far side of the valley, Everafter has just lost power.', 'good');
   }
 
   private async pickCabinet() {
@@ -483,7 +484,7 @@ export class SolarSite extends Site {
     this.s.data.stats.picks++;
     this.ctx.audio.play('unlock', { pos: this.ctx.player.position });
     const got = this.loot([{ id: 'battery', qty: 2 }, { id: 'scrap', qty: 2 }, { id: 'lockpick', qty: 1 }]);
-    this.toast(`Spare cells for robots that never needed them, a bag of fuses, a pick someone left in the lock. ${got}`, 'good');
+    this.toast(`Spare robot cells, a bag of fuses, and a pick somebody left in the lock. ${got}`, 'good');
     this.s.addXP(XP_REWARDS.lockPicked + 10, 'Spares cabinet');
   }
 
@@ -511,7 +512,7 @@ export class SolarSite extends Site {
       const h = this.frame.p(33, 0, 2);
       if (Math.hypot(pl.x - h.x, pl.z - h.z) < 10) {
         s.set(F.found);
-        this.toast('Seven rows of glass and four robots wiping them, for a customer who stopped paying the day the world ended.', 'info');
+        this.toast('Seven rows of panels, and four robots still wiping them clean.', 'info');
       }
     }
   }

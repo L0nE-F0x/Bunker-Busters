@@ -62,7 +62,7 @@ export class Scavenge {
         radius: 2.2,
         primary: {
           label: def.label,
-          available: () => this.ready(key) ? true : 'Empty. Somebody tops these up; come back later.',
+          available: () => this.ready(key) ? true : 'Empty. Somebody keeps these stocked, so check back later.',
           run: () => this.open(key, CACHE_LOOT[def.kind], true),
         },
       });

@@ -34,7 +34,7 @@ export const TILL_STOCK: TillLine[] = [
 
 /** What she says when you walk up, by mood. */
 export const TILL_LINES = {
-  stranger: 'Browse. Don\'t palm. Prices are for people I don\'t know yet. Everyone starts as people I don\'t know yet.',
+  stranger: 'Browse. Don\'t palm anything. These are stranger prices, and right now you\'re a stranger.',
   owner: 'My Till, my slate, my pencil. You get the good number. Don\'t make me regret the pencil.',
   town: 'Town prices. The town voted. I counted the votes. Funny how that works.',
 };
@@ -44,16 +44,16 @@ export const TILL_QUIPS: Record<string, { sell?: string; buy?: string }> = {
   gpu: { sell: 'She holds it up to the light. "It agrees with me already."' },
   nft_drive: { sell: '"Monkeys. Again." She pays you a bean. She has a jar of beans for this.' },
   mug: { sell: '"Move fast." She puts it on the shelf very, very slowly.' },
-  hoodie: { sell: '"Seed stage." She folds it like a flag at a funeral.' },
+  hoodie: { sell: '"Seed stage." She folds it and adds it to a pile of others just like it.' },
   visor: { sell: 'She looks through it at you. "No. Still you."' },
   smart_ring: { sell: '"It says I slept badly." She drops it in the jar with the others.' },
   asic: { sell: 'She weighs it in both hands. "It paid for itself. On a chart."' },
-  speaker_badge: { sell: '"Disrupting the Apocalypse." She files it under fiction.' },
-  seed_plate: { sell: 'She reads all twenty-four words, out loud, slowly, as if one of them might be water.' },
-  smart_lock: { sell: '"The most secure object on Earth." She uses it as a paperweight.' },
-  kombucha: { sell: '"It\'s still alive." She sets it apart from the other bottles. For their sake.' },
+  speaker_badge: { sell: '"Disrupting the Apocalypse." She snorts and drops it in a drawer.' },
+  seed_plate: { sell: 'She reads the twenty-four words under her breath, then weighs the plate in her hand.' },
+  smart_lock: { sell: 'She presses the app button out of habit, then uses it as a paperweight.' },
+  kombucha: { sell: '"It\'s still alive." She puts it well away from the other bottles.' },
   mezcal: { sell: '"Four hundred dollars." She sniffs it. "Fuel."' },
-  fleece: { sell: 'She checks the fund\'s logo. "Liquidated. Like everyone who wore it."' },
+  fleece: { sell: 'She checks the logo. "That fund went under before the Pivot did."' },
   scooter_cell: { sell: '"Please park responsibly." She parks it under the counter.' },
   kade_badge: { sell: 'She turns the photo face down. "They smile at you otherwise."' },
   exit_pass: { sell: '"Seat 1A." She tucks it in the till. "Somebody\'ll want a seat."' },

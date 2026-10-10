@@ -305,72 +305,72 @@ export function journalEntries(v: StoryView): JournalEntry[] {
   const add = (flag: string, title: string, body: string) => {
     if (v.has(flag)) out.push({ title, body });
   };
-  add('briefed', 'The rule on the receipt', 'Take what the living need. Leave him alive if you can. Don\'t become the person on the other side of the lock. The Compact is a radio net between camps that still answer: not an army, not a brand. Day 1,284. The jugs are the point.');
+  add('briefed', 'The rule on the receipt', 'Take what the living need. Leave him alive if you can. Don\'t become the person on the other side of the lock. The Compact is a radio net between the camps that still answer. It isn\'t an army. Day 1,284, and Last Chance is running out of water.');
   add('briefed', a.name, a.journal);
-  add('intel:intel.gas.note', 'The note on the pumps', 'SeedBot flew northeast with the camp\'s water and the meal shakes. A fenced garage off the dirt spur, neon, and a man yelling about runway. The cistern is on his lot. The names are in his safe.');
-  add('cache.cooler', 'The cooler', 'Two bottles and a ration behind the pumps. Not enough. Proof the camp wasn\'t exaggerating, which you knew, and which feels different with the plastic in your hand.');
-  add('intel:intel.spire.blueprint', 'The fence he didn\'t buy', 'Change order on the Spire: Tanner refused the north-east fence because raccoons were "not a threat vector". The vault has a 5-pin lock and a keypad. He thinks the code is obvious. He never wrote the obvious part down.');
-  add('intel:intel.highway.greg', 'Greg, from the seed round', 'A customer. Paid two hundred thousand for a bunker and got a tote bag and a calendar invite that 404s. Greg would settle for the wifi password.');
-  add('lore.valve', 'Spur valve 3', 'A Kade Holdings valve tag on the dirt spur below the Garage. "Reseller access: BUNKR.LY. Quota: forty jugs a week. Late payment forfeits waitlist position." Tanner isn\'t hoarding water. He\'s paying rent with it.');
-  add('tanner.kade', 'Who Tanner pays', 'Tanner admitted it on the intercom: Bunkr.ly resold seats in Apex Vault, and Vesper Kade only takes water now. He\'s on her waitlist. Number four thousand and twelve.');
-  add('lore.permit', 'Permit 7-K', 'A county clipboard on the highway. Kade Holdings got a perpetual "pilot" on the Dry Creek aquifer, in exchange for a rocket-themed school. Approved: M. Voss, County Water Engineer.');
-  add('mara.permit', 'Mara\'s signature', 'Mara owned it on the radio. She signed for the school. Eight months later the creek stopped. She\'s been paying it back in jugs ever since.');
-  add('social.past', 'He remembers you', 'Tanner doesn\'t apologise. He rebrands. Whatever you were to him, he has a version where it was a feature. Fixing his version isn\'t your job. The door is.');
-  add('social.digit', 'One, then two', 'He slipped the first half of the vault code and called the call a bad podcast. Two digits left. He thinks the rest is obvious. He\'s right about that, and wrong about everything under it.');
-  add('social.code', 'He said it out loud', '1 2 3 4. It tested well with users. The user was him.');
-  add('garage.complete', 'The Runway Room', 'The safe had the water, the manifest and a hoodie from a company that built one building. The manifest\'s unpaid column is most of the valley. The paid-and-housed column is short.');
-  add('debriefed', 'The Seed', 'The last page of the manifest is the Seed: the few Vesper Kade is keeping. Mara is on it, "for services rendered". Vesper cut into the debrief and offered twenty jugs a week for the ledger.');
-  add('act1.broadcast', 'Every name, on air', 'You read the whole ledger to every camp on the band. Vesper closed the spur valve. The cistern has about two weeks in it. Apex Vault is west of the salt.');
-  add('act1.leverage', 'The ammo tin', 'You kept the ledger quiet and let Vesper pay for the silence. Her drone drop is a free trial. Trials end. Apex Vault is west of the salt.');
-  add('act1.deal', 'Twenty jugs a week', 'You sent the ledger back. The camp drinks on Vesper\'s schedule. Nobody believes "forever". Apex Vault is west of the salt.');
-  add('seen:creek', 'Dry Creek', 'A diner, a clinic with a sulking generator, a store called the Till, and a motel with two locked doors. It used to sit on a creek. These people are the part of the map that isn\'t a bunker.');
-  add('creek.guest', 'Guest book', 'Room 2 is three pins, if your hands are worth a rank. Room 3 is nailed shut. The Till has a stair that the sign calls a closet.');
-  add('creek.loft', 'The page on the shelf', 'The landlord drew a ridge south of the Spire with a cut in it, and left the Till\'s deed signed over to "whoever is still here". Somebody with rocket money looked at a pocket in that ridge and didn\'t buy.');
-  add('creek.doc.list', 'Doc\'s page', 'Half the names on it are from the camps. Tanner sold them a bunker health plan and shipped them tote bags. Doc kept the page because nobody else would.');
-  add('cave.known', 'The cut in the ridge', 'South of the Spire, up the posted wash. Wick lives up there with the view, because nobody bought it.');
-  add('arms.v5', 'Hollis\'s revolver', 'Hollis handed over the camp\'s old six-shooter and a crowbar with the paint worn to steel. "The road has teeth now," he said. Kade\'s Recovery crews walk the highway, and the wolves stopped keeping their distance. Rounds are scrap and patience at the fire.');
-  add('seen:survey', 'Survey stakes', 'Kade\'s surveyors are pricing the ridge north of the camp. White hard hats, respirators, lanyards with smiling photos. They log everything, including the people they shoot.');
-  add('seen:rp7', 'Recovery Point 7', 'Where Kade stacks what it repossesses: water jugs, a vending machine, somebody\'s piano. A sentry by the wall says please before it fires.');
-  add('seen:pipeline', 'The line west', 'A pipe on stands runs west out of Pipeline Camp 3, and the skid beside it hums. Painted on the casing: WATER IS A SERVICE. A Hornet drone circles the pad at night. The ground round it is mined.');
-  add('seen:wellhead', 'Where the creek went', 'South-west of Dry Creek, the aquifer comes up through a Kade wellhead into a tank with her name on it, then west down the pipe. The creek didn\'t dry up. It was moved. Juno was right, and the proof is guarded by five rifles, two sentries and a minefield.');
-  add('outpost.wellhead.cleared', 'Opened the tap', 'You took the wellhead. The tank is still Kade\'s, and Kade will send more people; Kade always sends more people. But for a while the water under Dry Creek was nobody\'s, which is the closest thing to everybody\'s it has been in years.');
-  add('intel:intel.salt.waybill', 'Her road', 'A Kade waybill on the salt: forty jugs a week down a private road to Apex Vault, off the highway\'s west end and along the shore. The driver walked. The truck stayed. Vesper posted about it.');
-  add('seen:apex', 'Apex Vault', 'A launch site at the foot of the range on the salt\'s west shore: a stainless booster held up by a tower, a hangar with her feed over the door, and a vault dug into the hill. Every camera there is live. She is always watching, and always posting.');
-  add('apex.code', 'The launch clock', 'The airlock code is the countdown over the door, hours and minutes to her launch. It is never the same twice. She calls that zero trust. Her guards call it their knees.');
-  add('apex.demo', 'A fan, on tour', 'You told Vesper you were a fan and she let you into the hangar for content. Somewhere there is a clip of you looking unimpressed by a truck.');
-  add('apex.complete', 'The Cistern Room', 'A tank with her name on it, the valley\'s water inside, and a framed poll on the wall: should the camps get water? 88% said lol. The tap still works. The cistern runs east.');
-  add('intel:intel.apex.memo', 'Your guests', 'A memo on Vesper\'s cot, from somewhere called the Panopticon: every face that crossed her apron, matched and ranked, traded for her water. It ended "we noticed the person reading this. Hello."');
-  add('q:act2:done', 'The Panopticon', 'Dez caught it on the band after Apex: a building on the old coast north of the salt, with no windows and a lot of antennas. Somebody who sold the world a feed kept a copy of it. It read our names back before we said them.');
-  add('cave.wick.vesper', 'She stood where you stood', 'Wick says Vesper Kade called the Garage a prototype with bad unit economics. He told her the prototype had his cousin\'s water. She painted her initials in a pocket of the rock and left.');
+  add('intel:intel.gas.note', 'The note on the pumps', 'The drone took the camp\'s water and the meal shakes northeast, to a fenced lot up the dirt spur. Neon, solar panels, a man on a megaphone. His cistern is on that lot, and the ledger of everyone who paid him is in his safe.');
+  add('cache.cooler', 'The cooler', 'Two bottles and a ration in the cooler behind the pumps. That\'s all that was left.');
+  add('intel:intel.spire.blueprint', 'The fence he didn\'t buy', 'The contractor\'s drawing at the Spire. Tanner had the north-east fence cut from the job ("raccoons are not a threat vector"), so the corner panel is only tied on with wire. The vault has a 5-pin lock and a keypad. The code is blacked out. His note in the margin says to make it obvious.');
+  add('intel:intel.highway.greg', 'Greg, from the seed round', 'A voicemail on the highway call box. Greg paid Tanner two hundred thousand for a bunker seat and got a tote bag and a calendar invite with a broken link. He\'d settle for the wifi password.');
+  add('lore.valve', 'Spur valve 3', 'A Kade Holdings tag on a valve on the dirt spur below the Garage. Reseller: Bunkr.ly. Quota: forty jugs a week. Late payment forfeits waitlist position. Tanner isn\'t keeping the camp\'s water. He\'s paying Kade with it.');
+  add('tanner.kade', 'Who Tanner pays', 'Tanner admitted it on the intercom. Bunkr.ly resold seats in Vesper Kade\'s Apex Vault, and Vesper only takes water now. Tanner is on her waitlist himself, at number 4,012.');
+  add('lore.permit', 'Permit 7-K', 'A county clipboard on the highway. Kade Holdings got a perpetual "pilot program" on the Dry Creek aquifer in exchange for a school with a rocket on the sign. Approved by M. Voss, County Water Engineer.');
+  add('mara.permit', 'Mara\'s signature', 'Mara admitted it on the radio. She signed for the school, and eight months later the creek stopped. She\'s been paying it back in jugs ever since.');
+  add('social.past', 'He remembers you', 'Tanner knew who you were on the intercom. He didn\'t apologise for anything. He has his own version of how it went, and in his version it was fine.');
+  add('social.digit', 'One, then two', 'Tanner let the first two digits of the vault code slip on the intercom: one, then two. He says the rest is obvious.');
+  add('social.code', 'He said it out loud', 'Tanner said the vault code out loud: 1 2 3 4. "It tested well with users." The user was him.');
+  add('garage.complete', 'The Runway Room', 'The safe had the water, the Seed Manifest and a hoodie from a company that only ever built one bunker. Most of the valley is in the manifest\'s unpaid column. The paid-and-housed column is short.');
+  add('debriefed', 'The Seed', 'The last page of the manifest is headed THE SEED: the few people Vesper Kade is keeping. Mara is on it, "seat held for services rendered". Vesper broke into the camp\'s band during the debrief and offered twenty jugs a week for the ledger.');
+  add('act1.broadcast', 'Every name, on air', 'The whole ledger went out to every camp on the band. Vesper shut the spur valve. The cistern has about two weeks in it. Apex Vault is west of the salt.');
+  add('act1.leverage', 'The ammo tin', 'The ledger stays in Mara\'s ammo tin, and Vesper pays for the silence with a drone drop she calls a free trial. Trials end. Apex Vault is west of the salt.');
+  add('act1.deal', 'Twenty jugs a week', 'The ledger went back to Vesper. The camp drinks on her schedule now, twenty jugs a week. Nobody believes "forever". Apex Vault is west of the salt.');
+  add('seen:creek', 'Dry Creek', 'A diner, a clinic with an unreliable generator, a store called the Till and a motel with two locked doors. It used to sit on a creek. People still live here, and they\'ve been out here longer than the camp.');
+  add('creek.guest', 'Guest book', 'From the motel guest book: room 2 is three pins, room 3 is nailed shut, and the Till has a stair that the sign calls a closet.');
+  add('creek.loft', 'The page on the shelf', 'The Till\'s landlord left a map of the ridge south of the Spire with a cut drawn in it, and the deed to the Till signed over to "whoever is still here". A note on the map says a woman with rocket money looked at a pocket in that ridge and didn\'t buy it.');
+  add('creek.doc.list', 'Doc\'s page', 'Half the names on Doc\'s list are from the camps. Tanner sold them a bunker health plan and sent them tote bags. Doc kept the list because nobody else was going to.');
+  add('cave.known', 'The cut in the ridge', 'South of the Spire, up the wash with the posts in it. A man called Wick lives at the top.');
+  add('arms.v5', 'Hollis\'s revolver', 'Hollis gave you the camp\'s old six-shooter and a crowbar with the paint worn off. "The road has teeth now." Kade\'s Recovery crews walk the highway, and the wolves have stopped keeping their distance. The camp can load rounds from scrap.');
+  add('seen:survey', 'Survey stakes', 'Kade surveyors are working the slope below the Cut. White hard hats, respirators, lanyards with smiling photos. They log everything, including who they shoot.');
+  add('seen:rp7', 'Recovery Point 7', 'Where Kade stacks whatever it repossesses: water jugs, a vending machine, somebody\'s piano. The sentry by the wall says please before it fires.');
+  add('seen:pipeline', 'The line west', 'A pipe on stands runs west out of Pipeline Camp 3, past a pumping skid that hums. WATER IS A SERVICE is painted on the casing. A Hornet drone circles the pad at night, and the ground around it is mined.');
+  add('seen:wellhead', 'Where the creek went', 'South-west of Dry Creek, the aquifer comes up through a Kade wellhead into a tank with her name on it, then goes west down the pipe. The creek didn\'t dry up. Someone moved it. Five rifles, two sentries and a minefield guard the tank.');
+  add('outpost.wellhead.cleared', 'Opened the tap', 'You took the wellhead. The tank is still Kade\'s, and they\'ll send more people. For a while, though, the water under Dry Creek belongs to nobody.');
+  add('intel:intel.salt.waybill', 'Her road', 'A Kade waybill out on the salt: forty jugs a week down a private road to Apex Vault, off the west end of the highway and along the shore. The last driver walked off and left the truck.');
+  add('seen:apex', 'Apex Vault', 'A launch site at the foot of the range on the salt\'s west shore. A steel booster in a tower, a hangar with her feed playing over the door, and a vault dug into the hill. Every camera there is live, and she\'s usually watching.');
+  add('apex.code', 'The launch clock', 'The airlock code is the countdown over the door, hours and minutes to her launch, so it\'s never the same twice. She calls it zero trust.');
+  add('apex.demo', 'A fan, on tour', 'You told Vesper you were a fan, and she let you into the hangar so she could film it. There\'s a clip of you somewhere, looking unimpressed by her truck.');
+  add('apex.complete', 'The Cistern Room', 'A tank with her name on it and the valley\'s water inside, and a framed poll on the wall: should the camps get water? 88% said "lol". The tap still works. The water is going east.');
+  add('intel:intel.apex.memo', 'Your guests', 'A memo on Vesper\'s cot from somewhere called the Panopticon. Every face that crossed her apron, matched and ranked, in exchange for her water. At the bottom: "We can see whoever is reading this. Hi."');
+  add('q:act2:done', 'The Panopticon', 'After Apex, Dez picked it up on the band: a building on the old coast north of the salt, with no windows and a lot of antennas. Whoever is in there read the camp\'s names back before anyone had said them.');
+  add('cave.wick.vesper', 'Vesper in the Cut', 'Wick says Vesper Kade once called the Garage a prototype with bad unit economics. He told her the prototype had his cousin\'s water in it. She painted her initials in a pocket of the rock and left.');
   // the founders, from the outside (WORLD_INTEL's lore pickups and the four favours that hang off them)
-  add('lore.lifeboat', '#LIFEBOAT', 'A group chat the founders kept before the Pivot: Vesper Kade, Hunter Vale, Ezra Seymour, Prudence Ashby, Orrin, Kit, and Tanner, who kept rejoining. Every device that died out here kept its last page. Dez hears them try to sync at three in the morning.');
-  add('lore.pivotname', 'Everybody forgives a pivot', 'They named it before it happened. "Collapse" was bad for the brand. "Transition" tested badly. Ezra said "Pivot". Tanner reacted with a rocket.');
-  add('lore.panopticon', 'Eleven hundred cameras', 'Ezra Seymour built Glimpse, the neighbourhood app that never forgot a face, and then a bunker he calls the Panopticon, north of the salt. Every camera in it is pointed at somebody. Prudence Ashby built the Alignment Spire. Kit built a Fortress with a moat of coolant. Apex is only the next door.');
-  add('lore.spire', 'The wrong spire', 'Careful Labs left a notice at the 5G tower for anyone looking for the Alignment Spire: you are at the wrong spire, please don\'t look for the right one. Its doors ask ethics questions. Its turrets apologise first.');
-  add('lore.walkwest', 'The walk west', 'People walked west toward Apex on Bunkr.ly receipts, because the line moves faster if you\'re already standing in it. Marcus, waitlist 88,301, sat down on the west road with his water in a tote bag. The salt is very white.');
-  add('lore.kdry', 'KDRY 1340 AM', 'Dry Creek\'s radio station stayed on the air the afternoon of the Pivot, reading the numbers, warning about the sky, talking to whoever was left. Kade cancelled its 2:30 spot. The operator played the song anyway. The log is signed R. Varga.');
-  add('lore.kadekids', 'Kade Kids Academy', 'The school Mara traded the creek for. Rocket backpacks, lifetime refillable bottles, a fountain you weren\'t allowed to drink from. The brochure promised "100% managed water" by 2046. The school is a crater now.');
-  add('q.capsule.dug', 'Class of Tomorrow', 'Kade buried the time capsule to be found: twenty-two envelopes, a lanyard, and a letter to the children of 2046 congratulating them on their Kade citizenship. One envelope said TO PIP OKAFOR, AGE 23.');
-  add('q.cam.seen', 'Unit 0414', 'A Glimpse camera on a pole by the camp road, blinking blue, uploading the forecourt to a relay on the rise. Three years of Hollis fixing a sign, Pip counting jugs, and everyone eating beans.');
-  add('q.cam.hello', 'Ezra Seymour', 'He answered the relay on the first press. He knew your water ration and which foot you favour. He lives north of the salt in the Panopticon, and he\'ll know when you\'re close. He always knows.');
-  add('q.song.asked', 'Rosa Varga', 'Sol\'s wife ran KDRY out of the back of the feed store and stayed on the air until the generator quit. She played one song at the end, "for whoever is still here". Sol was out opening someone\'s car. He never heard which song.');
+  add('lore.lifeboat', '#LIFEBOAT', 'A group chat the founders kept before the Pivot: Vesper Kade, Hunter Vale, Ezra Seymour, Prudence Ashby, Orrin, Kit, and Tanner, who kept getting removed and coming back. Every device that died out here kept its last page. Dez hears them trying to sync at three in the morning.');
+  add('lore.pivotname', 'Everybody forgives a pivot', '"Collapse" was bad for the brand. "Transition" and "sunset" didn\'t stick. Ezra said "pivot" and Vesper made it official. They had a name for it before it happened.');
+  add('lore.panopticon', 'Eleven hundred cameras', 'Ezra Seymour built Glimpse, the neighbourhood app that never forgot a face, and then a bunker north of the salt that he calls the Panopticon: eleven hundred cameras, every one pointed at someone. Prudence Ashby built the Alignment Spire, and Kit built a Fortress with a moat of coolant. Apex is only the next one.');
+  add('lore.spire', 'The wrong spire', 'Careful Labs left a notice at the 5G tower for anyone looking for the Alignment Spire: wrong spire, and please don\'t look for the right one. Its doors ask ethics questions. Its turrets apologise first.');
+  add('lore.walkwest', 'The walk west', 'People walked west toward Apex on Bunkr.ly receipts, because someone told them the line moves faster if you\'re already in it. Marcus Bell, waitlist 88,301, didn\'t get past the west road. He carried his water in a tote bag.');
+  add('lore.kdry', 'KDRY 1340 AM', 'Dry Creek\'s radio station stayed on the air the afternoon of the Pivot: reading the market numbers, warning about the sky, talking to whoever was left. Kade cancelled its 2:30 ad. The log is signed R. Varga.');
+  add('lore.kadekids', 'Kade Kids Academy', 'The school Mara traded the creek for. Rocket backpacks, lifetime refillable bottles, and a brochure that promised "100% managed water" by 2046. It\'s a crater now.');
+  add('q.capsule.dug', 'Class of Tomorrow', 'The time capsule was barely buried: twenty-two envelopes, a lanyard, and a letter to the children of 2046 congratulating them on their Kade citizenship. One envelope says TO PIP OKAFOR, AGE 23.');
+  add('q.cam.seen', 'Unit 0414', 'A Glimpse camera on a pole by the camp road, blinking blue, uploading the forecourt to a relay on the rise. Three years of footage of Hollis fixing the sign and Pip counting jugs.');
+  add('q.cam.hello', 'Ezra Seymour', 'He answered the relay on the first press. He knew your water ration and which foot you favour. He lives north of the salt in the Panopticon, and says he\'ll know when you\'re close.');
+  add('q.song.asked', 'Rosa Varga', 'Sol\'s wife ran KDRY out of the back of the feed store and stayed on the air until the generator quit. She played one last song, "for whoever is still here". Sol was out opening someone\'s car and never heard which one.');
   if (v.has('q.chat.air') || v.has('q.chat.mara') || v.has('q.chat.pip')) {
     out.push({
       title: '#LIFEBOAT, reassembled',
       body: v.has('q.chat.air')
-        ? 'All eight pages, read on the open band by Dez, with voices. Every camp heard the founders name the end of the world like a product. Vesper\'s carrier went quiet for a day.'
+        ? 'All eight pages, read out on the open band by Dez, voices and all. Every camp heard the founders name the end of the world like a product. Vesper\'s carrier went silent for a day.'
         : v.has('q.chat.mara')
-          ? 'All eight pages, in Mara\'s ammo tin with the ledger. Evidence, she calls it. Ezra watched every camp for three years. That makes him a witness.'
-          : 'All eight pages, copied into the back of Pip\'s ledger under THE OTHER COLUMN. When there\'s a trial, Pip is reading it out.',
+          ? 'All eight pages, in Mara\'s ammo tin with the ledger. She calls it evidence. Ezra has watched every camp for three years, and Mara thinks that could matter one day.'
+          : 'All eight pages, copied into the back of Pip\'s ledger under THE OTHER COLUMN. Pip plans to read it out at the trial.',
     });
   }
   // the 2026-10-10 sites (src/game/sites/booster.ts, waitlist.ts, solar.ts)
-  add('seen:booster', 'The Longshot', 'A Kade booster on its side in the south basin, KADE three metres tall down the tank. Flight-proven, once. Kade taped it off and never came back for it.');
-  add('site.booster.done', 'Pad B', 'The flight recorder kept her voice: "Land it at the pad." It didn\'t. The pod was for Vesper Kade: glacier water, flown in from Iceland. "No Kade water on board. I know where it\'s been." Pad B is west of the salt.');
-  add('seen:waitlist', 'Waitlist City', 'A bunker called Everafter, set into the mountain at the head of the north-east basin, and four thousand people who queued for it. NOW SERVING 0001. Somebody still feeds the fire.');
-  add('site.waitlist.done', 'Twelve residents', 'The service door opens on the grand-opening date. Behind it, Kade jugs: forty a week, by drone, for twelve people inside. The line outside was never going to move.');
-  add('seen:solar', 'Photon Park', 'A solar farm in the north-west basin that still powers Everafter. Its cleaning robots never stopped. Nobody has paid the bill since the Pivot.');
-  add('site.solar.done', 'Pulled the plug', 'You threw Photon Park\'s main breaker. Everafter is on its backup cell, and its locks fail open. The robots kept cleaning.');
+  add('seen:booster', 'The Longshot', 'A Kade booster on its side in the north basin, KADE three metres tall down the tank. Kade taped it off and never came back for it.');
+  add('site.booster.done', 'Pad B', 'The flight recorder kept her voice: "Land it at the pad." It didn\'t. The pod was Vesper\'s own resupply, glacier water flown in from Iceland. Her note on the manifest: "No Kade water on board. I know where it\'s been." Pad B is west of the salt.');
+  add('seen:waitlist', 'Waitlist City', 'A bunker called Everafter, set into the mountain at the head of the south-east basin, and the four thousand people who queued for it. The board says NOW SERVING 0001. Somebody still keeps a fire going.');
+  add('site.waitlist.done', 'Twelve residents', 'The service door opened on the grand-opening date. Behind it: Kade jugs, forty a week by drone, for the twelve people inside. The line outside was never going to move.');
+  add('seen:solar', 'Photon Park', 'A solar farm in the basin south of camp that still powers Everafter. The cleaning robots never stopped. Nobody has paid the bill since the Pivot.');
+  add('site.solar.done', 'Pulled the plug', 'You threw Photon Park\'s main breaker. Everafter is running on its backup cell, and its locks fail open. The robots are still cleaning.');
   return out.reverse();
 }
 
@@ -406,8 +406,8 @@ export function apexDebrief(v: StoryView): StoryPage[] {
 
 export function storyObjective(v: StoryView): string {
   if (v.has('act2.debriefed')) return 'Act II is done. Ezra Seymour is north of the salt, in the Panopticon, and he knows your name.';
-  if (v.has('apex.complete')) return 'Apex is busted and the water runs east. Radio Mara from the campfire: the band is talking.';
-  if (v.has('debriefed')) return 'Act I is done. Apex Vault is west of the salt. Ask Dry Creek who would come.';
+  if (v.has('apex.complete')) return 'Apex is done and the water is heading east. Radio Mara from the campfire.';
+  if (v.has('debriefed')) return 'Act I is done. Apex Vault is west of the salt. Ask in Dry Creek who would come with you.';
   if (v.has('garage.complete')) return 'Radio Mara from the campfire. She wants the Seed Manifest read out loud.';
   if (!v.has('intel:intel.gas.note')) return 'Read the note on the pumps by the fire. Search the cooler behind them.';
   if (!v.has('seen:garage')) return 'Find the Garage: northeast, up the dirt spur off the highway.';
@@ -447,7 +447,7 @@ export const WORLD_CACHES: WorldCache[] = [
     x: 176,
     z: 194,
     label: 'Salvage the mast battery',
-    approach: 'The fallen mast still has cells on it. Careful if you don\'t speak electronics.',
+    approach: 'There are still battery cells on the fallen mast. They\'ll bite if you don\'t know electronics.',
     xp: 20,
     items: [
       { id: 'battery', qty: 2 },

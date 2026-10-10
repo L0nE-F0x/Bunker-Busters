@@ -653,7 +653,7 @@ class Minefield {
     if (m.state !== 'armed') return;
     const demo = this.host.skill('demolition');
     if (demo < 1 && Math.random() < 0.5) {
-      this.host.toast('Wrong wire. Probably.', 'bad');
+      this.host.toast('Wrong wire.', 'bad');
       this.trip(m);
       return;
     }

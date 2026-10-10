@@ -30,11 +30,11 @@ export interface Banter {
 }
 
 const SEEN_GARAGE: Record<string, string> = {
-  infiltrator: 'Same padlock. He never changed it. Of course he never changed it.',
+  infiltrator: 'Same padlock. He never even changed it.',
   engineer: 'There it is. My code, hovering over a parking lot. Still running the power-save. Hi, buddy.',
   brute: 'The wrap with the camp\'s name on it is in there somewhere. It\'s coming home.',
   fixer: 'Neon and a megaphone. He hasn\'t changed at all. Good. I know this man.',
-  scout: 'The ground under that fence is damp. Nothing out here is damp. Of course it\'s his.',
+  scout: 'The ground under that fence is damp. Nothing else out here is damp.',
   defector: 'Bunkr.ly. I nearly invested. I\'d like that on the record, and then off it.',
 };
 
@@ -93,7 +93,7 @@ export const BANTER: Banter[] = [
   {
     id: 'night', speaker: 'self', priority: 2,
     when: (v) => v.night && v.has('seen:garage') && !v.has('garage.complete'),
-    text: 'Dark. SeedBot\'s optics hate the dark. So do I, but less.',
+    text: 'Good, it\'s dark. SeedBot can barely see at night.',
   },
   {
     id: 'storm', speaker: 'Mara', priority: 3,
@@ -139,25 +139,25 @@ export const BANTER: Banter[] = [
     id: 'wash', speaker: 'self',
     near: { x: 80, z: 196, r: 26 },
     when: (v) => !v.has('seen:cave'),
-    text: 'Posts in the wash, heading up the ridge. Somebody wanted this walked.',
+    text: 'Somebody\'s set posts up the wash, all the way up the ridge. It\'s a path.',
   },
   {
     id: 'cave', speaker: 'self',
     when: (v) => v.has('seen:cave') && !v.has('creek.talk.wick'),
     near: { lm: 'cave', r: 30 },
-    text: 'Smoke, a chair, a view. Somebody lives up here on purpose.',
+    text: 'Smoke, and a chair facing the view. Somebody lives up here.',
   },
   {
     id: 'valve.near', speaker: 'self',
     near: { x: 119, z: -12, r: 30 },
     when: (v) => !v.has('lore.valve'),
-    text: 'A valve on the spur, with a tag wired to it. Somebody wanted that read.',
+    text: 'There\'s a valve on the spur with a metal tag wired to it.',
   },
   {
     id: 'permit.near', speaker: 'self',
     near: { x: -236, z: 96, r: 34 },
     when: (v) => !v.has('lore.permit'),
-    text: 'A clipboard in the road. County seal, still legible. Huh.',
+    text: 'A clipboard lying in the road. That\'s a county seal on it.',
   },
   {
     id: 'jet', speaker: 'self',
@@ -169,7 +169,7 @@ export const BANTER: Banter[] = [
     id: 'drivein', speaker: 'self',
     near: { lm: 'drivein', r: 130 },
     when: (v) => !v.has('seen:drivein'),
-    text: 'A screen the size of a building, still white. Still waiting for the keynote to end.',
+    text: 'A drive-in screen, still standing. The cars are all still parked facing it.',
   },
   {
     id: 'datacenter', speaker: 'Mara',
@@ -181,19 +181,19 @@ export const BANTER: Banter[] = [
     id: 'courier', speaker: 'self',
     near: { lm: 'courier', r: 110 },
     when: (v) => !v.has('seen:courier'),
-    text: (v) => (v.night ? 'A red light blinking out on the flats. Two quick flashes, every two seconds. Somebody wanted to be seen.' : 'An orange flag on a whip, out on the flats. Somebody planted that to be found.'),
+    text: (v) => (v.night ? 'A red light blinking out on the flats. Two quick flashes, every couple of seconds.' : 'An orange flag on a whip, out on the flats. Delivery bikes used to carry those.'),
   },
   {
     id: 'stakes', speaker: 'self',
     near: { x: 18, z: 311, r: 30 },
     when: (v) => !v.has('wick.survey') && !v.has('q.wick.stake.b'),
-    text: 'Orange tape on a stake, out here. Somebody is measuring this slope for something.',
+    text: 'Survey stakes with orange tape, running up the slope. Somebody\'s been measuring this.',
   },
   {
     id: 'tube', speaker: 'self',
     near: { lm: 'tube', r: 120 },
     when: (v) => !v.has('seen:tube'),
-    text: 'A silver tube on stilts, running east to nowhere. Top speed: one press release.',
+    text: 'A silver tube on stilts, running east and stopping short. That\'ll be the hyperloop.',
   },
 
   // ------------------------------------------------------------------ the founders, from the outside
@@ -218,13 +218,13 @@ export const BANTER: Banter[] = [
     when: (v) => !v.has('q.capsule.dug'),
     text: (v) => (v.has('pip.capsule')
       ? 'A rocket on a sign, bent over like it\'s reading the ground. Kade Kids Academy. Pip went here for eleven days.'
-      : 'A school sign with a rocket on it, and no school. The ground round it has been a crater for a while.'),
+      : 'A school sign with a rocket on it, and no school behind it. Just a crater.'),
   },
   {
     id: 'relay.near', speaker: 'self',
     near: { x: -74, z: 178, r: 32 },
     when: (v) => !v.has('q.cam.cut') && !v.has('q.cam.loop') && !v.has('q.cam.hello'),
-    text: 'A mast on the rise with two dishes. One looks at the camp. The other looks north, at nothing you can see.',
+    text: 'A mast on the rise with two dishes. One is pointed at the camp. The other points north.',
   },
   {
     id: 'ezra.night', speaker: 'Ezra Seymour · camera', priority: 3,
@@ -264,7 +264,7 @@ export const BANTER: Banter[] = [
   {
     id: 'panopticon.far', speaker: 'self', priority: 2,
     when: (v) => (v.has('q:act2:done') || v.has('apex.complete')) && v.has('q.cam.hello'),
-    text: 'Somewhere on the old coast, north of the salt, Ezra is watching this exact moment. Fine. Let him write it down.',
+    text: 'Ezra\'s probably watching this from up north. Fine.',
   },
   // ------------------------------------------------------------------ routines (content/routines.ts)
   {
@@ -277,7 +277,7 @@ export const BANTER: Banter[] = [
     id: 'routine.lookout', speaker: 'self', priority: 2,
     near: { lm: 'gas', r: 28 },
     when: (v) => v.has('q.ren.truth'),
-    text: 'Ren\'s on the lookout crate by the road, counting our highway now. Ren raises the mug without turning round.',
+    text: 'Ren is on the lookout crate by the road, keeping count. Ren lifts a mug without turning round.',
   },
   {
     id: 'routine.pippool', speaker: 'self', priority: 2,
@@ -301,7 +301,7 @@ export const BANTER: Banter[] = [
     id: 'routine.creekdark', speaker: 'self', priority: 2,
     near: { lm: 'creek', r: 45 },
     when: (v) => hr(v) < 5,
-    text: 'Dry Creek is dark except for Sol\'s fire. There\'s a note on the diner counter. The town sleeps in shifts.',
+    text: 'Dry Creek is dark except for Sol\'s fire. There\'s a note on the diner counter.',
   },
   {
     id: 'routine.till', speaker: 'self', priority: 1,
@@ -313,6 +313,6 @@ export const BANTER: Banter[] = [
     id: 'pool', speaker: 'self', priority: 2,
     near: { lm: 'gas', r: 30 },
     when: (v) => v.has('q.capsule.sealed') || v.has('q.capsule.peeked') || v.has('q.capsule.mara'),
-    text: 'A chalk pool on the forecourt, with a ladder. Everybody walks round it. Even the dust seems to.',
+    text: 'Pip\'s chalk pool is still on the forecourt, ladder and all. Everyone walks round it.',
   },
 ];

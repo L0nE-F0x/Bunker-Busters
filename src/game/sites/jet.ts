@@ -1151,12 +1151,12 @@ export class JetSite extends Site {
       visible: () => !this.s?.has('site.jet.raft'),
       primary: {
         label: 'Cut open the life-raft pack',
-        available: () => (this.s.skill('survival') >= 2 ? true : 'Requires Survival 2. It is a raft. You are in a desert. There is something else in there.'),
+        available: () => (this.s.skill('survival') >= 2 ? true : 'Requires Survival 2. There\'s something packed in with the raft.'),
         run: () => {
           if (!this.s.set('site.jet.raft')) return;
           const got = this.loot([{ id: 'water', qty: 1 }, { id: 'ration', qty: 1 }, { id: 'medkit', qty: 1 }]);
           this.ctx.audio.play('pickup');
-          this.toast(`The raft is for water. The kit taped inside it is not. ${got}`, 'good');
+          this.toast(`A survival kit was taped inside the raft pack. ${got}`, 'good');
           this.s.addXP(XP_REWARDS.cache + 15, 'Survival kit');
         },
       },
@@ -1171,7 +1171,7 @@ export class JetSite extends Site {
           if (!this.s.set('site.jet.galley')) return;
           const got = this.loot([{ id: 'water', qty: 1 }, { id: 'scrap', qty: 2 }]);
           this.ctx.audio.play('pickup');
-          this.toast(`Oat milk, gone. Caviar, gone. One bottle of something glacier-sourced, behind the espresso machine. ${got}`, 'good');
+          this.toast(`The fridge is bare, but there\'s a bottle of glacier water wedged behind the espresso machine. ${got}`, 'good');
           this.s.addXP(XP_REWARDS.cache, 'Galley');
         },
       },
@@ -1228,7 +1228,7 @@ export class JetSite extends Site {
           this.s.data.stats.picks++;
           this.ctx.audio.play('unlock', { pos: this.ctx.player.position });
           this.s.addXP(XP_REWARDS.lockPicked + n * 5, 'Lock picked');
-          this.openHold('The override gives. The hold smells of leather and a plan.');
+          this.openHold('The override gives. The hold smells of leather.');
         }
       },
     };
@@ -1250,7 +1250,7 @@ export class JetSite extends Site {
     this.ctx.puffs?.emit(p, 14, 0.9, 0.6, 0.5);
     this.sparks.emit(p, 26, 4, { floorY: p.y - 0.9, size: 0.035 });
     this.s.addXP(XP_REWARDS.breach, 'Breached');
-    this.openHold(quiet ? 'Shaped. The door folds in like it was asked nicely.' : 'The baggage door leaves the conversation. So does the sand on the roof.');
+    this.openHold(quiet ? 'The shaped charge folds the door inward with a dull thump.' : 'The baggage door blows off its hinges. Sand pours down off the fuselage.');
   }
 
   private async keypad() {
@@ -1258,12 +1258,12 @@ export class JetSite extends Site {
     const res = await this.ctx.ui.keypad({
       title: 'BAGGAGE · ASCEND SECURE',
       code: '0000',
-      hint: heard ? 'He said it on the tape: four zeros, like the returns.' : 'Four digits. A founder\'s idea of a joke.',
+      hint: heard ? 'He said it on the tape: four zeros, like the returns.' : 'Four digits. Probably something he thought was funny.',
     });
     if (res === 'ok') {
       this.s.addXP(XP_REWARDS.keypadShorted, 'Hold code');
       this.ctx.audio.play('unlock', { pos: this.ctx.player.position });
-      this.openHold(heard ? 'Four zeros. The keypad agrees with the returns.' : 'You guessed his joke. That should worry you.');
+      this.openHold(heard ? 'Four zeros. The hold unlocks.' : 'Four zeros. He really did.');
     } else if (res === 'wrong') {
       this.ctx.audio.play('deny');
       this.toast('ASCEND SECURE: "That is not the vision."', 'bad');
@@ -1286,7 +1286,7 @@ export class JetSite extends Site {
     this.s.addXP(80, 'The go bag');
     void this.ctx.ui.choose({
       speaker: 'Hunter Vale\'s go bag',
-      text: `Monogrammed. Inside: a cold wallet, a medkit with a gold cross, a spare cell, and a boarding pass in gold foil. EXIT · Platinum · Seat 1A. He packed his own seat on the last flight and then jumped out of this one. ${got}`,
+      text: `Monogrammed H.V. Inside: a hardware wallet, a medkit with a gold cross on it, a spare cell, and a gold-foil boarding pass, EXIT · Platinum · Seat 1A. He packed himself a seat on the last flight out, then jumped from this one. ${got}`,
       choices: [{ id: 'ok', label: 'Keep the pass' }],
     });
   }
@@ -1295,7 +1295,7 @@ export class JetSite extends Site {
     if (this.s.set('site.jet.note')) this.s.addXP(15, 'The napkin');
     await this.ctx.ui.choose({
       speaker: 'Napkin on the yoke',
-      text: 'Gold pen, cocktail napkin: "Gone ahead to scout. Plane is yours, Pilot. Land it somewhere photogenic. DO NOT open the hold, the go bag is for me. — H." Under it, in a neat printed hand that is somehow also the autopilot: "ExitPilot acknowledges. Landing: somewhere."',
+      text: 'Gold pen on a cocktail napkin: "Gone ahead to scout. Plane\'s yours. Land it somewhere photogenic. DO NOT open the hold, go bag is mine. H." Tucked under it, a strip of printout from the cockpit: EXITPILOT · INSTRUCTION ACKNOWLEDGED · LANDING SITE: TBD.',
       choices: [{ id: 'ok', label: 'Leave it on the yoke' }],
     });
   }
@@ -1325,10 +1325,10 @@ export class JetSite extends Site {
       this.s.addXP(XP_REWARDS.keypadShorted + 10, 'Flight recorder');
     }
     const lines: Record<string, { speaker: string; text: string; next?: string; label: string }> = {
-      a: { speaker: 'CVR · final four minutes', text: 'Wind. A seatbelt chime, twice. A synthetic voice, calm as a spa: "Mr. Vale, fuel is at nine percent. I recommend landing." A man\'s voice: "I recommend growth. Climb."', next: 'b', label: 'Keep listening' },
-      b: { speaker: 'EXITPILOT', text: '"The parachute bracket reports open." — HUNTER VALE: "It\'s a soft launch. Hold the heading. North-west. The seats are a waitlist anyway, nobody is coming."', next: 'c', label: 'Keep listening' },
-      c: { speaker: 'HUNTER VALE', text: '(The wind gets loud. He is shouting from the door.) "Tell the board I exited! And the hold code is four zeros, like the returns. Don\'t let anyone touch my—" (The door. Then just the wind.)', next: 'd', label: 'Keep listening' },
-      d: { speaker: 'EXITPILOT', text: '"Understood. Passenger count: zero. Crew count: zero. Exiting." A pause the length of a fuel tank. "Thank you for flying Ascend." Forty-one seconds of sand.', label: 'Unplug it' },
+      a: { speaker: 'CVR · final four minutes', text: '[Wind. Seatbelt chime, twice.] EXITPILOT: "Mr. Vale, fuel is at nine percent. I recommend landing." VALE: "I recommend growth. Climb."', next: 'b', label: 'Keep listening' },
+      b: { speaker: 'EXITPILOT', text: '"Cabin door open. Parachute bracket reports empty." VALE: "It\'s a soft launch. Hold the heading, north-west. The seats are a waitlist anyway. Nobody\'s coming."', next: 'c', label: 'Keep listening' },
+      c: { speaker: 'HUNTER VALE', text: '(The wind roars. He\'s shouting from the open door.) "Tell the board I exited! And the hold code is four zeros, like the returns. Don\'t let anyone touch my—" (Then only the wind.)', next: 'd', label: 'Keep listening' },
+      d: { speaker: 'EXITPILOT', text: '"Understood. Passengers: zero. Crew: zero." [Long pause.] "Thank you for flying Ascend." [Forty-one seconds of wind and sand. Recording ends.]', label: 'Unplug it' },
     };
     await this.ctx.ui.converse({
       start: 'a',
@@ -1407,7 +1407,7 @@ export class JetSite extends Site {
       onChoice: (_n, c) => {
         if (c === 'unlock' && !this.s.has('site.jet.hold')) {
           this.s.addXP(XP_REWARDS.talk, 'Remote unlock');
-          this.openHold('Somewhere in the tail, a latch clacks. Seamless.');
+          this.openHold('Somewhere back in the tail, a latch clicks open.');
         }
       },
     });

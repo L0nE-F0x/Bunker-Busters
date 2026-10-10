@@ -88,7 +88,7 @@ export const OUTPOSTS: OutpostDef[] = [
   },
   {
     id: 'wellhead', name: 'Kade Wellhead', tier: 3, x: -240, z: -160, rot: 0.25, r: 22,
-    blurb: 'The Dry Creek aquifer comes up here, into a Kade tank, under Kade guns. The creek did not dry up. It was moved.',
+    blurb: 'The Dry Creek aquifer comes up here into a Kade tank, under guard. This is where the creek went.',
     crew: [
       { weapon: 'rifle', role: 'leader', at: [0, 8], yaw: 0 },
       { weapon: 'shotgun', role: 'guard', at: [9, 4], yaw: 1.2, kit: 'heavy' },
@@ -106,7 +106,7 @@ export const OUTPOSTS: OutpostDef[] = [
   {
     // Act II: Vesper's road to Apex Vault. Her alarm calls this crew to the apron (Game wires it).
     id: 'apexgate', name: 'Apex Gatehouse', tier: 2, x: -332, z: -70, rot: 0.25, r: 16,
-    blurb: 'Kade guards Vesper\'s road. The sign says WELCOME, SEED MEMBERS. The guns say the rest.',
+    blurb: 'A Kade checkpoint on Vesper\'s road. The sign says WELCOME, SEED MEMBERS.',
     crew: [
       { weapon: 'rifle', role: 'leader', at: [0, 5], yaw: 0 },
       { weapon: 'shotgun', role: 'guard', at: [6, 6], yaw: 0.6 },

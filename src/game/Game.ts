@@ -316,7 +316,7 @@ export class Game {
     this.weather = new Weather(this.atmo);
     this.weather.onPhase = (p) => {
       if (this.mode !== 'playing') return;
-      if (p === 'front') this.ui.toast('A dust storm is rolling in. Low visibility will blind SeedBot\'s optics.', 'info');
+      if (p === 'front') this.ui.toast('A dust storm is rolling in. SeedBot can barely see in this, and neither can you.', 'info');
       else if (p === 'clearing') this.ui.toast('The dust storm is passing.', 'info');
     };
     this.weather.onLightning = (k) => { this.audio.thunder(k); this.lightning.strike(this.camera.position, k); };
@@ -485,7 +485,7 @@ export class Game {
           };
         }
         if (s.capstone('lockpicking') === 'bump' && pins <= 3) {
-          s.events.emit('toast', { text: 'Bump key. Three pins never stood a chance.', kind: 'good' });
+          s.events.emit('toast', { text: 'Bump key. The lock pops open.', kind: 'good' });
           return 'success';
         }
         const res = await self.withMinigame('lockpick', () => self.ui.lockpick({ ...o, pins, onBreak }));
@@ -515,7 +515,7 @@ export class Game {
         if (o.kade && badges > 0) {
           const pick = await self.ui.choose({
             speaker: o.title,
-            text: 'The reader under the screen wants a contractor ID. You have a dead man\'s lanyard in your pocket. The photo is smiling.',
+            text: 'The reader under the screen wants a contractor ID. You have a Recovery lanyard in your pocket, taken off one of their own.',
             choices: [
               { id: 'badge', label: `Swipe a Recovery Lanyard, then splice in (${badges} left)` },
               { id: 'raw', label: 'Splice in cold' },
@@ -659,7 +659,7 @@ export class Game {
     s.data.pack = null;
     this.placePack();
     this.audio.play('loot');
-    this.ui.toast('Your pack. Everything still in it, which is more than you can say for you.', 'good');
+    this.ui.toast('Your pack. Everything\'s still in it.', 'good');
     this.arms?.validate();
   }
 
@@ -880,7 +880,7 @@ export class Game {
     if (c.shockWithoutElectronics && s.skill('electronics') < 1) {
       s.damage(8);
       this.audio.play('zap');
-      this.ui.toast('The mast bit you. Electronics would have made it polite.', 'bad');
+      this.ui.toast('The mast shocks you. Somebody with Electronics would have known which wire not to touch.', 'bad');
     }
     const got: string[] = [];
     for (const it of c.items) {
@@ -928,7 +928,7 @@ export class Game {
             s.restAtFire();
             this.save(true);
             this.audio.play('uiConfirm');
-            this.ui.toast(full ? 'You sleep like someone who learned how. Saved.' : 'Rested. Not new. Saved.', 'good');
+            this.ui.toast(full ? 'You sleep properly for once. Saved.' : 'You rest by the fire. Saved.', 'good');
           },
           onCraft: (id) => {
             const err = s.craft(id);
@@ -1158,7 +1158,7 @@ export class Game {
     this.combat.hooks = {
       onVenom: (sec) => {
         state.data.poison = Math.min(70, (state.data.poison ?? 0) + sec);
-        if (!this.venomHint) { this.venomHint = true; this.ui.toast('Venom. It burns slowly. A snakebite kit stops it; a medkit only slows it.', 'bad'); }
+        if (!this.venomHint) { this.venomHint = true; this.ui.toast('You\'ve been poisoned. A snakebite kit will stop it. A medkit only slows it down.', 'bad'); }
       },
       onHurt: (amt, from, kind) => this.playerHurt(amt, from, kind),
       onHit: (k) => { this.ui.hitmark(k); this.audio.combat?.hitmark(k); if (k === 'kill') state.data.stats.kills = (state.data.stats.kills ?? 0) + 1; },
@@ -1302,7 +1302,7 @@ export class Game {
       this.state.damage(dmg);
       this.audio.play('thud', { intensity: Math.min(1, (speed - 7.7) / 6 + 0.4) });
       this.post.damage.value = Math.min(1, 0.4 + dmg / 60);
-      if (dmg >= 8) this.ui.toast(dmg >= 40 ? 'That fall nearly broke your legs.' : 'Hard landing. Your knees disagree with that decision.', 'bad');
+      if (dmg >= 8) this.ui.toast(dmg >= 40 ? 'That fall nearly broke your legs.' : 'Hard landing.', 'bad');
     }
   }
 
@@ -1378,7 +1378,7 @@ export class Game {
       this.ui.fade(false);
       this.player!.frozen = false;
       this.busy = false;
-      if (exit) this.ui.toast('Exit Plan. You kept the pick, and you kept your dignity. Mostly the pick.', 'good');
+      if (exit) this.ui.toast('Exit Plan: you got tased, but you kept the pick.', 'good');
       else if (s.set('tut.caught')) this.ui.subtitle('Mara Voss', 'SeedBot graduates people. Crouch, or don\'t let it look at you. The pick was the expensive part.');
     }, 3600);
   }
@@ -1486,7 +1486,7 @@ export class Game {
       this.atmo.hour = (this.atmo.hour + 6) % 24;
       this.envTimer = 0;
       this.dying = 0;
-      this.ui.fade(true, 'Mara had someone drag you back. Six hours gone. The job didn\'t wait.');
+      this.ui.fade(true, 'Mara sent someone to drag you back to camp. You lost six hours.');
       this.placePack();
     }, 3000);
     setTimeout(() => {
@@ -1561,7 +1561,7 @@ export class Game {
       s.addItem('lockpick', 5, false, true);
       s.set('q.sol.kept');
       this.audio.play('pickup');
-      this.ui.toast('You unroll Sol\'s picks into your kit. Somewhere by a fire, a locksmith feels it.', 'info');
+      this.ui.toast('You unroll Sol\'s picks into your kit.', 'info');
       return;
     }
     const meal = id === 'ration' ? [45, 0, 18] : id === 'water' ? [0, 42, 4] : id === 'soylent' ? [30, 12, 12] : null;
@@ -1582,7 +1582,7 @@ export class Game {
         s.data.poison = 0;
         s.heal(10);
         this.audio.play('eat');
-        this.ui.toast('Snakebite kit. The burning stops. Mostly.', 'good');
+        this.ui.toast('The burning from the bite fades.', 'good');
       };
       if (this.hands && !this.ui.modalOpen) this.hands.eat(apply); else apply();
       return;
@@ -1594,7 +1594,7 @@ export class Game {
         s.heal(55);
         s.data.thirst = Math.max(0, s.data.thirst - 4);
         this.audio.play('eat');
-        this.ui.toast('Medkit. The hole closes. Your mouth is a little drier.', 'good');
+        this.ui.toast('You patch yourself up. Your mouth feels drier.', 'good');
       };
       if (this.hands && !this.ui.modalOpen) this.hands.eat(apply); else apply();
     }
@@ -1614,9 +1614,9 @@ export class Game {
     const drone = this.garage.drone;
     if (near && drone.state !== 'disabled' && drone.state !== 'alert') {
       drone.investigate(pos);
-      this.ui.toast('The can lands somewhere you are not. SeedBot goes to look.', 'info');
-    } else if (near && drone.state === 'alert') this.ui.toast('Too late for a rattle. It already likes you.', 'bad');
-    else this.ui.toast('A can rattles in the dust. Nothing out here is paid to care.', 'info');
+      this.ui.toast('The can rattles off somewhere. SeedBot goes to look.', 'info');
+    } else if (near && drone.state === 'alert') this.ui.toast('Too late for that. SeedBot has already seen you.', 'bad');
+    else this.ui.toast('The can rattles off into the dust. Nothing round here cares.', 'info');
   }
 
   private throwEmp() {
@@ -1778,8 +1778,8 @@ export class Game {
         if (this.huntedBy > 0) return 'Something is hunting you. Lose it first.';
         if (this.bunkerAlarm || this.garage.drone.state === 'alert') return 'Not with an alarm going.';
         if (this.bunkerInside) return 'Not from inside a bunker. Walk out the way you came.';
-        if ((s.data.poison ?? 0) > 0) return 'Venom first. Walk it off and it walks you off a cliff.';
-        if (this.combat.heat > 0.35) return 'Too loud out here. Let the shooting settle first.';
+        if ((s.data.poison ?? 0) > 0) return 'Treat the venom first.';
+        if (this.combat.heat > 0.35) return 'Not while there\'s shooting nearby.';
         return null;
       },
       hostileNear: (x, z, r) => {
@@ -1831,18 +1831,18 @@ export class Game {
     const nearGarage = this.player ? Math.hypot(this.player.position.x - gx, this.player.position.z - gz) < 90 : false;
     if (s.has('garage.marker') || nearGarage || s.has('garage.complete')) {
       out.push({ id: 'garage', x: gx, z: gz, label: s.has('garage.complete') ? 'The Garage (busted)' : 'The Garage · Tier 1', color: s.has('garage.complete') ? '#7d725f' : '#ff3a6e', kind: 'bunker',
-        note: s.has('garage.complete') ? 'Tanner\'s garage. The water and the names were his. Now they aren\'t.' : 'Tanner\'s fenced garage off the spur. The camp\'s water is in his cistern; the names are in his vault.' });
+        note: s.has('garage.complete') ? 'Tanner\'s garage. You took the water and the ledger.' : 'Tanner\'s fenced garage off the spur. The camp\'s water is in his cistern; the names are in his vault.' });
     }
     const [ax, , az] = APEX.location.position;
     const nearApex = this.player ? Math.hypot(this.player.position.x - ax, this.player.position.z - az) < 110 : false;
     if (s.has('apex.marker') || nearApex || s.has('apex.complete')) {
       out.push({ id: 'apex', x: ax, z: az, label: s.has('apex.complete') ? 'Apex Vault (busted)' : 'Apex Vault · Tier 2', color: s.has('apex.complete') ? '#7d725f' : '#ff3a6e', kind: 'bunker',
-        note: s.has('apex.complete') ? 'Vesper Kade\'s vault on the salt. The water went home with you.' : 'Vesper Kade\'s vault at the west shore of the salt, against the range. Her road runs past the gatehouse.' });
+        note: s.has('apex.complete') ? 'Vesper Kade\'s vault on the salt. You took the water east.' : 'Vesper Kade\'s vault at the west shore of the salt, against the range. Her road runs past the gatehouse.' });
     }
     for (const it of WORLD_INTEL) {
       if (s.has(`intel:${it.id}`)) continue;
       const known = it.id === 'intel.gas.note' || s.has(`rumour.${it.id}`) || this.map.revealedAt(it.position[0], it.position[2]) > 100;
-      if (known) out.push({ id: it.id, x: it.position[0], z: it.position[2], label: 'Intel', color: '#c896ff', kind: 'intel', note: 'Something left here on purpose. Worth reading.' });
+      if (known) out.push({ id: it.id, x: it.position[0], z: it.position[2], label: 'Intel', color: '#c896ff', kind: 'intel', note: 'There\'s something here worth reading.' });
     }
     for (const c of WORLD_CACHES) {
       if (s.has(c.id)) continue;
@@ -2059,10 +2059,10 @@ export class Game {
     player.stealthRank = s.skill('stealth');
     player.stealthFocus = s.focus('stealth');
     if (!blocked) {
-      if (s.data.thirst < 55 && s.set('tut.thirst')) this.ui.toast('Water is dropping. The blue bar. A ration will not fix it.', 'info');
-      if (s.data.thirst < 28 && s.set('tut.dry')) this.ui.toast('You are drying out. Drink, or walk slower and bleed.', 'bad');
-      if (s.data.hunger < 28 && s.set('tut.hungry')) this.ui.toast('Hunger. A ration off the hotbar. The fire helps a little.', 'bad');
-      if (s.weight > s.carryLimit + 0.05 && s.set('tut.heavy')) this.ui.toast('Overburdened. Drop something from the kit, or walk it at seventy percent.', 'bad');
+      if (s.data.thirst < 55 && s.set('tut.thirst')) this.ui.toast('You\'re getting thirsty (the blue bar). Food won\'t help. Drink.', 'info');
+      if (s.data.thirst < 28 && s.set('tut.dry')) this.ui.toast('You\'re dehydrated and losing health. Drink something.', 'bad');
+      if (s.data.hunger < 28 && s.set('tut.hungry')) this.ui.toast('You\'re getting hungry. Eat a ration from the hotbar.', 'bad');
+      if (s.weight > s.carryLimit + 0.05 && s.set('tut.heavy')) this.ui.toast('You\'re overloaded and down to seventy percent speed. Drop something from your kit.', 'bad');
     }
 
     // UI hotkeys

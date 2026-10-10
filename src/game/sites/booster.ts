@@ -599,7 +599,7 @@ export class BoosterSite extends Site {
           if (!this.s.set(F.cables)) return;
           const got = this.loot([{ id: 'scrap', qty: 3 }, { id: 'battery', qty: 1 }]);
           this.ctx.audio.play('pickup');
-          this.toast(`Aerospace copper, aerospace connectors, and a backup cell nobody inventoried. ${got}`, 'good');
+          this.toast(`Good copper, and a backup cell zip-tied inside the tray. ${got}`, 'good');
           this.s.addXP(XP_REWARDS.cache, 'Cable tray');
         },
       },
@@ -614,7 +614,7 @@ export class BoosterSite extends Site {
           if (!this.s.set(F.copv)) return;
           const got = this.loot([{ id: 'scrap', qty: 2 }]);
           this.ctx.audio.play('pickup');
-          this.toast(`Carbon wrap over a titanium liner, rated for 6,000 psi and one landing. The valve unscrews. ${got}`, 'good');
+          this.toast(`A carbon-wrapped tank stencilled 6,000 PSI. The valve and fittings come off by hand. ${got}`, 'good');
           this.s.addXP(10, 'Pressure sphere');
         },
       },
@@ -627,9 +627,10 @@ export class BoosterSite extends Site {
     await this.ctx.ui.choose({
       speaker: 'Manifest · Kade Longshot B7',
       text:
-        'PRIORITY RESUPPLY 3 → APEX VAULT, PAD B. Customer: V. Kade (personal). Contents: 12× glacier water, single-estate, bottled at source (Iceland). ' +
-        '40 kg wagyu, dry-aged. 1× replacement sommelier (declined to board). 1× signed first edition of her own book. ' +
-        'Special handling, customer\'s note: "No Kade water on board. I know where it\'s been." ' +
+        'KADE LONGSHOT B7 · PRIORITY RESUPPLY 3\n' +
+        'Deliver to: APEX VAULT, PAD B. Customer: V. Kade (personal).\n' +
+        'Contents: 12× glacier water, single estate, bottled at source (Iceland). 40 kg wagyu, dry-aged. 1× replacement sommelier (declined to board). 1× signed first edition of customer\'s own book.\n' +
+        'Special handling, customer\'s note: "No Kade water on board. I know where it\'s been."\n' +
         'Pod seal: customer code, transmitted at descent (see recorder).',
       choices: [{ id: 'ok', label: 'Put it back in the pouch' }],
     });
@@ -640,7 +641,7 @@ export class BoosterSite extends Site {
     if (!s.has(F.power)) {
       if (cell) {
         if (!s.removeItem('battery', 1)) return;
-        this.toast('The cell takes. The recorder clicks, thinks about it, and shows a cursor.', 'good');
+        this.toast('The cell takes. The recorder clicks, and a cursor blinks on its screen.', 'good');
       } else if (s.skill('electronics') < 4) {
         const ok = await this.ctx.ui.circuit({ title: 'LONGSHOT B7 · FLIGHT RECORDER', difficulty: s.focus('electronics') === 'hotline' ? 1 : 2 });
         if (!ok) { this.ctx.audio.play('deny'); return; }
@@ -658,11 +659,15 @@ export class BoosterSite extends Site {
     await this.ctx.ui.choose({
       speaker: 'Flight recorder · Longshot B7',
       text:
-        'T+04:10 Boostback nominal. Target APEX PAD B. T+06:55 Crosswind 41 knots, outside limits. Recommend divert. ' +
-        'T+06:58 Customer override, voice: "It\'s a rocket, not a bicycle. Land it at the pad." T+07:30 Entry burn. ' +
-        'T+08:02 Pod release requested by customer: "If it lands hard, open the pod and save the water. Code two-zero-four-eight." ' +
-        'T+08:41 Landing burn. T+08:44 Pad not found. Ground found. T+08:45 Ground found again. ' +
-        'Last fix: Pad B bears two-seven-five, west of the salt. Recording ends.',
+        'T+04:10 Boostback nominal. Target APEX PAD B.\n' +
+        'T+06:55 Crosswind 41 knots, outside limits. Recommend divert.\n' +
+        'T+06:58 Customer override (voice): "It\'s a rocket, not a bicycle. Land it at the pad."\n' +
+        'T+07:30 Entry burn.\n' +
+        'T+08:02 Pod release requested by customer: "If it lands hard, open the pod and save the water. Code two-zero-four-eight."\n' +
+        'T+08:41 Landing burn.\n' +
+        'T+08:44 Pad not found. Ground found.\n' +
+        'T+08:45 Ground found again.\n' +
+        'Last fix: Pad B bearing 275, west of the salt. Recording ends.',
       choices: [{ id: 'ok', label: first ? 'Two-zero-four-eight. West of the salt.' : 'Let it loop' }],
     });
   }
@@ -672,7 +677,7 @@ export class BoosterSite extends Site {
     const res = await this.ctx.ui.keypad({
       title: 'PRIORITY RESUPPLY · POD SEAL',
       code: POD_CODE,
-      hint: heard ? 'She said it on the recorder: two-zero-four-eight.' : 'Four digits. The customer chose them. The manifest says the recorder knows.',
+      hint: heard ? 'She said it on the recorder: two-zero-four-eight.' : 'Four digits, set by the customer. The manifest says the code went out over the flight recorder.',
     });
     if (res === 'ok') this.openPod(false);
     else if (res === 'wrong') { this.ctx.audio.play('deny'); this.toast('KADE: "That is not the code. This attempt has been logged."', 'bad'); }
@@ -693,8 +698,8 @@ export class BoosterSite extends Site {
       : [{ id: 'water', qty: 4 }, { id: 'ration', qty: 2 }, { id: 'medkit', qty: 1 }]);
     s.addXP(pried ? XP_REWARDS.cache : 45, 'Priority resupply');
     this.toast(pried
-      ? `The hatch gives with a sound like money. Half the bottles didn't survive the crowbar. ${got}`
-      : `The seal sighs open. Cold inside, still. Glacier water in glass, wagyu in vacuum foil, and a first-aid kit with her monogram. ${got}`, 'good');
+      ? `The hatch bends open with a crack. Half the bottles inside didn't survive the crowbar. ${got}`
+      : `The seal hisses open. It's still cold inside: glacier water in glass bottles, wagyu in vacuum foil, and a first-aid kit with her monogram on it. ${got}`, 'good');
   }
 
   // ================================================================ per frame
@@ -741,7 +746,7 @@ export class BoosterSite extends Site {
       }
       if (s && d < 14 && !s.has(F.found)) {
         s.set(F.found);
-        this.toast('Kade\'s name, three metres tall, lying in the sand. The tape says it\'s still theirs.', 'info');
+        this.toast('KADE in three-metre letters, lying in the sand. The salvage tape round it says it\'s still theirs.', 'info');
       }
     }
   }

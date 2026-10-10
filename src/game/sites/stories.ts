@@ -393,8 +393,8 @@ export class Stories {
     await this.ctx.ui.choose({
       speaker: 'Time capsule',
       text:
-        'It isn\'t deep. Kade buried it to be found. A steel tube with a rocket decal, sealed with a Kade Holdings sticker. Inside: twenty-two envelopes in children\'s handwriting, a Kade Kids lanyard, ' +
-        'and a letter on Kade letterhead. "To the children of 2046: by the time you read this, Dry Creek\'s aquifer will be fully monetised, and so, in a sense, will you. Congratulations on your Kade citizenship. Please recycle this capsule." ' +
+        'It isn\'t buried deep. A steel tube with a rocket decal, sealed with a Kade Holdings sticker. Inside: twenty-two envelopes addressed in children\'s handwriting, a Kade Kids lanyard, and a letter on Kade letterhead:\n' +
+        '"To the children of 2046: by the time you read this, Dry Creek\'s aquifer will be fully monetised, and so, in a sense, will you. Congratulations on your Kade citizenship. Please recycle this capsule."\n' +
         'One envelope says TO PIP OKAFOR, AGE 23. DO NOT OPEN UNTIL 2046.',
       choices: [{ id: 'ok', label: 'Take Pip\'s envelope. Leave the rest for 2046.' }],
     });
@@ -407,7 +407,7 @@ export class Stories {
     this.capsuleOpen.visible = true;
     const peek = await this.ctx.ui.choose({
       speaker: 'Pip\'s envelope',
-      text: 'The flap is only tucked in. Eleven-year-olds don\'t lick envelopes. It would be easy.',
+      text: 'The flap isn\'t stuck down, only tucked in. It would be easy to read it.',
       choices: [
         { id: 'read', label: 'Read it.' },
         { id: 'seal', label: 'Leave it sealed. It\'s hers.' },
@@ -416,8 +416,8 @@ export class Stories {
     if (peek === 'read' && s.set('q.capsule.read')) {
       await this.ctx.ui.choose({
         speaker: 'Pip\'s letter',
-        text: '"Dear future me. I hope you have a pool. I hope Mara is still on the radio. I hope the creek comes back, because the man from Kade said it would come back better. If it didn\'t, I\'m sorry I believed him. I was eleven. Love, Pip. P.S. Count everything."',
-        choices: [{ id: 'ok', label: 'Fold it back the way it was. It won\'t be.' }],
+        text: 'Dear future me,\nI hope you have a pool. I hope Mara is still on the radio. I hope the creek comes back because the man from Kade said it would come back better. If it didn\'t I\'m sorry I believed him. I was 11.\nLove, Pip\nP.S. count everything',
+        choices: [{ id: 'ok', label: 'Fold it back up the way it was.' }],
       });
     }
   }
@@ -429,9 +429,9 @@ export class Stories {
     await this.ctx.ui.choose({
       speaker: 'Note on chair 2,212',
       text:
-        'TO HAL IVERS, DRY CREEK CLINIC. HAND DELIVERY. YOU KNOW WHY. "Hal. Thirteen months in a chair. The board still says now serving one. ' +
-        'A man from Glimpse came down the line with a tablet and said the Panopticon seats everyone, no appointments, because it can always see you, so nobody ever has to wait. ' +
-        'Half the line went with him to the coast. I\'m going too. Don\'t come after me. Don\'t send the chicken. Love, Ada. P.S. The woman in 2,213 snores. Tell her I said so."',
+        'TO HAL IVERS, DRY CREEK CLINIC. HAND DELIVERY. YOU KNOW WHY.\n' +
+        'Hal,\nThirteen months in this chair and the board still says now serving one. A man from Glimpse came down the line with a tablet. He says the Panopticon seats everybody, no appointments, because it can always see you, so nobody ever has to wait. Half the line went with him to the coast. I\'m going too.\n' +
+        'Don\'t come after me. Don\'t send the chicken.\nLove, Ada\nP.S. The woman in 2,213 snores. Tell her I said so.',
       choices: [{ id: 'ok', label: 'Take the letter to Doc.' }],
     });
     if (!s.set('q.ada.found')) return;
@@ -448,8 +448,8 @@ export class Stories {
     await this.ctx.ui.choose({
       speaker: 'Camera on the pole',
       text:
-        'GLIMPSE NEIGHBOURHOOD WATCH · UNIT 0414. A white box with a blue light, a solar panel the size of a tray, and a sticker: SMILE, YOU\'RE ALREADY TAGGED. ' +
-        'The lens is on the forecourt: the pumps, the fire, the logs where everyone sits. Status light: UPLOADING. A little antenna points south-east, at a mast on the rise.',
+        'GLIMPSE NEIGHBOURHOOD WATCH · UNIT 0414\n' +
+        'A white box with a blue light, a solar panel the size of a tray, and a sticker: SMILE, YOU\'RE ALREADY TAGGED. The lens is pointed at the forecourt: the pumps, the fire, the logs where everyone sits. Status light: UPLOADING. A little antenna points south-east, at a mast on the rise.',
       choices: [{ id: 'ok', label: 'Follow the antenna.' }],
     });
     if (!s.set('q.cam.seen')) return;
@@ -465,8 +465,8 @@ export class Stories {
     const pick = await this.ctx.ui.choose({
       speaker: 'Glimpse relay',
       text:
-        'A white cabinet at the foot of the mast, unlocked, because who would come out here. Inside: a router with forty-one feeds on it. One is labelled LAST CHANCE (FORECOURT). ' +
-        'The others are camps you\'ve heard on the radio. Viewers on the forecourt feed, right now: 1. There\'s a speaker grille, and a button marked TALK.',
+        'A white cabinet at the foot of the mast. It isn\'t even locked. Inside, a router with forty-one feeds on it. One is labelled LAST CHANCE (FORECOURT), and the rest are camps you\'ve heard on the radio. ' +
+        'Viewers on the forecourt feed right now: 1. There\'s a speaker grille, and a button marked TALK.',
       choices: [
         { id: 'cut', label: 'Pull the forecourt feed. Pull it hard.' },
         { id: 'loop', label: 'Loop ten minutes of an empty forecourt, forever.', disabled: loopWhy },
@@ -483,7 +483,7 @@ export class Stories {
       if (elec < 2) s.removeItem('battery', 1);
       this.ctx.audio.play('unlock', { pos: this.ctx.player.position });
       s.addXP(40, 'Looped');
-      this.toast('Ten minutes of an empty forecourt at dusk, on repeat. Whoever watches is watching a picture now.', 'good');
+      this.toast('The feed now shows ten minutes of an empty forecourt at dusk, on a loop.', 'good');
       setTimeout(() => this.ctx.ui.subtitle('Dez Marlow · radio', 'Is that a loop? Did you loop them? I\'m coming up there with a lunchbox. That pole deserves a lunchbox.'), 1600);
       this.applyCam();
     } else if (pick === 'hello' && s.set('q.cam.hello')) {
@@ -538,7 +538,7 @@ export class Stories {
       // Dez's pick of the night: the pickup it points at goes on the map
       const r = rumourTonight({ has: (f) => s.has(f), count: (i) => s.count(i), rep: (p) => s.rep(p), name: s.archetype.name, rests: s.data.rests });
       const key = r?.intel ?? r?.op;
-      if (key && s.set(`rumour.${key}`)) setTimeout(() => this.toast('Marked on your map: what the band was talking about.', 'info'), 400);
+      if (key && s.set(`rumour.${key}`)) setTimeout(() => this.toast('Dez marked the spot on your map.', 'info'), 400);
     }
     if (choice === 'song.hollis' && s.has('q.song.asked')) s.set('q.song.hollis');
     if (choice === 'song.dez' && s.has('q.song.hollis')) s.set('q.song.dez');

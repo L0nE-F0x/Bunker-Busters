@@ -363,7 +363,7 @@ export abstract class Bunker<S extends BunkerShell = BunkerShell> {
     this.openEntry(e.id, m.line !== undefined ? { line: m.line } : {});
     this.ctx.audio.play('thud', { pos: this.ctx.player.position, intensity: 0.85 });
     this.ctx.cam.addTrauma(quiet ? 0.15 : 0.45);
-    if (quiet) this.s.events.emit('toast', { text: 'Shaped charge. The alarm stayed asleep.', kind: 'good' });
+    if (quiet) this.s.events.emit('toast', { text: 'The shaped charge goes off with a muffled thump. No alarm.', kind: 'good' });
     else this.triggerAlarm(this.b.points[e.point], m.loud);
     this.s.addXP(XP_REWARDS.breach, 'Lock breached');
   }

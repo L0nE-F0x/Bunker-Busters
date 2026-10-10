@@ -255,7 +255,7 @@ export class Settlement {
       primary: this.circuitAction('freezer', 'Diner freezer', 3, 'creek.freezer', () => {
         this.s.set('creek.freezer');
         const got = this.loot([{ id: 'ration', qty: 2 }, { id: 'water', qty: 1 }]);
-        this.ctx.ui.banner('THE FREEZER', `The seal sighs. ${got}`, 'good');
+        this.ctx.ui.banner('THE FREEZER', `The seal cracks and cold air rolls out. ${got}`, 'good');
         this.s.addXP(XP_REWARDS.cache, 'Freezer');
       }),
     });
@@ -263,7 +263,7 @@ export class Settlement {
     this.interactables.push({
       id: 'generator', pos: this.pos('generator'), radius: 1.9,
       visible: () => !this.s?.has('creek.power'),
-      primary: this.circuitAction('generator', 'Clinic generator', 2, 'creek.power', () => this.powerClinic('The clinic window wakes up. Doc can work.')),
+      primary: this.circuitAction('generator', 'Clinic generator', 2, 'creek.power', () => this.powerClinic('The clinic window lights up. Doc can work now.')),
     });
     this.interactables.push({
       id: 'inez', pos: this.pos('inez'), radius: 2.1,
@@ -273,14 +273,14 @@ export class Settlement {
         available: () => {
           if (this.s.has('creek.till')) return 'Already light.';
           if (this.s.skill('stealth') < 2) return 'Requires Stealth 2';
-          if (!this.ctx.player.crouching) return 'Crouch. She is right there.';
+          if (!this.ctx.player.crouching) return 'Crouch first. She\'s right there.';
           return true;
         },
         run: () => {
           if (!this.s.set('creek.till')) return;
           const got = this.loot([{ id: 'scrap', qty: 4 }, { id: 'water', qty: 1 }]);
           this.ctx.audio.play('pickup');
-          this.toast(`The till was light. Inez is still talking to a shelf. ${got}`, 'good');
+          this.toast(`You empty the till while Inez has her back turned. ${got}`, 'good');
           this.s.addXP(XP_REWARDS.cache, 'The till');
         },
       },
@@ -288,7 +288,7 @@ export class Settlement {
     this.interactables.push({
       id: 'closet', pos: this.pos('closet'), radius: 1.85,
       visible: () => !this.s?.has('creek.stair'),
-      primary: this.pickAction(4, 3, 'CLOSET', () => this.opened('creek.stair', 'closet', 'The closet was a stair all along. Up you go.')),
+      primary: this.pickAction(4, 3, 'CLOSET', () => this.opened('creek.stair', 'closet', 'The lock gives. Behind the "closet" door, a narrow stair goes up.')),
       secondary: {
         label: 'Charge the closet door',
         available: () => this.chargeReason(2),
@@ -312,7 +312,7 @@ export class Settlement {
     this.interactables.push({
       id: 'motelB', pos: this.pos('motelB'), radius: 1.85,
       visible: () => !this.s?.has('creek.motel.b'),
-      primary: this.pickAction(3, 1, 'MOTEL', () => this.opened('creek.motel.b', 'motelB', 'Three pins. The room smells like a closed window.')),
+      primary: this.pickAction(3, 1, 'MOTEL', () => this.opened('creek.motel.b', 'motelB', 'The lock gives. The room smells like nobody has opened a window in years.')),
     });
     this.interactables.push({
       id: 'motelBloot', pos: this.pos('motelBloot'), radius: 1.6,
@@ -332,7 +332,7 @@ export class Settlement {
       primary: {
         label: 'Charge the boards',
         available: () => this.chargeReason(1),
-        run: () => this.blow('creek.motel.c', null, 'boards', 'Boards. The street looks over.', 1),
+        run: () => this.blow('creek.motel.c', null, 'boards', 'The boards blow in. Heads turn up and down the street.', 1),
       },
     });
     this.interactables.push({
@@ -360,7 +360,7 @@ export class Settlement {
           if (sv >= 3) items.push({ id: 'ration', qty: 1 }, { id: 'water', qty: 1 });
           if (sv >= 5) items.push({ id: 'medkit', qty: 1 });
           const got = this.loot(items);
-          this.toast(`The wash gives up what the rain left. ${got}`, 'good');
+          this.toast(`You turn up whatever the last rain washed down. ${got}`, 'good');
           this.s.addXP(XP_REWARDS.cache, 'The wash');
         },
       },
@@ -387,14 +387,14 @@ export class Settlement {
       primary: {
         label: 'Charge the rockfall',
         available: () => this.chargeReason(2),
-        run: () => this.blow('cave.pocket', null, 'rockfall', 'The fall slumps. The pocket behind it was always there.', 2),
+        run: () => this.blow('cave.pocket', null, 'rockfall', 'The rockfall slumps, and there\'s a gap behind it.', 2),
       },
     });
     this.interactables.push({
       id: 'pocket', pos: this.pos('pocket'), radius: 1.6,
       visible: () => !!this.s?.has('cave.pocket') && !this.s.has('cave.pocket.loot'),
       primary: {
-        label: 'The crate she didn\'t buy',
+        label: 'Vesper\'s crate',
         available: () => true,
         run: () => this.vesperCrate(),
       },
@@ -467,7 +467,7 @@ export class Settlement {
         [s.has('site.booster.done'), ' I watched that rocket come down, back then. Counted the pieces. Two. Kade said one.'],
         [ending === 'deal', ' Kade drone went over on Tuesday, toward Last Chance. Twenty jugs, they said. I counted nineteen. It\'s always nineteen.'],
         [ending === 'broadcast', ' I counted the names when Mara read them. Four hundred and six. I lost count at the senators.'],
-        [ending === 'leverage', ' Watched the free-trial drone go over. It came with a survey. "How likely are you to recommend thirst?"'],
+        [ending === 'leverage', ' Watched the free-trial drone go over. It came with a survey asking how likely we were to recommend thirst.'],
         [s.has('lore.walkwest'), ' You found someone on the west road, didn\'t you. I counted forty walk out that way, one week. I stopped counting the ones coming back. There was nothing to count.'],
         [night, ' Night shift. The road\'s even emptier in the dark.'],
       );
@@ -566,7 +566,7 @@ export class Settlement {
   private circuitAction(id: string, title: string, difficulty: number, flag: string, onOk: () => void): Action {
     const need = id === 'freezer' ? 3 : 1;
     return {
-      label: id === 'freezer' ? 'Open the freezer' : 'Convince the generator',
+      label: id === 'freezer' ? 'Open the freezer' : 'Get the generator running',
       available: () => {
         if (this.s.has(flag)) return 'Already done.';
         if (this.s.skill('electronics') < need) return `Requires Electronics ${need}`;
@@ -575,7 +575,7 @@ export class Settlement {
       run: async () => {
         if (this.s.has(flag)) return;
         if (this.s.skill('electronics') >= 5) {
-          this.toast('You flip it like a switch.', 'good');
+          this.toast('You know this kind of panel. It comes on first time.', 'good');
           // Salvage pays for a switch too (boards pay through Game's circuit wrapper)
           if (this.s.capstone('electronics') === 'salvage') this.loot([{ id: 'battery', qty: 1 }]);
           onOk();
@@ -637,7 +637,7 @@ export class Settlement {
     if (blocker) this.clearBlocker(blocker);
     this.ctx.audio.play('thud', { pos: this.ctx.player.position, intensity: 0.8 });
     this.ctx.cam.addTrauma(quiet ? 0.12 : 0.4);
-    this.toast(quiet ? 'Shaped. The street stays at dinner.' : loud, quiet ? 'good' : 'bad');
+    this.toast(quiet ? 'The shaped charge goes off with a muffled thump. Nobody on the street looks up.' : loud, quiet ? 'good' : 'bad');
     this.s.addXP(XP_REWARDS.breach, 'Breached');
   }
 
@@ -661,7 +661,7 @@ export class Settlement {
   private async vesperCrate() {
     const pick = await this.ctx.ui.choose({
       speaker: 'Paint on the rock',
-      text: '"V. K. looked. Didn\'t buy." Under the paint, a crate taped shut in her handwriting: PROTOTYPE ADJACENT. Water, cells, scrap. Wick is watching you from the fire.',
+      text: 'Painted on the rock in white: "V.K. looked. Didn\'t buy." Under it, a crate taped shut and labelled in marker: PROTOTYPE ADJACENT. Water, cells and scrap inside. Wick is watching you from the fire.',
       choices: [
         { id: 'take', label: 'Take the crate.' },
         { id: 'leave', label: 'Leave it for Wick.' },
@@ -672,10 +672,10 @@ export class Settlement {
       this.s.set('cave.pocket.loot');
       const got = this.loot([{ id: 'water', qty: 1 }, { id: 'battery', qty: 2 }, { id: 'scrap', qty: 2 }]);
       this.s.addXP(40, 'Vesper\'s leftovers');
-      this.toast(`${got}. Wick says nothing, which from Wick is a paragraph.`, 'good');
+      this.toast(`${got}. Wick watches you carry it out and doesn\'t say a word.`, 'good');
     } else if (pick === 'leave' && this.s.set('q.wick.left')) {
       this.s.set('cave.pocket.loot');
-      this.toast('You leave it. Wick paints over her initials with his own, and points at the seep at the back of the cave.', 'good');
+      this.toast('You leave it. Wick paints over her initials with his own, then shows you the seep at the back of the cave.', 'good');
     }
   }
 
@@ -685,7 +685,7 @@ export class Settlement {
     this.s.addXP(15, 'The wash');
     await this.ctx.ui.choose({
       speaker: 'Board on the shed',
-      text: 'South of the Spire there\'s a wash with posts in it, the only ground up that ridge that still agrees to be walked. Wick lives at the top. He does not come down for coffee.',
+      text: 'Chalked on the board:\nTHE CUT: south of the Spire. Follow the posts up the wash, it\'s the only safe way up the ridge.\nWick lives at the top. He won\'t come down. Take him coffee if you have any.',
       choices: [{ id: 'ok', label: 'Follow the posts.' }],
     });
   }
@@ -695,7 +695,7 @@ export class Settlement {
     this.s.addXP(15, 'Guest book');
     await this.ctx.ui.choose({
       speaker: 'Guest book',
-      text: 'Last page, in pencil: "Room 2 is three pins, if your hands are worth a rank. Room 3 is nailed shut. The ice machine left with the owner. And the Till has a stair that the sign calls a closet."',
+      text: 'Last page, in pencil, a few different hands:\nRm 2 lock is only 3 pins if you know what you\'re doing. Rm 3 is nailed shut, don\'t bother.\nIce machine left with the owner.\nThe "closet" at the Till is a stair. Inez will tell you it isn\'t.',
       choices: [{ id: 'ok', label: 'Tear the page out' }],
     });
   }
@@ -708,7 +708,7 @@ export class Settlement {
     this.s.addXP(35, 'The stair');
     await this.ctx.ui.choose({
       speaker: 'The landlord\'s shelf',
-      text: `A map of the ridge south of the Spire, with a cut drawn in it: "Wick answers the radio with silence. A woman with rocket money looked at the pocket and didn't buy." Under it, the deed to the Till, signed over to "whoever is still here". ${got}`,
+      text: `A hand-drawn map of the ridge south of the Spire, with the cut marked and two notes in the margin: "Wick, top of the wash. Won't answer the radio." and "Woman with rocket money came to look at the side pocket. Didn't buy." Under the map, the deed to the Till, signed over to "whoever is still here". ${got}`,
       choices: [{ id: 'ok', label: 'Take the deed. Decide later.' }],
     });
   }
@@ -740,7 +740,7 @@ export class Settlement {
           s.useFavour('nia.plate');
           s.satisfy(45, 12, 8);
           this.ctx.audio.play('eat');
-          this.toast('Nia\'s plate. Beans, something green, and opinions. Less hungry, less thirsty.', 'good');
+          this.toast('Nia puts a plate down in front of you: beans and something green. You feel less hungry and less thirsty.', 'good');
         }
         if (choice === 'deed' && s.removeItem('deed', 1)) s.set('q.inez.town');
         if (choice === 'igniter' && !s.has('q.rider.delivered') && s.removeItem('igniter', 1)) {
@@ -893,7 +893,7 @@ export class Settlement {
           this.toast(calls ? 'House call. Doc stitches you and complains about your posture.' : sv >= 2 ? 'Doc stitches, then makes you take a kit so you stop visiting.' : 'Doc stitches what he can see.', 'good');
         }
         if (choice === 'cell' && !s.has('creek.power') && s.removeItem('battery', 1)) {
-          this.powerClinic('Doc swears at the generator until it agrees with him. The window wakes up.');
+          this.powerClinic('Doc swears at the generator until it starts. The clinic window lights up.');
         }
         if (choice === 'list' && this.townSocial() >= 2 && s.set('creek.doc.list')) {
           s.addXP(25, 'Patient list');
@@ -1027,7 +1027,7 @@ export class Settlement {
           if (s.count('scrap') < rate) return;
           s.removeItem('scrap', rate);
           this.loot([{ id: 'water', qty: 1 }]);
-          this.toast(`${rate} scrap, one bottle. She doesn't haggle. Haggling is a second conversation.`, 'good');
+          this.toast(`${rate} scrap for a bottle. Inez doesn't haggle.`, 'good');
         }
         if (choice === 'open' && s.set('creek.stair')) {
           this.openDoor('closet', false);
@@ -1083,7 +1083,7 @@ export class Settlement {
       };
     }
     if (id === 'pivot') {
-      return this.pivotNode('Inez Quill', 'Selling the forty-first ticket for the Tube. The card reader said DECLINED, and then everything said declined. First time a machine ever saved a customer. I kept the forty dollars I never charged her. I still feel bad about it. Not that bad.');
+      return this.pivotNode('Inez Quill', 'Selling the forty-first ticket for the Tube. The card reader said DECLINED, and then everything did. So she never paid. Out of forty-one, she\'s the only one I don\'t owe a refund. I think about that more than I should.');
     }
     if (id === 'closet') {
       return {
@@ -1245,7 +1245,7 @@ export class Settlement {
         const s = this.s;
         if (choice === 'pantry' && s.skill('survival') >= 2 && s.set('creek.ren.ration')) {
           this.loot([{ id: 'ration', qty: 1 }]);
-          this.toast('Ren hands you the ration they were saving for somebody who could name the wash.', 'good');
+          this.toast('Ren hands over the ration they\'d been keeping back.', 'good');
         }
         if (choice === 'truth') s.set('q.ren.truth');
         if (choice === 'spare') s.set('q.ren.spare');
@@ -1328,7 +1328,7 @@ export class Settlement {
         const s = this.s;
         if (choice === 'share' && s.skill('survival') >= 2 && s.set('cave.share')) {
           this.loot([{ id: 'ration', qty: 1 }, { id: 'water', qty: 1 }]);
-          this.toast('Wick splits what the ridge allows. It isn\'t a feast. It\'s a count.', 'good');
+          this.toast('Wick splits what he has with you. It isn\'t much.', 'good');
         }
         if (choice === 'vesper') s.set('cave.wick.vesper');
         if (choice === 'view') s.set('wick.jet');
