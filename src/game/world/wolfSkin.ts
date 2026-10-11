@@ -90,6 +90,8 @@ interface LegGait {
   sweep: number;
 }
 const LIFT_N = 48;
+/** Stride scales the planted sweep is measured at (walk 1.15 … gallop 1.6). */
+const SCALES = [1, 1.15, 1.3, 1.45, 1.6];
 /** Rig names of the legs, in the gait order LH, RH, LF, RF. */
 const LEGS = ['backleg', 'R_backleg', 'frontleg', 'R_frontleg'] as const;
 
@@ -124,7 +126,7 @@ const _q = new THREE.Quaternion(), _pq = new THREE.Quaternion(), _bq = new THREE
 const _lat = new THREE.Vector3(), _up = new THREE.Vector3(), _fwd = new THREE.Vector3();
 const _cq = new THREE.Quaternion(), _cp = new THREE.Vector3(), _m = new THREE.Matrix4(), _mq = new THREE.Quaternion();
 const _sole = new THREE.Vector3(), _gait: Gait = { td: [0, 0, 0, 0], duty: 0, scale: 1, flex: 0 };
-const _dy = [0, 0, 0, 0], _tLeg = [0, 0, 0, 0], _uLeg = [0, 0, 0, 0];
+const _dy = [0, 0, 0, 0], _dx = [0, 0, 0, 0], _dz = [0, 0, 0, 0], _tLeg = [0, 0, 0, 0], _uLeg = [0, 0, 0, 0];
 
 export class WolfSkins {
   readonly group = new THREE.Group();
@@ -136,6 +138,7 @@ export class WolfSkins {
   private gaitLegs: LegGait[] = [];
   /** Mean stance sweep of the four legs (m), and the paws' mean depth below the floor in the clip. */
   private sweep = 0.45;
+  private sweeps: number[] = [];
   private floor = 0;
 
   static async load(count: number, look: CanidLook = {}): Promise<WolfSkins | null> {
@@ -284,8 +287,39 @@ export class WolfSkins {
     });
     this.floor = floor;
     this.sweep = this.gaitLegs.reduce((a, g) => a + g.sweep, 0) / 4 || 0.45;
+    // the sweep a planted paw really makes at each stride scale (lengthening the stride about the
+    // clip's mean pose doesn't scale it linearly), so the gait rate keeps planted paws still
+    this.sweeps = SCALES.map((k) => {
+      let sum = 0;
+      for (let i = 0; i < 4; i++) {
+        const L = this.gaitLegs[i];
+        const zAt = (t: number) => {
+          for (const r of s.rig) {
+            r.bone.quaternion.copy(r.q0);
+            r.bone.position.copy(r.p0);
+            const time = t * this.clipLen;
+            if (r.rot) { _cq.fromArray(r.rot.evaluate(time) as unknown as number[]); r.bone.quaternion.copy(r.leg >= 0 ? _mq.copy(r.mean).slerp(_cq, k) : _cq); }
+            if (r.pos) r.bone.position.fromArray(r.pos.evaluate(time) as unknown as number[]);
+          }
+          s.root.updateMatrixWorld(true);
+          return soleWorld(s.legs[i], _sole).z;
+        };
+        sum += Math.abs(zAt(L.land) - zAt(frac(L.lift - 1 / LIFT_N)));
+      }
+      return sum / 4;
+    });
     for (const r of s.rig) { r.bone.quaternion.copy(r.q0); r.bone.position.copy(r.p0); }
     s.root.updateMatrixWorld(true);
+  }
+
+  /** The planted sweep (m) at stride scale `k`, from the measured ones. */
+  private sweepAt(k: number) {
+    const S = this.sweeps;
+    if (S.length !== SCALES.length) return this.sweep * k;
+    let i = 0;
+    while (i < SCALES.length - 2 && k > SCALES[i + 1]) i++;
+    const t = (k - SCALES[i]) / (SCALES[i + 1] - SCALES[i]);
+    return THREE.MathUtils.lerp(S[i], S[i + 1], t);
   }
 
   /**
@@ -295,7 +329,7 @@ export class WolfSkins {
   gaitRate(speed: number) {
     const g = gaitAt(speed, _gait);
     const w = Math.max(0.3, Math.min(1, speed / 0.6));
-    return (speed * g.duty) / (this.sweep * g.scale * w);
+    return (speed * g.duty) / (this.sweepAt(g.scale) * w);
   }
 
   /** Clip time (fraction) for leg `i` at gait phase `u` (0..1 from its touchdown) with duty `duty`. */
@@ -465,14 +499,25 @@ export class WolfSkins {
     const swingK = g ? 1 + (g.scale - 1) * 0.6 : 1;
     // the clip stands the body higher over its paws than the bind pose does
     const raise = -this.floor * w;
-    // legs fold or open to reach; the body only drops by what the longest reach can't make
+    // a planted paw stays where it landed until it lifts (it lets go over the stance's last fifth);
+    // legs fold or open to reach their spots; the body only drops by what the longest reach can't make
     let need = 0;
     for (let i = 0; i < 4; i++) {
       soleWorld(s.legs[i], _sole);
       const lift = g ? this.swingAt(i, _tLeg[i]) * swingK * w : 0;
       _dy[i] = gy(_sole.x, _sole.z) + lift - (_sole.y + raise);
+      const pl = s.plant[i];
+      _dx[i] = _dz[i] = 0;
+      if (g !== null && w > 0.3 && !s.fresh && _uLeg[i] < g.duty) {
+        if (!pl.on) { pl.on = true; pl.x = _sole.x; pl.z = _sole.z; }
+        const hold = 1 - THREE.MathUtils.smoothstep(_uLeg[i], g.duty * 0.8, g.duty);
+        _dx[i] = (pl.x - _sole.x) * hold;
+        _dz[i] = (pl.z - _sole.z) * hold;
+        // (too far to hold: the body has moved on; let it go)
+        if (_dx[i] * _dx[i] + _dz[i] * _dz[i] > 0.16) { _dx[i] = _dz[i] = 0; pl.x = _sole.x; pl.z = _sole.z; }
+      } else pl.on = false;
       // (with the body raised, the hip rises too: the foot's move relative to it is _dy)
-      need = Math.max(need, shortfall(s.legs[i], _dy[i]));
+      need = Math.max(need, shortfall(s.legs[i], _dy[i], _dx[i], _dz[i]));
     }
     const want = raise - Math.min(0.3, need);
     const k = s.fresh || !p.dt ? 1 : Math.min(1, p.dt * 14);
@@ -482,22 +527,7 @@ export class WolfSkins {
     s.root.updateMatrixWorld(true);
     s.tilt.getWorldQuaternion(_bq);
     const hinge = _lat.set(-1, 0, 0).applyQuaternion(_bq);
-    for (let i = 0; i < 4; i++) {
-      // a planted paw stays where it landed until it lifts (it lets go over the stance's last fifth)
-      const pl = s.plant[i];
-      const stance = g !== null && w > 0.3 && !s.fresh && _uLeg[i] < g.duty;
-      let dx = 0, dz = 0;
-      if (stance) {
-        soleWorld(s.legs[i], _sole);
-        if (!pl.on) { pl.on = true; pl.x = _sole.x; pl.z = _sole.z; }
-        const hold = 1 - THREE.MathUtils.smoothstep(_uLeg[i], g.duty * 0.8, g.duty);
-        dx = (pl.x - _sole.x) * hold;
-        dz = (pl.z - _sole.z) * hold;
-        // (too far to hold: the body has moved on; let it go)
-        if (dx * dx + dz * dz > 0.16) { dx = dz = 0; pl.x = _sole.x; pl.z = _sole.z; }
-      } else pl.on = false;
-      reachBy(s.legs[i], _dy[i] + raise - s.lift, hinge, dx, dz);
-    }
+    for (let i = 0; i < 4; i++) reachBy(s.legs[i], _dy[i] + raise - s.lift, hinge, _dx[i], _dz[i]);
     // the tail's tip stays off the ground (a low body, a rise behind it)
     const B = s.bones;
     if (B.tailstart && B.tail3) {
