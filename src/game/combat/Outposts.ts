@@ -4,6 +4,7 @@ import { printPaint, printMap, printMaterial } from '../world/printAtlas';
 import { decalMat, floorDecal } from '../sites/jetKit';
 import { fabric, wood, rustyMetal, plainStandard, glow, corrugated, warmWindow } from '../world/materials';
 import { VirtualLight } from '../world/lights';
+import { ridgeTent } from '../world/tent';
 import { Fire } from '../world/effects';
 import type { Physics } from '@/engine/physics';
 import type { Heightfield } from '../world/Heightfield';
@@ -207,23 +208,16 @@ export function buildOutpost(def: OutpostDef, physics: Physics, hf: Heightfield)
       cover.push({ pos: p, out: d.applyAxisAngle(V(0, 1, 0), def.rot), h: 0.8, taken: false });
     }
   };
-  // --- an A-frame tent, Kade beige with a red stripe
+  // --- a ridge tent, Kade beige with a red stripe: closed canvas that sags between the poles, guyed
+  // out (two single-sided planes and a back triangle read as a leaning board or a white "V" from
+  // most of the yard)
   const tent = (cx: number, cz: number, yaw: number, L = 3.2, W = 2.4, H = 1.9) => {
-    for (const s of [-1, 1]) {
-      const g = new THREE.PlaneGeometry(L, Math.hypot(W / 2, H), 1, 1);
-      g.rotateX(-Math.PI / 2).rotateZ(s * Math.atan2(H, W / 2)).translate(s * W / 4, H / 2, 0);
-      const m = place(g.rotateY(Math.PI / 2), cx, 0, cz, yaw);
-      mb.add(canvas, m);
-      const st = new THREE.PlaneGeometry(L, 0.25).rotateX(-Math.PI / 2).rotateZ(s * Math.atan2(H, W / 2)).translate(s * W * 0.36, H * 0.3, 0).rotateY(Math.PI / 2);
-      mb.add(stripe, place(st, cx, 0.01, cz, yaw));
-    }
-    // back wall + ridge pole + guy lines' stakes
-    const back = new THREE.BufferGeometry().setFromPoints([V(-W / 2, 0, 0), V(W / 2, 0, 0), V(0, H, 0)]);
-    back.setIndex([0, 1, 2]);
-    back.computeVertexNormals();
-    mb.add(canvasDark, place(back, cx, 0, cz - L / 2, yaw));
-    mb.add(steel, place(new THREE.CylinderGeometry(0.025, 0.025, L + 0.3, 6).rotateX(Math.PI / 2), cx, H, cz, yaw));
-    for (const z of [-L / 2 - 0.1, L / 2 + 0.1]) mb.add(steel, place(new THREE.CylinderGeometry(0.02, 0.02, H, 6), cx, H / 2, cz + z, yaw));
+    const t = ridgeTent(0, 0, 0, L, W / 2, H, [0.6, 0.72]);
+    mb.add(canvas, place(t.canvas, cx, 0, cz, yaw));
+    if (t.band) mb.add(stripe, place(t.band, cx, 0, cz, yaw));
+    for (const r of t.ropes) mb.add(canvasDark, place(r, cx, 0, cz, yaw));
+    for (const w of t.wood) mb.add(pallet, place(w, cx, 0, cz, yaw));
+    for (const z of [-L / 2 - 0.03, L / 2 + 0.03]) mb.add(steel, place(new THREE.CylinderGeometry(0.022, 0.022, H + 0.05, 6), cx, (H + 0.05) / 2, cz + z, yaw));
     solid(cx, H / 2, cz, W / 2 - 0.2, H / 2, L / 2, yaw);
   };
   // --- water: blue 20 L jugs on a pallet, the camp's water with somebody else's logo on it
