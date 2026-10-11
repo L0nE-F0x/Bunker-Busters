@@ -256,7 +256,10 @@ export class Terrain {
     // up close: grain, chips and dark crevices (fading out before they'd shimmer)
     const near = smoothstep(1.4, 0.4, fwidth(wp.y).mul(9));
     const grit = onFace(1.1, 0.9, 0.17);
-    const crevice = smoothstep(0.09, 0.02, grit.b).mul(near);
+    // crevices: open fractures ~0.5 m apart where the face is jointed, ragged and broken into runs
+    // (every 9 cm cell edge everywhere read as crazy paving over the whole cliff)
+    const crevice = smoothstep(0.06, 0.01, rockTap.b.add(grit.r.sub(0.5).mul(0.05)))
+      .mul(smoothstep(0.44, 0.56, rockTap.g)).mul(near);
     // bedding planes: thin layers ~0.7 m apart running across the face for tens of metres, each a
     // slightly different hardness (the softer ones weather back into grooves)
     const bed = onFace(40, 0.7, 0.29).add(strataN.mul(0.02));

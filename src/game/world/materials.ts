@@ -2,7 +2,7 @@ import * as THREE from 'three/webgpu';
 import {
   Fn, vec2, float, positionWorld, positionLocal, normalWorld, mix, smoothstep, abs, sin, uniform, time, pow, max,
   fract, step, uv, cameraPosition, normalize, dot, attribute, uniformArray, int, vertexStage, varying, texture,
-  renderGroup, materialColor, floor, vec3,
+  renderGroup, materialColor, floor, vec3, fwidth,
 } from 'three/tsl';
 import { bumpFromHeight } from './Terrain';
 import { noise } from '@/engine/noiseTex';
@@ -341,31 +341,53 @@ export const carGlass = () => memo('carGlass', () => {
 export const desertRock = () => memo('desertRock', () => {
   const m = new THREE.MeshStandardNodeMaterial({ roughness: 0.92, metalness: 0 });
   const p = positionWorld;
+  // face-projected (sides: c.x runs along the face, c.y = height; tops: xz). Keyed on x + z as before,
+  // a face along the other diagonal had one coordinate all the way across and its detail smeared.
   const c = triCoord();
+  const ny = normalWorld.y;
   const big = noise(c.mul(0.09));
   const mid = noise(c.mul(0.45).add(0.21));
   const fine = noise(c.mul(2.1));
-  const bandsN = noise(vec2(p.y.mul(0.55).add(big.r.mul(1.6)), (p.x.add(p.z) as N).mul(0.02))).r;
+  // fine detail fades before it would shimmer (a 3 m boulder at 60 m is a dozen pixels)
+  const near = smoothstep(0.09, 0.02, fwidth(p.y).add(fwidth(p.x)));
+  // bedding: layers keyed on height, wobbling along the face
+  const bandsN = noise(vec2(p.y.mul(0.55).add(big.r.mul(1.6)), c.x.mul(0.02))).r;
   const bands = smoothstep(0.3, 0.75, bandsN);
-  let col: N = mix(vec3c(0.3, 0.17, 0.1), vec3c(0.55, 0.37, 0.24), bands).mul(float(0.8).add(mid.g.mul(0.4)));
-  // cracks: the atlas' cell edges at a large scale, thinned to a sparse network
-  const crackN = noise(c.mul(0.16).add(0.6));
-  const crack = smoothstep(0.035, 0.0, crackN.b).mul(smoothstep(0.4, 0.62, big.g));
-  const fineCrack = float(0);
+  // a weathered rind: dark varnished crust over most of it, paler where the stone shows through
+  let col: N = mix(vec3c(0.22, 0.125, 0.075), vec3c(0.45, 0.3, 0.19), bands.mul(0.7).add(big.g.mul(0.3)))
+    .mul(float(0.76).add(mid.g.mul(0.48)));
+  // spalls: flakes where the rind came off, fresh and pale, with a ragged edge
+  const spallN = noise(c.mul(0.6).add(vec2(0.37, 0.11)));
+  const spall = smoothstep(0.64, 0.68, spallN.r.add(fine.r.sub(0.5).mul(0.14))).mul(smoothstep(0.95, 0.5, ny));
+  col = mix(col, vec3c(0.55, 0.41, 0.28).mul(float(0.85).add(fine.g.mul(0.3))), spall.mul(0.5));
+  // joints: a few long fractures through the stone (warped cell edges, only some of them open),
+  // not a crazy-paving net over every face
+  const jointN = noise(c.mul(0.05).add(mid.rg.sub(0.5).mul(0.05)).add(0.6));
+  const joint = smoothstep(0.04, 0.0, jointN.b).mul(smoothstep(0.48, 0.6, mid.r));
+  const hair = smoothstep(0.025, 0.0, noise(c.mul(0.17).add(fine.rg.sub(0.5).mul(0.012)).add(0.3)).b)
+    .mul(smoothstep(0.6, 0.72, big.r)).mul(near);
   // varnish: manganese-dark streaks down the steeper faces
-  const steep = smoothstep(0.75, 0.25, abs(normalWorld.y));
-  const varnish = smoothstep(0.45, 0.75, noise(vec2((p.x.add(p.z) as N).mul(0.7), p.y.mul(0.08)).add(0.4)).r).mul(steep);
-  col = mix(col, vec3c(0.12, 0.07, 0.045), varnish.mul(0.65));
-  // lichen: crusty orange and grey-green islands, not on the very top (sand) or in the cracks
-  const lichenN = noise(c.mul(0.8).add(0.77));
-  const lichen = smoothstep(0.7, 0.74, lichenN.r.add(mid.r.mul(0.08))).mul(smoothstep(0.9, 0.4, normalWorld.y));
-  const lichenCol = mix(vec3c(0.62, 0.4, 0.16), vec3c(0.42, 0.44, 0.36), step(0.4, lichenN.g));
-  col = mix(col, lichenCol, lichen.mul(0.55));
-  col = col.mul(float(1).sub(crack.mul(0.6)).sub(fineCrack.mul(0.25)));
-  const sd = settle(m, col, float(0.6));
-  m.colorNode = sd.color;
-  m.roughnessNode = mix(mix(float(0.9), float(0.55), varnish.mul(0.6)), float(0.98), sd.dust);
-  m.normalNode = bumpFromHeight(mid.r.mul(0.4).add(fine.r.mul(0.25)).add(fine.a.mul(0.12)).sub(crack.mul(0.7)).sub(fineCrack.mul(0.3)).add(lichen.mul(0.15)), float(0.05));
+  const steep = smoothstep(0.75, 0.25, abs(ny));
+  const varnish = smoothstep(0.45, 0.75, noise(vec2(c.x.mul(0.7), p.y.mul(0.08)).add(0.4)).r).mul(steep);
+  col = mix(col, vec3c(0.1, 0.06, 0.04), varnish.mul(0.6));
+  // lichen: small crusty islands, orange and soot-black, on the shaded sides only
+  const lichenN = noise(c.mul(1.3).add(0.77));
+  const lichen = smoothstep(0.72, 0.8, lichenN.r.add(fine.g.sub(0.5).mul(0.3))).mul(smoothstep(0.85, 0.3, ny))
+    .mul(smoothstep(0.35, 0.6, big.b)).mul(fine.a.mul(0.6).add(0.4));
+  const lichenCol = mix(vec3c(0.56, 0.33, 0.12), vec3c(0.13, 0.12, 0.1), step(0.45, lichenN.g));
+  col = mix(col, lichenCol, lichen.mul(0.7));
+  // grit: the stone's own grain, up close
+  col = col.mul(float(1).add(fine.a.sub(0.5).mul(0.25).mul(near)));
+  col = col.mul(float(1).sub(joint.mul(0.65)).sub(hair.mul(0.3)));
+  const sd = settle(m, col, float(0.42));
+  // wind-blown sand lodges in the joints and on ledges
+  m.colorNode = mix(sd.color, uDustColor.mul(0.85), joint.mul(smoothstep(0.2, 0.7, ny)).mul(0.6));
+  m.roughnessNode = mix(mix(mix(float(0.88), float(0.6), varnish.mul(0.7)), float(0.95), spall), float(0.98), sd.dust);
+  m.normalNode = bumpFromHeight(
+    mid.r.mul(0.45).add(bands.mul(0.35)).add(fine.r.mul(0.22).mul(near)).add(fine.a.mul(0.1).mul(near))
+      .sub(spall.mul(0.3)).sub(joint.mul(0.9)).sub(hair.mul(0.25)).add(lichen.mul(0.12)),
+    float(0.05),
+  );
   m.emissiveNode = sunRim().mul(0.5);
   return m;
 });
