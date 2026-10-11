@@ -1710,3 +1710,13 @@ The owner asked (Sunday night, before bed) for an in-depth audit focused on perf
 **Perf backlog seen tonight:** at Dry Creek facing the Wellhead, the two near outposts are ~11 draws each (one per material in their batches) and the sentries 6+6; 14 skinned character draws. Merging outpost materials would be the next draw cut.
 
 **Not checked:** the desktop app by hand (owner); the models over long play.
+
+### swarm: graphics (close-up weak spots)
+
+Looked first (closeups, perf-probe shots, a scripted view set of boulders, cliffs, outposts, Dry Creek). Lighting, sky, fog and grade untouched. The three weakest things up close, fixed:
+
+- **Boulders** (`materials.ts desertRock`, `Props.ts`): big rocks read as pale, sand-coloured soap lumps with pale-blue plaster blots (the lichen), a 0.5 m crazy-paving net of cell edges on some faces, streaks keyed on x + z (smeared on one diagonal), and a lit flat wedge where the flattened underside stood out of a slope. Now: face-projected streaks, a darker varnished rind with smaller pale spalls, a few long warped joints with sand lodged in them, small orange/soot lichen, less settled dust, grain that fades with distance; boulders sit by their footprint (half the lowest of six footprint samples) and the underside curves down further. desertRock is shared by every site's rocks and the pebbles, so they all change a little. +2 atlas taps in the rock shader.
+- **Cliffs up close** (`Terrain.ts`): tonight's cliff pass added crevices from every 9 cm cell edge of the atlas, so a cliff face at arm's length was a regular net of black outlines. Now the face's own ~0.5 m cells, ragged, only where a 1–3 m field says the rock is jointed (no new taps).
+- **Outpost tents** (`Outposts.ts`, new `world/tent.ts`): Kade's A-frames were two single-sided planes and a back triangle; from behind or the side they were a leaning board or a white "V" (every outpost, mid-range, in every fight). They use the camp's ridge tent now (moved out of Landmarks, plus an optional painted band that follows the sag): closed canvas, red stripe, guy lines, stakes, steel end poles, all in materials the batch already had.
+
+**Perf** (perf-probe 1280×720, 120 frames, before → after): draws unchanged within streaming noise (creek 173+31 both, wellhead 166+31 both, camp 124+23 → 124+24, garage 58 → 59), triangles +0–20k, frame times within run-to-run noise, **programs 208**. Considered and left: the black infiltrator gloves (a deliberate archetype look), the playa's crack cells (intended), the sand-slope strata stripes.
