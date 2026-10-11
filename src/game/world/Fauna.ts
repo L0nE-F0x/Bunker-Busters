@@ -778,6 +778,9 @@ class Wolf implements Hostile {
   yaw = 0;
   phase = Math.random() * 6;
   speed = 0;
+  /** Turning on the spot, the legs step round: the yaw last frame and the turn rate (smoothed, rad/s). */
+  private lastYaw = 0;
+  private turnRate = 0;
   howl = 0;
   look = 0;
   // --- the hunt
@@ -913,7 +916,11 @@ class Wolf implements Hostile {
       this.center.set(this.pos.x, g + 0.32, this.pos.z);
       return;
     }
-    const sp = this.speed;
+    // turning on the spot counts as walking (the paws ~0.45 m from its middle swing round): it steps
+    // round instead of pivoting on planted paws
+    if (c.dt > 0) this.turnRate += (Math.abs(angDiff(this.lastYaw, this.yaw)) / c.dt - this.turnRate) * Math.min(1, c.dt * 10);
+    this.lastYaw = this.yaw;
+    const sp = this.skin ? Math.max(this.speed, Math.min(1.2, this.turnRate * 0.45)) : this.speed;
     // the model's stride matches its speed (gaitRate: planted paws don't skate); the procedural one keeps its own
     this.phase += c.dt * (this.skin ? Math.PI * 2 * this.skin.gaitRate(sp) : sp > 6 ? 9.5 : 3 + sp * 1.6);
     const A = sp < 0.2 ? 0 : sp > 6 ? 0.85 : 0.45;
