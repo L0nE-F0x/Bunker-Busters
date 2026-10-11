@@ -8,6 +8,11 @@ Repo: https://github.com/L0nE-F0x/Bunker-Busters (public, branch `main`). Read `
 
 **Current phase:** v0.8.0 is live (released 2026-10-11, the Spire). Before it, v0.7.0 (2026-10-10): Tier 3 **the Panopticon** and Act III to the end (Ezra in person, Ada, the archive choice), a new website, phone HUD + offline play + an install sheet. Bunkers are added one at a time: **Tier 4, the Alignment Spire, shipped in v0.8.0** (2026-10-11). Tier 5, Hunter Vale's Singularity Dome, is next. v0.6.1 before it: the writing pass (NOTES "writing pass on everything unvoiced"): every unvoiced note/quest/journal/item/toast rewritten to read naturally, documents keep line breaks, and 135 more cast lines voiced. v0.6.0 came from the second overnight swarm (NOTES.md has one `2026-10-10` section per agent): Tier 2 **Apex Vault** placed west of a new salt flat and Act II playable to the end (bunker registry `game.bunkers`), four+one new favours and the #LIFEBOAT lore series (Ezra Seymour of the Panopticon is the Tier 3 hook), NPC daily routines, three new sites (The Longshot, Waitlist City, Photon Park), Kade specialists (marksman/breacher/grenadier) + surrender + fear of fire, vultures/coyotes, the Hush .22/molotov/binoculars/plates + Inez's Till + weapon mods, a world map with fog and fast travel, sky/cloud/horizon/night-light visuals, and perf (lowfx HUD shadows, texture-flip uniforms). All dialogue is voiced. The owner has the desktop app installed. We are **refining and iterating**. The owner cares most about visual quality ("make it look incredible"), then game feel. **Batch fixes; release only when the owner says "ship"** (then do it yourself: `scripts/release.sh patch` for 0.6.1, or `minor` if a content batch joins it).
 
+### Next session (handoff, 2026-10-12, overnight audit)
+- **Branch `audit-2026-10-12`** (not merged, not pushed): the owner asked for an overnight audit of how the Meshy models move, graphics and perf. NOTES "overnight audit". **First, ask the owner to try it** (`git checkout audit-2026-10-12 && npm run desktop`): wolves/coyotes now walk/trot/gallop with paws on the ground (they sank 10–21 cm and skated), contractors walk/run on mocap with planted feet, the six standing townsfolk no longer turn their backs (the library `Idle` swung their hips 93°), the snake rears properly, cliffs have real strata, camp tents. If they like it: merge to main, then ship when they say so.
+- **Crash on quit:** WebKitWebProcess segfaults in NVIDIA EGL (driver 610.57) when the desktop app exits (175 cores since 16 Sep, `/var/lib/systemd/coredump` 4.2 GB). Play unaffected; the game now also saves on `pagehide`. Ask whether they've noticed; don't delete their coredumps without asking.
+- **Desktop frame budget:** in a fight our JS is ~8.5 ms of a ~21 ms frame at any quality/resolution; the rest is WebKitGTK's compositing/present path. Experiments there (WebKit env flags) touch the GPU path: warn the owner first.
+
 ### Next session (handoff, 2026-10-11, the Alignment Spire)
 - **v0.8.0 shipped (2026-10-11):** Tier 4, Prudence Ashby's Alignment Spire, and Act IV to the end (NOTES "Tier 4, the Alignment Spire"); owner: "looks amazing". `?at=spire` starts at the foot of its road; `node scripts/dev/spire-test.mjs both` plays both endings headlessly.
 - **Next: Tier 5, Hunter Vale's Singularity Dome** (the owner accepted the hook: he took off the week of the Pivot and never got there; something runs it). Planned for Monday; the owner is buying Meshy credits first. Propose a design, quote credits. Ask in passing how the Spire plays by hand (apology lengths 3.2/2.4/1.4 s, how fast the level climbs, the carry).
@@ -168,6 +173,9 @@ node scripts/dev/marketing-shots.mjs [hero night interior camp lockpick]   # reg
 node scripts/dev/og-card.mjs                                               # regenerate public/og.jpg
 node scripts/dev/mobile-shot.mjs "http://localhost:5173/play/?webgl" out.png --tap 230,207 --twin "150,250,150,150;600,200,700,200"   # phone emulation + touch gestures
 node scripts/dev/walk-probe.mjs 150 [--sprint]   # movement regression: logs every stall + contacts (FPS=144 env)
+node scripts/dev/paw-probe.mjs 20 [--shots dir]   # wolves: lowest paw vs terrain each frame + planted-paw skate speed
+node scripts/dev/film.mjs "<url>" sheet.png --setup s.js --each e.js --frames 16 --every 120   # motion → contact sheet (free camera: game.camHook, world keeps playing)
+node scripts/dev/cpu-profile.mjs [spotJs] / alloc-profile.mjs [spotJs]   # CDP: top self-time functions / allocation sites at a spot
 node scripts/dev/audio-capture.mjs "http://localhost:5173/play/?webgl&autostart" out.wav 60 --eval "game.atmo.hour = 22"   # record the mix + per-bus dB; then ffmpeg showspectrumpic
 scripts/dev/bench-desktop.sh [high|medium]   # real desktop-app perf: opens a window ~40 s, self-closes
 ```
@@ -187,6 +195,7 @@ Game URL flags:
 - `?webgl`, `?gpu=high|low|reset`: backend override
 - `?skip=ui,post,env,dust,haze,props,landmarks,scrub,fauna,garage,terrain,sky,shadows,fog`: subsystem bisecting
 - `?fight`: drop a Recovery squad in front of you (Story difficulty, can't die), for benches
+- `?procgait`: contractors' legs from the old procedural gait (A/B the mocap legs). `?procwolf`, `?prochuman`, `?procnpc`, `?procfauna`: the procedural bodies
 - `?interior=off`: never skip the exterior (A/B for interior mode). `?at=garage`: start the run inside the Garage. `?at=panopticon`: start down the valley from the Panopticon. `?at=spire`: start at the foot of the Spire's road. `?nolamp`: hide its lamp's beam (perf A/B)
 
 Desktop dev hooks (env vars):
