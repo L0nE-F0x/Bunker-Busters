@@ -68,11 +68,11 @@ const GALLOP: Gait = { td: [0, 0.1, 0.42, 0.55], duty: 0.24, scale: 1.6, flex: 1
 /** The gait at `speed` (m/s), blended (walk → trot from 1.6 to 2.4, trot → gallop from 4 to 5.6). */
 function gaitAt(speed: number, out: Gait) {
   const a = THREE.MathUtils.smoothstep(speed, 1.6, 2.4), b = THREE.MathUtils.smoothstep(speed, 4, 5.6);
-  const mixG = (k: (g: Gait) => number) => THREE.MathUtils.lerp(THREE.MathUtils.lerp(k(WALK), k(TROT), a), k(GALLOP), b);
-  for (let i = 0; i < 4; i++) out.td[i] = mixG((g) => g.td[i]);
-  out.duty = mixG((g) => g.duty);
-  out.scale = mixG((g) => g.scale);
-  out.flex = mixG((g) => g.flex);
+  const mix3 = (w: number, t: number, g: number) => (w + (t - w) * a) * (1 - b) + g * b;
+  for (let i = 0; i < 4; i++) out.td[i] = mix3(WALK.td[i], TROT.td[i], GALLOP.td[i]);
+  out.duty = mix3(WALK.duty, TROT.duty, GALLOP.duty);
+  out.scale = mix3(WALK.scale, TROT.scale, GALLOP.scale);
+  out.flex = mix3(WALK.flex, TROT.flex, GALLOP.flex);
   return out;
 }
 const frac = (x: number) => x - Math.floor(x);
@@ -461,7 +461,7 @@ export class WolfSkins {
    */
   private ground(s: Slot, p: WolfPose, g: Gait | null, w: number) {
     if (s.legs.length !== 4) return;
-    const gy = p.ground ?? (() => p.pos.y);
+    const gy = p.ground ?? ((_x: number, _z: number) => p.pos.y);
     const swingK = g ? 1 + (g.scale - 1) * 0.6 : 1;
     // the clip stands the body higher over its paws than the bind pose does
     const raise = -this.floor * w;

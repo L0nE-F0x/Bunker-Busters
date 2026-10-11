@@ -18,8 +18,9 @@ export interface Leg {
   upper: THREE.Bone;
   lower: THREE.Bone;
   end: THREE.Bone;
-  /** Sole points (heel, toe) in `end`'s local space. */
+  /** Sole points (heel, toe) in `end`'s local space (or in `soleOn[i]`'s, a toe bone). */
   sole: THREE.Vector3[];
+  soleOn?: (THREE.Bone | undefined)[];
 }
 
 const _a = new THREE.Vector3(), _b = new THREE.Vector3(), _c = new THREE.Vector3(), _t = new THREE.Vector3();
@@ -61,8 +62,8 @@ export function measureSole(mesh: THREE.SkinnedMesh, end: THREE.Bone, fwd: THREE
 /** The lowest sole point of `leg` in world space, now (`end`'s matrixWorld must be current). */
 export function soleWorld(leg: Leg, out: THREE.Vector3) {
   let best = Infinity;
-  for (const s of leg.sole) {
-    _p.copy(s).applyMatrix4(leg.end.matrixWorld);
+  for (let i = 0; i < leg.sole.length; i++) {
+    _p.copy(leg.sole[i]).applyMatrix4((leg.soleOn?.[i] ?? leg.end).matrixWorld);
     if (_p.y < best) { best = _p.y; out.copy(_p); }
   }
   return out;

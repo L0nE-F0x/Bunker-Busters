@@ -921,6 +921,8 @@ class Wolf implements Hostile {
     if (this.leap >= 0) { this.leap += c.dt; if (this.leap > LEAP) this.leap = -1; }
     const leapU = this.leap >= 0 ? this.leap / LEAP : 0;
     this.center.set(this.pos.x, g + 0.8 - low, this.pos.z);
+    // a wolf nobody can see (nor its shadow) isn't posed (its hit shape is Wolf.shape(), not the model)
+    if (this.skin && !viewCull.sees(this.center, 1.6)) { this.skin.hide(this.slot); this.b.visible = false; return; }
     if (this.skin) {
       let lookYaw = 0;
       if (target) lookYaw = clamp(angDiff(this.yaw, Math.atan2(target.x - this.pos.x, target.z - this.pos.z)), -1.1, 1.1);

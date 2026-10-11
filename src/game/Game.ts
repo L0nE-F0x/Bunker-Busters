@@ -237,6 +237,8 @@ export class Game {
   /** ?bench: frame intervals (rAF to rAF) of the current window, for the p50/p90 the log prints */
   private benchInt = new Float32Array(1024);
   private frameGap = 0;
+  /** Dev harness: called each frame after the player's camera is placed (a free camera that films the world). */
+  camHook: ((camera: THREE.PerspectiveCamera) => void) | null = null;
   backendLabel = 'WebGL2';
 
   constructor(private renderer: THREE.WebGPURenderer, public isWebGPU: boolean, private canvas: HTMLCanvasElement) {
@@ -1992,6 +1994,8 @@ export class Game {
     this.touch?.setActive(this.mode === 'playing' && this.input.locked && !this.ui.modalOpen && !this.ui.minigameOpen && !this.busy);
 
     // world systems
+    // dev harness (scripts/dev/film.mjs): place the camera after the player's, the world still playing
+    if (this.camHook) { this.camHook(this.camera); this.camera.updateMatrixWorld(); }
     viewCull.update(this.camera, this.atmo.sun.shadow.camera); // what characters need posing this frame
     this.atmo.follow(this.camera);
     this.landmarks.update(dt, this.t, this.camera.position);

@@ -152,7 +152,17 @@ const BUILDERS: Record<string, () => THREE.Object3D> = {
       p.aimPitch = num('ap', 0);
       for (let k = 0; k < 30; k++) p.update(1 / 30, hf);
     });
-    if (qs.has('walk')) c.people.forEach((p) => { p.vel.set(0, 0, -Number(qs.get('walk'))); for (let k = 0; k < 17; k++) p.update(1 / 30, hf); });
+    // &walk=1.5: walking along −Z for &wt s (each person &wdt s further on; &wdir=1.57 sideways, 3.14 backing up)
+    if (qs.has('walk')) c.people.forEach((p, i) => {
+      const v = Number(qs.get('walk')), a = Math.PI + num('wdir', 0);
+      if (qs.has('crouch')) p.crouch = num('crouch', 1);
+      p.vel.set(Math.sin(a) * v, 0, Math.cos(a) * v);
+      for (let k = 0, n = Math.round((num('wt', 0.57) + i * num('wdt', 0)) * 60); k < n; k++) {
+        p.pos.addScaledVector(p.vel, 1 / 60);
+        p.update(1 / 60, hf);
+        humanSkins?.pose(p.slot, p, 1 / 60, hf);
+      }
+    });
     // &hit=body|head|arm|leg&at=0.1&side=1: a round from the front (toward −Z... they face −Z), `at` s ago
     // &cower=1: under fire. &dying=0.4: s into dying on its feet (&hit sets the wound)
     const hit = qs.get('hit') as HitZone | null;
@@ -171,7 +181,7 @@ const BUILDERS: Record<string, () => THREE.Object3D> = {
     });
     // &rel=1.1: s into a reload (2.2 s; the left hand reaches the pouch mid-way)
     if (qs.has('rel')) c.people.forEach((p) => { p.reloadT = 2.2 - num('rel', 1.1); p.update(1 / 60, hf); });
-    c.people.forEach((p) => humanSkins?.pose(p.slot, p, true));
+    c.people.forEach((p) => humanSkins?.pose(p.slot, p, 1 / 60, hf));
     // &gaps: how far each model hand is from the procedural one (cm; the model's arms are shorter)
     if (qs.has('gaps') && humanSkins) {
       const slots = (humanSkins as unknown as { slots: { b: Record<string, THREE.Bone> }[] }).slots;

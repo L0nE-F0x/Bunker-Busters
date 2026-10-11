@@ -344,12 +344,21 @@ export class Human {
   aimYaw = 0;
   aimPitch = 0;
   readonly vel = new THREE.Vector3();
+  /**
+   * How it's really moving (m/s, smoothed from its position frame to frame). The legs walk by this,
+   * not `vel`: the AI's `vel` can outlive the move (a member that arrived, or one walking into a
+   * wall, would otherwise step on the spot).
+   */
+  readonly moved = new THREE.Vector3();
+  private lastPos: THREE.Vector3 | null = null;
   crouch = 0;
   pose: HumanPose = 'relaxed';
   /** 0..1: weapon raised (ready) → shouldered (aim). Smoothed. */
   private aimK = 0;
   private readyK = 0;
   private crouchS = 0;
+  /** The crouch as shown (smoothed, 0..1). */
+  get crouching() { return this.crouchS; }
   /** 0..1 hands going up (surrender; the gun is on the ground). */
   private surK = 0;
   /** Where its gun lies after it gave up (it never picks it back up), or null: armed. */
@@ -452,6 +461,8 @@ export class Human {
   /** Collapse every bone to a point far below the world (an unused slot). */
   hide() {
     this.active = false;
+    this.lastPos = null;
+    this.moved.set(0, 0, 0);
     for (const m of this.mats) m.makeScale(0, 0, 0).setPosition(0, -9999, 0);
   }
 
@@ -463,7 +474,16 @@ export class Human {
     const H = L.height;
     const gy = this.floor ?? hf.heightAt(this.pos.x, this.pos.z);
     this.pos.y = gy;
-    const speed = Math.hypot(this.vel.x, this.vel.z);
+    if (this.lastPos && dt > 0) {
+      const dx = this.pos.x - this.lastPos.x, dz = this.pos.z - this.lastPos.z;
+      // (a jump — a perch, a respawn — isn't walking)
+      const k = dx * dx + dz * dz > 4 ? 0 : Math.min(1, dt * 12);
+      this.moved.x += (dx / dt - this.moved.x) * k;
+      this.moved.z += (dz / dt - this.moved.z) * k;
+      if (k === 0) this.moved.set(0, 0, 0);
+    }
+    (this.lastPos ??= new THREE.Vector3()).copy(this.pos);
+    const speed = Math.hypot(this.moved.x, this.moved.z);
     this.speedS += (speed - this.speedS) * Math.min(1, dt * 8);
     this.crouchS += (this.crouch - this.crouchS) * Math.min(1, dt * 7);
     // dying on its feet: the arms go slack, the knees go, it folds forward (then the ragdoll)
@@ -541,7 +561,7 @@ export class Human {
 
     // legs
     const legL = 0.44 * H, shinL = 0.43 * H;
-    const md = sp > 0.05 ? _md.set(this.vel.x, 0, this.vel.z).normalize() : _md.copy(f);
+    const md = sp > 0.05 ? _md.set(this.moved.x, 0, this.moved.z).normalize() : _md.copy(f);
     for (const side of [1, -1] as const) {
       const hip = (side > 0 ? J.hipL : J.hipR).copy(pelvis).addScaledVector(left, side * 0.1 * Math.max(1, L.build * 0.95)).addScaledVector(UP, -0.06 * H);
       const off = side > 0 ? 0 : Math.PI;
@@ -738,7 +758,7 @@ export class HumanCrowd {
         any = true;
         // the model is fitted only where it can be seen or cast a shadow into view (the procedural
         // skeleton above still moves: AI, hit tests); elsewhere it's hidden, not left standing
-        if (this.skins && viewCull.sees(_hc.setFromMatrixPosition(p.mats[BONE.hips]), 1.35 * p.look_.height)) this.skins.pose(p.slot, p);
+        if (this.skins && viewCull.sees(_hc.setFromMatrixPosition(p.mats[BONE.hips]), 1.35 * p.look_.height)) this.skins.pose(p.slot, p, dt, hf);
         else this.skins?.hide(p.slot);
       } else this.skins?.hide(p.slot);
     }
@@ -754,7 +774,7 @@ export class HumanCrowd {
       p.aimYaw = Math.PI;
       p.pose = i % 3 === 0 ? 'aim' : i % 3 === 1 ? 'ready' : 'relaxed';
       for (let k = 0; k < 30; k++) p.update(1 / 30, hf);
-      this.skins?.pose(p.slot, p);
+      this.skins?.pose(p.slot, p, 1 / 30, hf);
     });
     this.mesh.visible = true;
   }

@@ -6,6 +6,9 @@ import { clone as cloneSkinned } from 'three/addons/utils/SkeletonUtils.js';
 import { BONE, type Human } from './Humans';
 import { boundSkinned } from '../world/kit';
 import { WristTwist, mittFrame } from '../world/limbTwist';
+import { ContractorGait, type GaitClip } from './humanGait';
+import { reachBy, shortfall, soleWorld, type Leg } from '../world/legIK';
+import type { Heightfield } from '../world/Heightfield';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 type N = any;
@@ -28,6 +31,11 @@ type N = any;
  * (wrist → hand, palm toward its +Z: the gun's side on the grip, up under the forend), measured
  * against the mitt's shape at bind, and half of its roll about the forearm is spread into the
  * forearm (no twist bones: limbTwist.ts).
+ *
+ * Walking and running, the hips and legs play real motion capture instead (humanGait.ts), at the
+ * rate that keeps a planted foot still, turned toward where it's going (backing up plays the clip
+ * in reverse); standing, the legs reach the procedural ankles. Either way the feet then go onto the
+ * ground under them (legIK.ts): sole on the terrain, a planted foot held where it landed.
  */
 
 /** Meshy contractor height (m) at bind; procedural `look.height` 1 = 1.78 m. */
@@ -46,6 +54,17 @@ interface Slot {
   b: Record<string, THREE.Bone>;
   /** The body's skinned mesh(es): bounded each frame so both passes can cull them. */
   skinned: THREE.SkinnedMesh[];
+  /** The legs for the ground pass (L, R). */
+  legs: Leg[];
+  /** Gait clock (cycles, from a left heel strike), the legs' turn off the facing (smoothed), the body's drop (m). */
+  phase: number;
+  legYaw: number;
+  drop: number;
+  /** Where each planted foot is held (world x, z). */
+  plant: { on: boolean; x: number; z: number }[];
+  fresh: boolean;
+  /** The person posed in this slot last (a new one starts fresh). */
+  who: Human | null;
 }
 
 const _q = new THREE.Quaternion(), _q2 = new THREE.Quaternion(), _q3 = new THREE.Quaternion(), _pq = new THREE.Quaternion();
@@ -56,6 +75,12 @@ const _root = new THREE.Vector3(), _target = new THREE.Vector3(), _procMid = new
 const _mid = new THREE.Vector3(), _twist = new THREE.Vector3(), _twist2 = new THREE.Vector3(), _toe = new THREE.Vector3(), _hipW = new THREE.Vector3();
 const _u = new THREE.Vector3(), _f = new THREE.Vector3(), _n = new THREE.Vector3(), _hd = new THREE.Vector3(), _hz = new THREE.Vector3();
 const _fq = new THREE.Quaternion(), _hq = new THREE.Quaternion(), _rel = new THREE.Quaternion();
+const _gq = new THREE.Quaternion(), _gq2 = new THREE.Quaternion(), _yq = new THREE.Quaternion(), _sole = new THREE.Vector3(), _hipC = new THREE.Vector3();
+const _legDy = [0, 0], _lift = [0, 0];
+const SIDES: Side[] = ['Left', 'Right'];
+const LEG_BONES = ['UpLeg', 'Leg', 'Foot', 'ToeBase'];
+const smooth = THREE.MathUtils.smoothstep;
+const angDiff = (a: number, b: number) => Math.atan2(Math.sin(b - a), Math.cos(b - a));
 
 /** Rotation of a frame with +Y along `y` and +Z toward `zHint` (the Humans.ts frameTo convention). */
 function basis(y: THREE.Vector3, zHint: THREE.Vector3, out: THREE.Quaternion) {
@@ -89,18 +114,20 @@ export class HumanSkins {
   private hipsH = 0.996;
   /** Per side: the mitt's frame at bind (model space: wrist → fingers, out of the palm) and the wrist spreading. */
   private mitt: Partial<Record<Side, { long: THREE.Vector3; palm: THREE.Vector3; twist: WristTwist }>> = {};
+  /** The walk/run/crouch-walk clips, measured (null: the procedural legs only). */
+  private gait: ContractorGait | null = null;
 
   static async load(count: number, leader: number[]): Promise<HumanSkins | null> {
     try {
       const [body, hat, mask] = await Promise.all(['contractor', 'hardhat', 'respirator'].map((n) => loadGLB(n)));
-      return new HumanSkins(body.scene, hat.scene, mask.scene, count, leader);
+      return new HumanSkins(body.scene, hat.scene, mask.scene, count, leader, body.animations);
     } catch (e) {
       console.warn('[contractor] model failed to load; keeping the procedural bodies', e);
       return null;
     }
   }
 
-  private constructor(src: THREE.Object3D, hatSrc: THREE.Object3D, maskSrc: THREE.Object3D, count: number, leader: number[]) {
+  private constructor(src: THREE.Object3D, hatSrc: THREE.Object3D, maskSrc: THREE.Object3D, count: number, leader: number[], anims: THREE.AnimationClip[] = []) {
     this.group.name = 'contractors';
     // The hard hat and the respirator are skinned into the body (all on the Head bone), so a
     // contractor is one draw and one depth draw, not three: one node material samples the body,
@@ -154,6 +181,7 @@ export class HumanSkins {
       const rel = this.bind[sd + 'ForeArm'].q.clone().invert().multiply(q);
       this.mitt[sd] = { long: m.long.clone().applyQuaternion(q), palm: m.palm.clone().applyQuaternion(q), twist: new WristTwist(rel, hand.position) };
     }
+    if (body && !new URLSearchParams(location.search).has('procgait')) this.gait = ContractorGait.measure(src, bones, body, anims);
     const [crewGeo, leadGeo] = this.gearUp(src, bones, hatSrc, maskSrc);
 
     for (let i = 0; i < count; i++) {
@@ -178,7 +206,9 @@ export class HumanSkins {
         m.receiveShadow = true;
         m.frustumCulled = false; // until pose() bounds it (boundSkinned)
       });
-      this.slots.push({ root, model, b, skinned });
+      const G = this.gait;
+      const legs = G ? SIDES.map((sd): Leg => ({ upper: b[sd + 'UpLeg'], lower: b[sd + 'Leg'], end: b[sd + 'Foot'], sole: [G.sole[sd].heel, G.sole[sd].toe], soleOn: [undefined, b[sd + 'ToeBase']] })) : [];
+      this.slots.push({ root, model, b, skinned, legs, phase: 0, legYaw: 0, drop: 0, plant: SIDES.map(() => ({ on: false, x: 0, z: 0 })), fresh: true, who: null });
     }
   }
 
@@ -256,11 +286,11 @@ export class HumanSkins {
 
   hide(i: number) {
     const s = this.slots[i];
-    if (s) s.root.visible = false;
+    if (s) { s.root.visible = false; s.fresh = true; }
   }
 
-  /** Fit slot `i` onto person `h`'s procedural skeleton for this frame. */
-  pose(i: number, h: Human) {
+  /** Fit slot `i` onto person `h`'s procedural skeleton for this frame (`dt`: since the last; `hf`: the ground). */
+  pose(i: number, h: Human, dt = 1 / 60, hf?: Heightfield) {
     const s = this.slots[i];
     if (!s) return;
     const H = h.look_.height;
@@ -269,6 +299,8 @@ export class HumanSkins {
     s.root.position.set(0, 0, 0);
     s.root.scale.setScalar(H * (1.78 / MODEL_H));
     const B = s.b;
+    if (s.who !== h) { s.who = h; s.fresh = true; }
+    const loco = this.locomote(s, h, dt);
 
     // torso frames from the procedural bones (their rotation; the matrices carry the height scale)
     const rot = (bone: number, out: THREE.Quaternion) => {
@@ -285,7 +317,11 @@ export class HumanSkins {
     _p.setFromMatrixPosition(m[BONE.hips]);
     _hipW.copy(_p);
     _v.set(0, 1, 0).applyQuaternion(_dq.hips).multiplyScalar((this.hipsH - 0.95) * H);
-    this.setWorld(B.Hips, _q.copy(_dq.hips).multiply(this.bind.Hips.q), _w.copy(_p).add(_v));
+    _w.copy(_p).add(_v);
+    _q.copy(_dq.hips).multiply(this.bind.Hips.q);
+    // walking: the clip's hips (its sway, roll and bob, over the ground), turned toward where it's going
+    if (loco) this.clipHips(s, h, loco, H, _q, _w);
+    this.setWorld(B.Hips, _q, _w);
     // the spine eases from the hips' frame to the chest's
     const spine: [string, number][] = [['Spine02', 0.35], ['Spine01', 0.7], ['Spine', 1]];
     for (const [n, t] of spine) if (B[n]) this.setWorld(B[n], _q.copy(_dq.hips).slerp(_dq.chest, t).multiply(this.bind[n].q));
@@ -303,9 +339,126 @@ export class HumanSkins {
     // legs: reach the procedural ankles; feet follow the procedural foot frame
     this.limb(B, 'Left', 'UpLeg', 'Leg', 'Foot', sd2(BONE.thighL, BONE.shinL, BONE.footL), H, m);
     this.limb(B, 'Right', 'UpLeg', 'Leg', 'Foot', sd2(BONE.thighR, BONE.shinR, BONE.footR), H, m);
+    if (loco) this.clipLegs(s, loco);
     s.root.updateMatrixWorld(true);
+    if (hf && s.legs.length === 2 && !h.ragdoll && h.dyingT < 0) this.ground(s, h, loco, hf, dt, m);
+    s.fresh = false;
     // a sphere round the pelvis holds the whole pose (it follows a ragdoll too)
     for (const sk of s.skinned) boundSkinned(sk, _hipW, 1.35 * H);
+  }
+
+  /**
+   * This frame's locomotion: how much the clips drive the legs (`w`), which and how (`walk`/`run`/
+   * `crouch` weights, stride scale `k`), the phase, and the legs' heading. Null standing still.
+   */
+  private locomote(s: Slot, h: Human, dt: number) {
+    const G = this.gait;
+    if (!G || h.ragdoll || h.dyingT >= 0 || h.pose === 'sit') { s.legYaw = 0; return null; }
+    const sp = Math.hypot(h.moved.x, h.moved.z);
+    const w = smooth(sp, 0.12, 0.55);
+    if (w <= 0) { s.legYaw *= Math.max(0, 1 - dt * 6); return null; }
+    const run = smooth(sp, 2.0, 3.6), crouch = smooth(h.crouching, 0.35, 0.7);
+    const C = G.clips;
+    const lerp = THREE.MathUtils.lerp;
+    const nat = lerp(lerp(C.walk.speed, C.run.speed, run), C.crouchwalk.speed, crouch);
+    const stride = lerp(lerp(C.walk.stride, C.run.stride, run), C.crouchwalk.stride, crouch);
+    // slower than the clip's own pace: shorter steps (not slow motion); faster: a little longer
+    const k = THREE.MathUtils.clamp(sp / nat, 0.5, 1.15);
+    // legs face where it's going (within ~60° of the chest); backing up, the clip runs in reverse
+    const md = Math.atan2(h.moved.x, h.moved.z);
+    const back = Math.abs(angDiff(h.yaw, md)) > 1.75;
+    const want = THREE.MathUtils.clamp(angDiff(h.yaw, back ? md + Math.PI : md), -1.05, 1.05);
+    s.legYaw = s.fresh ? want : s.legYaw + angDiff(s.legYaw, want) * Math.min(1, dt * 8);
+    s.phase += ((back ? -1 : 1) * sp * dt) / (stride * k);
+    return { w, run, crouch, k, ph: s.phase, yaw: h.yaw + s.legYaw };
+  }
+
+  /** The clip's hips: blended over the procedural ones (`q`, `p`: world, rewritten). */
+  private clipHips(s: Slot, h: Human, L: NonNullable<ReturnType<HumanSkins['locomote']>>, H: number, q: THREE.Quaternion, p: THREE.Vector3) {
+    const G = this.gait!, C = G.clips;
+    this.blendRot('Hips', L, _gq);
+    // (the clips' rotations are local to the Armature; turn the model to the legs' heading)
+    _pq.setFromRotationMatrix(_m.extractRotation(s.b.Hips.parent!.matrixWorld));
+    _yq.setFromAxisAngle(UP, L.yaw);
+    _gq.premultiply(_pq).premultiply(_yq);
+    q.slerp(_gq, L.w);
+    // where the hips are over the floor, in the model's frame, then in the world
+    const hp = (c: GaitClip, j: number) => ContractorGait.at(c.hips, L.ph, 3, j);
+    const mix = (j: number) => THREE.MathUtils.lerp(THREE.MathUtils.lerp(hp(C.walk, j), hp(C.run, j), L.run), hp(C.crouchwalk, j), L.crouch);
+    const k = H * (1.78 / MODEL_H);
+    _hipC.set(mix(0) * k, 0, mix(2) * k).applyQuaternion(_yq);
+    _hipC.x += h.pos.x;
+    _hipC.z += h.pos.z;
+    _hipC.y = h.pos.y + mix(1) * k;
+    p.lerp(_hipC, L.w);
+  }
+
+  /** The legs' clip pose (local rotations), blended over what the procedural IK put there. */
+  private clipLegs(s: Slot, L: NonNullable<ReturnType<HumanSkins['locomote']>>) {
+    for (const sd of SIDES) for (const n of LEG_BONES) {
+      const bone = s.b[sd + n];
+      if (!bone || !this.blendRot(sd + n, L, _gq)) continue;
+      bone.quaternion.slerp(_gq, L.w);
+    }
+  }
+
+  /** `bone`'s rotation from the three clips at the shared phase, blended by run and crouch. */
+  private blendRot(bone: string, L: NonNullable<ReturnType<HumanSkins['locomote']>>, out: THREE.Quaternion) {
+    const G = this.gait!, C = G.clips;
+    if (!G.rotAt(C.walk, bone, L.ph, L.k, out)) return null;
+    if (L.run > 0.001 && G.rotAt(C.run, bone, L.ph, L.k, _gq2)) out.slerp(_gq2, L.run);
+    if (L.crouch > 0.001 && G.rotAt(C.crouchwalk, bone, L.ph, L.k, _gq2)) out.slerp(_gq2, L.crouch);
+    return out;
+  }
+
+  /**
+   * Feet on the ground: each sole goes to the terrain under it (plus the clip's swing while
+   * walking); a foot planted mid-stride stays where it landed; the body drops only by what a leg
+   * can't reach.
+   */
+  private ground(s: Slot, h: Human, L: ReturnType<HumanSkins['locomote']>, hf: Heightfield, dt: number, m: THREE.Matrix4[]) {
+    const G = this.gait!, C = G.clips;
+    const gy = (x: number, z: number) => h.floor ?? hf.heightAt(x, z);
+    const w = L?.w ?? 0;
+    const scale = H_SCALE(h);
+    let need = 0;
+    for (let i = 0; i < 2; i++) {
+      const leg = s.legs[i];
+      soleWorld(leg, _sole);
+      // the swing: the clip's while it walks, the procedural foot's lift otherwise
+      const proc = Math.max(0, _p.setFromMatrixPosition(m[i ? BONE.footR : BONE.footL]).y - gy(_p.x, _p.z) - 0.085 * scale);
+      let sw = 0;
+      if (L) {
+        const at = (c: GaitClip) => ContractorGait.at(c.swing[i], L.ph, 1, 0);
+        sw = THREE.MathUtils.lerp(THREE.MathUtils.lerp(at(C.walk), at(C.run), L.run), at(C.crouchwalk), L.crouch) * scale * Math.min(1, 0.5 + L.k * 0.5);
+      }
+      _lift[i] = THREE.MathUtils.lerp(proc, sw, w);
+      _legDy[i] = gy(_sole.x, _sole.z) + _lift[i] - _sole.y;
+      need = Math.max(need, shortfall(leg, _legDy[i]));
+    }
+    const want = -Math.min(0.25, need);
+    s.drop = s.fresh ? want : s.drop + (want - s.drop) * Math.min(1, dt * 12);
+    if (Math.abs(s.drop) > 1e-4) {
+      // (in the Hips' parent's frame: the Armature is scaled and may be turned)
+      const hips = s.b.Hips;
+      _p.setFromMatrixPosition(hips.matrixWorld);
+      _p.y += s.drop;
+      hips.position.copy(_p.applyMatrix4(_m.copy(hips.parent!.matrixWorld).invert()));
+      s.root.updateMatrixWorld(true);
+    }
+    _v.set(1, 0, 0).applyAxisAngle(UP, L?.yaw ?? h.yaw);
+    for (let i = 0; i < 2; i++) {
+      const leg = s.legs[i], pl = s.plant[i];
+      let dx = 0, dz = 0;
+      // planted: the clip has the foot down (or nearly) and it's really walking
+      if (L && w > 0.5 && _lift[i] < 0.012 * scale && !s.fresh) {
+        soleWorld(leg, _sole);
+        if (!pl.on) { pl.on = true; pl.x = _sole.x; pl.z = _sole.z; }
+        dx = pl.x - _sole.x; dz = pl.z - _sole.z;
+        if (dx * dx + dz * dz > 0.09) { dx = dz = 0; pl.x = _sole.x; pl.z = _sole.z; }
+      } else pl.on = false;
+      reachBy(leg, _legDy[i] - s.drop, _v, dx, dz);
+    }
   }
 
   /** Upper/lower/end bones of a procedural limb. */
@@ -401,3 +554,5 @@ export class HumanSkins {
 }
 
 const sd2 = (a: number, b: number, c: number): [number, number, number] => [a, b, c];
+/** A person's size relative to the model (their height scale). */
+const H_SCALE = (h: Human) => h.look_.height * (1.78 / MODEL_H);
