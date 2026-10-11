@@ -10,7 +10,7 @@ Repo: https://github.com/L0nE-F0x/Bunker-Busters (public, branch `main`). Read `
 
 ### Next session (handoff, 2026-10-12, overnight audit)
 - **Shipped as v0.8.1 (2026-10-12, owner: "ship it, I'll test it live when I wake up")**: the overnight audit + a 3-agent swarm (contractor upper body, graphics, perf). NOTES "overnight audit". **First, ask how it plays live:** wolves/coyotes now walk/trot/gallop with paws on the ground (they sank 10–21 cm and skated), contractors walk/run on mocap with planted feet, the six standing townsfolk no longer turn their backs (the library `Idle` swung their hips 93°), the snake rears properly, cliffs have real strata, camp tents. Also ask about the contractors' one-handed relaxed carry (`carryK` → 0 restores two hands).
-- **Crash on quit:** WebKitWebProcess segfaults in NVIDIA EGL (driver 610.57) when the desktop app exits (175 cores since 16 Sep, `/var/lib/systemd/coredump` 4.2 GB). Play unaffected; the game now also saves on `pagehide`. Ask whether they've noticed; don't delete their coredumps without asking.
+- **Crash on quit fixed after v0.8.1** (committed on main, installed on the owner's machine, not released yet): `main.rs quit` saves, then kills the web process before its NVIDIA EGL teardown. The owner said the old cores can go (needs their sudo: `sudo rm /var/lib/systemd/coredump/core.WebKitWebProces.*`).
 - **Desktop frame budget:** in a fight our JS is ~8.5 ms of a ~21 ms frame at any quality/resolution; the rest is WebKitGTK's compositing/present path. Experiments there (WebKit env flags) touch the GPU path: warn the owner first.
 
 ### Next session (handoff, 2026-10-11, the Alignment Spire)
