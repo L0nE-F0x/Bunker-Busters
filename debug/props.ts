@@ -209,7 +209,7 @@ const BUILDERS: Record<string, () => THREE.Object3D> = {
       // each forearm's line (yellow: elbow → wrist joint). clip=bind leaves the rig in its bind pose.
       const mitts = qs.has('axes') ? (['Left', 'Right'] as const).map((sd) => ({ sd, m: mittFrame(a.body, a.bone(sd + 'Hand')!, new THREE.Vector3(0, -1, 0)) })) : [];
       if (clip !== 'bind') {
-        if (!a.pin(clip, num('t', 0))) console.warn(`[lab] ${id} has no ${clip}: ${a.roles().join(', ')}`);
+        if (!a.pin(clip, num('t', 0) + i * num('dt', 0))) console.warn(`[lab] ${id} has no ${clip}: ${a.roles().join(', ')}`);
         a.update(0, false, num('look', 0), num('nod', 0));
         if (!a.raw) console.log(`[lab] ${id} ${clip}@${num('t', 0)} wrist roll: ${a.wristRoll()}`);
       }

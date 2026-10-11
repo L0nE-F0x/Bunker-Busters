@@ -63,6 +63,12 @@ interface Clip {
   once: boolean;
   tracks: Track[];
   hips: THREE.Vector3;
+  /**
+   * The clip's mean turn of the hips off the bind pose's facing (radians, about up). Library clips
+   * carry one (the talk loops face ~15° aside); standing people cancel it, so they face where the
+   * game turned them.
+   */
+  yaw: number;
 }
 interface Template {
   id: string;
@@ -75,6 +81,8 @@ interface Template {
   bind: Map<string, { q: THREE.Quaternion; p: THREE.Vector3 }>;
   /** Wrist twist spreading, per side. */
   wrist: { side: 'Left' | 'Right'; w: WristTwist }[];
+  /** Each mitt's palm normal (Hand-bone space, measured at bind), for the relaxed arms. */
+  palm: Partial<Record<'Left' | 'Right', THREE.Vector3>>;
   prop?: THREE.Object3D;
   /** Held in a hand (on that Hand bone, in its space). */
   held?: { bone: string; obj: THREE.Object3D };
@@ -92,6 +100,8 @@ export interface ClipCoord {
 const _q = new THREE.Quaternion(), _q2 = new THREE.Quaternion(), _pq = new THREE.Quaternion();
 const _v = new THREE.Vector3(), _v2 = new THREE.Vector3(), _m = new THREE.Matrix4(), _c = new THREE.Vector3();
 const UP = new THREE.Vector3(0, 1, 0);
+const _ra = new THREE.Vector3(), _rb = new THREE.Vector3(), _rc = new THREE.Vector3(), _rp = new THREE.Vector3(), _re = new THREE.Vector3();
+const _ru = new THREE.Vector3(), _rn = new THREE.Vector3(), _rq = new THREE.Quaternion();
 const rand = (a: number, b: number) => a + Math.random() * (b - a);
 
 export class NpcModels {
@@ -172,8 +182,23 @@ function template(id: string, scene: THREE.Object3D, anims: THREE.AnimationClip[
     // where the hips sit at the clip's first frame (model space): seated clips differ by ~0.3 m
     const clip: Clip = {
       name: a.name, src: (a.userData?.src as string | undefined) ?? a.name, i: list.length, dur: a.duration || 1,
-      once: /^(ins|alt)/.test(a.name), tracks, hips: new THREE.Vector3(),
+      once: /^(ins|alt)/.test(a.name), tracks, hips: new THREE.Vector3(), yaw: 0,
     };
+    // the hips' mean facing over the clip, against the bind pose's
+    if (bones.Hips) {
+      const facing = () => { bones.Hips.getWorldQuaternion(_q2); _v.set(0, 0, 1).applyQuaternion(_q2); return Math.atan2(_v.x, _v.z); };
+      for (const [n, b] of Object.entries(bones)) { const k = bind.get(n); if (k) { b.quaternion.copy(k.q); b.position.copy(k.p); } }
+      scene.updateMatrixWorld(true);
+      const y0 = facing();
+      let sx = 0, sz = 0;
+      for (let k = 0; k < 24; k++) {
+        sample(bones, bind, clip, (k / 24) * clip.dur, 1, true);
+        scene.updateMatrixWorld(true);
+        const y = facing() - y0;
+        sx += Math.sin(y); sz += Math.cos(y);
+      }
+      clip.yaw = Math.atan2(sx, sz);
+    }
     sample(bones, bind, clip, 0, 1, true);
     scene.updateMatrixWorld(true);
     bones.Hips?.getWorldPosition(clip.hips);
@@ -190,7 +215,15 @@ function template(id: string, scene: THREE.Object3D, anims: THREE.AnimationClip[
     const h = bind.get(side + 'Hand');
     return h && bind.has(side + 'ForeArm') ? [{ side, w: new WristTwist(h.q, h.p) }] : [];
   });
-  return { id, scene, clips, list, idle, near, ins: list.filter((c) => c.once), bind, wrist, held: heldProp(id, scene, bones) };
+  let body: THREE.SkinnedMesh | null = null;
+  scene.traverse((o) => { if ((o as THREE.SkinnedMesh).isSkinnedMesh) body ??= o as THREE.SkinnedMesh; });
+  const palm: Template['palm'] = {};
+  for (const sd of ['Left', 'Right'] as const) {
+    // (Meshy's A-pose holds the palms up and a little forward: checked on each standing rig)
+    const m = body && bones[sd + 'Hand'] ? mittFrame(body, bones[sd + 'Hand'], new THREE.Vector3(0, 1, 0.3)) : null;
+    if (m) palm[sd] = m.palm;
+  }
+  return { id, scene, clips, list, idle, near, ins: list.filter((c) => c.once), bind, wrist, palm, held: heldProp(id, scene, bones) };
 }
 
 let _heldMat: THREE.MeshStandardNodeMaterial | null = null;
@@ -279,6 +312,7 @@ export class NpcActor {
   private varT = rand(6, 24);
   private insT = rand(15, 40);
   private chat: boolean;
+  private seated: boolean;
   private anchor: THREE.Vector3;
   /** The prop lab's frozen pose (no clocks, no switching, no breathing). */
   private pinned = false;
@@ -299,6 +333,7 @@ export class NpcActor {
     if (T.held) this.B[T.held.bone]?.add(T.held.obj.clone(true));
     this.clock = Float64Array.from(T.list, (c) => (c.once ? 0 : Math.random() * c.dur));
     this.chat = seated && CHATS.has(T.id);
+    this.seated = seated;
     this.shift = seated ? null : { w: 2 * Math.PI * rand(0.06, 0.12), a: rand(1.1, 1.6) * (Math.PI / 180), ph: rand(0, 7) };
     this.cur = this.base = this.pick(T.idle, null);
     // hips stay where the idle clip puts them; seated people sink onto the game's seat
@@ -475,15 +510,33 @@ export class NpcActor {
     }
     // the wrists: the clip's forearm roll spread into the forearm (no twist bones), then any fix
     if (!this.raw) this.wrists();
-    // keep the hips over the same spot whatever the clip (seated clips sit in different places)
+    // keep the hips over the same spot whatever the clip (seated clips sit in different places);
+    // standing, turn the body back by the clip's own mean turn, about the hips
     const off = _v2.copy(this.anchor).sub(this.cur.hips);
     if (this.prev && f < 1) off.lerp(_v.copy(this.anchor).sub(this.prev.hips), 1 - f);
+    let yaw = 0;
+    if (!this.seated) {
+      yaw = this.cur.yaw;
+      if (this.prev && f < 1) yaw = this.prev.yaw + Math.atan2(Math.sin(this.cur.yaw - this.prev.yaw), Math.cos(this.cur.yaw - this.prev.yaw)) * f;
+      // (the hips sit at anchor − off; turning by −yaw about them moves the model's origin)
+      const hx = this.anchor.x - off.x, hz = this.anchor.z - off.z, c = Math.cos(-yaw), s = Math.sin(-yaw);
+      off.x = this.anchor.x - (hx * c + hz * s);
+      off.z = this.anchor.z - (-hx * s + hz * c);
+    }
+    this.model.rotation.y = -yaw;
     this.model.position.set(off.x, 0, off.z);
     this.root.updateMatrixWorld(true);
     // everything below turns bones about world axes from the body (the rig's bone axes differ)
     this.root.getWorldQuaternion(_q2);
     const lat = _v.set(-1, 0, 0).applyQuaternion(_q2); // + lifts the chin
     const B = this.B;
+    // standing in an idle loop: arms rest closer in, palms toward the legs (the library's idles hold
+    // them out, palms forward)
+    if (!this.seated && !this.raw) {
+      const isIdle = (c: Clip | null) => (c && this.idle.includes(c) ? 1 : 0);
+      const w = this.prev && f < 1 ? isIdle(this.cur) * f + isIdle(this.prev) * (1 - f) : isIdle(this.cur);
+      if (w > 0.01) this.relaxArms(w, _q2);
+    }
     if (!this.pinned) {
       // breathing: the chest rises and falls; the neck takes it back so the head stays level
       const br = Math.sin(this.time * this.breath.w + this.breath.ph) * this.breath.a;
@@ -550,6 +603,41 @@ export class NpcActor {
         if (alt && alt !== this.cur && alt.src !== p.clip.src) p.clip = alt;
         else p.at = this.time + rand(0.4, 1.5);
       }
+    }
+  }
+
+  /**
+   * Arms at rest, by `w`: an upper arm held out from the side comes in to ~11°, and each forearm and
+   * hand roll so the palm faces the leg (a little back), the roll shared between them like the
+   * wrist spreading. `body`: the actor's world rotation.
+   */
+  private relaxArms(w: number, body: THREE.Quaternion) {
+    const up = _ra.set(0, 1, 0).applyQuaternion(body), fwd = _rb.set(0, 0, 1).applyQuaternion(body);
+    for (const sd of ['Left', 'Right'] as const) {
+      const arm = this.B[sd + 'Arm'], fore = this.B[sd + 'ForeArm'], hand = this.B[sd + 'Hand'], palm = this.T.palm[sd];
+      if (!arm || !fore || !hand || !palm) continue;
+      // the person's left is the model's +X
+      const out = _rc.set(sd === 'Left' ? 1 : -1, 0, 0).applyQuaternion(body);
+      const S = _rp.setFromMatrixPosition(arm.matrixWorld), E = _re.setFromMatrixPosition(fore.matrixWorld);
+      const u = _ru.subVectors(E, S).normalize();
+      const abd = Math.atan2(u.dot(out), -u.dot(up));
+      if (abd > 0.2) {
+        const axis = _rn.crossVectors(out, up).negate().normalize(); // turning about it takes `out` toward down
+        this.turn(arm, axis, (abd - 0.2) * 0.7 * w);
+      }
+      // the palm: roll about the forearm until it faces in toward the leg
+      E.setFromMatrixPosition(fore.matrixWorld);
+      const a = _ru.setFromMatrixPosition(hand.matrixWorld).sub(E).normalize();
+      hand.getWorldQuaternion(_rq);
+      const p = _rp.copy(palm).applyQuaternion(_rq);
+      const d = _rn.copy(out).negate().addScaledVector(fwd, -0.35);
+      p.addScaledVector(a, -p.dot(a));
+      d.addScaledVector(a, -d.dot(a));
+      if (p.lengthSq() < 1e-6 || d.lengthSq() < 1e-6) continue;
+      p.normalize(); d.normalize();
+      const roll = THREE.MathUtils.clamp(Math.atan2(_rc.crossVectors(p, d).dot(a), p.dot(d)), -2.4, 2.4) * w;
+      this.turn(fore, a, roll * 0.55);
+      this.turn(hand, a, roll * 0.45);
     }
   }
 

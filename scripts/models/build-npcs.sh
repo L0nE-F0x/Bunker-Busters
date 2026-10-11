@@ -3,6 +3,9 @@
 #   scripts/models/build-npcs.sh            all of them
 #   scripts/models/build-npcs.sh pip dez    just these
 #
+# Standing people idle on Listening_Gesture, not the library's Idle: that one is a hunched look-round
+# whose hips swing through 93° of yaw (they'd turn their back on you mid-loop). 2026-10-12.
+#
 # Roles (world/npcSkin.ts): idle* loop (each person drifts between them), near* loop while you're
 # within talking range, ins* play once now and then. `--mirror` adds a mirror image (`_m`): neighbours
 # get opposite versions, so the camp's pairs never show one pose. Seated people with no clip of their
@@ -21,16 +24,16 @@ on() { [ ${#ids[@]} -eq 0 ] && return 0; for i in "${ids[@]}"; do [ "$i" = "$1" 
 
 # --- Dry Creek, standing (Nia at her counter, Doc with his clipboard, Inez at the till)
 on nia && build nia ${DC}Nia_Rigged.glb \
-  --clips ${DC}Nia_Animations.glb:Idle=idle,Talk_with_Hands_Open=near,Listening_Gesture=near2,Stand_and_Chat=ins_chat \
-  --mirror ${DC}Nia_Animations.glb:Idle=idle_m
+  --clips ${DC}Nia_Animations.glb:Listening_Gesture=idle,Talk_with_Hands_Open=near,Stand_and_Chat=ins_chat \
+  --mirror ${DC}Nia_Animations.glb:Listening_Gesture=idle_m
 # (Hand_on_Hip_Gesture lifts the clipboard hand over his head: left out)
 on doc && build doc ${DC}Doc_Rigged.glb \
-  --clips ${DC}Doc_Animations.glb:Idle=idle,Talk_with_Right_Hand_Open=near,Listening_Gesture=near2,Shrug=ins_shrug \
-  --mirror ${DC}Doc_Animations.glb:Idle=idle_m
+  --clips ${DC}Doc_Animations.glb:Listening_Gesture=idle,Talk_with_Right_Hand_Open=near,Shrug=ins_shrug \
+  --mirror ${DC}Doc_Animations.glb:Listening_Gesture=idle_m
 # (Checkout_Gesture was her loop; its wrist is the worst in the set, so it's an occasional gesture)
 on inez && build inez ${DC}Inez_Rigged.glb \
-  --clips ${DC}Inez_Animations.glb:Idle=idle,Talk_with_Left_Hand_on_Hip=near,Listening_Gesture=near2,Checkout_Gesture=ins_checkout \
-  --mirror ${DC}Inez_Animations.glb:Idle=idle_m
+  --clips ${DC}Inez_Animations.glb:Listening_Gesture=idle,Talk_with_Left_Hand_on_Hip=near,Checkout_Gesture=ins_checkout \
+  --mirror ${DC}Inez_Animations.glb:Listening_Gesture=idle_m
 
 # --- Dry Creek, seated (Sol and Ren side by side at the fire, Wick in his cave)
 on sol && build sol ${DC}Sol_Rigged.glb \
@@ -57,9 +60,9 @@ on dez && build dez ${CP}Dez_Rigged.glb \
 # --- the Panopticon: Ezra on his feet at the monitor wall; Ada and two reviewers at their desks
 # (Ezra borrows Sol's standing idle and talk loops; the reviewers borrow Sol's and Ada's seated clips)
 on ezra && build ezra ${PN}Ezra_Rigged.glb \
-  --clips ${DC}Sol_Animations.glb:Idle=idle,Talk_with_Hands_Open=near,Listening_Gesture=near2 \
+  --clips ${DC}Sol_Animations.glb:Listening_Gesture=idle,Talk_with_Hands_Open=near \
   --clips ${PN}Ezra_Animations.glb:Scheming_Hand_Rub=idle2,Look_Around_Dumbfounded=ins_look,Stand_Talking_Angry=talk_hard \
-  --mirror ${DC}Sol_Animations.glb:Idle=idle_m
+  --mirror ${DC}Sol_Animations.glb:Listening_Gesture=idle_m
 on ada && build ada ${PN}Ada_Rigged.glb \
   --clips ${PN}Ada_Animations.glb:Chair_Sit_Idle_F=idle,Sit_Hands_on_Head_Lean_Back=ins_lean,Sit_to_Stand_Transition_F=stand \
   --clips ${DC}Sol_Animations.glb:Sitting_Answering_Questions=near \
@@ -77,16 +80,16 @@ on rev2 && build rev2 ${PN}Reviewer2_Rigged.glb \
 # she wakes, sits up, and later walks out; afterwards she sits at Nia's counter in Dry Creek), Benny standing at his plant. Prudence's headache and Noor's
 # sleep and waking are their own clips; the rest are borrowed (Sol, Doc, Nia, Ada)
 on prudence && build prudence ${SP}Prudence_Rigged.glb \
-  --clips ${DC}Sol_Animations.glb:Idle=idle,Talk_with_Hands_Open=near,Listening_Gesture=near2 \
+  --clips ${DC}Sol_Animations.glb:Listening_Gesture=idle,Talk_with_Hands_Open=near \
   --clips ${SP}Prudence_Animations.glb:Headache_Relief=ins_head \
   --clips ${DC}Nia_Animations.glb:Stand_and_Chat=ins_chat \
-  --mirror ${DC}Sol_Animations.glb:Idle=idle_m
+  --mirror ${DC}Sol_Animations.glb:Listening_Gesture=idle_m
 on noor && build noor ${SP}Noor_Rigged.glb \
   --clips ${SP}Noor_Animations.glb:Sleep_on_Desk=sleep,Wake_Up_and_Look_Up=wake \
   --clips ${PN}Ada_Animations.glb:Chair_Sit_Idle_F=idle,Sit_to_Stand_Transition_F=stand \
   --clips ${DC}Sol_Animations.glb:Sitting_Answering_Questions=near \
   --clips ${SP}Noor_Walking_Basic.glb:walking_man=walk
 on benny && build benny ${SP}Benny_Rigged.glb \
-  --clips ${DC}Doc_Animations.glb:Idle=idle,Talk_with_Right_Hand_Open=near,Listening_Gesture=near2,Shrug=ins_shrug \
-  --mirror ${DC}Doc_Animations.glb:Idle=idle_m
+  --clips ${DC}Doc_Animations.glb:Listening_Gesture=idle,Talk_with_Right_Hand_Open=near,Shrug=ins_shrug \
+  --mirror ${DC}Doc_Animations.glb:Listening_Gesture=idle_m
 true
