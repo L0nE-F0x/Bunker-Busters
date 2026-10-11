@@ -1634,6 +1634,9 @@ class Coyote {
   nod = 0;
   low = 0;
   out = false;
+  /** Turning on the spot (rad/s, smoothed) and last frame's yaw: the legs step round. */
+  turnRate = 0;
+  lastYaw = 0;
   constructor(readonly slot: number) {}
 }
 
@@ -1750,7 +1753,10 @@ class Coyotes implements HostileProvider {
       k.pos.y = g;
       // the gait: a quicker step than the wolf's (a smaller animal)
       const step = Math.floor(k.phase / Math.PI);
-      k.phase += c.dt * Math.PI * 2 * S.gaitRate(k.speed);
+      if (c.dt > 0) k.turnRate += (Math.abs(angDiff(k.lastYaw, k.yaw)) / c.dt - k.turnRate) * Math.min(1, c.dt * 10);
+      k.lastYaw = k.yaw;
+      const gaitSp = Math.max(k.speed, Math.min(1, k.turnRate * 0.32));
+      k.phase += c.dt * Math.PI * 2 * S.gaitRate(gaitSp);
       // flat out, every other stride throws dust back off the paws
       if (k.speed > 6 && Math.floor(k.phase / Math.PI) !== step && step % 2 === 0) c.combat?.puffs?.emit(k.pos, 1, 0.35, 0.3, 0.35);
       const tgt = lookAt ?? (this.state === 'feed' ? this.goal : null);
@@ -1767,7 +1773,7 @@ class Coyotes implements HostileProvider {
         pos: _cy2.set(k.pos.x, g, k.pos.z), yaw: k.yaw, pitch: pitch * 0.8, roll: 0, bob: 0, phase: k.phase, amp: A, low: k.low,
         look: k.look, nod: k.nod > 0 ? 0.85 : feeding ? -0.55 + Math.max(0, Math.sin(c.t * 2.4 + i)) * -0.25 : k.speed > 6 ? -0.12 : 0.05,
         tail: k.speed > 6 ? 0.45 : feeding ? -0.1 : k.speed > 2 ? 0.2 : 0.05 + Math.sin(c.t * 1.6 + i) * 0.05, deadT: -1, side: 1,
-        speed: k.speed, ground: c.hf.groundFn, dt: c.dt,
+        speed: gaitSp, ground: c.hf.groundFn, dt: c.dt,
       });
     });
   }
