@@ -201,7 +201,7 @@ export class Game {
   private shockwaves: Shockwave[] = [];
   private flash: VirtualLight;
   private intelMeshes = new Map<string, THREE.Object3D>();
-  private intelProps: { g: THREE.Object3D; prop: IntelProp; phase: number }[] = [];
+  private intelProps: { g: THREE.Object3D; prop: IntelProp; phase: number; casters: THREE.Mesh[]; shadow: boolean }[] = [];
   private markerCache: MapMarker[] | null = null;
   private markerAt = 0;
   private readonly _fwd = new THREE.Vector3();
@@ -747,7 +747,9 @@ export class Game {
       const g = prop.group;
       g.position.set(x, y, z);
       g.rotation.y = ((Math.sin(x * 12.9898 + z * 78.233) * 43758.5453) % 1) * Math.PI * 2;
-      this.intelProps.push({ g, prop, phase: Math.abs(x * 0.37 + z * 0.11) % 1 });
+      const casters: THREE.Mesh[] = [];
+      g.traverse((o) => { if ((o as THREE.Mesh).isMesh && o.castShadow) casters.push(o as THREE.Mesh); });
+      this.intelProps.push({ g, prop, phase: Math.abs(x * 0.37 + z * 0.11) % 1, casters, shadow: true });
       this.scene.add(g);
       this.intelMeshes.set(it.id, g);
       this.interactables.push({
@@ -2041,6 +2043,9 @@ export class Game {
       // a note or a phone is sub-pixel long before this: stop drawing it (and its shadow)
       const show = d < 170;
       if (ip.g.children[0] && ip.g.children[0].visible !== show) for (const c of ip.g.children) c.visible = show;
+      // and its shadow is a few pixels past ~28 m: not worth its 2-3 shadow draws a frame
+      const cast = d < 28;
+      if (ip.shadow !== cast) { ip.shadow = cast; for (const m of ip.casters) m.castShadow = cast; }
       ip.prop.glint.t.value = ((this.t / 3.2 + ip.phase) % 1);
       ip.prop.glint.k.value = d > 70 ? 0 : Math.min(1, 1.6 - d / 45) * (this.atmo.isNight ? 1.4 : 1);
       if (ip.prop.blink) ip.prop.blink.value = (this.t % 1.4) < 0.5 ? 8 : 0.2;
