@@ -480,6 +480,12 @@ export class Game {
     await step(0.95, 'Polishing neon');
     this.renderer.setAnimationLoop(() => this.frame());
     window.addEventListener('resize', () => this.resize());
+    // closing the app or the tab: keep the last minute (autosave runs once a minute). The desktop
+    // app's web process can crash in NVIDIA's EGL teardown just after (NOTES 2026-10-12); the save is
+    // written before that, and WebKit keeps storage in another process.
+    window.addEventListener('pagehide', () => {
+      if (this.mode === 'playing' && this.state && this.state.data.health > 0 && !this.bunkerAlarm) this.save(true);
+    });
     document.addEventListener('bb-lockchange', () => this.onLockChange());
     // the grab can fail (WebKitGTK/XWayland, now and then): say so, and the next click on the view retries
     document.addEventListener('bb-lockerror', () => {
