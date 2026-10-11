@@ -1710,3 +1710,26 @@ The owner asked (Sunday night, before bed) for an in-depth audit focused on perf
 **Perf backlog seen tonight:** at Dry Creek facing the Wellhead, the two near outposts are ~11 draws each (one per material in their batches) and the sentries 6+6; 14 skinned character draws. Merging outpost materials would be the next draw cut.
 
 **Not checked:** the desktop app by hand (owner); the models over long play.
+
+### 2026-10-12, swarm: perf (draw calls, no visible change)
+
+Goal: less CPU per frame in the desktop app by cutting draws, with no new programs and nothing that looks different. `perf-probe.mjs --by N` now lists the N objects with the most draws per frame (name path, `[shadow]` for the depth pass).
+
+- **Map-wide batches merged across batches** (`kit.mergeStatic`, called in `Game.build` before the warm-up): wrecks, poles + road furniture, billboard frames and stashes each drew the same shared family materials (`family:rust` five times a frame, everywhere). Their static, non-casting meshes now sit in one mesh per material (`statics` under `props`); a single variant whose family program already exists takes the family's per-vertex parameters, as MeshBatch does. The wires stay apart (they don't receive shadows, so a different program), and so do the car glass, the lone `paint` and `concrete` meshes, and the alpha-tested pole parts. `?nostaticmerge` A/Bs it. 6-12 fewer main draws at every outdoor spot.
+- **Intel glints** were drawn at strength 0 from 70 to 170 m: hidden there (1 draw per pickup in that ring; 3 at Dry Creek).
+- **Sentry lasers** hide with the eye and LED past ~100 m (2 cm wide: a tenth of a pixel; sentries only see 34 m) and are frustum-culled again (they drew behind the camera): 2 draws per far sentry.
+- **Shadow proxies** for intel pickups (3-5 casters, one depth draw while they cast, < 28 m) and both time-capsule states.
+- Programs: 208 → 206 (two shadow-pass variants nothing uses any more). No new ones.
+
+| spot (480×270, q=high) | main+shadow before | after | frame ms before → after (noisy) |
+|---|---|---|---|
+| wellhead | 166+31 | 150+28 | 6.5 → 5.3 |
+| creek | 198+31 | 181+28 | 6.7 → 5.6 |
+| camp | 124+24 | 116+23 | 4.8 → 4.2 |
+| fight | 124+17 | 114+17 | 4.7 → 4.2 |
+| highway | 112+17 | 100+15 | 4.2 → 3.8 |
+| spireRoad | 135+23 | 125+23 | 4.4 → 4.2 |
+
+Screenshots at every spot compared before/after (only grass sway, NPCs, fire and HUD timing differ); the kdry.log crate's shadow is pixel-identical with the proxy.
+
+**What's left is near the floor without changing a look:** outposts (~10 each near) are one draw per family plus singles (the water jugs are deliberately dust-free, so not `plain`; one corrugated box; the lamp window); sentries are 4 (head and base move apart); the hands are 8 (left/right meshes share materials, but each hand hides on its own and a hidden hand's bones go stale, so merging them needs care); post is ~23 (bloom's 5 levels). Outposts at 118-155 m from the Dry Creek hub are drawn even when the town hides them (no occlusion culling).

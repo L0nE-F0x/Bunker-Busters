@@ -107,6 +107,9 @@ export class Stories {
       open.add(paper, T(loreQuad('letter', 0.14, 0.18), 0.6, 0.012, 3.0, -Math.PI / 2, 0.5, 0));
       open.add(paper, T(loreQuad('letter', 0.14, 0.18), 0.48, 0.013, 2.85, -Math.PI / 2, -0.3, 0));
       this.capsuleOpen = open.build('capsule-open');
+      // each state's casters in one depth draw (the proxy rides its state's visibility)
+      shadowProxy(this.capsuleShut);
+      shadowProxy(this.capsuleOpen);
       this.capsuleOpen.visible = false;
       site.add(this.capsuleShut, this.capsuleOpen);
       this.group.add(site);
