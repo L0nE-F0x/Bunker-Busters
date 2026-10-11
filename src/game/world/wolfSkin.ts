@@ -471,7 +471,8 @@ export class WolfSkins {
       soleWorld(s.legs[i], _sole);
       const lift = g ? this.swingAt(i, _tLeg[i]) * swingK * w : 0;
       _dy[i] = gy(_sole.x, _sole.z) + lift - (_sole.y + raise);
-      need = Math.max(need, shortfall(s.legs[i], _dy[i] + raise));
+      // (with the body raised, the hip rises too: the foot's move relative to it is _dy)
+      need = Math.max(need, shortfall(s.legs[i], _dy[i]));
     }
     const want = raise - Math.min(0.3, need);
     const k = s.fresh || !p.dt ? 1 : Math.min(1, p.dt * 14);
