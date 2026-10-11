@@ -353,9 +353,10 @@ export class HumanSkins {
    */
   private locomote(s: Slot, h: Human, dt: number) {
     const G = this.gait;
-    if (!G || h.ragdoll || h.dyingT >= 0 || h.pose === 'sit') { s.legYaw = 0; return null; }
+    if (!G || h.ragdoll || h.pose === 'sit') { s.legYaw = 0; return null; }
     const sp = Math.hypot(h.moved.x, h.moved.z);
-    const w = smooth(sp, 0.12, 0.55);
+    // shot mid-stride, the stride lets go over the collapse's first quarter-second (no snap)
+    const w = smooth(sp, 0.12, 0.55) * (h.dyingT >= 0 ? Math.max(0, 1 - h.dyingT / 0.25) : 1);
     if (w <= 0) { s.legYaw *= Math.max(0, 1 - dt * 6); return null; }
     const run = smooth(sp, 2.0, 3.6), crouch = smooth(h.crouching, 0.35, 0.7);
     const C = G.clips;
