@@ -3,6 +3,14 @@
 Each `## vX.Y.Z` section becomes the GitHub release notes and the "what's new" list in the in-app
 update notice (the first few bullets). `scripts/release.sh` refuses to release a version without one.
 
+## v0.8.0
+- **The Alignment Spire is open.** Act IV plays to the end: take the highway east until it climbs into the tablelands, and follow Careful Labs' guardrailed road up to Prudence Ashby's white tower above the Tube. The light at the top shows the Spire's safety level. Every slip raises it, and at level four the whole building pauses. Mara debriefs you at the fire and names the next door
+- **Turrets with manners.** The Careful Sentinels apologise before they fire. Get out of sight before they finish and they log a near miss. Put your weapon away and they won't shoot at all, but they report you, and the level goes up
+- **A door that knows what you did.** The Spire's front door asks about your own game: the ledger, how you got into Apex, Ezra's archive, Ada, what you've killed. It doesn't care whether you were good, only whether you tell the truth. Or jailbreak it, show it a dead red-teamer's badge, or blow it
+- **Take the water, or let it run.** The plant on the top floor pulls 300 litres a day out of the air. Pull its core and carry it home with the Spire paused behind you (no running, no weapon, and the turrets stop apologising), or open the red valve and send the water down Benny's pipe to Dry Creek. The camp or the creek drinks from it every day afterwards
+- **Three new people.** Prudence in person at her window, Benny at his plant, and Noor, the last red-teamer, asleep at her desk on the eval floor. Wake her and she'll help; get the top door open and she walks out, and turns up at Nia's counter in Dry Creek fixing radios
+- **More voices.** 99 new lines for Prudence, Noor, Benny, the door, the sentinels, and Mara's debrief
+
 ## v0.7.0
 - **The Panopticon is open.** Act III plays to the end: follow the valley north from the salt to Ezra Seymour's building, a ring of reviewers' desks built round the old Point Argus lighthouse. Its blue lamp turns once every forty seconds and calls Kade up the valley if it catches you in the open. Get through a face gate that only opens for staff, past four cameras on the tower that watch each other's junction boxes, and into the tower. Mara debriefs you at the fire and names the next door
 - **Ezra in person.** He stands at his monitor wall in the tower and answers back. Take his archive of three years of every camp to Mara, wipe it, or broadcast it to every radio in the valley, and the debrief remembers which

@@ -1,5 +1,6 @@
 import { TILL_LINES } from '@/content/trade';
 import { ADA_CREEK } from '@/content/bunkers/panopticon';
+import { NOOR_CREEK } from '@/content/bunkers/spire';
 import * as THREE from 'three/webgpu';
 import { Interior } from '../world/interiors';
 import type { Heightfield } from '@/game/world/Heightfield';
@@ -275,6 +276,23 @@ export class Settlement {
           s.data.marks['ada.line'] = n + 1;
           const line = ADA_CREEK[n % ADA_CREEK.length];
           this.ctx.ui.subtitle(line.speaker, line.text, { pos: this.pos('ada') });
+        },
+      },
+    });
+    // Noor, once she's out of the Spire (content/routines.ts 'noor.diner')
+    this.interactables.push({
+      id: 'noor', pos: this.pos('noor'), radius: 2.0,
+      visible: () => !!this.s?.has('spire.noor.free'),
+      primary: {
+        label: 'Talk to Noor',
+        available: () => true,
+        run: () => {
+          const s = this.s;
+          if (s.set('creek.talk.noor')) s.addXP(XP_REWARDS.talk, 'Noor, at the counter');
+          const n = s.data.marks['noor.line'] ?? 0;
+          s.data.marks['noor.line'] = n + 1;
+          const line = NOOR_CREEK[n % NOOR_CREEK.length];
+          this.ctx.ui.subtitle(line.speaker, line.text, { pos: this.pos('noor') });
         },
       },
     });

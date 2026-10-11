@@ -24,6 +24,8 @@ export interface ItemDef {
   description: string;
   flavor?: string;
   usable?: boolean;
+  /** Can't be dropped (the Spire's core, until it's home). */
+  keep?: boolean;
 }
 
 export interface ArchetypeDef {
@@ -70,6 +72,7 @@ export type PersonId =
   | 'nia' | 'doc' | 'inez' | 'sol' | 'ren' | 'wick'
   | 'tanner' | 'vesper'
   | 'ezra' | 'ada'
+  | 'prudence' | 'noor'
   | 'creek' | 'compact';
 
 export type SolutionKind = 'stealth' | 'hack' | 'force' | 'social' | 'lockpick';

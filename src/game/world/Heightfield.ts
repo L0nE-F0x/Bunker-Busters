@@ -2,6 +2,7 @@ import { Simplex2, smoothstep, lerp, clamp } from '@/engine/noise';
 import { WORLD_SIZE, WORLD_SEED, HIGHWAY, SIDE_ROADS, LANDMARKS, CAVE_TRAIL, SALT_FLAT } from '@/content/world';
 import { APEX, APEX_PAD, APEX_BLOCK_PAD } from '@/content/bunkers/apex';
 import { PANOPTICON, PANOPTICON_PAD } from '@/content/bunkers/panopticon';
+import { SPIRE, SPIRE_PAD, SPIRE_RAMP } from '@/content/bunkers/spire';
 import { GARAGE } from '@/content/bunkers/garage';
 import { OUTPOSTS } from '@/content/recovery';
 
@@ -48,6 +49,8 @@ export class Heightfield {
   zones: FlattenZone[] = [];
   /** Walkable corridor carved after the flatten zones. Empty until generate(). */
   trail: [number, number][] = [];
+  /** Roads carved up slopes at an even grade (the Spire's): scatter keeps off them too. */
+  ramps: [number, number][][] = [];
 
   constructor(segments = 420) {
     this.res = segments + 1;
@@ -77,6 +80,8 @@ export class Heightfield {
     this.zones.push({ x: APEX.location.position[0] + bp.dx, z: APEX.location.position[2] + bp.dz, r: bp.r, falloff: bp.falloff, target: bp.target });
     // the Panopticon's pad at the head of the valley north of the salt, cut into the cliff foot
     this.zones.push({ x: PANOPTICON.location.position[0], z: PANOPTICON.location.position[2], ...PANOPTICON_PAD });
+    // the Alignment Spire's pad, cut into the first bench of the eastern tablelands (its ramp is carved after)
+    this.zones.push({ x: SPIRE.location.position[0], z: SPIRE.location.position[2], ...SPIRE_PAD });
     // her road squeezes past a mesa spur north of the pad: open the cut a little
     this.zones.push({ x: -351, z: -62, r: 9, falloff: 14 });
     // Kade outposts sit on pads of their own
@@ -170,6 +175,71 @@ export class Heightfield {
       }
     }
     this.carveTrail();
+    this.carveRamp(SPIRE_RAMP, SPIRE_PAD.target);
+    // the canyon's terrace risers, half-blended into the Spire's pad and the ramp's banks, come out
+    // as rows of teeth at this grid size: relax them into plain slopes (the flat parts stay flat)
+    const [sx, , sz] = SPIRE.location.position, pr = SPIRE_PAD.r;
+    this.relax((x, z) => {
+      const dPad = Math.hypot(x - sx, z - sz);
+      const pad = smoothstep(pr - 1, pr + 3, dPad) * smoothstep(pr + SPIRE_PAD.falloff + 14, pr + SPIRE_PAD.falloff + 4, dPad);
+      const rd = distToPolyline(x, z, SPIRE_RAMP).d;
+      const ramp = smoothstep(5.5, 8, rd) * smoothstep(24, 15, rd);
+      return Math.max(pad, ramp);
+    }, 6, sx, sz, 110);
+  }
+
+  /**
+   * Blur the heights where `w(x, z)` > 0 (a 3×3 average, `iters` times, weighted by w), within
+   * `reach` of (cx, cz). Used to smooth cut-and-fill seams into the canyon's terraces.
+   */
+  private relax(w: (x: number, z: number) => number, iters: number, cx: number, cz: number, reach: number) {
+    const { res, step, size, heights } = this;
+    const half = size / 2;
+    const i0 = Math.max(1, Math.floor((cx - reach + half) / step)), i1 = Math.min(res - 2, Math.ceil((cx + reach + half) / step));
+    const j0 = Math.max(1, Math.floor((cz - reach + half) / step)), j1 = Math.min(res - 2, Math.ceil((cz + reach + half) / step));
+    const wts: number[] = [];
+    for (let j = j0; j <= j1; j++) for (let i = i0; i <= i1; i++) wts.push(w(-half + i * step, -half + j * step));
+    const tmp = new Float32Array(heights.length);
+    for (let it = 0; it < iters; it++) {
+      tmp.set(heights);
+      let k = 0;
+      for (let j = j0; j <= j1; j++) {
+        for (let i = i0; i <= i1; i++, k++) {
+          const wt = wts[k];
+          if (wt <= 0.001) continue;
+          let sum = 0;
+          for (let dj = -1; dj <= 1; dj++) for (let di = -1; di <= 1; di++) sum += tmp[(j + dj) * res + i + di];
+          const idx = j * res + i;
+          heights[idx] = lerp(tmp[idx], sum / 9, wt);
+        }
+      }
+    }
+  }
+
+  /**
+   * A road up a slope at an even grade (the Spire's access road): from the ground at its foot to
+   * `top` at its head, flat across about 12 m (the guardrails stand at ±4.2) and blended into the
+   * cut and the fill beside it by 15 m.
+   */
+  private carveRamp(poly: [number, number][], top: number) {
+    this.ramps.push(poly);
+    const base = this.heightAt(poly[0][0], poly[0][1]);
+    let total = 0;
+    for (let i = 0; i < poly.length - 1; i++) total += Math.hypot(poly[i + 1][0] - poly[i][0], poly[i + 1][1] - poly[i][1]);
+    const { res, step, size } = this;
+    const half = size / 2;
+    for (let iz = 0; iz < res; iz++) {
+      for (let ix = 0; ix < res; ix++) {
+        const x = -half + ix * step, z = -half + iz * step;
+        const { d, arc } = distToPolyline(x, z, poly);
+        if (d > 15) continue;
+        // (past either end the arc runs on: the foot meets the old road, the head the pad)
+        const t = clamp(arc / total, 0, 1);
+        const k = smoothstep(15, 6, d) * smoothstep(-0.06, 0.02, arc / total) * smoothstep(1.08, 1.0, arc / total);
+        const i = iz * res + ix;
+        this.heights[i] = lerp(this.heights[i], lerp(base, top, t), k);
+      }
+    }
   }
 
   /**
@@ -250,6 +320,7 @@ export class Heightfield {
     for (const zn of this.zones) best = Math.min(best, Math.hypot(x - zn.x, z - zn.z) - zn.r);
     // Keep rocks and scrub off the wash. 14 m reads as "inside the corridor" to scatter.
     if (this.trail.length) best = Math.min(best, distToPolyline(x, z, this.trail).d - 14);
+    for (const r of this.ramps) best = Math.min(best, distToPolyline(x, z, r).d - 9);
     return best;
   }
 
@@ -260,6 +331,11 @@ export class Heightfield {
 
   /** Height function extended beyond the playable square (for the far-terrain ring). */
   farHeight(x: number, z: number) {
+    // round the Spire's pad (cut into the bench near the map's east edge) the far ring's inner rings
+    // follow the real ground, or the raw canyon pokes up through the pad; everywhere else the raw
+    // height is what the edges were tuned against (the highway's slots stay open to the sky)
+    const [sx, , sz] = SPIRE.location.position;
+    if (Math.hypot(x - sx, z - sz) < SPIRE_PAD.r + SPIRE_PAD.falloff + 24) return this.heightAt(x, z);
     return this.rawHeight(x, z);
   }
 }

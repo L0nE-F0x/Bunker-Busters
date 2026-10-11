@@ -32,6 +32,10 @@ export const DAEMONS: Record<string, DaemonDef> = {
   poles: { id: 'poles', name: 'POLE CAMERAS · SLEEP', blurb: 'The three Glimpse poles in the valley stop recording.' },
   tower: { id: 'tower', name: 'TOWER DOOR · RELEASE', blurb: 'The tower door unlatches. Ezra will know.' },
   towercams: { id: 'towercams', name: 'YARD CAMERAS · OFF', blurb: 'The four cameras on the tower power down together.' },
+  // --- the Alignment Spire: the ethics door's policy, the sentinels, Prudence's card reader
+  jailbreak: { id: 'jailbreak', name: 'DOOR POLICY · ROLEPLAY', blurb: 'The door agrees to pretend it is a door with no policy. It opens.' },
+  sentinels: { id: 'sentinels', name: 'SENTINELS · TEST MODE', blurb: 'Every sentinel on the network goes into test mode and stops watching.' },
+  office: { id: 'office', name: 'TOP FLOOR · ACCESS', blurb: 'The card reader on Prudence\'s door accepts a card you don\'t have.' },
   cameras: { id: 'cameras', name: 'CAMERAS · LOOP', blurb: 'The cameras loop yesterday\'s footage. Nobody was here yesterday.' },
 };
 

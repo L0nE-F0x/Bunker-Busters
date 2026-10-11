@@ -1,4 +1,5 @@
 import type { IntelItem, LandmarkDef } from './types';
+import { SPIRE_ROAD } from './bunkers/spire';
 
 /** Size of the playable square in metres (centred on the origin). */
 export const WORLD_SIZE = 840;
@@ -15,6 +16,8 @@ export const SIDE_ROADS: [number, number][][] = [
   [[-40, 112], [10, 150], [80, 172], [148, 176]],
   // Kade's private road: off the highway's west end, down past Dry Creek and across the salt to Apex Vault
   [[-326, 63], [-338, 10], [-344, -40], [-352, -80], [-361, -96], [-366, -103]],
+  // Careful's access road: off the highway where it climbs east into the tablelands, up to the Spire
+  SPIRE_ROAD,
 ];
 
 /**

@@ -26,6 +26,8 @@ export class Player {
   grounded = false;
   crouching = false;
   sprinting = false;
+  /** Both arms full of something heavy (the Spire's core): no running. */
+  heavy = false;
   frozen = false;
   interactPose = 0;
   speedMult = 1;
@@ -135,7 +137,7 @@ export class Player {
     const wantCrouch = !this.frozen && input.act('crouch');
     this.setCrouch(wantCrouch);
     const moving = mx !== 0 || mz !== 0;
-    this.sprinting = moving && !this.crouching && input.act('sprint') && mz > 0 && this.stumble < 0.3 && !this.winded;
+    this.sprinting = moving && !this.crouching && !this.heavy && input.act('sprint') && mz > 0 && this.stumble < 0.3 && !this.winded;
 
     // keys give full speed; a half-pushed stick walks slower (but never crawls)
     const push = Math.hypot(mx, mz);

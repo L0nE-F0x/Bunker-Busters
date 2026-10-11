@@ -62,6 +62,11 @@ export interface BunkerShell {
    * mode and the inside-only draws when present.
    */
   contains?(p: THREE.Vector3, margin?: number): boolean;
+  /**
+   * Openings that aren't doors (the Spire's window band), as world boxes: interior mode draws the
+   * exterior whenever one is in view.
+   */
+  portals?: { box: THREE.Box3; open?: () => boolean }[];
   /** The compound around it (yard). */
   groundsBox: THREE.Box3;
   tripwires: Tripwire[];

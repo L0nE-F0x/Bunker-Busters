@@ -32,6 +32,11 @@ export const LOOKS: Record<string, NpcLook> = {
     skin: '#c99c80', hair: '#a8a29a', hairStyle: 'crop', fem: true, build: 0.96, height: 0.95,
     shirt: '#9fc0dc', pants: '#a89a78', boots: '#4a3424',
   },
+  // Noor Haddad, out of the Spire: black curls tied up, an oversized cream hoodie, a red armband
+  noor: {
+    skin: '#c69a78', hair: '#1c1612', hairStyle: 'bun', fem: true, build: 0.92, height: 0.95,
+    shirt: '#e9e2d2', pants: '#26272a', coat: '#e9e2d2', coatLen: 0.2, boots: '#7a7d80',
+  },
   // Wick: the hermit; beanie, a beard to the sternum, a blanket for a coat
   wick: {
     skin: '#a87a5c', hair: '#b4aca0', hairStyle: 'long', beard: 'long', build: 1.0, height: 1.0,

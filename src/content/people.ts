@@ -251,6 +251,38 @@ export const PEOPLE: PersonDef[] = [
     ],
   },
   {
+    id: 'noor', accent: '#e0835c', name: 'Noor Haddad', role: 'Red team, Careful Labs', place: 'Eval 3, then Dry Creek',
+    bio: 'Paid for three years to break the Spire\'s doors before anyone else could. She never managed it, and most nights she slept at her desk. Fixes radios now, and won\'t answer a question until she\'s heard it twice.',
+    known: (v) => v.has('spire.noor.met') || v.has('spire.noor.free'),
+    about: [
+      { who: 'prudence', line: 'She isn\'t cruel. She\'s just never been finished with anything.' },
+      { who: 'dez', line: 'Dez asks a lot of questions. None of them are a test. I\'m getting used to it.', when: (v) => v.has('spire.noor.free') },
+      { who: 'nia', line: 'Nia brought me coffee and tea because I couldn\'t choose. Nobody\'s done that for me before.', when: (v) => v.has('spire.noor.free') },
+    ],
+    ofYou: [
+      'You got through the door. I still want to know how.',
+      'You knocked. Benny\'s the only other person who ever knocked.',
+      'You got me out. I keep saying that to myself.',
+      'If you ever need something broken, ask me. Properly broken.',
+    ],
+  },
+  {
+    id: 'prudence', accent: '#c4613f', name: 'Prudence Ashby', role: 'Head of Safety, Careful Labs', place: 'The Alignment Spire, above the Tube',
+    bio: 'Her team modelled the grid\'s collapse to the week and published it. Nobody read it. She built the Spire to go on thinking carefully after everyone else had stopped, and it has: three hundred litres of water a day, and a policy for each of them.',
+    known: (v) => v.has('lore.spire') || v.has('seen:spire') || v.has('q:act3:done'),
+    about: [
+      { who: 'ezra', line: 'Ezra sent us his feeds for a year. I asked him to stop. He said our doors were learning. They were.' },
+      { who: 'vesper', line: 'Vesper\'s model of the future has one customer in it.' },
+      { who: 'noor', line: 'Noor never broke a door. She found every reason they shouldn\'t open, and I wrote them all down.', when: (v) => v.has('spire.noor.met') },
+    ],
+    ofYou: [
+      'You\'re a risk I modelled. I modelled you wrong.',
+      'You\'re within tolerance.',
+      'You did what I couldn\'t decide to. I\'ve rerun it since. It still doesn\'t come out clean.',
+      'If I had to hand the decision to anyone, I\'d want it to be you. I\'ve never said that about anyone.',
+    ],
+  },
+  {
     id: 'ezra', accent: '#6f9cff', name: 'Ezra Seymour', role: 'Founder, Glimpse', place: 'The Panopticon, north of the salt',
     bio: 'Built Glimpse, the neighbourhood app that never forgot a face, and then a bunker with eleven hundred cameras in it. Came up with the name "the Pivot". Watches every camp he can reach, and honestly believes it\'s because he cares.',
     known: (v) => v.has('q.cam.hello') || v.has('lore.panopticon'),

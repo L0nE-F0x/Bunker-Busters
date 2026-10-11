@@ -156,6 +156,14 @@ export class GameState {
     this.events.emit('flag', { flag });
     return true;
   }
+  /** Clear a flag (a state that ends: carrying the Spire's core). True if it was set. */
+  unset(flag: string) {
+    const i = this.data.flags.indexOf(flag);
+    if (i < 0) return false;
+    this.data.flags.splice(i, 1);
+    this.events.emit('flag', { flag });
+    return true;
+  }
 
   // ---------- skills ----------
   skill(id: SkillId) {

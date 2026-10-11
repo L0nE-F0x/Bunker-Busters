@@ -24,8 +24,8 @@ import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
  * something changed.
  */
 
-/** Characters that have a model: Dry Creek's six, the camp's four, and the Panopticon's four (Ezra, Ada, two reviewers). */
-export const NPC_MODELS = ['nia', 'doc', 'inez', 'sol', 'ren', 'wick', 'mara', 'hollis', 'pip', 'dez', 'ezra', 'ada', 'rev1', 'rev2'] as const;
+/** Characters that have a model: Dry Creek's six, the camp's four, the Panopticon's four (Ezra, Ada, two reviewers), the Spire's three. */
+export const NPC_MODELS = ['nia', 'doc', 'inez', 'sol', 'ren', 'wick', 'mara', 'hollis', 'pip', 'dez', 'ezra', 'ada', 'rev1', 'rev2', 'prudence', 'noor', 'benny'] as const;
 /** Head props, in Head-bone space (1 unit = 1 cm there; fits from Assets/MESHY_ASSETS.md §5). */
 export const NPC_PROPS: Record<string, { file: string; pos: [number, number, number]; rot: [number, number, number]; scale: number }> = {
   hollis: { file: 'truckercap', pos: [-1.7, 20.3, 2.6], rot: [-7.5, 3.2, 3.6], scale: 16 },
@@ -310,10 +310,28 @@ export class NpcActor {
     if (seated) this.root.position.y = THREE.MathUtils.clamp(hipY - this.anchor.y, -0.16, 0.32);
   }
 
+  /** The idle loops in use (the template's, or a set swapped in by `setIdle`). */
+  private idles: Clip[] | null = null;
+  private get idle() {
+    return this.idles ?? this.T.idle;
+  }
+
   /** The loops to drift between right now (near you, the talk loops and, now and then, the idles). */
   private pool(near: boolean) {
     const T = this.T;
-    return (near && T.near.length) || this.chat ? [...T.idle, ...T.near] : T.idle;
+    return (near && T.near.length) || this.chat ? [...this.idle, ...T.near] : this.idle;
+  }
+
+  /**
+   * Swap the loops this person drifts between for these roles (Noor, asleep at her desk and then
+   * awake). Ends any scripted beat; crossfades to one of them.
+   */
+  setIdle(roles: string[]) {
+    const list = roles.map((r) => this.T.clips.get(r)).filter((c): c is Clip => !!c);
+    if (!list.length) return;
+    this.idles = list;
+    this.scripted = null;
+    this.queue(this.pick(list, null), 0);
   }
 
   /** A clip from `pool`, never `not`, less likely what a neighbour is playing. */
@@ -508,7 +526,7 @@ export class NpcActor {
       this.wasNear = near;
       // a beat before reacting (and everyone's beat differs)
       if (near && T.near.length) this.queue(this.pick(T.near, null), rand(0.2, 1.2));
-      else if (!near && this.cur.name.startsWith('near') && !this.chat) this.queue(this.pick(T.idle, null), rand(0.2, 1.2));
+      else if (!near && this.cur.name.startsWith('near') && !this.chat) this.queue(this.pick(this.idle, null), rand(0.2, 1.2));
     }
     const pool = this.pool(near);
     if (!this.cur.once && !this.pending && this.fade >= 1) {

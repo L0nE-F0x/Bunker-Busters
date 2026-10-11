@@ -46,6 +46,10 @@ export const RUMOURS: Rumour[] = [
     id: 'panopticon', when: (v) => v.has('q:act2:done') || v.has('apex.complete'),
     text: 'The band\'s been strange since the cistern turned. There\'s a carrier from the old coast, north of the salt, that reads out camp names. All of ours, in order, before anybody\'s said them. Mara wants to know who\'s keeping the list. I think we know.',
   },
+  {
+    id: 'spire', when: (v) => v.has('act3.debriefed') && !v.has('spire.complete'),
+    text: 'There\'s a carrier out of the east tablelands that only ever says one thing. Current safety level, one. Every hour on the hour, for three years. Last night it said two. Somebody up there is nervous about us.',
+  },
   // ---- the places themselves (a Kade outpost goes on the map when the band names it)
   {
     id: 'rp7', op: 'rp7', when: (v) => !v.has('seen:rp7'),

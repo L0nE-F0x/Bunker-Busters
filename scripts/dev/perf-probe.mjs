@@ -11,7 +11,8 @@
 // JS heap growth per frame (positive deltas only, --enable-precise-memory-info), programs compiled.
 // --shots <dir> saves a screenshot per spot (A/B the look of a change at the same views).
 // Spots: camp (night, fire), creek (Dry Creek noon), highway (noon), garage (inside), fight, wolves,
-// wellhead / wellheadNight (from Dry Creek, ~150 m from the Kade Wellhead outpost).
+// wellhead / wellheadNight (from Dry Creek, ~150 m from the Kade Wellhead outpost), spireRoad / spireCourt /
+// spireNight / spireLobby (the Alignment Spire), panValley (the Panopticon's valley, for comparison).
 import fs from 'node:fs';
 import path from 'node:path';
 import { launch, waitForGame } from './browser.mjs';
@@ -47,6 +48,17 @@ const SPOTS = {
   fight: `{ tp(60, 40); game.atmo.hour = 15; await next(); game.cam.snap(0, -0.02); await next();
     game.combat.difficulty = 'story'; game.recovery.summon(game.player.position, game.cam.yaw, 22, 4, true);
     window.__heal = setInterval(() => { game.state.data.health = Math.max(game.state.data.health, 50); }, 250); }`,
+  // the Alignment Spire (Tier 4): up the road at it, the forecourt, the lobby, and the Panopticon's valley to compare
+  spireRoad: `{ const o = game.spire.b.origin; tp(o.x - 30, o.z - 70); game.atmo.hour = 16.5; await next();
+    game.cam.snap(Math.atan2(-30, -70) , 0.12); }`,
+  spireCourt: `{ const o = game.spire.b.origin; tp(o.x - 9, o.z - 24); game.atmo.hour = 16.5; await next();
+    game.cam.snap(Math.atan2(-9, -16), 0.1); }`,
+  spireNight: `{ const o = game.spire.b.origin; tp(o.x - 60, o.z - 90); game.atmo.hour = 21.5; await next();
+    game.cam.snap(Math.atan2(-60, -94), 0.15); }`,
+  spireLobby: `{ const o = game.spire.b.origin; game.player.teleport(o.clone().add({ x: 1, y: 0.2, z: -4.5 })); game.atmo.hour = 16.5; await next();
+    game.cam.snap(Math.atan2(-1, -8.5) + Math.PI, -0.05); }`,
+  panValley: `{ const o = game.panopticon.b.origin; tp(o.x + 4, o.z + 70); game.atmo.hour = 16.5; await next();
+    game.cam.snap(0, 0.08); }`,
   wolves: `{ tp(-60, 180); game.atmo.hour = 10; await next(); game.cam.snap(0, -0.03); await next();
     game.combat.difficulty = 'story'; game.fauna.summonPack(game.player.position, 30, true, 4);
     window.__heal ??= setInterval(() => { game.state.data.health = Math.max(game.state.data.health, 50); }, 250); }`,

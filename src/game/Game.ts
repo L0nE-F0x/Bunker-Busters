@@ -36,6 +36,8 @@ import { HumanSkins } from './combat/humanSkin';
 import { Garage } from './bunker/Garage';
 import { Apex } from './bunker/apex/Apex';
 import { Panopticon } from './bunker/panopticon/Panopticon';
+import { Spire } from './bunker/spire/Spire';
+import { SpireTaps } from './bunker/spire/taps';
 import type { Bunker } from './bunker/Bunker';
 import { Settlement } from './town/Settlement';
 import { buildSites, Errands, type Site } from './sites';
@@ -59,6 +61,7 @@ import { SKILLS } from '@/content/skills';
 import { GARAGE } from '@/content/bunkers/garage';
 import { APEX } from '@/content/bunkers/apex';
 import { PANOPTICON } from '@/content/bunkers/panopticon';
+import { SPIRE } from '@/content/bunkers/spire';
 import { ITEMS, HOTBAR_ITEMS, KEEP_ON_DEATH } from '@/content/items';
 import { KadeTerminals } from './combat/terminals';
 import { OUTPOSTS } from '@/content/recovery';
@@ -145,6 +148,9 @@ export class Game {
   /** Tier 2, Vesper's launch site west of the salt (Act II). */
   apex!: Apex;
   panopticon!: Panopticon;
+  spire!: Spire;
+  /** The core at the camp, or the standpipe at Dry Creek (after Act IV). */
+  spireTaps: SpireTaps | null = null;
   /** Every bunker (the Garage first): interactables, update/cull, interiors, EMP, alarms. */
   bunkers: Bunker[] = [];
   settlement!: Settlement;
@@ -355,7 +361,10 @@ export class Game {
     this.garage = new Garage(this.ctx);
     this.apex = new Apex(this.ctx);
     this.panopticon = new Panopticon(this.ctx);
-    this.bunkers = [this.garage, this.apex, this.panopticon];
+    this.spire = new Spire(this.ctx);
+    this.bunkers = [this.garage, this.apex, this.panopticon, this.spire];
+    // the Spire's sentinels are hostiles, and they need to know whether you're holding a weapon
+    this.spire.attach(this.combat, () => !!this.arms?.equipped);
     this.combat.sparks = this.garage.sparks;
     // wolves won't follow you to the fire or into a town
     this.fauna.safe = [{ p: this.landmarks.campPosition.clone(), r: 30 }];
@@ -365,6 +374,8 @@ export class Game {
     NpcCrowd.models = await models(NpcModels.load(), 0.7, 0.78, bunkerMsg);
     // Ezra, Ada and the reviewers sit (and stand) in the Panopticon from boot (before the warm-up)
     this.panopticon.addPeople(NpcCrowd.models);
+    // Prudence, Noor and Benny in the Spire, likewise
+    this.spire.addPeople(NpcCrowd.models);
     // routines (content/routines.ts): who is in which seat or spot, by the hour and the story
     NpcCrowd.schedule = (st) => routineOpen(st, { playing: this.mode === 'playing', hour: this.atmo.hour, has: (f) => !!this.state?.has(f) });
     this.landmarks.addCampPeople();
@@ -398,10 +409,13 @@ export class Game {
     this.interactables.push(...this.errands.interactables);
     this.stories = new Stories(this.ctx, this.landmarks, (x, z) => this.clearSpot(x, z));
     this.interactables.push(...this.stories.interactables);
+    this.spireTaps = new SpireTaps(this.ctx, this.landmarks, (x, z) => this.clearSpot(x, z));
+    this.interactables.push(...this.spireTaps.interactables);
     if (!SKIP.has('env')) this.buildEnvironment();
     if (SKIP.has('garage')) this.scene.remove(this.garage.b.group, this.garage.drone.group);
     if (SKIP.has('apex')) this.scene.remove(this.apex.b.group);
     if (SKIP.has('panopticon')) this.scene.remove(this.panopticon.b.group);
+    if (SKIP.has('spire')) this.scene.remove(this.spire.b.group);
     if (SKIP.has('ui')) document.getElementById('ui')!.style.display = 'none';
     if (SKIP.has('terrain')) this.scene.remove(this.terrain.mesh, this.terrain.far);
     if (SKIP.has('sky')) this.scene.remove(this.atmo.sky);
@@ -934,7 +948,8 @@ export class Game {
       for (;;) {
         const why = await this.ui.camp({
           radioLabel: debrief ? 'Radio Mara · read the names' : s.has('apex.complete') && !s.has('act2.debriefed') ? 'Radio Mara · the water came east'
-            : s.has('panopticon.complete') && !s.has('act3.debriefed') ? 'Radio Mara · the lamp went out' : 'Raise Mara on the radio',
+            : s.has('panopticon.complete') && !s.has('act3.debriefed') ? 'Radio Mara · the lamp went out'
+              : s.has('spire.complete') && s.has('spire.core') && !s.has('act4.debriefed') ? 'Radio Mara · the Spire' : 'Raise Mara on the radio',
           people: CAMP.filter((m) => m.present(campView())).map((m) => ({ id: m.id, name: m.name, role: m.role })),
           onRest: () => {
             const full = s.skill('survival') >= 5;
@@ -958,6 +973,11 @@ export class Game {
             const call = campRadio({ has: (f) => s.has(f), archetype: s.archetype });
             await this.ui.pages(call.pages, 'Back to the fire');
             for (const f of call.flags) s.set(f);
+            // the Spire's core goes on the bench by the pumps (spire/taps.ts draws it there from now on)
+            if (call.flags.includes('act4.debriefed') && s.count('purifier_core')) {
+              s.removeItem('purifier_core', 1);
+              this.ui.toast('Pip takes the core off you with both hands and doesn\'t say anything for a while.', 'good');
+            }
           }
           return;
         }
@@ -1134,6 +1154,11 @@ export class Game {
     if (new URLSearchParams(location.search).get('at') === 'panopticon') {
       const o = this.panopticon.b.origin;
       spawn = new THREE.Vector3(o.x + 4, 0, o.z + 70);
+      spawn.y = this.hf.heightAt(spawn.x, spawn.z) + 0.2;
+    }
+    // ?at=spire starts at the foot of its road (Act IV without the walk)
+    if (new URLSearchParams(location.search).get('at') === 'spire') {
+      spawn = this.spire.b.points.road.clone();
       spawn.y = this.hf.heightAt(spawn.x, spawn.z) + 0.2;
     }
     this.player = new Player(this.physics, state.data.archetype, spawn);
@@ -1864,6 +1889,12 @@ export class Game {
       out.push({ id: 'panopticon', x: px, z: pz, label: s.has('panopticon.complete') ? 'The Panopticon (busted)' : 'The Panopticon · Tier 3', color: s.has('panopticon.complete') ? '#7d725f' : '#ff3a6e', kind: 'bunker',
         note: s.has('panopticon.complete') ? 'Ezra Seymour\'s lighthouse at the head of the valley. You took the water, and you decided what happened to the archive.' : 'Ezra Seymour\'s building at the head of the valley north of the salt: a ring round an old lighthouse with a blue lamp.' });
     }
+    const [sx, , sz] = SPIRE.location.position;
+    const nearSpire = this.player ? Math.hypot(this.player.position.x - sx, this.player.position.z - sz) < 150 : false;
+    if (s.has('spire.marker') || s.has('act3.debriefed') || nearSpire || s.has('spire.complete')) {
+      out.push({ id: 'spire', x: sx, z: sz, label: s.has('spire.complete') ? 'The Alignment Spire (busted)' : 'The Alignment Spire · Tier 4', color: s.has('spire.complete') ? '#7d725f' : '#ff3a6e', kind: 'bunker',
+        note: s.has('spire.complete') ? 'Prudence Ashby\'s tower above the Tube. You took the water, and you decided what happened to the core.' : 'Prudence Ashby\'s tower on the first bench of the eastern tablelands, above the Tube. The road up to it leaves the highway where it climbs into the hills.' });
+    }
     for (const it of WORLD_INTEL) {
       if (s.has(`intel:${it.id}`)) continue;
       const known = it.id === 'intel.gas.note' || s.has(`rumour.${it.id}`) || this.map.revealedAt(it.position[0], it.position[2]) > 100;
@@ -1891,8 +1922,8 @@ export class Game {
 
   /** The tracked quest (or the main story) speaks unless you're standing at the Garage. */
   private objective(): string {
-    const here = this.garage.objective() || this.apex.objective() || this.panopticon.objective();
-    const label = !here || this.garage.objective() ? undefined : this.apex.objective() ? 'Act II · Apex Vault' : 'Act III · The Panopticon';
+    const here = this.garage.objective() || this.apex.objective() || this.panopticon.objective() || this.spire.objective();
+    const label = !here || this.garage.objective() ? undefined : this.apex.objective() ? 'Act II · Apex Vault' : this.panopticon.objective() ? 'Act III · The Panopticon' : 'Act IV · The Alignment Spire';
     return this.story ? this.story.objective(here, label).text : here;
   }
 
@@ -1969,6 +2000,7 @@ export class Game {
     for (const site of this.sites) site.update(dt, this.camera.position);
     this.errands?.update(dt, this.camera.position);
     this.stories?.update(dt, this.camera.position);
+    this.spireTaps?.update(dt);
     for (const b of this.bunkers) {
       if (this.mode !== 'playing') b.update(dt);
       b.cull(this.camera.position);
@@ -2080,6 +2112,15 @@ export class Game {
     if (worst < 30) sp *= 0.86;
     if (worst < 12) sp *= 0.8;
     if (s.weight > s.carryLimit + 0.05) sp *= 0.72;
+    // carrying the Spire's core off its road: both hands on it, no weapon, no running
+    const coreOut = s.has('spire.core.carrying');
+    if (coreOut) sp *= 0.85;
+    player.heavy = coreOut;
+    if (this.arms) this.arms.handsFull = coreOut;
+    if (this.hands && !this.busy) {
+      if (coreOut && this.hands.basePose !== 'carry') this.hands.setBase('carry');
+      else if (!coreOut && this.hands.basePose === 'carry') this.hands.setBase('idle');
+    }
     player.speedMult = sp;
     player.stealthRank = s.skill('stealth');
     player.stealthFocus = s.focus('stealth');
@@ -2251,6 +2292,12 @@ export class Game {
         s.set('seen:panopticon');
         s.set('panopticon.marker');
         this.ui.banner('THE PANOPTICON', 'An old lighthouse at the head of the valley, a ring of desks round it, and a man who has watched every camp for three years. Tier 3.', 'info');
+      }
+      const [spx, , spz] = SPIRE.location.position;
+      if (!s.has('seen:spire') && Math.hypot(player.position.x - spx, player.position.z - spz) < 125) {
+        s.set('seen:spire');
+        s.set('spire.marker');
+        this.ui.banner('THE ALIGNMENT SPIRE', 'A white tower with a light on top that tells you how worried it is. Prudence Ashby has thought very carefully about you. Tier 4.', 'info');
       }
       for (const c of WORLD_CACHES) {
         if (s.has(c.id) || s.has(`approach:${c.id}`)) continue;

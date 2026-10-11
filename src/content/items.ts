@@ -228,6 +228,17 @@ const defs: ItemDef[] = [
     description: 'A leather roll of tension wrenches and picks. Take it back to Sol at the street fire, or unroll it into your kit for five picks.',
     flavor: 'Stamped S.V. on the flap, worn almost smooth.',
   },
+  // --- the Alignment Spire ---
+  {
+    id: 'fenn_badge', name: 'Isaac Fenn\'s Badge', category: 'intel', weight: 0, stack: 1, value: 0, icon: 'badge',
+    description: 'A Careful Labs lanyard, terracotta: I. FENN · RED TEAM. He died on the Spire\'s road testing the sentinels. The front door lets red-teamers through.',
+    flavor: 'The photo has faded to a pale smile.',
+  },
+  {
+    id: 'purifier_core', name: 'Purifier Core', category: 'intel', weight: 6, stack: 1, value: 0, icon: 'battery', keep: true,
+    description: 'The heart of the Spire\'s water plant: a frosted steel cartridge that pulls water out of the air. Benny says it would keep a camp going for twenty years. Take it to the camp.',
+    flavor: 'CORE · DO NOT REMOVE WHILE RUNNING. Keep it upright.',
+  },
   // --- the Panopticon ---
   {
     id: 'archive_drive', name: 'The Valley Archive', category: 'intel', weight: 0.3, stack: 1, value: 0, icon: 'drive',

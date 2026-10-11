@@ -46,6 +46,14 @@ export const CAST: Record<string, CastVoice> = {
   'ada ivers': { voice: 'af_nicole', fx: 'room', speed: 0.92 },
   'kofi boateng': { voice: 'am_liam', fx: 'room', speed: 1.02 },
   'jun ishida': { voice: 'bf_alice', fx: 'room', speed: 0.98 },
+  // the Alignment Spire (content/bunkers/spire.ts): Prudence on the PA and in the room, her staff,
+  // and the one calm voice that comes out of everything Careful built
+  'prudence ashby': { voice: 'bf_isabella', fx: 'pa', speed: 0.96 },
+  prudence: { voice: 'bf_isabella', fx: 'room', speed: 0.95 },
+  'noor haddad': { voice: 'af_jessica', fx: 'room', speed: 0.98 },
+  'benny adeyemi': { voice: 'am_michael', fx: 'room', speed: 0.92 },
+  'careful door': { voice: 'bf_lily', fx: 'pa', speed: 0.97 },
+  'careful sentinel': { voice: 'bf_lily', fx: 'bot', speed: 1.0 },
 };
 
 const ALIAS: Record<string, string> = { mara: 'mara voss' };

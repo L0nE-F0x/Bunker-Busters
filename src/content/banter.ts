@@ -136,6 +136,18 @@ export const BANTER: Banter[] = [
     text: 'That\'s the Spire. Tanner\'s contractor left paperwork up there. Contractors always leave paperwork.',
   },
   {
+    id: 'alignment', speaker: 'Mara',
+    near: { x: 378, z: 4, r: 150 },
+    when: (v) => v.has('act3.debriefed') && !v.has('seen:spire'),
+    text: 'That white needle on the bench is the real one. The light on top is green. Let\'s try to keep it that way.',
+  },
+  {
+    id: 'spire.wrong', speaker: 'self',
+    near: { lm: 'spire', r: 40 },
+    when: (v) => v.has('act3.debriefed') && !v.has('seen:spire'),
+    text: 'There. East, on the bench above the Tube. That\'s the right spire.',
+  },
+  {
     id: 'wash', speaker: 'self',
     near: { x: 80, z: 196, r: 26 },
     when: (v) => !v.has('seen:cave'),

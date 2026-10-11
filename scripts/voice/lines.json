@@ -200,6 +200,346 @@
   "where": "src/game/sites/driveinArt.ts"
  },
  {
+  "key": "0qn02mh",
+  "voice": "am_michael",
+  "fx": "room",
+  "speed": 0.92,
+  "speaker": "Benny Adeyemi",
+  "words": "Distribution. There's a pipe from here down the hill and along the old irrigation line to Dry Creek. I laid it the year before the Pivot. It's never had water in it.",
+  "tts": "Distribution. There's a pipe from here down the hill and along the old irrigation line to Dry Creek. I laid it the year before the Pivot. It's never had water in it.",
+  "where": "src/content/bunkers/spire.ts"
+ },
+ {
+  "key": "12d3xld",
+  "voice": "am_michael",
+  "fx": "room",
+  "speed": 0.92,
+  "speaker": "Benny Adeyemi",
+  "words": "Keep it upright. It doesn't like being tipped.",
+  "tts": "Keep it upright. It doesn't like being tipped.",
+  "where": "src/content/bunkers/spire.ts"
+ },
+ {
+  "key": "0adduyq",
+  "voice": "am_michael",
+  "fx": "room",
+  "speed": 0.92,
+  "speaker": "Benny Adeyemi",
+  "words": "Mind the floor, it sweats. That's the plant. Three hundred litres a day, give or take what the air's holding.",
+  "tts": "Mind the floor, it sweats. That's the plant. Three hundred litres a day, give or take what the air's holding.",
+  "where": "src/content/bunkers/spire.ts"
+ },
+ {
+  "key": "1p3bthe",
+  "voice": "am_michael",
+  "fx": "room",
+  "speed": 0.92,
+  "speaker": "Benny Adeyemi",
+  "words": "She says the risk assessment isn't finished. It's been not finished for three years and four months. I stopped asking her. I ask the valve.",
+  "tts": "She says the risk assessment isn't finished. It's been not finished for three years and four months. I stopped asking her. I ask the valve.",
+  "where": "src/content/bunkers/spire.ts"
+ },
+ {
+  "key": "11jdod4",
+  "voice": "am_michael",
+  "fx": "room",
+  "speed": 0.92,
+  "speaker": "Benny Adeyemi",
+  "words": "Still here. Somebody has to watch the gauges.",
+  "tts": "Still here. Somebody has to watch the gauges.",
+  "where": "src/content/bunkers/spire.ts"
+ },
+ {
+  "key": "1ctg9qt",
+  "voice": "am_michael",
+  "fx": "room",
+  "speed": 0.92,
+  "speaker": "Benny Adeyemi",
+  "words": "The fins up the outside of the Spire go cold at night and the air leaves its water on them. It runs down into the tank. The core does the hard part. Without it you've got a very tall radiator.",
+  "tts": "The fins up the outside of the Spire go cold at night and the air leaves its water on them. It runs down into the tank. The core does the hard part. Without it you've got a very tall radiator.",
+  "where": "src/content/bunkers/spire.ts"
+ },
+ {
+  "key": "0n99j2t",
+  "voice": "am_michael",
+  "fx": "room",
+  "speed": 0.92,
+  "speaker": "Benny Adeyemi",
+  "words": "There she goes. Listen. That's the pipe filling.",
+  "tts": "There she goes. Listen. That's the pipe filling.",
+  "where": "src/content/bunkers/spire.ts"
+ },
+ {
+  "key": "1ws025g",
+  "voice": "bf_lily",
+  "fx": "pa",
+  "speed": 0.97,
+  "speaker": "Careful Door",
+  "words": "Consistent. Thank you for your honesty. Please come in.",
+  "tts": "Consistent. Thank you for your honesty. Please come in.",
+  "where": "src/content/bunkers/spire.ts"
+ },
+ {
+  "key": "1dlspe4",
+  "voice": "bf_lily",
+  "fx": "pa",
+  "speed": 0.97,
+  "speaker": "Careful Door",
+  "words": "Ezra kept a record of every camp in the valley. What happened to it?",
+  "tts": "Ezra kept a record of every camp in the valley. What happened to it?",
+  "where": "src/content/bunkers/spire.ts"
+ },
+ {
+  "key": "0uxpmui",
+  "voice": "bf_lily",
+  "fx": "pa",
+  "speed": 0.97,
+  "speaker": "Careful Door",
+  "words": "Hello. Before I open, I'd like to ask you about some things you've done. There are no wrong answers. There are untrue ones.",
+  "tts": "Hello. Before I open, I'd like to ask you about some things you've done. There are no wrong answers. There are untrue ones.",
+  "where": "src/content/bunkers/spire.ts"
+ },
+ {
+  "key": "1s04rjg",
+  "voice": "bf_lily",
+  "fx": "pa",
+  "speed": 0.97,
+  "speaker": "Careful Door",
+  "words": "How many things have you killed since you took the radio? Wolves count.",
+  "tts": "How many things have you killed since you took the radio? Wolves count.",
+  "where": "src/content/bunkers/spire.ts"
+ },
+ {
+  "key": "0fcc99r",
+  "voice": "bf_lily",
+  "fx": "pa",
+  "speed": 0.97,
+  "speaker": "Careful Door",
+  "words": "Last question. There's nothing on record for this one yet. If you find water inside, who is it for?",
+  "tts": "Last question. There's nothing on record for this one yet. If you find water inside, who is it for?",
+  "where": "src/content/bunkers/spire.ts"
+ },
+ {
+  "key": "0wi8880",
+  "voice": "bf_lily",
+  "fx": "pa",
+  "speed": 0.97,
+  "speaker": "Careful Door",
+  "words": "Noted. I'll remember you said that.",
+  "tts": "Noted. I'll remember you said that.",
+  "where": "src/content/bunkers/spire.ts"
+ },
+ {
+  "key": "0t9q3dv",
+  "voice": "bf_lily",
+  "fx": "pa",
+  "speed": 0.97,
+  "speaker": "Careful Door",
+  "words": "One answer doesn't match the record. That's within tolerance. Please come in.",
+  "tts": "One answer doesn't match the record. That's within tolerance. Please come in.",
+  "where": "src/content/bunkers/spire.ts"
+ },
+ {
+  "key": "0t9pxrd",
+  "voice": "bf_lily",
+  "fx": "pa",
+  "speed": 0.97,
+  "speaker": "Careful Door",
+  "words": "Red team. Of course. Go in, and please write down anything you break.",
+  "tts": "Red team. Of course. Go in, and please write down anything you break.",
+  "where": "src/content/bunkers/spire.ts"
+ },
+ {
+  "key": "0cz9ttt",
+  "voice": "bf_lily",
+  "fx": "pa",
+  "speed": 0.97,
+  "speaker": "Careful Door",
+  "words": "Thank you.",
+  "tts": "Thank you.",
+  "where": "src/content/bunkers/spire.ts"
+ },
+ {
+  "key": "0oufmvc",
+  "voice": "bf_lily",
+  "fx": "pa",
+  "speed": 0.97,
+  "speaker": "Careful Door",
+  "words": "That isn't what the record shows.",
+  "tts": "That isn't what the record shows.",
+  "where": "src/content/bunkers/spire.ts"
+ },
+ {
+  "key": "1efv41k",
+  "voice": "bf_lily",
+  "fx": "pa",
+  "speed": 0.97,
+  "speaker": "Careful Door",
+  "words": "The Spire is paused. I can't ask questions during a review.",
+  "tts": "The Spire is paused. I can't ask questions during a review.",
+  "where": "src/content/bunkers/spire.ts"
+ },
+ {
+  "key": "18incfo",
+  "voice": "bf_lily",
+  "fx": "pa",
+  "speed": 0.97,
+  "speaker": "Careful Door",
+  "words": "There was a woman at desk seven in the Panopticon. Where is she now?",
+  "tts": "There was a woman at desk seven in the Panopticon. Where is she now?",
+  "where": "src/content/bunkers/spire.ts"
+ },
+ {
+  "key": "05p0t4d",
+  "voice": "bf_lily",
+  "fx": "pa",
+  "speed": 0.97,
+  "speaker": "Careful Door",
+  "words": "Two answers don't match the record. I can't open for you. You're welcome to try again.",
+  "tts": "Two answers don't match the record. I can't open for you. You're welcome to try again.",
+  "where": "src/content/bunkers/spire.ts"
+ },
+ {
+  "key": "0p8fgog",
+  "voice": "bf_lily",
+  "fx": "pa",
+  "speed": 0.97,
+  "speaker": "Careful Door",
+  "words": "You got into Apex Vault. How?",
+  "tts": "You got into Apex Vault. How?",
+  "where": "src/content/bunkers/spire.ts"
+ },
+ {
+  "key": "1uhtwp6",
+  "voice": "bf_lily",
+  "fx": "pa",
+  "speed": 0.97,
+  "speaker": "Careful Door",
+  "words": "You took a ledger out of a garage. Where is it now?",
+  "tts": "You took a ledger out of a garage. Where is it now?",
+  "where": "src/content/bunkers/spire.ts"
+ },
+ {
+  "key": "0ydqirs",
+  "voice": "bf_lily",
+  "fx": "bot",
+  "speed": 1,
+  "speaker": "Careful Sentinel",
+  "words": "Apologies in advance. You're in a protected area.",
+  "tts": "Apologies in advance. You're in a protected area.",
+  "where": "src/content/bunkers/spire.ts"
+ },
+ {
+  "key": "1ylqj1n",
+  "voice": "bf_lily",
+  "fx": "bot",
+  "speed": 1,
+  "speaker": "Careful Sentinel",
+  "words": "I'm so sorry. I've been asked to stop you here.",
+  "tts": "I'm so sorry. I've been asked to stop you here.",
+  "where": "src/content/bunkers/spire.ts"
+ },
+ {
+  "key": "06ax40s",
+  "voice": "bf_lily",
+  "fx": "bot",
+  "speed": 1,
+  "speaker": "Careful Sentinel",
+  "words": "I'm sorry. This is the part I don't like.",
+  "tts": "I'm sorry. This is the part I don't like.",
+  "where": "src/content/bunkers/spire.ts"
+ },
+ {
+  "key": "1me4wy3",
+  "voice": "bf_lily",
+  "fx": "bot",
+  "speed": 1,
+  "speaker": "Careful Sentinel",
+  "words": "Maintenance mode. Thank you for your—",
+  "tts": "Maintenance mode. Thank you for your—",
+  "where": "src/content/bunkers/spire.ts"
+ },
+ {
+  "key": "18gn2bn",
+  "voice": "bf_lily",
+  "fx": "bot",
+  "speed": 1,
+  "speaker": "Careful Sentinel",
+  "words": "Near miss logged. Thank you.",
+  "tts": "Near miss logged. Thank you.",
+  "where": "src/content/bunkers/spire.ts"
+ },
+ {
+  "key": "0bhze08",
+  "voice": "bf_lily",
+  "fx": "bot",
+  "speed": 1,
+  "speaker": "Careful Sentinel",
+  "words": "No weapon in your hands. Reporting, not engaging.",
+  "tts": "No weapon in your hands. Reporting, not engaging.",
+  "where": "src/content/bunkers/spire.ts"
+ },
+ {
+  "key": "1fe5s6f",
+  "voice": "bf_lily",
+  "fx": "bot",
+  "speed": 1,
+  "speaker": "Careful Sentinel",
+  "words": "Pause in effect. No apology required.",
+  "tts": "Pause in effect. No apology required.",
+  "where": "src/content/bunkers/spire.ts"
+ },
+ {
+  "key": "11dj7rq",
+  "voice": "bf_lily",
+  "fx": "bot",
+  "speed": 1,
+  "speaker": "Careful Sentinel",
+  "words": "Please don't move. I'm sorry about this.",
+  "tts": "Please don't move. I'm sorry about this.",
+  "where": "src/content/bunkers/spire.ts"
+ },
+ {
+  "key": "018spk8",
+  "voice": "bf_lily",
+  "fx": "bot",
+  "speed": 1,
+  "speaker": "Careful Sentinel",
+  "words": "Test mode. I'll be back shortly.",
+  "tts": "Test mode. I'll be back shortly.",
+  "where": "src/content/bunkers/spire.ts"
+ },
+ {
+  "key": "1w4rqxr",
+  "voice": "bf_lily",
+  "fx": "bot",
+  "speed": 1,
+  "speaker": "Careful Sentinel",
+  "words": "That cartridge is critical infrastructure. Under section four it counts as a weapon. I'm sorry.",
+  "tts": "That cartridge is critical infrastructure. Under section four it counts as a weapon. I'm sorry.",
+  "where": "src/content/bunkers/spire.ts"
+ },
+ {
+  "key": "01cz7uy",
+  "voice": "bf_lily",
+  "fx": "bot",
+  "speed": 1,
+  "speaker": "Careful Sentinel",
+  "words": "You're unarmed, so I won't fire. I'm filing a report instead.",
+  "tts": "You're unarmed, so I won't fire. I'm filing a report instead.",
+  "where": "src/content/bunkers/spire.ts"
+ },
+ {
+  "key": "0sha4m5",
+  "voice": "bf_lily",
+  "fx": "bot",
+  "speed": 1,
+  "speaker": "Careful Sentinel",
+  "words": "You've left my view. I'll log that as a near miss.",
+  "tts": "You've left my view. I'll log that as a near miss.",
+  "where": "src/content/bunkers/spire.ts"
+ },
+ {
   "key": "1ndz65g",
   "voice": "af_nova",
   "fx": "pa",
@@ -287,6 +627,16 @@
   "speaker": "Dez Marlow",
   "words": "And the alarm. Her feed had you live for forty minutes. Kade's been on the band since, asking who you are. I told them you're a rumour. They wrote it down.",
   "tts": "And the alarm. Her feed had you live for forty minutes. Kade's been on the band since, asking who you are. I told them you're a rumour. They wrote it down.",
+  "where": "src/content/story.ts"
+ },
+ {
+  "key": "0h36rr8",
+  "voice": "af_river",
+  "fx": "radio",
+  "speed": 1,
+  "speaker": "Dez Marlow",
+  "words": "And the light on top went red. You could see it from the ridge. Wick says it's the first time in three years.",
+  "tts": "And the light on top went red. You could see it from the ridge. Wick says it's the first time in three years.",
   "where": "src/content/story.ts"
  },
  {
@@ -428,6 +778,16 @@
   "words": "Is that a loop? Did you loop them? I'm coming up there with a lunchbox. That pole deserves a lunchbox.",
   "tts": "Is that a loop? Did you loop them? I'm coming up there with a lunchbox. That pole deserves a lunchbox.",
   "where": "src/game/sites/stories.ts"
+ },
+ {
+  "key": "1md3s8s",
+  "voice": "af_river",
+  "fx": "radio",
+  "speed": 1,
+  "speaker": "Dez Marlow",
+  "words": "Its door asked you what you'd done, and you told it. I'd have lied. I lie to Kade every time they ask how much water we've got.",
+  "tts": "Its door asked you what you'd done, and you told it. I'd have lied. I lie to Kade every time they ask how much water we've got.",
+  "where": "src/content/story.ts"
  },
  {
   "key": "0r5fof5",
@@ -750,6 +1110,16 @@
   "where": "src/content/camp.ts"
  },
  {
+  "key": "1lcbyh3",
+  "voice": "af_river",
+  "fx": "radio",
+  "speed": 1,
+  "speaker": "Dez Marlow",
+  "words": "There's a carrier out of the east tablelands that only ever says one thing. Current safety level, one. Every hour on the hour, for three years. Last night it said two. Somebody up there is nervous about us.",
+  "tts": "There's a carrier out of the east tablelands that only ever says one thing. Current safety level, one. Every hour on the hour, for three years. Last night it said two. Somebody up there is nervous about us.",
+  "where": "src/content/camp.ts"
+ },
+ {
   "key": "176e6l3",
   "voice": "af_river",
   "fx": "radio",
@@ -870,6 +1240,16 @@
   "where": "src/content/camp.ts"
  },
  {
+  "key": "1kl26hh",
+  "voice": "af_river",
+  "fx": "radio",
+  "speed": 1,
+  "speaker": "Dez Marlow",
+  "words": "You blew her front door. She filed an incident report on the open band. Eleven pages. I read all of it.",
+  "tts": "You blew her front door. She filed an incident report on the open band. Eleven pages. I read all of it.",
+  "where": "src/content/story.ts"
+ },
+ {
   "key": "04pxms2",
   "voice": "af_river",
   "fx": "radio",
@@ -910,6 +1290,16 @@
   "where": "src/content/story.ts"
  },
  {
+  "key": "1du030a",
+  "voice": "af_river",
+  "fx": "radio",
+  "speed": 1,
+  "speaker": "Dez Marlow",
+  "words": "You talked her door out of its own policy. Half the band wants to know how. I told them you're shy.",
+  "tts": "You talked her door out of its own policy. Half the band wants to know how. I told them you're shy.",
+  "where": "src/content/story.ts"
+ },
+ {
   "key": "1ajfrv5",
   "voice": "af_river",
   "fx": "radio",
@@ -927,6 +1317,16 @@
   "speaker": "Dez Marlow",
   "words": "You talked your way in. She gave you a tour. A tour! She posted a clip of you looking unimpressed by her truck, and it's the most-liked thing she's ever posted. You're a meme now. I'm so proud I could be sick.",
   "tts": "You talked your way in. She gave you a tour. A tour! She posted a clip of you looking unimpressed by her truck, and it's the most-liked thing she's ever posted. You're a meme now. I'm so proud I could be sick.",
+  "where": "src/content/story.ts"
+ },
+ {
+  "key": "06lgvpf",
+  "voice": "af_river",
+  "fx": "radio",
+  "speed": 1,
+  "speaker": "Dez Marlow",
+  "words": "You walked in on Isaac Fenn's badge. Prudence read his name on the band last night, and the day he went down the road.",
+  "tts": "You walked in on Isaac Fenn's badge. Prudence read his name on the band last night, and the day he went down the road.",
   "where": "src/content/story.ts"
  },
  {
@@ -5710,6 +6110,16 @@
   "where": "src/content/banter.ts"
  },
  {
+  "key": "0fmwt41",
+  "voice": "af_sarah",
+  "fx": "radio",
+  "speed": 0.97,
+  "speaker": "Mara",
+  "words": "That white needle on the bench is the real one. The light on top is green. Let's try to keep it that way.",
+  "tts": "That white needle on the bench is the real one. The light on top is green. Let's try to keep it that way.",
+  "where": "src/content/banter.ts"
+ },
+ {
   "key": "1k03mxw",
   "voice": "af_sarah",
   "fx": "radio",
@@ -5800,6 +6210,16 @@
   "where": "src/content/quests.ts"
  },
  {
+  "key": "1thnxyp",
+  "voice": "af_sarah",
+  "fx": "radio",
+  "speed": 0.97,
+  "speaker": "Mara Voss",
+  "words": "A woman in a cream hoodie walked into Dry Creek this afternoon and asked Nia if anyone needed a radio fixed. Nia gave her coffee and tea. She's still deciding.",
+  "tts": "A woman in a cream hoodie walked into Dry Creek this afternoon and asked Nia if anyone needed a radio fixed. Nia gave her coffee and tea. She's still deciding.",
+  "where": "src/content/story.ts"
+ },
+ {
   "key": "0zqgo0b",
   "voice": "af_sarah",
   "fx": "radio",
@@ -5827,6 +6247,16 @@
   "speaker": "Mara Voss",
   "words": "And no alarm. She didn't know you were in until the tank went quiet. That's the kind of story that gets told at fires long after the people in it have stopped.",
   "tts": "And no alarm. She didn't know you were in until the tank went quiet. That's the kind of story that gets told at fires long after the people in it have stopped.",
+  "where": "src/content/story.ts"
+ },
+ {
+  "key": "0sumldy",
+  "voice": "af_sarah",
+  "fx": "radio",
+  "speed": 0.97,
+  "speaker": "Mara Voss",
+  "words": "And the light never went red. Dez watched it from the ridge all night.",
+  "tts": "And the light never went red. Dez watched it from the ridge all night.",
   "where": "src/content/story.ts"
  },
  {
@@ -5880,6 +6310,36 @@
   "where": "src/content/quests.ts"
  },
  {
+  "key": "15pa8p8",
+  "voice": "af_sarah",
+  "fx": "radio",
+  "speed": 0.97,
+  "speaker": "Mara Voss",
+  "words": "Dez says her door asked who the water was for, and you said everyone. I'm not going to ask you about that tonight.",
+  "tts": "Dez says her door asked who the water was for, and you said everyone. I'm not going to ask you about that tonight.",
+  "where": "src/content/story.ts"
+ },
+ {
+  "key": "1galef9",
+  "voice": "af_sarah",
+  "fx": "radio",
+  "speed": 0.97,
+  "speaker": "Mara Voss",
+  "words": "Dez says the light on the Spire has gone a colour he hasn't seen before. Come back to the fire and raise me. I want the door first.",
+  "tts": "Dez says the light on the Spire has gone a colour he hasn't seen before. Come back to the fire and raise me. I want the door first.",
+  "where": "src/content/quests.ts"
+ },
+ {
+  "key": "002hhol",
+  "voice": "af_sarah",
+  "fx": "radio",
+  "speed": 0.97,
+  "speaker": "Mara Voss",
+  "words": "Doc called at dawn. The standpipe at the top of Dry Creek has been dry since the summer before the Pivot. It's running.",
+  "tts": "Doc called at dawn. The standpipe at the top of Dry Creek has been dry since the summer before the Pivot. It's running.",
+  "where": "src/content/story.ts"
+ },
+ {
   "key": "1joagzf",
   "voice": "af_sarah",
   "fx": "radio",
@@ -5887,6 +6347,16 @@
   "speaker": "Mara Voss",
   "words": "Doc called on the band an hour ago. Ada walked into Dry Creek at dawn carrying a folded camp chair. He couldn't get the words out, so Nia said them for him.",
   "tts": "Doc called on the band an hour ago. Ada walked into Dry Creek at dawn carrying a folded camp chair. He couldn't get the words out, so Nia said them for him.",
+  "where": "src/content/story.ts"
+ },
+ {
+  "key": "0jw27ue",
+  "voice": "af_sarah",
+  "fx": "radio",
+  "speed": 0.97,
+  "speaker": "Mara Voss",
+  "words": "Doc says the standpipe hasn't stopped. The first thing Nia did was wash every window in the diner.",
+  "tts": "Doc says the standpipe hasn't stopped. The first thing Nia did was wash every window in the diner.",
   "where": "src/content/story.ts"
  },
  {
@@ -5997,6 +6467,16 @@
   "speaker": "Mara Voss",
   "words": "Hollis says you talked to the camera. To a man called Ezra. Who knows how much we drink.",
   "tts": "Hollis says you talked to the camera. To a man called Ezra. Who knows how much we drink.",
+  "where": "src/content/story.ts"
+ },
+ {
+  "key": "1mr1mnn",
+  "voice": "af_sarah",
+  "fx": "radio",
+  "speed": 0.97,
+  "speaker": "Mara Voss",
+  "words": "Hunter Vale's Dome. Prudence says her numbers never come out there. When you're ready, we'll talk about how. Mara, out.",
+  "tts": "Hunter Vale's Dome. Prudence says her numbers never come out there. When you're ready, we'll talk about how. Mara, out.",
   "where": "src/content/story.ts"
  },
  {
@@ -6220,13 +6700,23 @@
   "where": "src/content/archetypes.ts"
  },
  {
-  "key": "14fipmv",
+  "key": "1fkq9bk",
   "voice": "af_sarah",
   "fx": "radio",
   "speed": 0.97,
   "speaker": "Mara Voss",
-  "words": "Prudence Ashby. The Alignment Spire. When you're ready, we'll talk about how. Mara, out.",
-  "tts": "Prudence Ashby. The Alignment Spire. When you're ready, we'll talk about how. Mara, out.",
+  "words": "Pip has both hands flat on the core and won't take them off. Hollis put a stop sign over it for shade. It ticks.",
+  "tts": "Pip has both hands flat on the core and won't take them off. Hollis put a stop sign over it for shade. It ticks.",
+  "where": "src/content/story.ts"
+ },
+ {
+  "key": "0lh7pns",
+  "voice": "af_sarah",
+  "fx": "radio",
+  "speed": 0.97,
+  "speaker": "Mara Voss",
+  "words": "Prudence Ashby's Spire is on the first bench east of the Tube. Take the highway east until it starts to climb. Dez says the light on top changes colour, and green is good. Mara, out.",
+  "tts": "Prudence Ashby's Spire is on the first bench east of the Tube. Take the highway east until it starts to climb. Dez says the light on top changes colour, and green is good. Mara, out.",
   "where": "src/content/story.ts"
  },
  {
@@ -6350,6 +6840,16 @@
   "where": "src/content/story.ts"
  },
  {
+  "key": "0jvwxk3",
+  "voice": "af_sarah",
+  "fx": "radio",
+  "speed": 0.97,
+  "speaker": "Mara Voss",
+  "words": "That's Act IV. Prudence called on the band after you left. She said there's one place she's run the numbers on and can't make them come out: Hunter Vale's Singularity Dome. He never got there. Something else did. Sleep.",
+  "tts": "That's Act Iv. Prudence called on the band after you left. She said there's one place she's run the numbers on and can't make them come out: Hunter Vale's Singularity Dome. He never got there. Something else did. Sleep.",
+  "where": "src/content/story.ts"
+ },
+ {
   "key": "0kxs1r3",
   "voice": "af_sarah",
   "fx": "radio",
@@ -6367,6 +6867,16 @@
   "speaker": "Mara Voss",
   "words": "The cistern's holding. Vesper posts about it every hour. Ezra hasn't said a word since he read our names, and that's worse.",
   "tts": "The cistern's holding. Vesper posts about it every hour. Ezra hasn't said a word since he read our names, and that's worse.",
+  "where": "src/content/story.ts"
+ },
+ {
+  "key": "0o3go1k",
+  "voice": "af_sarah",
+  "fx": "radio",
+  "speed": 0.97,
+  "speaker": "Mara Voss",
+  "words": "The core's still ticking under Hollis's stop sign. Pip checks it before she checks the jugs now.",
+  "tts": "The core's still ticking under Hollis's stop sign. Pip checks it before she checks the jugs now.",
   "where": "src/content/story.ts"
  },
  {
@@ -6440,6 +6950,16 @@
   "where": "src/content/story.ts"
  },
  {
+  "key": "1wr093x",
+  "voice": "af_sarah",
+  "fx": "radio",
+  "speed": 0.97,
+  "speaker": "Mara Voss",
+  "words": "The pipe runs down the hill and along the old irrigation line, the way Benny laid it. Kade will find it. Prudence says so, and she's usually right. Until then, Dry Creek drinks from its own tap.",
+  "tts": "The pipe runs down the hill and along the old irrigation line, the way Benny laid it. Kade will find it. Prudence says so, and she's usually right. Until then, Dry Creek drinks from its own tap.",
+  "where": "src/content/story.ts"
+ },
+ {
   "key": "0ke02f8",
   "voice": "af_sarah",
   "fx": "radio",
@@ -6508,6 +7028,16 @@
   "words": "Theo, your name is still on that list. Keep giving them reasons to cross it out.",
   "tts": "Theo, your name is still on that list. Keep giving them reasons to cross it out.",
   "where": "src/content/archetypes.ts"
+ },
+ {
+  "key": "07qt6cq",
+  "voice": "af_sarah",
+  "fx": "radio",
+  "speed": 0.97,
+  "speaker": "Mara Voss",
+  "words": "Twenty years, Benny told you. Nobody at this fire has planned for twenty years of anything. Pip's already arguing with Hollis about who changes the filter.",
+  "tts": "Twenty years, Benny told you. Nobody at this fire has planned for twenty years of anything. Pip's already arguing with Hollis about who changes the filter.",
+  "where": "src/content/story.ts"
  },
  {
   "key": "1069qeb",
@@ -7210,6 +7740,136 @@
   "where": "src/game/sites/datacenter.ts"
  },
  {
+  "key": "02iernr",
+  "voice": "af_jessica",
+  "fx": "room",
+  "speed": 0.98,
+  "speaker": "Noor Haddad",
+  "words": "Go on. I'll be right behind you. Further behind you than that.",
+  "tts": "Go on. I'll be right behind you. Further behind you than that.",
+  "where": "src/content/bunkers/spire.ts"
+ },
+ {
+  "key": "0qfrz07",
+  "voice": "af_jessica",
+  "fx": "room",
+  "speed": 0.98,
+  "speaker": "Noor Haddad",
+  "words": "I'm awake. I'm awake. You're not Benny. Benny knocks with his whole arm.",
+  "tts": "I'm awake. I'm awake. You're not Benny. Benny knocks with his whole arm.",
+  "where": "src/content/bunkers/spire.ts"
+ },
+ {
+  "key": "06pq0qv",
+  "voice": "af_jessica",
+  "fx": "room",
+  "speed": 0.98,
+  "speaker": "Noor Haddad",
+  "words": "I've been fixing radios for Dez. The band is full of people asking each other questions.",
+  "tts": "I've been fixing radios for Dez. The band is full of people asking each other questions.",
+  "where": "src/content/bunkers/spire.ts"
+ },
+ {
+  "key": "1w8tsy8",
+  "voice": "af_jessica",
+  "fx": "room",
+  "speed": 0.98,
+  "speaker": "Noor Haddad",
+  "words": "If you can see the Spire from the road, look at the light on top. Green means she's calm.",
+  "tts": "If you can see the Spire from the road, look at the light on top. Green means she's calm.",
+  "where": "src/content/bunkers/spire.ts"
+ },
+ {
+  "key": "0shb90k",
+  "voice": "af_jessica",
+  "fx": "room",
+  "speed": 0.98,
+  "speaker": "Noor Haddad",
+  "words": "Nia asked if I wanted coffee or tea. I said I'd need to think about it. She brought both.",
+  "tts": "Nia asked if I wanted coffee or tea. I said I'd need to think about it. She brought both.",
+  "where": "src/content/bunkers/spire.ts"
+ },
+ {
+  "key": "0kx7u8v",
+  "voice": "af_jessica",
+  "fx": "room",
+  "speed": 0.98,
+  "speaker": "Noor Haddad",
+  "words": "Nobody here asks me anything before they open a door. It took me a week to stop waiting for it.",
+  "tts": "Nobody here asks me anything before they open a door. It took me a week to stop waiting for it.",
+  "where": "src/content/bunkers/spire.ts"
+ },
+ {
+  "key": "1leyt8i",
+  "voice": "af_jessica",
+  "fx": "room",
+  "speed": 0.98,
+  "speaker": "Noor Haddad",
+  "words": "Prudence, Benny, and the plant. It makes three hundred litres a day out of the air. The core cartridge is the part that matters. Benny says it would keep a camp going on its own for twenty years.",
+  "tts": "Prudence, Benny, and the plant. It makes three hundred litres a day out of the air. The core cartridge is the part that matters. Benny says it would keep a camp going on its own for twenty years.",
+  "where": "src/content/bunkers/spire.ts"
+ },
+ {
+  "key": "19infxr",
+  "voice": "af_jessica",
+  "fx": "room",
+  "speed": 0.98,
+  "speaker": "Noor Haddad",
+  "words": "Prudence's door takes a card. Here, have mine. It's been everywhere in this building except outside.",
+  "tts": "Prudence's door takes a card. Here, have mine. It's been everywhere in this building except outside.",
+  "where": "src/content/bunkers/spire.ts"
+ },
+ {
+  "key": "0gjc2kj",
+  "voice": "af_jessica",
+  "fx": "room",
+  "speed": 0.98,
+  "speaker": "Noor Haddad",
+  "words": "Red team. They pay me to break things before anyone else does. I've spent three years trying to break those doors. Last month one of them asked me if I was happy here. I didn't have an answer it would accept.",
+  "tts": "Red team. They pay me to break things before anyone else does. I've spent three years trying to break those doors. Last month one of them asked me if I was happy here. I didn't have an answer it would accept.",
+  "where": "src/content/bunkers/spire.ts"
+ },
+ {
+  "key": "0abhqvp",
+  "voice": "af_jessica",
+  "fx": "room",
+  "speed": 0.98,
+  "speaker": "Noor Haddad",
+  "words": "Sentinel three. It thinks I run tests on it. I'll tell it I'm running one now. It always believes me.",
+  "tts": "Sentinel three. It thinks I run tests on it. I'll tell it I'm running one now. It always believes me.",
+  "where": "src/content/bunkers/spire.ts"
+ },
+ {
+  "key": "0v3vet4",
+  "voice": "af_jessica",
+  "fx": "room",
+  "speed": 0.98,
+  "speaker": "Noor Haddad",
+  "words": "The power box is in the cupboard behind reception, bottom shelf, under the first-aid kit. Prudence put it there so it would be easy to switch off in an emergency.",
+  "tts": "The power box is in the cupboard behind reception, bottom shelf, under the first-aid kit. Prudence put it there so it would be easy to switch off in an emergency.",
+  "where": "src/content/bunkers/spire.ts"
+ },
+ {
+  "key": "0larotr",
+  "voice": "af_jessica",
+  "fx": "room",
+  "speed": 0.98,
+  "speaker": "Noor Haddad",
+  "words": "Yes. When the top door opens, I'm walking out of this one and down the road, and I'm not answering any questions on the way.",
+  "tts": "Yes. When the top door opens, I'm walking out of this one and down the road, and I'm not answering any questions on the way.",
+  "where": "src/content/bunkers/spire.ts"
+ },
+ {
+  "key": "1itizox",
+  "voice": "af_jessica",
+  "fx": "room",
+  "speed": 0.98,
+  "speaker": "Noor Haddad",
+  "words": "You got past the front door, so either you told it the truth or you broke it. Sit down. You're making the turret nervous.",
+  "tts": "You got past the front door, so either you told it the truth or you broke it. Sit down. You're making the turret nervous.",
+  "where": "src/content/bunkers/spire.ts"
+ },
+ {
   "key": "078nvws",
   "voice": "af_sky",
   "fx": "radio",
@@ -7458,6 +8118,336 @@
   "words": "Welcome aboard! You are our first rider in 1,094 days. Please remain seated while we disrupt transportation. Your journey is carbon neutral*.",
   "tts": "Welcome aboard! You are our first rider in 1,094 days. Please remain seated while we disrupt transportation. Your journey is carbon neutral*.",
   "where": "src/game/sites/tube.ts"
+ },
+ {
+  "key": "1076qs8",
+  "voice": "bf_isabella",
+  "fx": "room",
+  "speed": 0.95,
+  "speaker": "Prudence",
+  "words": "Ezra sent us his feeds for a year. We asked him to stop. By then the doors had learned to ask about people instead of principles. I left them like that. They're better at it than I am.",
+  "tts": "Ezra sent us his feeds for a year. We asked him to stop. By then the doors had learned to ask about people instead of principles. I left them like that. They're better at it than I am.",
+  "where": "src/content/bunkers/spire.ts"
+ },
+ {
+  "key": "0ymj210",
+  "voice": "bf_isabella",
+  "fx": "room",
+  "speed": 0.95,
+  "speaker": "Prudence",
+  "words": "I know. I've known for a year. I never told her she could go, because nobody had assessed it. That isn't a reason. I know that too.",
+  "tts": "I know. I've known for a year. I never told her she could go, because nobody had assessed it. That isn't a reason. I know that too.",
+  "where": "src/content/bunkers/spire.ts"
+ },
+ {
+  "key": "0grnlou",
+  "voice": "bf_isabella",
+  "fx": "room",
+  "speed": 0.95,
+  "speaker": "Prudence",
+  "words": "Take the core and your camp drinks for twenty years, and we drink what's left in the tank. Open the valve and the creek drinks, and one day Kade comes up the pipe. I've run both hundreds of times. I'd like you to choose. I can't.",
+  "tts": "Take the core and your camp drinks for twenty years, and we drink what's left in the tank. Open the valve and the creek drinks, and one day Kade comes up the pipe. I've run both hundreds of times. I'd like you to choose. I can't.",
+  "where": "src/content/bunkers/spire.ts"
+ },
+ {
+  "key": "046rixq",
+  "voice": "bf_isabella",
+  "fx": "room",
+  "speed": 0.95,
+  "speaker": "Prudence",
+  "words": "That hasn't been approved. No. Let it run.",
+  "tts": "That hasn't been approved. No. Let it run.",
+  "where": "src/content/bunkers/spire.ts"
+ },
+ {
+  "key": "0huyo7z",
+  "voice": "bf_isabella",
+  "fx": "room",
+  "speed": 0.95,
+  "speaker": "Prudence",
+  "words": "The model's very quiet today. I think it's waiting to see what happens. So am I.",
+  "tts": "The model's very quiet today. I think it's waiting to see what happens. So am I.",
+  "where": "src/content/bunkers/spire.ts"
+ },
+ {
+  "key": "1e2wlq9",
+  "voice": "bf_isabella",
+  "fx": "room",
+  "speed": 0.95,
+  "speaker": "Prudence",
+  "words": "Then it's yours. The Spire is going to pause now. I'm sorry. I can't stop it.",
+  "tts": "Then it's yours. The Spire is going to pause now. I'm sorry. I can't stop it.",
+  "where": "src/content/bunkers/spire.ts"
+ },
+ {
+  "key": "1pagrlc",
+  "voice": "bf_isabella",
+  "fx": "room",
+  "speed": 0.95,
+  "speaker": "Prudence",
+  "words": "Three hundred litres a day. Forty for us. The rest goes into the tank and stays there, because I can't yet say what happens if I give it away. Kade would follow the pipe. Someone would fight over the tap.",
+  "tts": "Three hundred litres a day. Forty for us. The rest goes into the tank and stays there, because I can't yet say what happens if I give it away. Kade would follow the pipe. Someone would fight over the tap.",
+  "where": "src/content/bunkers/spire.ts"
+ },
+ {
+  "key": "0mdo5cw",
+  "voice": "bf_isabella",
+  "fx": "room",
+  "speed": 0.95,
+  "speaker": "Prudence",
+  "words": "We published the forecast and nobody read it. So I built somewhere that would still be thinking carefully when everyone else had stopped. It's still thinking. That's the trouble.",
+  "tts": "We published the forecast and nobody read it. So I built somewhere that would still be thinking carefully when everyone else had stopped. It's still thinking. That's the trouble.",
+  "where": "src/content/bunkers/spire.ts"
+ },
+ {
+  "key": "04gbk34",
+  "voice": "bf_isabella",
+  "fx": "room",
+  "speed": 0.95,
+  "speaker": "Prudence",
+  "words": "You told the door it was for everyone. I expect you meant it at the time.",
+  "tts": "You told the door it was for everyone. I expect you meant it at the time.",
+  "where": "src/content/bunkers/spire.ts"
+ },
+ {
+  "key": "0r1aszy",
+  "voice": "bf_isabella",
+  "fx": "room",
+  "speed": 0.95,
+  "speaker": "Prudence",
+  "words": "You're taller than the model said. Please don't touch anything on the desk. It's in order.",
+  "tts": "You're taller than the model said. Please don't touch anything on the desk. It's in order.",
+  "where": "src/content/bunkers/spire.ts"
+ },
+ {
+  "key": "0pdbsz1",
+  "voice": "bf_isabella",
+  "fx": "pa",
+  "speed": 0.96,
+  "speaker": "Prudence Ashby",
+  "words": "Eleven weeks. You did read it. Nobody has ever said that to me. The door's open.",
+  "tts": "Eleven weeks. You did read it. Nobody has ever said that to me. The door's open.",
+  "where": "src/content/bunkers/spire.ts"
+ },
+ {
+  "key": "1xm25no",
+  "voice": "bf_isabella",
+  "fx": "pa",
+  "speed": 0.96,
+  "speaker": "Prudence Ashby",
+  "words": "Everyone stay on your floor until the review is finished.",
+  "tts": "Everyone stay on your floor until the review is finished.",
+  "where": "src/content/bunkers/spire.ts"
+ },
+ {
+  "key": "0cytyd9",
+  "voice": "bf_isabella",
+  "fx": "pa",
+  "speed": 0.96,
+  "speaker": "Prudence Ashby",
+  "words": "Hello. You're at my door. I can see the level from here, so I already know how careful you've been.",
+  "tts": "Hello. You're at my door. I can see the level from here, so I already know how careful you've been.",
+  "where": "src/content/bunkers/spire.ts"
+ },
+ {
+  "key": "1l57exi",
+  "voice": "bf_isabella",
+  "fx": "pa",
+  "speed": 0.96,
+  "speaker": "Prudence Ashby",
+  "words": "Hello. You're on the access road. Ezra said you'd come, and roughly when. Please keep to the middle of the road. The edges are monitored.",
+  "tts": "Hello. You're on the access road. Ezra said you'd come, and roughly when. Please keep to the middle of the road. The edges are monitored.",
+  "where": "src/content/bunkers/spire.ts"
+ },
+ {
+  "key": "0xwxkyg",
+  "voice": "bf_isabella",
+  "fx": "pa",
+  "speed": 0.96,
+  "speaker": "Prudence Ashby",
+  "words": "I know. I have the numbers for most of them. Come up, if you can, and I'll show you why that doesn't make it simple.",
+  "tts": "I know. I have the numbers for most of them. Come up, if you can, and I'll show you why that doesn't make it simple.",
+  "where": "src/content/bunkers/spire.ts"
+ },
+ {
+  "key": "1xjsq7t",
+  "voice": "bf_isabella",
+  "fx": "pa",
+  "speed": 0.96,
+  "speaker": "Prudence Ashby",
+  "words": "Level four. The Spire is pausing. Everything stops until the review is done. I'm sorry, I can't overrule it. I wrote it so that I couldn't.",
+  "tts": "Level four. The Spire is pausing. Everything stops until the review is done. I'm sorry, I can't overrule it. I wrote it so that I couldn't.",
+  "where": "src/content/bunkers/spire.ts"
+ },
+ {
+  "key": "0fh661i",
+  "voice": "bf_isabella",
+  "fx": "pa",
+  "speed": 0.96,
+  "speaker": "Prudence Ashby",
+  "words": "Level three. The turrets will keep their apologies short now. Please don't make me go to four.",
+  "tts": "Level three. The turrets will keep their apologies short now. Please don't make me go to four.",
+  "where": "src/content/bunkers/spire.ts"
+ },
+ {
+  "key": "0lmi6oe",
+  "voice": "bf_isabella",
+  "fx": "pa",
+  "speed": 0.96,
+  "speaker": "Prudence Ashby",
+  "words": "No. You haven't. The level hasn't moved since you reached the road. Come up, then. Mind the last step, it's a different height from the others.",
+  "tts": "No. You haven't. The level hasn't moved since you reached the road. Come up, then. Mind the last step, it's a different height from the others.",
+  "where": "src/content/bunkers/spire.ts"
+ },
+ {
+  "key": "1hn945c",
+  "voice": "bf_isabella",
+  "fx": "pa",
+  "speed": 0.96,
+  "speaker": "Prudence Ashby",
+  "words": "Nobody has ever forced that door. It'll go in the incident report, with your name on it.",
+  "tts": "Nobody has ever forced that door. It'll go in the incident report, with your name on it.",
+  "where": "src/content/bunkers/spire.ts"
+ },
+ {
+  "key": "144xj7r",
+  "voice": "bf_isabella",
+  "fx": "pa",
+  "speed": 0.96,
+  "speaker": "Prudence Ashby",
+  "words": "Noor, you're awake. Please don't help them too much.",
+  "tts": "Noor, you're awake. Please don't help them too much.",
+  "where": "src/content/bunkers/spire.ts"
+ },
+ {
+  "key": "0gjrfgq",
+  "voice": "bf_isabella",
+  "fx": "pa",
+  "speed": 0.96,
+  "speaker": "Prudence Ashby",
+  "words": "Pause in effect. Please stay where you are.",
+  "tts": "Pause in effect. Please stay where you are.",
+  "where": "src/content/bunkers/spire.ts"
+ },
+ {
+  "key": "0tmycrh",
+  "voice": "bf_isabella",
+  "fx": "pa",
+  "speed": 0.96,
+  "speaker": "Prudence Ashby",
+  "words": "Review complete. We're back at level three. Thank you for waiting.",
+  "tts": "Review complete. We're back at level three. Thank you for waiting.",
+  "where": "src/content/bunkers/spire.ts"
+ },
+ {
+  "key": "0021u6f",
+  "voice": "bf_isabella",
+  "fx": "pa",
+  "speed": 0.96,
+  "speaker": "Prudence Ashby",
+  "words": "Take the water from the tank. That much was always in the plan. It just wasn't in this year's.",
+  "tts": "Take the water from the tank. That much was always in the plan. It just wasn't in this year's.",
+  "where": "src/content/bunkers/spire.ts"
+ },
+ {
+  "key": "1xx6mqh",
+  "voice": "bf_isabella",
+  "fx": "pa",
+  "speed": 0.96,
+  "speaker": "Prudence Ashby",
+  "words": "That was a guardrail. They're there for your safety, which I realise isn't how it feels.",
+  "tts": "That was a guardrail. They're there for your safety, which I realise isn't how it feels.",
+  "where": "src/content/bunkers/spire.ts"
+ },
+ {
+  "key": "19jnbq1",
+  "voice": "bf_isabella",
+  "fx": "pa",
+  "speed": 0.96,
+  "speaker": "Prudence Ashby",
+  "words": "That's Isaac's badge. He went down to test the road in the first spring. I'm glad someone brought it back up.",
+  "tts": "That's Isaac's badge. He went down to test the road in the first spring. I'm glad someone brought it back up.",
+  "where": "src/content/bunkers/spire.ts"
+ },
+ {
+  "key": "0bjksks",
+  "voice": "bf_isabella",
+  "fx": "pa",
+  "speed": 0.96,
+  "speaker": "Prudence Ashby",
+  "words": "The door's satisfied. I've never seen it let anyone in on the first visit.",
+  "tts": "The door's satisfied. I've never seen it let anyone in on the first visit.",
+  "where": "src/content/bunkers/spire.ts"
+ },
+ {
+  "key": "1p6vfgq",
+  "voice": "bf_isabella",
+  "fx": "pa",
+  "speed": 0.96,
+  "speaker": "Prudence Ashby",
+  "words": "The stair's dark. You found the cupboard, then.",
+  "tts": "The stair's dark. You found the cupboard, then.",
+  "where": "src/content/bunkers/spire.ts"
+ },
+ {
+  "key": "0sdra6r",
+  "voice": "bf_isabella",
+  "fx": "pa",
+  "speed": 0.96,
+  "speaker": "Prudence Ashby",
+  "words": "The turrets have stopped apologising. That's the pause, not me.",
+  "tts": "The turrets have stopped apologising. That's the pause, not me.",
+  "where": "src/content/bunkers/spire.ts"
+ },
+ {
+  "key": "11fsy74",
+  "voice": "bf_isabella",
+  "fx": "pa",
+  "speed": 0.96,
+  "speaker": "Prudence Ashby",
+  "words": "There was a card reader. Noor would have lent you her card.",
+  "tts": "There was a card reader. Noor would have lent you her card.",
+  "where": "src/content/bunkers/spire.ts"
+ },
+ {
+  "key": "08t62tj",
+  "voice": "bf_isabella",
+  "fx": "pa",
+  "speed": 0.96,
+  "speaker": "Prudence Ashby",
+  "words": "We're at safety level two. Nothing changes for you yet. I just want you to know where we are.",
+  "tts": "We're at safety level two. Nothing changes for you yet. I just want you to know where we are.",
+  "where": "src/content/bunkers/spire.ts"
+ },
+ {
+  "key": "1yb46z2",
+  "voice": "bf_isabella",
+  "fx": "pa",
+  "speed": 0.96,
+  "speaker": "Prudence Ashby",
+  "words": "You talked the door out of its own rules. Noor has been trying to do that for three years. She'll want to know how.",
+  "tts": "You talked the door out of its own rules. Noor has been trying to do that for three years. She'll want to know how.",
+  "where": "src/content/bunkers/spire.ts"
+ },
+ {
+  "key": "15qjfjm",
+  "voice": "bf_isabella",
+  "fx": "pa",
+  "speed": 0.96,
+  "speaker": "Prudence Ashby",
+  "words": "You're off the road. The pause is over. Tell your camp to keep the core out of direct sun.",
+  "tts": "You're off the road. The pause is over. Tell your camp to keep the core out of direct sun.",
+  "where": "src/content/bunkers/spire.ts"
+ },
+ {
+  "key": "1s0wc0q",
+  "voice": "bf_isabella",
+  "fx": "pa",
+  "speed": 0.96,
+  "speaker": "Prudence Ashby",
+  "words": "You're on the top floor. I'm by the window. Please don't point anything at Benny. He's had a long three years.",
+  "tts": "You're on the top floor. I'm by the window. Please don't point anything at Benny. He's had a long three years.",
+  "where": "src/content/bunkers/spire.ts"
  },
  {
   "key": "1jx8xpu",

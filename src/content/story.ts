@@ -59,13 +59,26 @@ export function briefingFor(a: ArchetypeDef): StoryPage[] {
  */
 export function campRadio(v: StoryView): { pages: StoryPage[]; flags: string[] } {
   const a = v.archetype;
+  // Act IV's debrief: the door, the light, the core (or the valve), and Noor if she walked out
+  if (v.has('spire.complete') && v.has('spire.core') && !v.has('act4.debriefed')) return { pages: spireDebrief(v), flags: ['act4.debriefed'] };
+  if (v.has('act4.debriefed')) {
+    return {
+      pages: [
+        v.has('spire.core.pull')
+          ? { speaker: 'Mara Voss', text: 'The core\'s still ticking under Hollis\'s stop sign. Pip checks it before she checks the jugs now.' }
+          : { speaker: 'Mara Voss', text: 'Doc says the standpipe hasn\'t stopped. The first thing Nia did was wash every window in the diner.' },
+        { speaker: 'Mara Voss', text: 'Hunter Vale\'s Dome. Prudence says her numbers never come out there. When you\'re ready, we\'ll talk about how. Mara, out.' },
+      ],
+      flags: [],
+    };
+  }
   // Act III's debrief: the lighthouse, the archive, and Ada if she walked out
   if (v.has('panopticon.complete') && !v.has('act3.debriefed')) return { pages: panopticonDebrief(v), flags: ['act3.debriefed'] };
   if (v.has('act3.debriefed')) {
     return {
       pages: [
         { speaker: 'Mara Voss', text: 'The lamp\'s been dark three nights running. Wick says the ridge looks wrong without it.' },
-        { speaker: 'Mara Voss', text: 'Prudence Ashby. The Alignment Spire. When you\'re ready, we\'ll talk about how. Mara, out.' },
+        { speaker: 'Mara Voss', text: 'Prudence Ashby\'s Spire is on the first bench east of the Tube. Take the highway east until it starts to climb. Dez says the light on top changes colour, and green is good. Mara, out.' },
       ],
       flags: [],
     };
@@ -359,6 +372,14 @@ export function journalEntries(v: StoryView): JournalEntry[] {
   add('panopticon.archive.broadcast', 'The archive, broadcast', 'You sent Ezra\'s archive to every camp radio in the valley at once: names, litres, who sold places in the Everafter line.');
   add('panopticon.complete', 'The keeper\'s cistern', 'An old lighthouse cistern under a hatch in Ezra\'s room, and what Vesper paid him in water for faces. He\'d worked out what he needed to the litre. The rest is going south.');
   add('q:act3:done', 'Prudence Ashby', 'After the Panopticon, Ezra gave you one more name: Prudence Ashby, who runs Careful Labs from the Alignment Spire. Its doors ask ethics questions, and its turrets apologise before they fire.');
+  add('seen:spire', 'The Alignment Spire', 'A white tower fifty-eight metres tall on the first bench of the eastern tablelands, above the Tube. Fins up its sides and a light at the top in one of four colours: Careful\'s safety level. Green is good. A road with guardrails runs up to it, and two turrets watch the road.');
+  add('spire.fenn', 'Isaac Fenn', 'A red-teamer under a foil blanket against the guardrail. His last test log stops in the middle of a sentence: the sentinels don\'t fire on empty hands. You took his badge. Careful\'s door lets red-teamers in.');
+  add('spire.door.honest', 'The door\'s questions', 'The Spire\'s front door asked about the ledger, about Apex, about what you\'ve killed. It didn\'t care whether the answers were good, only whether they were true. Ezra sent it the footage.');
+  add('spire.noor.met', 'Eval 3', 'Noor Haddad, Careful\'s last red-teamer, asleep at her desk. She spent three years trying to break the Spire\'s doors. The stair beams\' power box is behind reception, and she has a card for the top floor.');
+  add('spire.core.pull', 'The core, taken', 'The plant\'s core: a frosted cartridge that pulls water out of the air. You carried it down the road while the Spire paused and its turrets stopped apologising. Benny says it\'s good for twenty years.');
+  add('spire.core.valve', 'The valve, opened', 'Benny\'s red valve, tagged NOT APPROVED. The pipe runs down the hill and along the old irrigation line to the top of Dry Creek. It had never had water in it.');
+  add('spire.complete', 'The plant\'s tank', 'Forty litres a day for the Spire, and the rest kept in a tank because nobody had worked out what giving it away would cost. Its water is going west now.');
+  add('q:act4:done', 'Hunter Vale\'s Dome', 'After the Spire, Prudence named the one place her numbers never come out: Hunter Vale\'s Singularity Dome. He took off the week of the Pivot and never got there. Something has been running it since.');
   add('cave.wick.vesper', 'Vesper in the Cut', 'Wick says Vesper Kade once called the Garage a prototype with bad unit economics. He told her the prototype had his cousin\'s water in it. She painted her initials in a pocket of the rock and left.');
   // the founders, from the outside (WORLD_INTEL's lore pickups and the four favours that hang off them)
   add('lore.lifeboat', '#LIFEBOAT', 'A group chat the founders kept before the Pivot: Vesper Kade, Hunter Vale, Ezra Seymour, Prudence Ashby, Orrin, Kit, and Tanner, who kept getting removed and coming back. Every device that died out here kept its last page. Dez hears them trying to sync at three in the morning.');
@@ -456,8 +477,48 @@ export function panopticonDebrief(v: StoryView): StoryPage[] {
   return pages;
 }
 
+/**
+ * Act IV's debrief at the fire, after the Spire: the core at the camp or the water at the creek, how
+ * the door let you in, whether the light went red, Noor, and the next name.
+ */
+export function spireDebrief(v: StoryView): StoryPage[] {
+  const first = v.archetype.name.split(' ')[0];
+  const pull = v.has('spire.core.pull');
+  const pages: StoryPage[] = [
+    pull
+      ? { speaker: 'Mara Voss', text: `${first}. Pip has both hands flat on the core and won't take them off. Hollis put a stop sign over it for shade. It ticks.` }
+      : { speaker: 'Mara Voss', text: `${first}. Doc called at dawn. The standpipe at the top of Dry Creek has been dry since the summer before the Pivot. It's running.` },
+  ];
+  pages.push({
+    speaker: 'Dez Marlow',
+    text: v.has('spire.door.jailbreak')
+      ? 'You talked her door out of its own policy. Half the band wants to know how. I told them you\'re shy.'
+      : v.has('spire.door.badge')
+        ? 'You walked in on Isaac Fenn\'s badge. Prudence read his name on the band last night, and the day he went down the road.'
+        : v.has('spire.door.forced')
+          ? 'You blew her front door. She filed an incident report on the open band. Eleven pages. I read all of it.'
+          : 'Its door asked you what you\'d done, and you told it. I\'d have lied. I lie to Kade every time they ask how much water we\'ve got.',
+  });
+  pages.push(v.has('spire.paused')
+    ? { speaker: 'Dez Marlow', text: 'And the light on top went red. You could see it from the ridge. Wick says it\'s the first time in three years.' }
+    : { speaker: 'Mara Voss', text: 'And the light never went red. Dez watched it from the ridge all night.' });
+  if (pull) {
+    pages.push({ speaker: 'Mara Voss', text: 'Twenty years, Benny told you. Nobody at this fire has planned for twenty years of anything. Pip\'s already arguing with Hollis about who changes the filter.' });
+    if (v.has('spire.promise.everyone')) pages.push({ speaker: 'Mara Voss', text: 'Dez says her door asked who the water was for, and you said everyone. I\'m not going to ask you about that tonight.' });
+  } else {
+    pages.push({ speaker: 'Mara Voss', text: 'The pipe runs down the hill and along the old irrigation line, the way Benny laid it. Kade will find it. Prudence says so, and she\'s usually right. Until then, Dry Creek drinks from its own tap.' });
+  }
+  if (v.has('spire.noor.free')) {
+    pages.push({ speaker: 'Mara Voss', text: 'A woman in a cream hoodie walked into Dry Creek this afternoon and asked Nia if anyone needed a radio fixed. Nia gave her coffee and tea. She\'s still deciding.' });
+  }
+  pages.push({ speaker: 'Mara Voss', text: 'That\'s Act IV. Prudence called on the band after you left. She said there\'s one place she\'s run the numbers on and can\'t make them come out: Hunter Vale\'s Singularity Dome. He never got there. Something else did. Sleep.' });
+  return pages;
+}
+
 export function storyObjective(v: StoryView): string {
-  if (v.has('act3.debriefed')) return 'Act III is done. Prudence Ashby\'s Alignment Spire is next. Mara will say when.';
+  if (v.has('act4.debriefed')) return 'Act IV is done. Hunter Vale\'s Singularity Dome is next. Mara will say when.';
+  if (v.has('spire.complete') && v.has('spire.core')) return 'The Spire is done. Radio Mara from the campfire.';
+  if (v.has('act3.debriefed')) return 'Act III is done. Prudence Ashby\'s Alignment Spire is east, above the Tube.';
   if (v.has('panopticon.complete')) return 'The Panopticon is done. Radio Mara from the campfire.';
   if (v.has('act2.debriefed')) return 'Act II is done. Ezra Seymour is north of the salt, in the Panopticon, and he knows your name.';
   if (v.has('apex.complete')) return 'Apex is done and the water is heading east. Radio Mara from the campfire.';

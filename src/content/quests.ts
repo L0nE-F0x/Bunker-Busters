@@ -253,6 +253,59 @@ export const QUESTS: QuestDef[] = [
     },
   },
 
+  {
+    id: 'act4',
+    kind: 'main',
+    title: 'Act IV · The Alignment Spire',
+    giver: 'mara',
+    where: 'East, above the Tube',
+    blurb:
+      'Prudence Ashby runs Careful Labs from a white tower on the first bench of the eastern tablelands. Her team modelled the grid\'s collapse to the week, published it, and nobody read it. Ezra said she\'d be expecting you. Mara wants to know why a building that makes water out of air has never given any of it away.',
+    start: (v) => v.has('act3.debriefed'),
+    steps: [
+      {
+        id: 'road', text: 'Reach the Alignment Spire, above the Tube', at: 'spire',
+        hint: 'Take the highway east until it climbs into the tablelands. A road with guardrails leaves it on the right, up to a white tower.',
+        done: (v) => any(v, 'seen:spire', 'spire.door.open', 'spire.complete'),
+      },
+      {
+        id: 'fenn', text: 'Find out what happened to Isaac Fenn', optional: true, at: 'spire',
+        hint: 'A third of the way up the road, against the west guardrail, under a foil blanket.',
+        done: (v) => v.has('spire.fenn'),
+      },
+      {
+        id: 'door', text: 'Get past the ethics door', at: 'spire',
+        hint: 'Under the canopy at the top of the road. It asks about things you\'ve done: answer truthfully. Or SPLICE a jailbreak (Electronics 4), show it a red-teamer\'s badge, or blow it (Demolition 5). Crouch over the red beams on the way up. With your weapon away, the sentinels won\'t fire.',
+        done: (v) => any(v, 'spire.door.open', 'spire.office.open', 'spire.complete'),
+      },
+      {
+        id: 'noor', text: 'Wake the red-teamer on the eval floor', optional: true, at: 'spire',
+        hint: 'Up the first stair, in the glass room marked Eval 3. Knock.',
+        done: (v) => v.has('spire.noor.met'),
+      },
+      {
+        id: 'up', text: 'Get to the top floor', at: 'spire',
+        hint: 'Up the second stair, beside the first. Prudence\'s door takes a card (Noor has one), or SPLICE the reader (Electronics 4), or press the call button and talk to her.',
+        done: (v) => any(v, 'spire.office.open', 'spire.complete'),
+      },
+      {
+        id: 'core', text: 'Decide what happens to the core', at: 'spire',
+        hint: 'At the plant along the north wall of the top floor. Pull the core and carry it home, or open the red valve and send the water down Benny\'s pipe to Dry Creek.',
+        done: (v) => v.has('spire.core'),
+      },
+      {
+        id: 'loot', text: 'Take the water', at: 'spire',
+        hint: 'On the top floor: the plant\'s tank, Prudence\'s supply cabinet and Benny\'s bench. The water comes with you even if your pack is full.',
+        done: (v) => v.has('spire.complete'),
+      },
+    ],
+    reward: { xp: 600, items: [{ id: 'water', qty: 4 }, { id: 'emp', qty: 1 }, { id: 'medkit', qty: 2 }], rep: { compact: 2, mara: 1, noor: 1 } },
+    wrap: {
+      speaker: 'Mara Voss',
+      text: 'Dez says the light on the Spire has gone a colour he hasn\'t seen before. Come back to the fire and raise me. I want the door first.',
+    },
+  },
+
   // ------------------------------------------------------------------ Dry Creek
   {
     id: 'nia.short',

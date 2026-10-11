@@ -718,7 +718,7 @@ export class UI implements UIBridge {
                   <div class="cat">${sel.category}</div><h4>${esc(sel.name)}</h4>
                   <p>${esc(proseKeys(sel.description))}</p>${itemStatus(sel.id, s) ? `<p class="gear-status">${esc(itemStatus(sel.id, s))}</p>` : ''}${sel.flavor ? `<p class="flavor">${esc(sel.flavor)}</p>` : ''}
                   <div class="stats"><span>WT ${sel.weight}kg</span><span>VALUE ${sel.value}</span><span>×${s.count(sel.id)}</span></div>
-                  <div class="rowbtns">${sel.usable ? `<button class="btn use">${USE_LABEL[sel.id] ?? 'Use'}</button>` : sel.category === 'weapon' ? '<button class="btn use">Equip</button>' : ''}<button class="btn drop">Drop 1</button><button class="btn drop-all">Drop stack</button></div>` : '<p>Nothing in your pockets yet.</p>'}
+                  <div class="rowbtns">${sel.usable ? `<button class="btn use">${USE_LABEL[sel.id] ?? 'Use'}</button>` : sel.category === 'weapon' ? '<button class="btn use">Equip</button>' : ''}${sel.keep ? '' : '<button class="btn drop">Drop 1</button><button class="btn drop-all">Drop stack</button>'}</div>` : '<p>Nothing in your pockets yet.</p>'}
                 </div>
                 <div class="kit-build">
                   <div class="label">Build · ${d.skillPoints} point${d.skillPoints === 1 ? '' : 's'} to spend</div>

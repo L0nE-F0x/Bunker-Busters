@@ -372,6 +372,8 @@ export const POSES: Record<string, { r: HandPose; l: HandPose; items?: { r?: str
   // binoculars at the eyes: both hands up and in, just under the frame (the view is the eyepieces)
   binos: { r: P(0.07, -0.2, -0.2, 0.9, 0.3, -1.3, 0.7, 0.65, 0.6), l: P(0.07, -0.2, -0.2, 0.9, 0.3, -1.3, 0.7, 0.65, 0.6) },
   eat: { r: P(0.03, -0.14, -0.26, 0.6, 0.75, -1.25, 0.75, 0.55, 0.5), l: READY, items: { r: 'ration' } },
+  // carrying the Spire's core: both hands under and round a cartridge held low in front
+  carry: { r: P(0.15, -0.255, -0.44, 0.35, 0.1, -1.4, 0.7, 0.5, 0.35), l: P(0.15, -0.255, -0.44, 0.35, 0.1, -1.4, 0.7, 0.5, 0.35), items: { r: 'core' } },
   // character select: kneeling at the fire. One hand shows the gear, the other warms at the flames.
   showcaseEmp: {
     r: P(0.11, -0.115, -0.38, 0.15, 0.4, -1.3, 0.78, 0.65, 0.6),
@@ -680,6 +682,22 @@ function buildItems(look: HandLook) {
   torch.rotation.set(-Math.PI / 2, 0, 0);
   torch.position.set(0, 0.004, 0.02);
   torch.userData.lens = lensG.intensity;
+  // the Spire's core: a frosted steel cartridge with the water light inside, carried in both hands
+  const core = g('core');
+  const shell = new THREE.Mesh(new RoundedBoxGeometry(0.28, 0.18, 0.34, 3, 0.02), hardMat('#c9d6d8', 0.3, 0.6));
+  const window = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.002, 0.24), hardMat('#e8f4f4', 0.15, 0.1));
+  window.position.set(0, 0.091, 0);
+  const coreGlow = glow('#7ff0ff', 2.2);
+  const inner = new THREE.Mesh(new THREE.BoxGeometry(0.17, 0.002, 0.2), coreGlow.material);
+  inner.position.set(0, 0.092, 0);
+  const bandA = new THREE.Mesh(new THREE.BoxGeometry(0.29, 0.19, 0.04), steelMat('#8f979c', 0.35));
+  bandA.position.z = 0.13;
+  const bandB = bandA.clone();
+  bandB.position.z = -0.13;
+  core.add(shell, window, inner, bandA, bandB);
+  core.position.set(0, -0.27, -0.47);
+  core.rotation.set(0.25, 0, 0);
+  core.userData.glow = coreGlow.intensity;
   for (const it of Object.values(items)) it.traverse((o) => { if ((o as THREE.Mesh).isMesh) { o.castShadow = false; o.receiveShadow = true; } });
   if (!NO_HAND_BAKE) for (const it of Object.values(items)) bakeParts(it, false);
   return items;
@@ -717,6 +735,10 @@ export class Hands {
   readonly left: HandRig;
   private items: Record<string, THREE.Group>;
   private base = 'idle';
+  /** The resting pose (`setBase`). */
+  get basePose() {
+    return this.base;
+  }
   private action: Action | null = null;
   private sway = new THREE.Vector2();
   private swayVel = new THREE.Vector2();
@@ -881,7 +903,8 @@ export class Hands {
     for (const [name, obj] of Object.entries(this.items)) {
       const hand = want.r === name ? this.right : want.l === name ? this.left : null;
       if (!hand) { obj.removeFromParent(); continue; }
-      const anchor = name === 'pick' || name === 'wrench' ? hand.pinch : hand.grip;
+      // (the core is held in both hands: it sits in view space between them, not in one fist)
+      const anchor = name === 'core' ? this.root : name === 'pick' || name === 'wrench' ? hand.pinch : hand.grip;
       if (obj.parent !== anchor) anchor.add(obj);
     }
 

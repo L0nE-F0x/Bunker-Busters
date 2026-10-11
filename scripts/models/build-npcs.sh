@@ -13,6 +13,7 @@ A=Assets/Meshy_AI_
 DC=${A}DryCreek_
 CP=${A}Camp_
 PN=${A}Panopticon_
+SP=${A}Spire_
 build() { local id=$1; shift; node scripts/models/build-glb.mjs "public/models/$id.glb" "$@" --size 1024; }
 
 ids=("$@")
@@ -71,4 +72,21 @@ on rev2 && build rev2 ${PN}Reviewer2_Rigged.glb \
   --clips ${PN}Ada_Animations.glb:Chair_Sit_Idle_F=idle \
   --clips ${DC}Sol_Animations.glb:Sitting_Answering_Questions=near \
   --mirror ${PN}Ada_Animations.glb:Chair_Sit_Idle_F=idle_m
+
+# --- the Alignment Spire: Prudence on her feet in the top room, Noor asleep at her eval desk (`sleep`;
+# she wakes, sits up, and later walks out; afterwards she sits at Nia's counter in Dry Creek), Benny standing at his plant. Prudence's headache and Noor's
+# sleep and waking are their own clips; the rest are borrowed (Sol, Doc, Nia, Ada)
+on prudence && build prudence ${SP}Prudence_Rigged.glb \
+  --clips ${DC}Sol_Animations.glb:Idle=idle,Talk_with_Hands_Open=near,Listening_Gesture=near2 \
+  --clips ${SP}Prudence_Animations.glb:Headache_Relief=ins_head \
+  --clips ${DC}Nia_Animations.glb:Stand_and_Chat=ins_chat \
+  --mirror ${DC}Sol_Animations.glb:Idle=idle_m
+on noor && build noor ${SP}Noor_Rigged.glb \
+  --clips ${SP}Noor_Animations.glb:Sleep_on_Desk=sleep,Wake_Up_and_Look_Up=wake \
+  --clips ${PN}Ada_Animations.glb:Chair_Sit_Idle_F=idle,Sit_to_Stand_Transition_F=stand \
+  --clips ${DC}Sol_Animations.glb:Sitting_Answering_Questions=near \
+  --clips ${SP}Noor_Walking_Basic.glb:walking_man=walk
+on benny && build benny ${SP}Benny_Rigged.glb \
+  --clips ${DC}Doc_Animations.glb:Idle=idle,Talk_with_Right_Hand_Open=near,Listening_Gesture=near2,Shrug=ins_shrug \
+  --mirror ${DC}Doc_Animations.glb:Idle=idle_m
 true

@@ -68,6 +68,8 @@ WORLD.push(
   ['place-longshot', free([100, 3, -262], [132, 3, -302], 50, 17.3)],
   // the Panopticon at dusk from the valley, the lamp's beam out over the cliff
   ['place-panopticon', free([-283, 2, -296], [-297, 16, -350], 50, 18.9)],
+  // the Alignment Spire from the flats west of its bench, the low sun on its face
+  ['place-spire', free([322, 2.5, 34], [378, 26, 2], 46, 17.55)],
   // Photon Park's panel rows at sunset, low along a row
   ['place-solar', free([-178, 1.7, 296], [-212, 1.2, 316], 48, 17.6)],
 );

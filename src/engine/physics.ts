@@ -43,6 +43,12 @@ export class Physics {
     return this.world.createCollider(desc);
   }
 
+  /** Static box with any orientation (`q` a unit quaternion): ramps under stairs. */
+  addBoxRot(pos: { x: number; y: number; z: number }, half: { x: number; y: number; z: number }, q: { x: number; y: number; z: number; w: number }) {
+    const desc = this.R.ColliderDesc.cuboid(half.x, half.y, half.z).setTranslation(pos.x, pos.y, pos.z).setRotation({ x: q.x, y: q.y, z: q.z, w: q.w });
+    return this.world.createCollider(desc);
+  }
+
   addCylinder(pos: { x: number; y: number; z: number }, halfHeight: number, radius: number) {
     const desc = this.R.ColliderDesc.cylinder(halfHeight, radius).setTranslation(pos.x, pos.y, pos.z);
     return this.world.createCollider(desc);

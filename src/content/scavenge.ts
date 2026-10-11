@@ -23,7 +23,7 @@ export const CACHES: CacheDef[] = [
   { id: 'c.gas-n', kind: 'crate', at: [-120, 260], label: 'Pry open the Kade crate' },
   { id: 'c.cut-e', kind: 'pack', at: [100, 300], label: 'Search the traveller\'s pack' },
   { id: 'c.spire-ne', kind: 'can', at: [230, 262], label: 'Open the ammo can' },
-  { id: 'c.tube-w', kind: 'locker', at: [380, 20], label: 'Open the footlocker' },
+  { id: 'c.tube-w', kind: 'locker', at: [336, 34], label: 'Open the footlocker' },
   { id: 'c.garage-se', kind: 'crate', at: [170, -228], label: 'Pry open the Kade crate' },
   { id: 'c.drivein-s', kind: 'pack', at: [20, -250], label: 'Search the traveller\'s pack' },
   { id: 'c.wash', kind: 'can', at: [-120, -230], label: 'Open the ammo can' },

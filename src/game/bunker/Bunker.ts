@@ -507,6 +507,7 @@ export abstract class Bunker<S extends BunkerShell = BunkerShell> {
       const box = new THREE.Box3(pos.clone().sub(half), pos.clone().add(half)).expandByVector(new THREE.Vector3(...pad));
       return { box, open: () => door.open > 0.005 || door.target > 0 };
     });
+    portals.push(...(this.b.portals ?? []).map((p) => ({ box: p.box, open: p.open ?? (() => true) })));
     return (this._interior = new Interior(this.id, new THREE.Matrix4(),
       (this.b.contains ? (p: THREE.Vector3) => this.b.contains!(p) : null) ?? ((p: THREE.Vector3) => p.x > hb.min.x + 0.05 && p.x < hb.max.x - 0.05 && p.z > hb.min.z + 0.05 && p.z < hb.max.z - 0.05 && p.y < hb.max.y),
       portals,

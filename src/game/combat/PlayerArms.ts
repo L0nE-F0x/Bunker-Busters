@@ -36,6 +36,8 @@ const _UP = new THREE.Vector3(0, 1, 0);
 
 export class PlayerArms {
   equipped: WeaponId | null = null;
+  /** Both hands are on something (the Spire's core): nothing comes out. */
+  handsFull = false;
   private last: WeaponId | null = null;
   private cooldown = 0;
   private bloom = 0;
@@ -104,6 +106,7 @@ export class PlayerArms {
 
   equip(id: WeaponId | null, instant = false) {
     if (id && !this.owned(id)) return;
+    if (id && this.handsFull) return;
     if (id === this.equipped) return;
     if (this.equipped) this.last = this.equipped;
     this.equipped = id;
@@ -172,6 +175,11 @@ export class PlayerArms {
     this.takedownTarget = !blocked && w ? this.findTakedown() : null;
 
     if (blocked) { this.reloadTick(dt, true); return { wantAds: false }; }
+    if (this.handsFull) {
+      if (this.equipped) this.equip(null);
+      this.reloadTick(dt, true);
+      return { wantAds: false };
+    }
 
     // weapon selection
     if (input.actPressed('lastWeapon')) this.equip(this.last && this.owned(this.last) ? this.last : WEAPON_ORDER.find((x) => this.owned(x) && x !== this.equipped) ?? null);
