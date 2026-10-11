@@ -65,14 +65,20 @@ export class SnakeSkins {
         pos.set([x, y, z], j * 3);
         nrm.set([N.getX(i), N.getY(i), N.getZ(i)], j * 3);
         if (UV) uv.set([UV.getX(i), UV.getY(i)], j * 2);
-        // which segment it lies along; blend into the one in front over the first half of each
+        // which segment it lies along, blending half-and-half at every joint into the neighbour
+        // on that side (front half into the one ahead, back half into the one behind), and from the
+        // first segment into the head over 6 cm. (Blending only forward left a 0.5 jump in weight at
+        // each joint: the skin tore at any bend, and the rearing head came off the neck.)
         let a = 0, b = 0, wa = 1, wb = 0;
-        if (z > 0.005) a = SEGS; // the head
+        const HB = 0.03;
+        if (z > HB) a = SEGS; // the head
+        else if (z > -HB) { a = SEGS; b = 0; wa = (z + HB) / (2 * HB); wb = 1 - wa; }
         else {
           const u = Math.min(SEGS - 0.001, -z / SEG_L);
           const k = Math.floor(u), f = u - k;
           a = k;
           if (f < 0.5 && k > 0) { b = k - 1; wa = 0.5 + f; wb = 0.5 - f; }
+          else if (f >= 0.5 && k < SEGS - 1) { b = k + 1; wa = 1.5 - f; wb = f - 0.5; }
         }
         si.set([c * NB + a, c * NB + b, 0, 0], j * 4);
         sw.set([wa, wb, 0, 0], j * 4);

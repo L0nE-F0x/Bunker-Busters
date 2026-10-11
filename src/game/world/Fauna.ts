@@ -253,6 +253,17 @@ class Body {
     Body._e.set(pitch, yaw, roll);
     this.root.compose(pos, Body._q.setFromEuler(Body._e), V(scale, scale, scale));
   }
+  /** Lying on the ground at `pos`: tilted to the terrain's slope there, then turned to `yaw` about it, and rolled `roll` about its own length. */
+  placeOn(hf: Heightfield, pos: THREE.Vector3, yaw: number, roll = 0, scale = 1) {
+    const n = hf.normalAt(pos.x, pos.z, Body._n);
+    Body._q.setFromUnitVectors(Body._up, Body._nv.set(n.x, n.y, n.z));
+    Body._e.set(0, yaw, roll, 'YXZ');
+    this.root.compose(pos, Body._q.multiply(Body._q2.setFromEuler(Body._e)), V(scale, scale, scale));
+  }
+  private static _n = { x: 0, y: 1, z: 0 };
+  private static _nv = new THREE.Vector3();
+  private static _up = new THREE.Vector3(0, 1, 0);
+  private static _q2 = new THREE.Quaternion();
   /** A Meshy model draws this creature (creatureSkins.ts): solve the part matrices, draw nothing. */
   ghost = false;
   private collapsed = false;
@@ -1060,19 +1071,27 @@ class Snake implements Hostile {
     const rear = st === 'rattle' ? 1 : st === 'strike' ? 1 : 0;
     const strike = st === 'strike' ? Math.sin(Math.min(1, this.t / 0.2) * Math.PI) : 0;
     const dead = st === 'dead';
-    this.b.place(V(this.pos.x, this.pos.y + 0.022, this.pos.z), this.yaw, 0, dead ? 2.6 : 0, 1);
+    // The chain hangs from the head, so rearing lifts the head (the root) and angles the neck down to
+    // the ground over three segments, the head held level; striking, it lunges forward and down.
+    // (Pitching the first segment up instead swung the whole body down into the ground behind it.)
+    const lift = rear * 0.15 * (1 - strike * 0.7), drop = Math.asin(Math.min(0.9, lift / 0.33));
+    const fx = Math.sin(this.yaw) * strike * 0.22, fz = Math.cos(this.yaw) * strike * 0.22;
+    // (on the slope it lies on, or the tail sinks downhill and floats uphill)
+    this.b.placeOn(c.hf, V(this.pos.x + fx, this.pos.y + 0.022 + lift, this.pos.z + fz), this.yaw, dead ? 2.6 : 0, 1);
     this.center.copy(this.pos).setY(this.pos.y + (rear ? 0.18 : 0.05));
     segs.forEach((sg, k) => {
       let yaw: number, pitch = 0;
       if (dead) { yaw = Math.sin(k * 0.9) * 0.25; }
       else if (coil) {
-        // a spiral: the tail wraps round, the neck makes an S and rears
-        yaw = k < 3 ? (k === 0 ? 0 : 0.9) : 0.85 + k * 0.02;
-        if (k < 3) { pitch = -rear * (k === 0 ? 0.5 : 0.35) + strike * (k === 0 ? 0.6 : 0.4); yaw = k === 0 ? -0.6 + strike * 0.6 : 0.9 - strike * 0.6; }
+        // a resting curl: the body sweeps round behind the head (~210°, loose enough that the rings
+        // don't lie through each other: the skinned model squashed into a lump at 0.85 rad a
+        // segment), the neck in an S
+        yaw = k < 3 ? (k === 0 ? -0.6 + strike * 0.6 : 0.9 - strike * 0.6) : 0.62 - (k - 3) * 0.03;
+        pitch = k === 0 ? -drop : k === 3 ? drop : 0;
       } else yaw = Math.sin(this.t * 6 - k * 0.8) * 0.5;
-      this.b.pose(sg, k === 0 ? pitch : pitch, k === 0 ? 0 : yaw, 0);
+      this.b.pose(sg, pitch, k === 0 ? 0 : yaw, 0);
     });
-    this.b.pose(head, -rear * 0.3 + strike * 0.2, 0, 0);
+    this.b.pose(head, drop * 0.9 - strike * 0.25, 0, 0);
     void c;
   }
 }
@@ -1149,7 +1168,7 @@ class Scorpion implements Hostile {
     }
     this.pos.y = c.hf.heightAt(this.pos.x, this.pos.z);
     const dead = this.state === 'dead';
-    this.b.place(this.pos, this.yaw, 0, dead ? Math.PI : 0, 1.8);
+    this.b.placeOn(c.hf, this.pos, this.yaw, dead ? Math.PI : 0, 1.8);
     this.center.copy(this.pos).setY(this.pos.y + 0.06);
     const sting = this.state === 'sting' ? Math.sin(Math.min(1, this.t / 0.25) * Math.PI) : 0;
     this.rig.tail.forEach((tl, k) => this.b.pose(tl, -0.55 - k * 0.12 - sting * 0.25, 0, 0));
