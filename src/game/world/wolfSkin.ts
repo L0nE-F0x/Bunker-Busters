@@ -125,6 +125,7 @@ interface Slot {
 const _q = new THREE.Quaternion(), _pq = new THREE.Quaternion(), _bq = new THREE.Quaternion();
 const _lat = new THREE.Vector3(), _up = new THREE.Vector3(), _fwd = new THREE.Vector3();
 const _cq = new THREE.Quaternion(), _cp = new THREE.Vector3(), _m = new THREE.Matrix4(), _mq = new THREE.Quaternion();
+const _pen: number[] = [];
 const _sole = new THREE.Vector3(), _gait: Gait = { td: [0, 0, 0, 0], duty: 0, scale: 1, flex: 0 };
 const _dy = [0, 0, 0, 0], _dx = [0, 0, 0, 0], _dz = [0, 0, 0, 0], _tLeg = [0, 0, 0, 0], _uLeg = [0, 0, 0, 0];
 
@@ -486,6 +487,32 @@ export class WolfSkins {
     if (B.tailstart) {
       this.turn(B.tailstart, lat, 0.3 * D.buckle); // (+ drops it)
       this.turn(B.tailstart, fwd, drop * 0.35 * D.relax);
+    }
+    // going down and lying there, it rests on the ground rather than in it: a spread of the mesh's
+    // vertices against the terrain, the body lifted by the deepest few (a stray paw tip may still
+    // touch). The death pose alone sank 8% of the carcass > 5 cm (17-20% on a 20° slope).
+    if (D.topple > 0.25) this.rest(s, p);
+  }
+
+  /** Lift a lying body out of the ground (see the dying pose). */
+  private rest(s: Slot, p: WolfPose) {
+    const mesh = s.skinned[0];
+    if (!mesh) return;
+    const gy = p.ground ?? ((_x: number, _z: number) => p.pos.y);
+    const n = mesh.geometry.attributes.position.count;
+    mesh.skeleton.update();
+    const pen: number[] = _pen;
+    pen.length = 0;
+    for (let i = 0; i < n; i += 61) {
+      mesh.getVertexPosition(i, _cp);
+      _cp.applyMatrix4(mesh.matrixWorld);
+      pen.push(gy(_cp.x, _cp.z) - _cp.y);
+    }
+    pen.sort((a, b) => b - a);
+    const deep = pen[Math.floor(pen.length * 0.04)] ?? 0;
+    if (deep > 0.005) {
+      s.root.position.y += deep;
+      s.root.updateMatrixWorld(true);
     }
   }
 
