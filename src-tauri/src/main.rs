@@ -7,8 +7,40 @@
 mod rawmouse;
 mod update;
 
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Duration;
 use tauri::Manager;
+
+static QUITTING: AtomicBool = AtomicBool::new(false);
+
+/// Quit without the web process's GL teardown. On Linux with NVIDIA's driver (610.57, Oct 2026),
+/// WebKitWebProcess segfaults inside libnvidia-eglcore while it tears down its EGL context after
+/// the window goes (every quit left a ~300 MB core dump). So: let the game save (`__bbQuit`, the
+/// same save as `pagehide`), give WebKit a moment to hand the write to its storage process, then
+/// end the web process outright (a kill: no teardown runs) and exit. NOTES 2026-10-12.
+fn quit(app: &tauri::AppHandle) {
+    if QUITTING.swap(true, Ordering::SeqCst) {
+        return;
+    }
+    let Some(win) = app.get_webview_window("main") else {
+        app.exit(0);
+        return;
+    };
+    let _ = win.eval("window.__bbQuit && window.__bbQuit()");
+    let app = app.clone();
+    std::thread::spawn(move || {
+        std::thread::sleep(Duration::from_millis(400));
+        #[cfg(target_os = "linux")]
+        if let Some(win) = app.get_webview_window("main") {
+            let _ = win.with_webview(|wv| {
+                use webkit2gtk::WebViewExt;
+                wv.inner().terminate_web_process();
+            });
+            std::thread::sleep(Duration::from_millis(150));
+        }
+        app.exit(0);
+    });
+}
 
 /// Linux hybrid-graphics laptops (Intel/AMD iGPU drives the screen, NVIDIA dGPU idle): route this
 /// app — and only this app — onto the NVIDIA card. Must run before GTK/EGL initialise.
@@ -78,6 +110,12 @@ fn main() {
             #[cfg(target_os = "linux")]
             rawmouse::mouse_capture
         ])
+        .on_window_event(|window, event| {
+            if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+                api.prevent_close();
+                quit(window.app_handle());
+            }
+        })
         .setup(|app| {
             let win = app
                 .get_webview_window("main")
@@ -115,7 +153,7 @@ fn main() {
                 let secs: u64 = secs.parse().unwrap_or(10);
                 std::thread::spawn(move || {
                     std::thread::sleep(Duration::from_secs(secs));
-                    handle.exit(0);
+                    quit(&handle);
                 });
             }
             Ok(())
