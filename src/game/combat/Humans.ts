@@ -5,6 +5,7 @@ import { rimColor, rimStrength } from '../world/materials';
 import type { Physics } from '@/engine/physics';
 import type { Heightfield } from '../world/Heightfield';
 import type { HumanSkins } from './humanSkin';
+import { GaitState, type ContractorGait, type Loco } from './humanGait';
 import { viewCull } from '../world/kit';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -396,6 +397,13 @@ export class Human {
     m.compose(_plp, _plq, this.plS);
   }
   private phase = Math.random() * 6;
+  /** The Meshy legs' clips (set by the crowd when the model loaded) and this person's clock on them. */
+  gait: ContractorGait | null = null;
+  readonly gs = new GaitState();
+  /** This frame's locomotion on the clips (null standing, or without them): the model's legs play it, the body rides it. */
+  loco: Loco | null = null;
+  /** 0..1: relaxed and walking, the gun hangs in the right hand and the left arm swings free. */
+  private carryK = 0;
   /** Standing still, a person still breathes and shifts their weight: their own clock and tempo. */
   private idleT = Math.random() * 100;
   private idleW = 0.8 + Math.random() * 0.4;
@@ -469,11 +477,12 @@ export class Human {
   /** Place every bone for this frame. */
   update(dt: number, hf: Heightfield) {
     if (!this.active) return;
-    if (this.ragdoll) { this.ragdoll.sync(this.mats); if (this.platesOff >= 0) this.placePlates(dt); this.updateDerived(); return; }
+    if (this.ragdoll) { this.loco = null; this.ragdoll.sync(this.mats); if (this.platesOff >= 0) this.placePlates(dt); this.updateDerived(); return; }
     const L = this.look_;
     const H = L.height;
     const gy = this.floor ?? hf.heightAt(this.pos.x, this.pos.z);
     this.pos.y = gy;
+    if (!this.lastPos) this.gs.fresh = true;
     if (this.lastPos && dt > 0) {
       const dx = this.pos.x - this.lastPos.x, dz = this.pos.z - this.lastPos.z;
       // (a jump — a perch, a respawn — isn't walking)
@@ -489,6 +498,10 @@ export class Human {
     // dying on its feet: the arms go slack, the knees go, it folds forward (then the ragdoll)
     const dying = this.dyingT >= 0 ? THREE.MathUtils.smoothstep(this.dyingT / this.dyingDur, 0, 1) : 0;
     if (this.dyingT >= 0) this.dyingT += dt;
+    // the clips' clock (the model's legs play it; the pelvis, chest and gun ride it below)
+    const Lo = (this.loco = this.gait ? this.gait.locomote(this.gs, this, dt) : null);
+    const gw = Lo ? Lo.w : 0;
+    const G = this.gait;
     const wantAim = this.pose === 'aim' && this.dyingT < 0 ? 1 : 0;
     this.surK += ((this.pose === 'surrender' && this.dyingT < 0 ? 1 : 0) - this.surK) * Math.min(1, dt * 4);
     const wantReady = this.dyingT < 0 && (this.pose === 'aim' || this.pose === 'ready' || this.pose === 'reload' || this.pose === 'throw') ? 1 : 0;
@@ -520,6 +533,24 @@ export class Human {
     // pelvis
     const pelvis = J.pelvis.copy(this.pos).addScaledVector(UP, (0.95 - cr * 0.36) * H - bob).addScaledVector(f, cr * 0.06 + run * 0.04);
     pelvis.addScaledVector(left, Math.sin(ph) * 0.02 * walk);
+    // the gait cycle (0 = left heel strike) and, walking on the clips, how the body moves off its
+    // mean over the cycle (world, m): the pelvis goes where the clip's hips go (their bob, sway and
+    // surge), so the chest, the gun and the model's shoulders ride the same steps as its legs
+    const cyc = Lo ? Lo.ph : (ph - Math.PI / 2) / (Math.PI * 2);
+    const dev = _dev.set(0, 0, 0);
+    let hipYaw = 0;
+    if (Lo && G) {
+      const hx = G.mix(Lo, (c) => c.hips, 3, 0), hy = G.mix(Lo, (c) => c.hips, 3, 1), hz = G.mix(Lo, (c) => c.hips, 3, 2);
+      const mean = G.hipsMean(Lo, _hm);
+      const sy = Math.sin(Lo.yaw), cy = Math.cos(Lo.yaw);
+      // (model space → world: turned to the legs' heading; the model's hips sit (hipsH − 0.95)·H above the procedural pelvis)
+      const cp = _cp.set(hx * cy + hz * sy, 0, -hx * sy + hz * cy).multiplyScalar(H).add(this.pos);
+      cp.y = this.pos.y + (hy - (G.hipsH - 0.95)) * H - Math.max(0, cr - this.crouchS) * 0.36 * H;
+      pelvis.lerp(cp, gw);
+      const dx = hx - mean.x, dz = hz - mean.z;
+      dev.set(dx * cy + dz * sy, hy - mean.y, -dx * sy + dz * cy).multiplyScalar(H * gw);
+      hipYaw = G.mix(Lo, (c) => c.hipsYaw, 1, 0) * gw;
+    }
     // standing still: the weight drifts from foot to foot (less while aiming), the chest breathes
     this.idleT += dt * this.idleW;
     const still = (1 - THREE.MathUtils.smoothstep(sp, 0.05, 0.4)) * (this.dyingT < 0 ? 1 : 0);
@@ -531,11 +562,14 @@ export class Human {
     // an arm hit wrenches that shoulder back (round from the front) or forward (from behind)
     const front = -(hd.x * f.x + hd.z * f.z) > 0 ? 1 : -1;
     const twist = THREE.MathUtils.clamp(angDiff(this.yaw, this.aimYaw), -0.9, 0.9) * (0.4 + this.readyK * 0.5)
-      + hr * hs * front * (hz === 'arm' ? 0.5 : hz === 'body' ? 0.12 : 0) - cw * 0.25;
+      + hr * hs * front * (hz === 'arm' ? 0.5 : hz === 'body' ? 0.12 : 0) - cw * 0.25
+      // walking, the chest turns against the pelvis (less with the gun shouldered)
+      - hipYaw * (0.55 - 0.3 * this.aimK);
     const chestYaw = this.yaw + twist;
     const cf = _cf.set(Math.sin(chestYaw), 0, Math.cos(chestYaw));
     const cl = _cl.set(cf.z, 0, -cf.x);
-    const lean = 0.06 + run * 0.25 + cr * 0.32 + this.aimK * 0.08 - (this.pose === 'sit' ? 0 : 0);
+    const runL = Lo ? Math.max(run, Lo.run * gw) : run;
+    const lean = 0.06 + runL * 0.27 + cr * 0.32 + this.aimK * 0.08;
     const torsoUp = _tu.copy(UP).multiplyScalar(Math.cos(lean)).addScaledVector(cf, Math.sin(lean));
     torsoUp.addScaledVector(cf, -breath).normalize();
     // flinch: knocked back from the hit
@@ -600,6 +634,28 @@ export class Human {
       const rdyP = _c.copy(chestBase).addScaledVector(UP, 0.22).addScaledVector(cf, 0.26).addScaledVector(cl, -0.1);
       wPos.copy(relP).lerp(rdyP, this.readyK).lerp(aimP, this.aimK);
     }
+    // walking: the arms take up some of the body's bob and sway (most with the gun shouldered), and
+    // a gun held ready nods with the footfalls and drifts with the stride
+    wPos.addScaledVector(dev, -(0.55 * this.aimK + 0.3 * this.readyK * (1 - this.aimK)));
+    if (gw > 0) {
+      const free = 1 - this.aimK;
+      wDir.addScaledVector(UP, Math.sin(TAU * (cyc * 2 - 0.1)) * 0.025 * gw * free).addScaledVector(cl, Math.sin(TAU * cyc) * 0.03 * gw * free).normalize();
+    }
+    // standing, the muzzle drifts a little with the breath and the weight shift (held still on the aim)
+    if (still > 0) wDir.addScaledVector(cl, Math.sin(this.idleT * 0.61) * 0.018 * still * (1 - 0.8 * this.aimK)).addScaledVector(UP, breath * 0.8 * (1 - this.aimK)).normalize();
+    // relaxed on the move: the gun hangs in the right hand, muzzle down, swinging a little with the
+    // arm (it's slung); the left arm swings free, against the left leg
+    const carryWant = this.readyK < 0.5 && this.reloadT <= 0 && this.pose !== 'radio' && this.surK < 0.01 && dying <= 0 && !this.dropped ? gw * (1 - this.readyK * 2) : 0;
+    this.carryK += (carryWant - this.carryK) * Math.min(1, dt * 4);
+    const ck = this.carryK;
+    const swing = Lo ? Math.min(1, 0.45 + 0.55 * Lo.k) * (1 - Lo.crouch * 0.6) : walk;
+    const armR = Math.cos(TAU * (cyc - 0.04)) * swing, armL = -armR;
+    if (ck > 0.001) {
+      const cP = _cp.copy(pelvis).addScaledVector(cl, -(pistol ? 0.23 : 0.2) * L.build).addScaledVector(UP, pistol ? -0.11 : -0.06).addScaledVector(cf, 0.06 + armR * 0.05);
+      const cD = _cd.copy(cf).multiplyScalar((pistol ? 0.5 : 0.8) - armR * 0.12).addScaledVector(UP, -0.9).addScaledVector(cl, pistol ? 0 : 0.1).normalize();
+      wPos.lerp(cP, ck);
+      wDir.lerp(cD, ck).normalize();
+    }
     // recoil: the gun bucks back and up
     wPos.addScaledVector(wDir, -this.recoil * 0.05);
     wDir.addScaledVector(UP, this.recoil * 0.12).normalize();
@@ -614,6 +670,8 @@ export class Human {
     }
     // weapon up vector: mostly world up, rolled a touch when relaxed
     const wUp = _wu.copy(UP).addScaledVector(cl, (1 - this.readyK) * 0.4).normalize();
+    // (hanging, the sights face forward)
+    if (ck > 0.001) wUp.lerp(_c.copy(cf).addScaledVector(wDir, -cf.dot(wDir)).normalize(), ck).normalize();
     frameTo(this.mats[BONE.weapon], wPos, wUp, _tmp.copy(wDir).negate(), 1);
     // surrendering: the gun goes down in the dirt in front of it, on its side
     if (this.pose === 'surrender' && !this.dropped) {
@@ -634,6 +692,8 @@ export class Human {
       const pouch = _c.copy(pelvis).addScaledVector(cl, 0.16).addScaledVector(cf, 0.1).addScaledVector(UP, 0.02);
       fore = _b.lerp(pouch, Math.min(1, reload * 1.6));
     }
+    // (carrying, the free hand swings by the left thigh, a little up as it comes forward)
+    if (ck > 0.001) fore = _b.lerp(_c.copy(pelvis).addScaledVector(cl, 0.22 * L.build).addScaledVector(UP, -0.1 + 0.06 * Math.max(0, armL) + 0.015 * armL * armL).addScaledVector(cf, 0.03 + armL * 0.18), ck);
     if (this.pose === 'radio') fore = _b.copy(neck).addScaledVector(cl, 0.08).addScaledVector(cf, 0.06).addScaledVector(UP, -0.02);
     // dying from a body wound, the free hand goes to it
     if (dying > 0 && hz === 'body' && !pistol) fore = _b.lerp(_c.copy(chestBase).addScaledVector(torsoUp, 0.2 * H).addScaledVector(cf, 0.17).addScaledVector(cl, 0.04), Math.min(1, dying * 1.6));
@@ -643,10 +703,11 @@ export class Human {
     let cradle = 1 - Math.min(1, reload * 1.6);
     if (this.pose === 'radio') cradle = 0;
     if (dying > 0 && hz === 'body' && !pistol) cradle *= 1 - Math.min(1, dying * 1.6);
+    cradle *= 1 - ck;
     // unarmed (it gave up): the hands hang at its sides when they aren't up
     if (this.dropped) {
-      grip.copy(pelvis).addScaledVector(cl, -0.24 * L.build).addScaledVector(UP, -0.12).addScaledVector(cf, 0.04 + Math.sin(ph) * 0.12 * walk);
-      fore = _b.copy(pelvis).addScaledVector(cl, 0.24 * L.build).addScaledVector(UP, -0.12).addScaledVector(cf, 0.04 - Math.sin(ph) * 0.12 * walk);
+      grip.copy(pelvis).addScaledVector(cl, -0.24 * L.build).addScaledVector(UP, -0.12 + 0.03 * armR * armR).addScaledVector(cf, 0.04 + armR * 0.14 * walk);
+      fore = _b.copy(pelvis).addScaledVector(cl, 0.24 * L.build).addScaledVector(UP, -0.12 + 0.03 * armL * armL).addScaledVector(cf, 0.04 + armL * 0.14 * walk);
       cradle = 0;
     }
     // hands up, open, either side of the hat
@@ -707,6 +768,8 @@ const _pole = new THREE.Vector3(), _toe = new THREE.Vector3(), _ad = new THREE.V
 const _wd = new THREE.Vector3(), _wp = new THREE.Vector3(), _wu = new THREE.Vector3(), _a = new THREE.Vector3(), _b = new THREE.Vector3(), _c = new THREE.Vector3();
 const _h1 = new THREE.Vector3(), _h2 = new THREE.Vector3(), _hc = new THREE.Vector3(), _hs = new THREE.Vector3();
 const _plm = new THREE.Matrix4(), _plp = new THREE.Vector3(), _plq = new THREE.Quaternion();
+const _dev = new THREE.Vector3(), _hm = new THREE.Vector3(), _cp = new THREE.Vector3(), _cd = new THREE.Vector3();
+const TAU = Math.PI * 2;
 
 /** Every contractor's body in one skinned mesh. `slots` people max; looks are fixed per slot. */
 export class HumanCrowd {
@@ -728,7 +791,9 @@ export class HumanCrowd {
         bs.push(bone);
         bones.push(bone);
       }
-      this.people.push(new Human(i, L, bs));
+      const h = new Human(i, L, bs);
+      h.gait = skins?.gait ?? null;
+      this.people.push(h);
     });
     const g = new THREE.BufferGeometry();
     g.setAttribute('position', new THREE.Float32BufferAttribute(sink.pos, 3));

@@ -143,6 +143,11 @@ const BUILDERS: Record<string, () => THREE.Object3D> = {
       looks[3] = { ...base };
     }
     const c = new HumanCrowd(looks, humanSkins);
+    // &gaitlog: the measured clips (stride, pace, hips bob/sway/yaw ranges)
+    if (qs.has('gaitlog') && humanSkins?.gait) for (const [n, g] of Object.entries(humanSkins.gait.clips)) {
+      const r = (a: Float32Array, w: number, j: number) => { const v = Array.from({ length: a.length / w }, (_, k) => a[k * w + j]); return `${(Math.min(...v) * 100).toFixed(1)}..${(Math.max(...v) * 100).toFixed(1)}`; };
+      console.log(`[lab] ${n}: ${g.dur.toFixed(2)} s, stride ${g.stride.toFixed(2)} m, ${g.speed.toFixed(2)} m/s; hips x ${r(g.hips, 3, 0)} y ${r(g.hips, 3, 1)} z ${r(g.hips, 3, 2)} cm, yaw ${r(g.hipsYaw.map((y) => y * 180 / Math.PI / 100), 1, 0)}°`);
+    }
     c.lineup(new THREE.Vector3(0, 0, 0), hf);
     const pose = qs.get('pose');
     // &ay=0.6&ap=-0.3: aim this far off straight ahead (yaw, pitch; radians)
