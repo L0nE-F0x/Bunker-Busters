@@ -107,6 +107,8 @@ class Sentry implements Hostile {
   readonly breaker: Interactable;
   /** Tiny parts (status LED, sensor eye): sub-pixel past ~100 m, a draw each (Machines.update). */
   readonly detail: THREE.Object3D[] = [];
+  /** Past the detail range (Machines.update): the laser isn't drawn either. */
+  distant = false;
 
   constructor(private host: MachineHost, readonly outpost: string, at: THREE.Vector3, readonly baseYaw: number) {
     this.yaw = baseYaw;
@@ -144,7 +146,9 @@ class Sentry implements Hostile {
     const lg = new THREE.PlaneGeometry(1, 0.02).translate(0.5, 0, 0).rotateY(-Math.PI / 2);
     this.laser = new THREE.Mesh(lg, laserMaterial());
     this.laser.position.set(0, 0.03, 0.31);
-    this.laser.frustumCulled = false;
+    // culled like anything else: its unit-length bounds scale with the beam (scale.z = its length),
+    // so the sphere covers the whole beam; unculled, both quads drew behind the camera too
+    lg.computeBoundingSphere();
     const lg2 = this.laser.clone();
     lg2.rotation.z = Math.PI / 2;
     this.laser.add(lg2);
@@ -242,6 +246,8 @@ class Sentry implements Hostile {
     return this.host.combat.clearLine(_b.copy(this.pivot).setY(this.pivot.y + 0.05), T.chest, T.collider);
   }
 
+  hideLaser() { this.laser.visible = false; }
+
   update(dt: number) {
     if (!this.group.visible) return;
     const host = this.host;
@@ -322,8 +328,9 @@ class Sentry implements Hostile {
     (this.eye.color.value as THREE.Color).set(eyeCol);
     this.eye.intensity.value = eyeK;
     // laser length: to whatever it points at
-    this.laser.visible = laser > 0;
-    if (laser > 0) {
+    // (a 2 cm beam is a tenth of a pixel wide past ~100 m, where the eye and LED are hidden: 2 draws)
+    this.laser.visible = laser > 0 && !this.distant;
+    if (this.laser.visible) {
       this.head.updateMatrixWorld();
       const from = _a.set(0, 0.03, 0.31).applyMatrix4(this.head.matrixWorld);
       const dir = _b.set(0, 0, 1).transformDirection(this.head.matrixWorld);
@@ -807,7 +814,9 @@ export class Machines implements HostileProvider {
       const d = cam.distanceTo(s.center);
       s.group.visible = d < 190;
       detailAt(s.detail, d);
+      s.distant = !s.detail[0].visible;
       if (awake) s.update(dt);
+      else if (s.distant) s.hideLaser();
     }
     for (const h of this.hornets) {
       const awake = this.host.awake(h.outpost);

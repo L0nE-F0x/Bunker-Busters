@@ -2055,6 +2055,8 @@ export class Game {
       if (ip.shadow !== cast) { ip.shadow = cast; for (const m of ip.casters) m.castShadow = cast; }
       ip.prop.glint.t.value = ((this.t / 3.2 + ip.phase) % 1);
       ip.prop.glint.k.value = d > 70 ? 0 : Math.min(1, 1.6 - d / 45) * (this.atmo.isNight ? 1.4 : 1);
+      // a glint at strength 0 still cost its draw (every pickup from 70 to 170 m)
+      ip.prop.glint.sprite.visible = show && d <= 70;
       if (ip.prop.blink) ip.prop.blink.value = (this.t % 1.4) < 0.5 ? 8 : 0.2;
     }
     // gameplay-driven post
