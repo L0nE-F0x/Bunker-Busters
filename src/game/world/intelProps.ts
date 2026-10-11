@@ -17,7 +17,7 @@ import { loreMaterial, loreScreen, loreQuad } from './loreAtlas';
 export interface IntelProp {
   group: THREE.Group;
   /** Twinkle phase/strength (the glint sprite's uniforms). */
-  glint: { t: { value: number }; k: { value: number } };
+  glint: { t: { value: number }; k: { value: number }; sprite: THREE.Sprite };
   /** Blinking parts (the call box's message light). */
   blink?: { value: number };
 }
@@ -179,7 +179,7 @@ export function buildIntelProp(id: string, opts: { crate?: boolean; prop?: strin
   const gl = glintSprite();
   gl.sprite.position.copy(glintAt);
   g.add(gl.sprite);
-  return { group: g, glint: { t: gl.t, k: gl.k }, blink };
+  return { group: g, glint: { t: gl.t, k: gl.k, sprite: gl.sprite }, blink };
 }
 
 // ------------------------------------------------------------------ lore pickups (content/world.ts `prop`)

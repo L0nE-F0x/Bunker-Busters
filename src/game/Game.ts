@@ -29,7 +29,7 @@ import { updateRim, glow, desertRock } from './world/materials';
 import { buildIntelProp, type IntelProp } from './world/intelProps';
 import { Scavenge } from './world/Scavenge';
 import { NpcModels } from './world/npcSkin';
-import { updateShownMatrices, viewCull } from './world/kit';
+import { updateShownMatrices, viewCull, mergeStatic, shadowProxy } from './world/kit';
 import { NpcCrowd } from './world/npc';
 import { routineOpen } from '@/content/routines';
 import { HumanSkins } from './combat/humanSkin';
@@ -423,6 +423,13 @@ export class Game {
     if (SKIP.has('sky')) this.scene.remove(this.atmo.sky);
     if (SKIP.has('shadows')) this.renderer.shadowMap.enabled = false;
     if (SKIP.has('fog')) this.scene.fogNode = null;
+    // the map-wide batches (wrecks, poles + road furniture, billboard frames, wires, stashes) draw the
+    // same shared family materials: merged, that's one draw per family instead of one per batch
+    if (this.props.group.parent === this.scene) {
+      const inUse = new Set<THREE.Material>();
+      this.scene.traverse((o) => { const m = (o as THREE.Mesh).material; if (m && !Array.isArray(m)) inUse.add(m); });
+      mergeStatic(this.props.group, [this.props.group, this.scavenge.group], inUse);
+    }
     await step(0.8, 'Compiling shaders');
     this.post = new PostFX(this.renderer, this.scene, this.camera, this.atmo.sun, this.quality);
     // Three walks the whole graph (~1,600 objects, ~600 of them bones, over half of it hidden) on
@@ -747,6 +754,9 @@ export class Game {
       const g = prop.group;
       g.position.set(x, y, z);
       g.rotation.y = ((Math.sin(x * 12.9898 + z * 78.233) * 43758.5453) % 1) * Math.PI * 2;
+      // its 3-5 casters through one depth draw (a proxy per cull side) while it casts (< 28 m)
+      g.updateMatrixWorld(true);
+      shadowProxy(g);
       const casters: THREE.Mesh[] = [];
       g.traverse((o) => { if ((o as THREE.Mesh).isMesh && o.castShadow) casters.push(o as THREE.Mesh); });
       this.intelProps.push({ g, prop, phase: Math.abs(x * 0.37 + z * 0.11) % 1, casters, shadow: true });
@@ -2048,6 +2058,8 @@ export class Game {
       if (ip.shadow !== cast) { ip.shadow = cast; for (const m of ip.casters) m.castShadow = cast; }
       ip.prop.glint.t.value = ((this.t / 3.2 + ip.phase) % 1);
       ip.prop.glint.k.value = d > 70 ? 0 : Math.min(1, 1.6 - d / 45) * (this.atmo.isNight ? 1.4 : 1);
+      // a glint at strength 0 still cost its draw (every pickup from 70 to 170 m)
+      ip.prop.glint.sprite.visible = show && d <= 70;
       if (ip.prop.blink) ip.prop.blink.value = (this.t % 1.4) < 0.5 ? 8 : 0.2;
     }
     // gameplay-driven post

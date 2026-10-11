@@ -30,6 +30,7 @@ const shots = opt('shots', null);
 const GL = flag('gl');
 const GPU = flag('gpu'); // GPU ms per frame (EXT_disjoint_timer_query_webgl2 around the whole frame)
 const EVAL = opt('eval', null); // JS run once after load (A/B toggles: quality, skips)
+const BY = +opt('by', 0); // --by N: also print the N objects with the most draws per frame (name path, main+shadow)
 if (shots) fs.mkdirSync(shots, { recursive: true });
 
 // Each spot: JS run in the page (game = window.game). Teleport, then aim on the next frame.
@@ -107,6 +108,12 @@ await p.evaluate(() => {
       const idx = geo.index; const pos = geo.attributes?.position;
       const n = ro.object.isInstancedMesh ? ro.object.count : 1;
       s.cur.tris += ((idx ? idx.count : pos ? pos.count : 0) / 3) * n;
+      if (s.by) {
+        const names = []; let o = ro.object;
+        while (o && names.length < 3) { if (o.name) names.push(o.name); o = o.parent; }
+        const k = `${names.join(' < ') || ro.object.type}${m && m.isShadowPassMaterial ? ' [shadow]' : ''}`;
+        s.by.set(k, (s.by.get(k) || 0) + 1);
+      }
     }
     return draw(ro, info);
   };
@@ -161,7 +168,7 @@ for (const name of spotsArg) {
     ${setup} })()`);
   await p.waitForTimeout(SETTLE);
   const prog0 = await p.evaluate(() => window.__probe.programs);
-  await p.evaluate(() => { window.__s.frames = []; window.__s.on = true; });
+  await p.evaluate((by) => { window.__s.frames = []; window.__s.on = true; window.__s.by = by ? new Map() : null; }, BY);
   await p.waitForFunction((n) => window.__s.frames.length >= n, FRAMES, { timeout: 120000, polling: 250 });
   const r = await p.evaluate(() => {
     const s = window.__s; s.on = false;
@@ -176,6 +183,7 @@ for (const name of spotsArg) {
       gpu: (() => { const v = f.filter((x) => x.gpu !== undefined).map((x) => x.gpu); return v.length ? v.reduce((a, b) => a + b, 0) / v.length : null; })(),
       main: mean('main'), shadow: mean('shadow'), tris: mean('tris'), gl: mean('gl'), alloc: mean('alloc') / 1024,
       interior: g.interiorName, census: g.recovery?.census?.() ?? null,
+      by: s.by ? [...s.by].map(([k, v]) => [k, v / f.length]).sort((a, b) => b[1] - a[1]) : null,
     };
   });
   r.newPrograms = (await p.evaluate(() => window.__probe.programs)) - prog0;
@@ -191,6 +199,7 @@ for (const name of spotsArg) {
     await p.setViewportSize({ width: W, height: H });
   }
   console.log(`${name.padEnd(8)} frame ${r.ms.toFixed(2)} (p25 ${r.p25.toFixed(2)} p90 ${r.p90.toFixed(2)}) upd ${r.update.toFixed(2)} phys ${r.phys.toFixed(2)} ren ${r.render.toFixed(2)} | draws ${r.main.toFixed(0)}+${r.shadow.toFixed(0)} tris ${(r.tris / 1000).toFixed(0)}k${GL ? ` gl ${r.gl.toFixed(0)}` : ''} alloc ${r.alloc.toFixed(0)}KB${r.gpu !== null ? ` GPU ${r.gpu.toFixed(2)}` : ''}${r.newPrograms ? ` NEW PROGRAMS ${r.newPrograms}` : ''}${r.interior ? ` [${r.interior}]` : ''}`);
+  if (BY && r.by) for (const [k, v] of r.by.slice(0, BY)) console.log(`   ${v.toFixed(1).padStart(5)}  ${k}`);
 }
 console.log(`boot ${bootMs} ms, programs after warm-up ${warm}, total ${await p.evaluate(() => window.__probe.programs)}`);
 const jsonOut = opt('json', null);

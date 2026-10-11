@@ -152,6 +152,82 @@ export class MeshBatch {
   }
 }
 
+/** Debug: ?nostaticmerge keeps the map-wide batches apart (A/B for mergeStatic). */
+const NO_STATIC_MERGE = typeof location !== 'undefined' && new URLSearchParams(location.search).has('nostaticmerge');
+
+/**
+ * Draw-call merging ACROSS batches. Each MeshBatch is one draw per material family, but the map-wide
+ * ones (wrecks, poles + road furniture, billboard frames, wires, stashes) each paid their own draw of
+ * the same shared family materials: five draws of `family:rust` a frame, everywhere. This moves every
+ * static, non-casting, opaque mesh under `roots` that renders with a family material (or a tagged
+ * single variant of a family whose material `inUse` already holds, so no new program) into ONE mesh
+ * per material under `dst`, in dst's frame. Same triangles, same shader math: the picture doesn't
+ * change. Only for things that never move, hide or get swapped on their own and aren't referenced
+ * later: their meshes are removed from their parents. Returns the number of meshes it removed.
+ */
+export function mergeStatic(dst: THREE.Object3D, roots: THREE.Object3D[], inUse: Set<THREE.Material>, name = 'statics') {
+  if (NO_STATIC_MERGE) return 0;
+  dst.updateWorldMatrix(true, false);
+  const inv = new THREE.Matrix4().copy(dst.matrixWorld).invert();
+  type Entry = { mat: THREE.Material; receive: boolean; meshes: THREE.Mesh[]; parts: THREE.BufferGeometry[] };
+  const byKey = new Map<string, Entry>();
+  const shown = (o: THREE.Object3D, root: THREE.Object3D) => {
+    for (let p: THREE.Object3D | null = o; p && p !== root.parent; p = p.parent) if (!p.visible) return false;
+    return true;
+  };
+  for (const root of roots) {
+    root.updateMatrixWorld(true);
+    root.traverse((o) => {
+      const mesh = o as THREE.Mesh;
+      if (!mesh.isMesh || (o as THREE.InstancedMesh).isInstancedMesh || (o as THREE.SkinnedMesh).isSkinnedMesh) return;
+      if (mesh.castShadow || mesh.renderOrder !== 0 || mesh.layers.mask !== 1 || !mesh.frustumCulled || !shown(o, root)) return;
+      if (Array.isArray(mesh.material) || Object.keys(mesh.geometry.morphAttributes).length || mesh.geometry.index) return;
+      if (mesh.onBeforeRender !== THREE.Object3D.prototype.onBeforeRender) return;
+      let mat = mesh.material as THREE.Material;
+      let geo = mesh.geometry;
+      if (!geo.attributes.bColor) {
+        // a single variant built on its own: give it the family's per-vertex parameters
+        const spec = batchSpec(mat);
+        if (!spec || spec.family === 'glow' || mat.transparent) return;
+        const fam = familyMaterial(spec.family);
+        if (!inUse.has(fam)) return;
+        const n = geo.attributes.position.count;
+        const col = new Float32Array(n * 4), par = new Float32Array(n * 4);
+        for (let v = 0; v < n; v++) { col.set(spec.c, v * 4); par.set(spec.p, v * 4); }
+        geo = geo.clone();
+        geo.setAttribute('bColor', new THREE.BufferAttribute(col, 4));
+        geo.setAttribute('bParam', new THREE.BufferAttribute(par, 4));
+        mat = fam;
+      } else {
+        if (!inUse.has(mat)) return;
+        geo = geo.clone();
+      }
+      const attrs = Object.keys(geo.attributes).sort().join(',');
+      if (attrs !== 'bColor,bParam,normal,position,uv') return;
+      const key = `${mat.uuid}|${mesh.receiveShadow}`;
+      let e = byKey.get(key);
+      if (!e) byKey.set(key, (e = { mat, receive: mesh.receiveShadow, meshes: [], parts: [] }));
+      geo.applyMatrix4(new THREE.Matrix4().multiplyMatrices(inv, mesh.matrixWorld));
+      e.meshes.push(mesh);
+      e.parts.push(geo);
+    });
+  }
+  let removed = 0;
+  for (const e of byKey.values()) {
+    if (e.meshes.length < 2) continue;
+    const geo = mergeGeometries(e.parts, false);
+    if (!geo) continue;
+    geo.computeBoundingSphere();
+    const mesh = new THREE.Mesh(geo, e.mat);
+    mesh.name = name;
+    mesh.castShadow = false;
+    mesh.receiveShadow = e.receive;
+    dst.add(mesh);
+    for (const m of e.meshes) { m.removeFromParent(); removed++; }
+  }
+  return removed;
+}
+
 /**
  * Layer for meshes only the sun's shadow camera renders (Game enables it on the shadow camera; the
  * main camera never sees it). The third-person body and the shadow proxies below live here.
