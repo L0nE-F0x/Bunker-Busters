@@ -56,6 +56,9 @@ interface Slot {
   skinned: THREE.SkinnedMesh[];
   /** The legs for the ground pass (L, R). */
   legs: Leg[];
+  /** Turning on the spot: last frame's yaw and the turn rate (rad/s, smoothed). */
+  lastYaw: number;
+  turnRate: number;
   /** Gait clock (cycles, from a left heel strike), the legs' turn off the facing (smoothed), the body's drop (m). */
   phase: number;
   legYaw: number;
@@ -208,7 +211,7 @@ export class HumanSkins {
       });
       const G = this.gait;
       const legs = G ? SIDES.map((sd): Leg => ({ upper: b[sd + 'UpLeg'], lower: b[sd + 'Leg'], end: b[sd + 'Foot'], sole: [G.sole[sd].heel, G.sole[sd].toe], soleOn: [undefined, b[sd + 'ToeBase']] })) : [];
-      this.slots.push({ root, model, b, skinned, legs, phase: 0, legYaw: 0, drop: 0, plant: SIDES.map(() => ({ on: false, x: 0, z: 0 })), fresh: true, who: null });
+      this.slots.push({ root, model, b, skinned, legs, lastYaw: 0, turnRate: 0, phase: 0, legYaw: 0, drop: 0, plant: SIDES.map(() => ({ on: false, x: 0, z: 0 })), fresh: true, who: null });
     }
   }
 
@@ -354,9 +357,15 @@ export class HumanSkins {
   private locomote(s: Slot, h: Human, dt: number) {
     const G = this.gait;
     if (!G || h.ragdoll || h.pose === 'sit') { s.legYaw = 0; return null; }
-    const sp = Math.hypot(h.moved.x, h.moved.z);
+    const sp0 = Math.hypot(h.moved.x, h.moved.z);
+    // turning on the spot: short steps round instead of feet pivoting on the ground
+    if (s.fresh) s.lastYaw = h.yaw;
+    if (dt > 0) s.turnRate += (Math.abs(angDiff(s.lastYaw, h.yaw)) / dt - s.turnRate) * Math.min(1, dt * 8);
+    s.lastYaw = h.yaw;
+    const turning = smooth(s.turnRate, 0.8, 1.8) * (1 - smooth(sp0, 0.12, 0.55)) * (h.dyingT >= 0 ? 0 : 1);
+    const sp = Math.max(sp0, 0.6 * turning);
     // shot mid-stride, the stride lets go over the collapse's first quarter-second (no snap)
-    const w = smooth(sp, 0.12, 0.55) * (h.dyingT >= 0 ? Math.max(0, 1 - h.dyingT / 0.25) : 1);
+    const w = Math.max(smooth(sp0, 0.12, 0.55), 0.8 * turning) * (h.dyingT >= 0 ? Math.max(0, 1 - h.dyingT / 0.25) : 1);
     if (w <= 0) { s.legYaw *= Math.max(0, 1 - dt * 6); return null; }
     const run = smooth(sp, 2.0, 3.6), crouch = smooth(h.crouching, 0.35, 0.7);
     const C = G.clips;
@@ -364,9 +373,9 @@ export class HumanSkins {
     const nat = lerp(lerp(C.walk.speed, C.run.speed, run), C.crouchwalk.speed, crouch);
     const stride = lerp(lerp(C.walk.stride, C.run.stride, run), C.crouchwalk.stride, crouch);
     // slower than the clip's own pace: shorter steps (not slow motion); faster: a little longer
-    const k = THREE.MathUtils.clamp(sp / nat, 0.5, 1.15);
+    const k = turning > 0.5 ? 0.5 : THREE.MathUtils.clamp(sp / nat, 0.5, 1.15);
     // legs face where it's going (within ~60° of the chest); backing up, the clip runs in reverse
-    const md = Math.atan2(h.moved.x, h.moved.z);
+    const md = sp0 > 0.12 ? Math.atan2(h.moved.x, h.moved.z) : h.yaw;
     const back = Math.abs(angDiff(h.yaw, md)) > 1.75;
     const want = THREE.MathUtils.clamp(angDiff(h.yaw, back ? md + Math.PI : md), -1.05, 1.05);
     s.legYaw = s.fresh ? want : s.legYaw + angDiff(s.legYaw, want) * Math.min(1, dt * 8);

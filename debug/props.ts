@@ -163,6 +163,14 @@ const BUILDERS: Record<string, () => THREE.Object3D> = {
         humanSkins?.pose(p.slot, p, 1 / 60, hf);
       }
     });
+    // &turn=2&tt=0.6: standing, turning at 2 rad/s for &tt s (the legs step round)
+    if (qs.has('turn')) c.people.forEach((p, i) => {
+      for (let k = 0, n = Math.round((num('tt', 0.6) + i * num('wdt', 0)) * 60); k < n; k++) {
+        p.yaw += num('turn', 2) / 60; p.aimYaw = p.yaw;
+        p.update(1 / 60, hf);
+        humanSkins?.pose(p.slot, p, 1 / 60, hf);
+      }
+    });
     // &hit=body|head|arm|leg&at=0.1&side=1: a round from the front (toward −Z... they face −Z), `at` s ago
     // &cower=1: under fire. &dying=0.4: s into dying on its feet (&hit sets the wound)
     const hit = qs.get('hit') as HitZone | null;
