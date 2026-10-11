@@ -243,14 +243,32 @@ export class Terrain {
     const layerFine = noise(vec2(wp.y.div(2.6).add(strataN.mul(0.3)), along.div(240)).add(0.37)).g;
     const bands = smoothstep(0.3, 0.7, layer);
     const pale = smoothstep(0.6, 0.78, layerFine).mul(smoothstep(1.2, 0.35, fwidth(wp.y.div(2.6)).mul(6)));
-    const rockTap = noise(vec2(along.mul(0.6), wp.y).div(4));
-    const varnish = smoothstep(0.5, 0.78, noise(vec2(along.mul(0.22), wp.y.mul(0.018)).add(0.53)).r)
+    // the face's own detail, projected onto it (from ±X onto zy, from ±Z onto xy, blended by which
+    // way it faces): keyed on x + z, a face running the other diagonal had the same coordinate all
+    // the way across and its detail smeared into streaks
+    const nwx = normalWorld.x.mul(normalWorld.x), nwz = normalWorld.z.mul(normalWorld.z);
+    const faceX = nwx.div(nwx.add(nwz).add(1e-4));
+    const onFace = (sx: number, sy: number, off: number): N =>
+      mix(noise(vec2(wp.x.div(sx), wp.y.div(sy)).add(off)), noise(vec2(wp.z.div(sx), wp.y.div(sy)).add(off + 0.41)), faceX);
+    const rockTap = onFace(6.7, 4, 0);
+    const varnish = smoothstep(0.5, 0.78, onFace(18, 220, 0.53).r)
       .mul(smoothstep(0.35, 0.6, slope));
+    // up close: grain, chips and dark crevices (fading out before they'd shimmer)
+    const near = smoothstep(1.4, 0.4, fwidth(wp.y).mul(9));
+    const grit = onFace(1.1, 0.9, 0.17);
+    const crevice = smoothstep(0.09, 0.02, grit.b).mul(near);
+    // bedding planes: thin layers ~0.7 m apart running across the face for tens of metres, each a
+    // slightly different hardness (the softer ones weather back into grooves)
+    const bed = onFace(40, 0.7, 0.29).add(strataN.mul(0.02));
+    const bedLine = smoothstep(0.35, 0.65, bed.g).mul(smoothstep(1.2, 0.3, fwidth(wp.y.div(0.7)).mul(4)));
     const rock = mix(mix(vec3(0.27, 0.13, 0.08), vec3(0.55, 0.30, 0.16), bands), vec3(0.70, 0.52, 0.36), pale.mul(0.55))
       .mul(float(0.78).add(rockTap.r.mul(0.4)))
-      .mul(float(1).sub(varnish.mul(0.5)));
+      .mul(float(1).sub(varnish.mul(0.5)))
+      .mul(float(0.95).add(bedLine.mul(0.08)))
+      .mul(float(1).add(grit.r.sub(0.5).mul(0.22).mul(near)).sub(crevice.mul(0.35)));
     const ledge = smoothstep(0.42, 0.5, layer).mul(smoothstep(0.58, 0.5, layer));
-    const rockH = layerFine.mul(0.5).add(rockTap.r.mul(0.9)).add(rockTap.b.mul(0.4)).add(ledge.mul(0.8));
+    const rockH = layerFine.mul(0.5).add(rockTap.r.mul(0.9)).add(rockTap.b.mul(0.4)).add(ledge.mul(0.8))
+      .add(bedLine.mul(0.5)).add(grit.g.mul(0.55).mul(near)).sub(crevice.mul(0.7));
 
     // scrub patches
     const scrubTap = noise(xz.div(80).add(0.3));
