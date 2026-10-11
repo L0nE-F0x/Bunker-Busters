@@ -29,7 +29,7 @@ import { updateRim, glow, desertRock } from './world/materials';
 import { buildIntelProp, type IntelProp } from './world/intelProps';
 import { Scavenge } from './world/Scavenge';
 import { NpcModels } from './world/npcSkin';
-import { updateShownMatrices, viewCull } from './world/kit';
+import { updateShownMatrices, viewCull, mergeStatic } from './world/kit';
 import { NpcCrowd } from './world/npc';
 import { routineOpen } from '@/content/routines';
 import { HumanSkins } from './combat/humanSkin';
@@ -423,6 +423,13 @@ export class Game {
     if (SKIP.has('sky')) this.scene.remove(this.atmo.sky);
     if (SKIP.has('shadows')) this.renderer.shadowMap.enabled = false;
     if (SKIP.has('fog')) this.scene.fogNode = null;
+    // the map-wide batches (wrecks, poles + road furniture, billboard frames, wires, stashes) draw the
+    // same shared family materials: merged, that's one draw per family instead of one per batch
+    if (this.props.group.parent === this.scene) {
+      const inUse = new Set<THREE.Material>();
+      this.scene.traverse((o) => { const m = (o as THREE.Mesh).material; if (m && !Array.isArray(m)) inUse.add(m); });
+      mergeStatic(this.props.group, [this.props.group, this.scavenge.group], inUse);
+    }
     await step(0.8, 'Compiling shaders');
     this.post = new PostFX(this.renderer, this.scene, this.camera, this.atmo.sun, this.quality);
     // Three walks the whole graph (~1,600 objects, ~600 of them bones, over half of it hidden) on
