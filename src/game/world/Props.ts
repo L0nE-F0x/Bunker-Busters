@@ -172,7 +172,7 @@ export function rockGeometry(seed: number, detail = 3) {
     v.multiplyScalar(1 + noise.fbm(v.x * 6 + 3, v.y * 6 + v.z * 4, 2) * 0.035);
     v.y *= squash;
     // flat-ish bottom so it sits in the sand
-    if (v.y < -0.2) v.y = -0.2 + (v.y + 0.2) * 0.3;
+    if (v.y < -0.2) v.y = -0.2 + (v.y + 0.2) * 0.55;
     pos.setXYZ(i, v.x, v.y, v.z);
   }
   g.computeVertexNormals();
@@ -259,7 +259,11 @@ export class Props {
         // the last mesh holds only boulders, the others only stones
         const big = vi === 4;
         const s = big ? 2.5 + rand() * 3.5 : 0.25 + Math.pow(rand(), 2) * 1.6;
-        const y = this.hf.heightAt(x, z) - s * 0.15;
+        // set into the ground by its footprint, not its centre: on a slope (or tilted) the flat
+        // underside stood out of the downhill side as a straight, lit edge
+        let low = this.hf.heightAt(x, z);
+        for (let a = 0; a < 6; a++) low = Math.min(low, this.hf.heightAt(x + Math.cos(a * 1.047) * s * 0.75, z + Math.sin(a * 1.047) * s * 0.75));
+        const y = (this.hf.heightAt(x, z) + low) * 0.5 - s * 0.17;
         dummy.position.set(x, y, z);
         dummy.rotation.set((rand() - 0.5) * 0.4, rand() * Math.PI * 2, (rand() - 0.5) * 0.4);
         dummy.scale.set(s * (0.8 + rand() * 0.5), s, s * (0.8 + rand() * 0.5));
