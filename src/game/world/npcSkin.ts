@@ -620,14 +620,19 @@ export class NpcActor {
       const out = _rc.set(sd === 'Left' ? 1 : -1, 0, 0).applyQuaternion(body);
       const S = _rp.setFromMatrixPosition(arm.matrixWorld), E = _re.setFromMatrixPosition(fore.matrixWorld);
       const u = _ru.subVectors(E, S).normalize();
+      // only an arm that hangs (a gesture keeps its shape)
+      const hang = THREE.MathUtils.smoothstep(-u.dot(up), 0.55, 0.85);
+      if (hang <= 0) continue;
       const abd = Math.atan2(u.dot(out), -u.dot(up));
       if (abd > 0.2) {
         const axis = _rn.crossVectors(out, up).negate().normalize(); // turning about it takes `out` toward down
-        this.turn(arm, axis, (abd - 0.2) * 0.7 * w);
+        this.turn(arm, axis, (abd - 0.2) * 0.7 * w * hang);
       }
       // the palm: roll about the forearm until it faces in toward the leg
       E.setFromMatrixPosition(fore.matrixWorld);
       const a = _ru.setFromMatrixPosition(hand.matrixWorld).sub(E).normalize();
+      const low = hang * THREE.MathUtils.smoothstep(-a.dot(up), 0.4, 0.8);
+      if (low <= 0) continue;
       hand.getWorldQuaternion(_rq);
       const p = _rp.copy(palm).applyQuaternion(_rq);
       const d = _rn.copy(out).negate().addScaledVector(fwd, -0.35);
@@ -635,7 +640,7 @@ export class NpcActor {
       d.addScaledVector(a, -d.dot(a));
       if (p.lengthSq() < 1e-6 || d.lengthSq() < 1e-6) continue;
       p.normalize(); d.normalize();
-      const roll = THREE.MathUtils.clamp(Math.atan2(_rc.crossVectors(p, d).dot(a), p.dot(d)), -2.4, 2.4) * w;
+      const roll = THREE.MathUtils.clamp(Math.atan2(_rc.crossVectors(p, d).dot(a), p.dot(d)), -2.4, 2.4) * w * low;
       this.turn(fore, a, roll * 0.55);
       this.turn(hand, a, roll * 0.45);
     }
