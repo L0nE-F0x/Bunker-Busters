@@ -3,6 +3,16 @@
 Each `## vX.Y.Z` section becomes the GitHub release notes and the "what's new" list in the in-app
 update notice (the first few bullets). `scripts/release.sh` refuses to release a version without one.
 
+## v0.8.1
+- **Wolves move like wolves.** They walk, trot and gallop now instead of playing one walk at every speed, and their paws stay on the sand: before, their feet sank out of sight and slid along the ground. They step round when they turn, their tails are tucked when they're hit and stream out when they run, and the dead ones lie on the ground instead of half inside it. Coyotes too
+- **Kade crews walk on real motion capture.** Contractors walk, run and crouch on recorded movement with their feet planted, turn their legs the way they're going, back up properly, and take small steps when they turn on the spot. Their bodies and guns move with their steps, and on patrol they carry the rifle low in one hand. Fixed a crew member who reached his post and kept walking on the spot
+- **Dry Creek stands still properly.** Nia, Doc, Inez, Ezra, Prudence and Benny used a stock idle that slowly turned them sideways and, at one point, gave you their back. They now stand facing you, arms at their sides
+- **Rattlesnakes.** A rearing snake's body no longer drops into the ground behind its head, and a coiled one is a curl instead of a lump. Snakes and scorpions lie flat on slopes
+- **Rock.** Cliffs show their layers up close instead of smooth streaks, and boulders have a dark weathered crust, cracks and lichen instead of pale blobs
+- **Tents.** The camp's and Kade's outposts' tents are real ridge tents with guy lines and stakes
+- **Smoother frame rate.** Fewer draw calls across the map (up to a fifth fewer in a fight)
+- **Saves when you quit.** Closing the game keeps your last minute; before, only the once-a-minute autosave did
+
 ## v0.8.0
 - **The Alignment Spire is open.** Act IV plays to the end: take the highway east until it climbs into the tablelands, and follow Careful Labs' guardrailed road up to Prudence Ashby's white tower above the Tube. The light at the top shows the Spire's safety level. Every slip raises it, and at level four the whole building pauses. Mara debriefs you at the fire and names the next door
 - **Turrets with manners.** The Careful Sentinels apologise before they fire. Get out of sight before they finish and they log a near miss. Put your weapon away and they won't shoot at all, but they report you, and the level goes up
