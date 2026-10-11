@@ -881,7 +881,11 @@ class Wolf implements Hostile {
           if (c.combat?.slide(from, this.pos, 0.45, 0.4) !== null && c.combat) this.speed = 0; // into a wall: stop there
           this.speed *= Math.exp(-c.dt * 4.5);
         }
-        this.skin.pose(this.slot, { pos: V(this.pos.x, c.hf.heightAt(this.pos.x, this.pos.z), this.pos.z), yaw: this.yaw, pitch: 0, roll: 0, bob: 0, phase: this.phase, amp: this.deathAmp, low: 0, look: 0, nod: 0, tail: 0, deadT: this.dead, side: this.deadSide });
+        // the body settles onto the slope it fell on (along and across it)
+        const fx = Math.sin(this.yaw) * 0.4, fz = Math.cos(this.yaw) * 0.4, H = c.hf;
+        const dPitch = -Math.atan2(H.heightAt(this.pos.x + fx, this.pos.z + fz) - H.heightAt(this.pos.x - fx, this.pos.z - fz), 0.8);
+        const dRoll = Math.atan2(H.heightAt(this.pos.x + fz, this.pos.z - fx) - H.heightAt(this.pos.x - fz, this.pos.z + fx), 0.8);
+        this.skin.pose(this.slot, { pos: V(this.pos.x, H.heightAt(this.pos.x, this.pos.z), this.pos.z), yaw: this.yaw, pitch: dPitch, roll: dRoll, bob: 0, phase: this.phase, amp: this.deathAmp, low: 0, look: 0, nod: 0, tail: 0, deadT: this.dead, side: this.deadSide });
         this.b.visible = false;
         this.center.set(this.pos.x, g + 0.32, this.pos.z);
         return;
@@ -899,7 +903,8 @@ class Wolf implements Hostile {
       return;
     }
     const sp = this.speed;
-    this.phase += c.dt * (sp > 6 ? 9.5 : 3 + sp * 1.6);
+    // the model's stride matches its speed (gaitRate: planted paws don't skate); the procedural one keeps its own
+    this.phase += c.dt * (this.skin ? Math.PI * 2 * this.skin.gaitRate(sp) : sp > 6 ? 9.5 : 3 + sp * 1.6);
     const A = sp < 0.2 ? 0 : sp > 6 ? 0.85 : 0.45;
     const bob = A ? Math.abs(Math.sin(this.phase)) * 0.035 : 0;
     // body pitch follows the ground under the shoulders and hips
@@ -927,8 +932,9 @@ class Wolf implements Hostile {
         pos: V(this.pos.x, g, this.pos.z), yaw: this.yaw, pitch: pitch * 0.8 + (this.bite > 0 ? 0.1 : 0) + (coiled ? 0.06 : 0), roll: this.hitSide * hr * 0.32 + shiver, bob: 0,
         phase: this.phase, amp: A, low: low / 0.08 + hr * 1.6, look: this.look - this.hitSide * hr * 0.9,
         nod: this.howl > 0 ? 0.85 : (sp > 6 ? -0.12 : 0) - snap * 0.45 - (coiled ? 0.2 : 0) + hr * 0.35,
-        tail: (sp > 6 ? -0.25 : low ? 0.3 : 0) + Math.sin(c.t * 2 + this.phase) * 0.06 - hr * 0.5 + (coiled ? 0.25 : 0),
-        deadT: -1, side: 1, leap: leapU,
+        // (+ lifts: streaming out flat out, level while stalking, tucked when hit)
+        tail: (sp > 6 ? 0.5 : sp > 2 ? 0.25 : low ? 0.2 : 0.05) + Math.sin(c.t * 2 + this.phase) * 0.06 - hr * 0.6 + (coiled ? 0.15 : 0),
+        deadT: -1, side: 1, leap: leapU, speed: sp, ground: c.hf.groundFn, dt: c.dt,
       });
       this.deathAmp = A;
       this.b.visible = false;
@@ -1716,7 +1722,7 @@ class Coyotes implements HostileProvider {
       k.pos.y = g;
       // the gait: a quicker step than the wolf's (a smaller animal)
       const step = Math.floor(k.phase / Math.PI);
-      k.phase += c.dt * (k.speed > 6 ? 11 : 3.6 + k.speed * 1.9);
+      k.phase += c.dt * Math.PI * 2 * S.gaitRate(k.speed);
       // flat out, every other stride throws dust back off the paws
       if (k.speed > 6 && Math.floor(k.phase / Math.PI) !== step && step % 2 === 0) c.combat?.puffs?.emit(k.pos, 1, 0.35, 0.3, 0.35);
       const tgt = lookAt ?? (this.state === 'feed' ? this.goal : null);
@@ -1732,7 +1738,8 @@ class Coyotes implements HostileProvider {
       S.pose(k.slot, {
         pos: _cy2.set(k.pos.x, g, k.pos.z), yaw: k.yaw, pitch: pitch * 0.8, roll: 0, bob: 0, phase: k.phase, amp: A, low: k.low,
         look: k.look, nod: k.nod > 0 ? 0.85 : feeding ? -0.55 + Math.max(0, Math.sin(c.t * 2.4 + i)) * -0.25 : k.speed > 6 ? -0.12 : 0.05,
-        tail: k.speed > 6 ? -0.35 : feeding ? -0.15 : -0.05 + Math.sin(c.t * 1.6 + i) * 0.05, deadT: -1, side: 1,
+        tail: k.speed > 6 ? 0.45 : feeding ? -0.1 : k.speed > 2 ? 0.2 : 0.05 + Math.sin(c.t * 1.6 + i) * 0.05, deadT: -1, side: 1,
+        speed: k.speed, ground: c.hf.groundFn, dt: c.dt,
       });
     });
   }

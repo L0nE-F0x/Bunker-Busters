@@ -3,13 +3,28 @@ import { loadGLB } from '@/engine/models';
 import { clone as cloneSkinned } from 'three/addons/utils/SkeletonUtils.js';
 import { boundSkinned } from './kit';
 import { texture, uniform } from 'three/tsl';
+import { measureSole, reachBy, shortfall, soleWorld, type Leg } from './legIK';
 
 /**
  * The wolf as a real model (Meshy, prepared by scripts/models/prep-glb.mjs): one textured skinned
- * mesh per pack slot, all sharing one material (one program). The baked walk clip is driven by the
- * wolf's own gait phase, so the feet keep time with its speed; everything else the hunt needs
- * (crouch, head tracking, the bite, the howl, the stagger, the death roll) is layered on top as
+ * mesh per pack slot, all sharing one material (one program). Everything the hunt needs (crouch,
+ * head tracking, the bite, the howl, the stagger, the death roll) is layered on top of the clip as
  * world-axis bone rotations, so it doesn't depend on how the rig's bones are oriented.
+ *
+ * Gaits from one clip. The model came with a single 1 s walk, nearly a pace (each side's feet land
+ * together). At load the clip is measured: when each paw lands and lifts, how high it swings, how
+ * far it sweeps under the body. Then every leg plays the clip on its own clock:
+ * - footfalls: a walk (lateral sequence: left hind, left fore, right hind, right fore, a quarter
+ *   apart), a trot (diagonal pairs) and a gallop (hinds together, then fores) by shifting each leg;
+ * - duty factor: the stance part of each leg's cycle is squeezed (60% walking → 22% flat out) and
+ *   the swing stretched, so a galloping paw is on the ground briefly and flies the rest;
+ * - stride: legs swing further about the clip's mean pose (×1.15 walking → ×1.6 galloping), the back
+ *   flexes at the gallop;
+ * - rate: `gaitRate(speed)` is the stride frequency at which a planted paw moves under the body at
+ *   exactly the ground speed, so paws don't skate.
+ * Then the paws are put on the terrain (legIK.ts): the body rises to the clip's own height, each leg
+ * folds to put its sole on the ground under it (plus the clip's swing), and the body drops where a
+ * paw can't reach (a hollow).
  */
 
 /** What Fauna's Wolf wants the model to do this frame. */
@@ -37,7 +52,46 @@ export interface WolfPose {
   side: number;
   /** A leap in progress: 0..1 through it (0: on the ground). */
   leap?: number;
+  /** Ground speed (m/s): picks the gait (walk, trot, gallop). Without it, `amp` alone (the old walk). */
+  speed?: number;
+  /** Terrain height under a point: the paws stand on it (omit: flat at `pos.y`). */
+  ground?: (x: number, z: number) => number;
+  /** Seconds since the last pose (smooths the body's height over the paws). */
+  dt?: number;
 }
+
+/** A gait: when each leg lands in the cycle (LH, RH, LF, RF), its duty factor, its stride scale. */
+interface Gait { td: [number, number, number, number]; duty: number; scale: number; flex: number }
+const WALK: Gait = { td: [0, 0.5, 0.25, 0.75], duty: 0.62, scale: 1.15, flex: 0 };
+const TROT: Gait = { td: [0, 0.5, 0.5, 0], duty: 0.44, scale: 1.3, flex: 0.2 };
+const GALLOP: Gait = { td: [0, 0.1, 0.42, 0.55], duty: 0.24, scale: 1.6, flex: 1 };
+/** The gait at `speed` (m/s), blended (walk → trot from 1.6 to 2.4, trot → gallop from 4 to 5.6). */
+function gaitAt(speed: number, out: Gait) {
+  const a = THREE.MathUtils.smoothstep(speed, 1.6, 2.4), b = THREE.MathUtils.smoothstep(speed, 4, 5.6);
+  const mixG = (k: (g: Gait) => number) => THREE.MathUtils.lerp(THREE.MathUtils.lerp(k(WALK), k(TROT), a), k(GALLOP), b);
+  for (let i = 0; i < 4; i++) out.td[i] = mixG((g) => g.td[i]);
+  out.duty = mixG((g) => g.duty);
+  out.scale = mixG((g) => g.scale);
+  out.flex = mixG((g) => g.flex);
+  return out;
+}
+const frac = (x: number) => x - Math.floor(x);
+
+/** One leg as measured from the clip (cycle fractions; lift sampled over the cycle). */
+interface LegGait {
+  /** The bones that play on this leg's clock (the shoulder blade or hip down to the paw). */
+  bones: Set<THREE.Bone>;
+  /** Clip time (fraction) the paw lands and lifts. */
+  land: number;
+  lift: number;
+  /** The sole's height above its lowest, over the clip (LIFT_N samples). */
+  swing: Float32Array;
+  /** How far the sole sweeps back while planted (m, model scale). */
+  sweep: number;
+}
+const LIFT_N = 48;
+/** Rig names of the legs, in the gait order LH, RH, LF, RF. */
+const LEGS = ['backleg', 'R_backleg', 'frontleg', 'R_frontleg'] as const;
 
 /** Ear-tip height of the model in metres (a big desert wolf: ~0.8 m at the shoulder). */
 const HEIGHT = 1.02;
@@ -54,14 +108,23 @@ interface Slot {
   bones: Record<string, THREE.Bone>;
   /** The body's skinned mesh(es), bounded each pose so both passes can cull them. */
   skinned: THREE.SkinnedMesh[];
-  /** Every animated or turned bone with its bind pose and the walk's tracks for it. */
-  rig: { bone: THREE.Bone; q0: THREE.Quaternion; p0: THREE.Vector3; rot?: THREE.Interpolant; pos?: THREE.Interpolant }[];
+  /** Every animated or turned bone with its bind pose and the walk's tracks for it; `leg`: which leg's clock it plays on (−1: the body's). */
+  rig: { bone: THREE.Bone; q0: THREE.Quaternion; p0: THREE.Vector3; mean: THREE.Quaternion; leg: number; rot?: THREE.Interpolant; pos?: THREE.Interpolant }[];
+  /** The legs for the ground pass (LH, RH, LF, RF). */
+  legs: Leg[];
+  /** The body's lift off the clip's floor (smoothed), m. */
+  lift: number;
+  /** Where each planted paw is held for the rest of its stance (world x, z), or `on` false: in the air. */
+  plant: { on: boolean; x: number; z: number }[];
+  fresh: boolean;
   used: boolean;
 }
 
 const _q = new THREE.Quaternion(), _pq = new THREE.Quaternion(), _bq = new THREE.Quaternion();
 const _lat = new THREE.Vector3(), _up = new THREE.Vector3(), _fwd = new THREE.Vector3();
-const _cq = new THREE.Quaternion(), _cp = new THREE.Vector3(), _m = new THREE.Matrix4();
+const _cq = new THREE.Quaternion(), _cp = new THREE.Vector3(), _m = new THREE.Matrix4(), _mq = new THREE.Quaternion();
+const _sole = new THREE.Vector3(), _gait: Gait = { td: [0, 0, 0, 0], duty: 0, scale: 1, flex: 0 };
+const _dy = [0, 0, 0, 0], _tLeg = [0, 0, 0, 0], _uLeg = [0, 0, 0, 0];
 
 export class WolfSkins {
   readonly group = new THREE.Group();
@@ -69,6 +132,11 @@ export class WolfSkins {
   private clipLen = 1;
   /** Height of the body's centre above the feet (the death roll pivots here). */
   private centre = 0.5;
+  /** Each leg's footfall, measured from the clip at load (LH, RH, LF, RF). */
+  private gaitLegs: LegGait[] = [];
+  /** Mean stance sweep of the four legs (m), and the paws' mean depth below the floor in the clip. */
+  private sweep = 0.45;
+  private floor = 0;
 
   static async load(count: number, look: CanidLook = {}): Promise<WolfSkins | null> {
     try {
@@ -140,14 +208,109 @@ export class WolfSkins {
       // the walk is sampled by hand, not through an AnimationMixer: the mixer only writes a bone
       // when its value changes, so once the clip's weight is 0 the layered turns below would pile
       // up frame after frame (a dead wolf curled up into a ball). Every frame starts from the bind pose.
+      // which leg's clock each bone plays on: everything under a leg's root (shoulder blade / hip)
+      const legOf = (b: THREE.Object3D) => {
+        for (let o: THREE.Object3D | null = b; o; o = o.parent) { const k = LEGS.indexOf(o.name as typeof LEGS[number]); if (k >= 0) return k; }
+        return -1;
+      };
       const rig = Object.values(bones).map((bone) => {
         const tr = (path: string) => gltf.animations[0]?.tracks.find((t) => t.name === `${bone.name}.${path}`);
         // createInterpolant is assigned per track at runtime (slerp for quaternions); the typings miss it
         const interp = (t?: THREE.KeyframeTrack) => (t ? (t as unknown as { createInterpolant(): THREE.Interpolant }).createInterpolant() : undefined);
-        return { bone, q0: bone.quaternion.clone(), p0: bone.position.clone(), rot: interp(tr('quaternion')), pos: interp(tr('position')) };
+        const rot = interp(tr('quaternion'));
+        // the clip's mean rotation: strides lengthen about it, not about the bind pose
+        const mean = new THREE.Quaternion(0, 0, 0, 0);
+        if (rot) {
+          for (let k = 0; k < 16; k++) {
+            _cq.fromArray(rot.evaluate((k / 16) * this.clipLen) as unknown as number[]);
+            if (k && mean.x * _cq.x + mean.y * _cq.y + mean.z * _cq.z + mean.w * _cq.w < 0) _cq.set(-_cq.x, -_cq.y, -_cq.z, -_cq.w);
+            mean.set(mean.x + _cq.x, mean.y + _cq.y, mean.z + _cq.z, mean.w + _cq.w);
+          }
+          mean.normalize();
+        } else mean.copy(bone.quaternion);
+        return { bone, q0: bone.quaternion.clone(), p0: bone.position.clone(), mean, leg: legOf(bone), rot, pos: interp(tr('position')) };
       });
-      this.slots.push({ root, tilt, model, bones, skinned, rig, used: false });
+      const legs: Leg[] = [];
+      root.updateMatrixWorld(true);
+      for (const n of LEGS) {
+        const [up, lo, end] = [bones[n + '0'], bones[n + '1'], bones[n + '2']];
+        if (up && lo && end && skinned[0]) legs.push({ upper: up, lower: lo, end, sole: measureSole(skinned[0], end, _fwd.set(0, 0, 1)) });
+      }
+      this.slots.push({ root, tilt, model, bones, skinned, rig, legs: legs.length === 4 ? legs : [], lift: 0, plant: LEGS.map(() => ({ on: false, x: 0, z: 0 })), fresh: true, used: false });
     }
+    this.measureGait();
+  }
+
+  /**
+   * When each paw lands and lifts in the clip, how high it swings and how far it sweeps while
+   * planted (slot 0, standing at the origin; then back to bind).
+   */
+  private measureGait() {
+    const s = this.slots[0];
+    if (!s || s.legs.length !== 4) return;
+    s.root.position.set(0, 0, 0);
+    s.root.rotation.set(0, 0, 0);
+    s.tilt.rotation.set(0, 0, 0);
+    const ys = s.legs.map(() => new Float32Array(LIFT_N)), zs = s.legs.map(() => new Float32Array(LIFT_N));
+    for (let k = 0; k < LIFT_N; k++) {
+      const t = (k / LIFT_N) * this.clipLen;
+      for (const r of s.rig) {
+        r.bone.quaternion.copy(r.q0);
+        r.bone.position.copy(r.p0);
+        if (r.rot) r.bone.quaternion.fromArray(r.rot.evaluate(t) as unknown as number[]);
+        if (r.pos) r.bone.position.fromArray(r.pos.evaluate(t) as unknown as number[]);
+      }
+      s.root.updateMatrixWorld(true);
+      s.legs.forEach((l, i) => { soleWorld(l, _sole); ys[i][k] = _sole.y; zs[i][k] = _sole.z; });
+    }
+    let floor = 0;
+    this.gaitLegs = s.legs.map((l, i) => {
+      const y = ys[i], lo = Math.min(...y);
+      floor += lo / 4;
+      const swing = y.map((v) => v - lo);
+      // the longest run of samples within 1.5 cm of the lowest: the stance
+      const down = Array.from(swing, (v) => v < 0.015);
+      let best = 0, start = 0;
+      for (let a = 0; a < LIFT_N; a++) {
+        if (!down[a] || down[(a + LIFT_N - 1) % LIFT_N]) continue;
+        let n = 0;
+        while (n < LIFT_N && down[(a + n) % LIFT_N]) n++;
+        if (n > best) { best = n; start = a; }
+      }
+      const end = (start + best) % LIFT_N;
+      const bones = new Set<THREE.Bone>();
+      for (const r of s.rig) if (r.leg === i) bones.add(r.bone);
+      return { bones, land: start / LIFT_N, lift: end / LIFT_N, swing, sweep: Math.abs(zs[i][start] - zs[i][(end + LIFT_N - 1) % LIFT_N]) };
+    });
+    this.floor = floor;
+    this.sweep = this.gaitLegs.reduce((a, g) => a + g.sweep, 0) / 4 || 0.45;
+    for (const r of s.rig) { r.bone.quaternion.copy(r.q0); r.bone.position.copy(r.p0); }
+    s.root.updateMatrixWorld(true);
+  }
+
+  /**
+   * Stride frequency (strides a second) at which a planted paw moves under the body at `speed`
+   * (m/s): advance the gait phase by 2π × this × dt.
+   */
+  gaitRate(speed: number) {
+    const g = gaitAt(speed, _gait);
+    const w = Math.max(0.3, Math.min(1, speed / 0.6));
+    return (speed * g.duty) / (this.sweep * g.scale * w);
+  }
+
+  /** Clip time (fraction) for leg `i` at gait phase `u` (0..1 from its touchdown) with duty `duty`. */
+  private legTime(i: number, u: number, duty: number) {
+    const L = this.gaitLegs[i];
+    const stance = frac(L.lift - L.land) || 0.5;
+    return u < duty
+      ? frac(L.land + (u / duty) * stance)
+      : frac(L.lift + ((u - duty) / (1 - duty)) * (1 - stance));
+  }
+
+  /** The clip's swing height of leg `i` at clip time `t` (fraction). */
+  private swingAt(i: number, t: number) {
+    const a = this.gaitLegs[i].swing, x = t * LIFT_N, k = Math.floor(x) % LIFT_N;
+    return THREE.MathUtils.lerp(a[k], a[(k + 1) % LIFT_N], x - Math.floor(x));
   }
 
   get size() {
@@ -156,7 +319,7 @@ export class WolfSkins {
 
   hide(i: number) {
     const s = this.slots[i];
-    if (s) s.root.visible = false;
+    if (s) { s.root.visible = false; s.fresh = true; for (const p of s.plant) p.on = false; }
   }
 
   /** Pose slot `i` for this frame. */
@@ -171,7 +334,8 @@ export class WolfSkins {
 
     // the body: alive it follows the slope; dying it buckles, topples onto its side and settles
     if (D) {
-      s.tilt.rotation.set(0.22 * (D.buckle - D.hind * 0.7) * (1 - D.topple), 0, p.side * (1.47 * D.topple + 0.07 * D.bounce), 'YXZ');
+      // (plus the slope under it, so it lies on a hillside rather than through it)
+      s.tilt.rotation.set(0.22 * (D.buckle - D.hind * 0.7) * (1 - D.topple) + p.pitch * 0.8, 0, p.side * (1.47 * D.topple + 0.07 * D.bounce) + p.roll * 0.8 * D.topple, 'YXZ');
       s.tilt.position.y = THREE.MathUtils.lerp(this.centre * (1 - 0.3 * D.buckle), this.centre * 0.36, D.topple);
     } else {
       // a leap: up and over in an arc, nose up off the ground, nose down into the bite
@@ -184,13 +348,31 @@ export class WolfSkins {
     const air = !D && p.leap ? Math.sin(p.leap * Math.PI) : 0;
 
     // the stride, in step with the wolf's own phase (frozen where it fell); standing is the bind pose
-    const w = Math.min(1, p.amp / 0.45) * (D ? 1 - D.release : 1) * (1 - air * 0.85);
-    const time = ((((p.phase / (Math.PI * 2)) % 1) + 1) % 1) * this.clipLen;
+    const gaited = p.speed !== undefined && !D && this.gaitLegs.length === 4;
+    const w = (gaited ? Math.min(1, p.speed! / 0.6) : Math.min(1, p.amp / 0.45)) * (D ? 1 - D.release : 1) * (1 - air * 0.85);
+    const phase = frac(p.phase / (Math.PI * 2));
+    const g = gaitAt(gaited ? p.speed! : 0, _gait);
+    if (gaited) {
+      // each leg on its own clock: its footfall in this gait, its stance squeezed to the duty factor
+      // (the clip's body moves with the left hind leg's clock)
+      for (let i = 0; i < 4; i++) {
+        _uLeg[i] = frac(phase - g.td[i]);
+        _tLeg[i] = this.legTime(i, _uLeg[i], g.duty);
+      }
+    }
+    const bodyT = gaited ? frac(phase + this.gaitLegs[0].land) : phase;
     for (const r of s.rig) {
       r.bone.quaternion.copy(r.q0);
       r.bone.position.copy(r.p0);
       if (w <= 0) continue;
-      if (r.rot) r.bone.quaternion.slerp(_cq.fromArray(r.rot.evaluate(time) as unknown as number[]), w);
+      const leg = gaited && r.leg >= 0;
+      const time = (leg ? _tLeg[r.leg] : bodyT) * this.clipLen;
+      if (r.rot) {
+        _cq.fromArray(r.rot.evaluate(time) as unknown as number[]);
+        // a longer stride: the leg swings further about the clip's mean pose
+        if (leg && g.scale !== 1) _cq.copy(_mq.copy(r.mean).slerp(_cq, g.scale));
+        r.bone.quaternion.slerp(_cq, w);
+      }
       if (r.pos) r.bone.position.lerp(_cp.fromArray(r.pos.evaluate(time) as unknown as number[]), w);
     }
     s.root.updateMatrixWorld(true);
@@ -229,7 +411,15 @@ export class WolfSkins {
         this.turn(B.head, up, p.look * 0.6);
         this.turn(B.head, lat, p.nod - p.low * 0.35);
       }
-      if (B.tailstart) this.turn(B.tailstart, lat, p.tail);
+      // (about `lat`, + tucks this rig's tail: negate so + lifts, as WolfPose says)
+      if (B.tailstart) this.turn(B.tailstart, lat, -p.tail);
+      // galloping, the back flexes: the chest dips as the fores land, lifts as the hinds reach under
+      if (gaited && g.flex > 0.01 && B.chest) {
+        const fl = Math.sin((phase - g.td[2] + 0.15) * Math.PI * 2) * 0.1 * g.flex * w;
+        this.turn(B.chest, lat, fl);
+        if (B.head) this.turn(B.head, lat, -fl * 0.8);
+      }
+      if (air < 0.05) this.ground(s, p, gaited ? g : null, w);
       return;
     }
     // ---- dying
@@ -260,8 +450,63 @@ export class WolfSkins {
     }
     if (B.chest) this.turn(B.chest, lat, -0.12 * D.buckle);
     if (B.tailstart) {
-      this.turn(B.tailstart, lat, -0.35 * D.buckle);
+      this.turn(B.tailstart, lat, 0.3 * D.buckle); // (+ drops it)
       this.turn(B.tailstart, fwd, drop * 0.35 * D.relax);
+    }
+  }
+
+  /**
+   * Paws on the terrain: each sole goes to the ground under it plus its swing in the clip; the body
+   * sits at the clip's own height over its paws, dropping (never rising) where a paw can't reach.
+   */
+  private ground(s: Slot, p: WolfPose, g: Gait | null, w: number) {
+    if (s.legs.length !== 4) return;
+    const gy = p.ground ?? (() => p.pos.y);
+    const swingK = g ? 1 + (g.scale - 1) * 0.6 : 1;
+    // the clip stands the body higher over its paws than the bind pose does
+    const raise = -this.floor * w;
+    // legs fold or open to reach; the body only drops by what the longest reach can't make
+    let need = 0;
+    for (let i = 0; i < 4; i++) {
+      soleWorld(s.legs[i], _sole);
+      const lift = g ? this.swingAt(i, _tLeg[i]) * swingK * w : 0;
+      _dy[i] = gy(_sole.x, _sole.z) + lift - (_sole.y + raise);
+      need = Math.max(need, shortfall(s.legs[i], _dy[i] + raise));
+    }
+    const want = raise - Math.min(0.3, need);
+    const k = s.fresh || !p.dt ? 1 : Math.min(1, p.dt * 14);
+    s.lift += (want - s.lift) * k;
+    s.fresh = false;
+    s.root.position.y += s.lift;
+    s.root.updateMatrixWorld(true);
+    s.tilt.getWorldQuaternion(_bq);
+    const hinge = _lat.set(-1, 0, 0).applyQuaternion(_bq);
+    for (let i = 0; i < 4; i++) {
+      // a planted paw stays where it landed until it lifts (it lets go over the stance's last fifth)
+      const pl = s.plant[i];
+      const stance = g !== null && w > 0.3 && !s.fresh && _uLeg[i] < g.duty;
+      let dx = 0, dz = 0;
+      if (stance) {
+        soleWorld(s.legs[i], _sole);
+        if (!pl.on) { pl.on = true; pl.x = _sole.x; pl.z = _sole.z; }
+        const hold = 1 - THREE.MathUtils.smoothstep(_uLeg[i], g.duty * 0.8, g.duty);
+        dx = (pl.x - _sole.x) * hold;
+        dz = (pl.z - _sole.z) * hold;
+        // (too far to hold: the body has moved on; let it go)
+        if (dx * dx + dz * dz > 0.16) { dx = dz = 0; pl.x = _sole.x; pl.z = _sole.z; }
+      } else pl.on = false;
+      reachBy(s.legs[i], _dy[i] + raise - s.lift, hinge, dx, dz);
+    }
+    // the tail's tip stays off the ground (a low body, a rise behind it)
+    const B = s.bones;
+    if (B.tailstart && B.tail3) {
+      _sole.setFromMatrixPosition(B.tail3.matrixWorld);
+      const under = gy(_sole.x, _sole.z) + 0.16 - _sole.y;
+      if (under > 0) {
+        const base = _cp.setFromMatrixPosition(B.tailstart.matrixWorld);
+        const len = Math.max(0.1, base.distanceTo(_sole));
+        this.turn(B.tailstart, hinge, -Math.min(0.9, under / len)); // (− lifts)
+      }
     }
   }
 

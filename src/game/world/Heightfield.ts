@@ -280,6 +280,9 @@ export class Heightfield {
   }
 
   /** Bilinear height at world XZ. */
+  /** `heightAt` bound to this field (pass it around without allocating a closure). */
+  readonly groundFn = (x: number, z: number) => this.heightAt(x, z);
+
   heightAt(x: number, z: number) {
     const { res, step, size, heights } = this;
     const fx = clamp((x + size / 2) / step, 0, res - 1.001);

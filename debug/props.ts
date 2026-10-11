@@ -79,6 +79,8 @@ const BUILDERS: Record<string, () => THREE.Object3D> = {
         pos: new THREE.Vector3((i - 1) * 1.6, 0, 0), yaw: num('wyaw', Math.PI / 2), pitch: num('wpitch', 0), roll: num('roll', 0), bob: 0,
         phase: num('phase', 0) + i * 1.2, amp: num('amp', 0), low: num('low', 0), look: num('look', 0), nod: num('nod', 0), tail: num('tail', 0),
         deadT: num('dead', -1), side: 1, leap: num('leap', 0),
+        // &speed=4: the gait at that speed (walk, trot, gallop), each wolf a third of a stride on (&dphase)
+        ...(qs.has('speed') ? { speed: num('speed', 0), phase: num('phase', 0) + i * num('dphase', 2.1), ground: () => 0 } : {}),
       });
     }
     return s.group;
