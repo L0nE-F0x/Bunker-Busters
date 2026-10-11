@@ -29,7 +29,7 @@ import { updateRim, glow, desertRock } from './world/materials';
 import { buildIntelProp, type IntelProp } from './world/intelProps';
 import { Scavenge } from './world/Scavenge';
 import { NpcModels } from './world/npcSkin';
-import { updateShownMatrices, viewCull, mergeStatic } from './world/kit';
+import { updateShownMatrices, viewCull, mergeStatic, shadowProxy } from './world/kit';
 import { NpcCrowd } from './world/npc';
 import { routineOpen } from '@/content/routines';
 import { HumanSkins } from './combat/humanSkin';
@@ -754,6 +754,9 @@ export class Game {
       const g = prop.group;
       g.position.set(x, y, z);
       g.rotation.y = ((Math.sin(x * 12.9898 + z * 78.233) * 43758.5453) % 1) * Math.PI * 2;
+      // its 3-5 casters through one depth draw (a proxy per cull side) while it casts (< 28 m)
+      g.updateMatrixWorld(true);
+      shadowProxy(g);
       const casters: THREE.Mesh[] = [];
       g.traverse((o) => { if ((o as THREE.Mesh).isMesh && o.castShadow) casters.push(o as THREE.Mesh); });
       this.intelProps.push({ g, prop, phase: Math.abs(x * 0.37 + z * 0.11) % 1, casters, shadow: true });
