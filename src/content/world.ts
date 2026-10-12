@@ -1,5 +1,6 @@
 import type { IntelItem, LandmarkDef } from './types';
 import { SPIRE_ROAD } from './bunkers/spire';
+import { DOME_ROAD } from './bunkers/dome';
 
 /** Size of the playable square in metres (centred on the origin). */
 export const WORLD_SIZE = 840;
@@ -18,6 +19,8 @@ export const SIDE_ROADS: [number, number][][] = [
   [[-326, 63], [-338, 10], [-344, -40], [-352, -80], [-361, -96], [-366, -103]],
   // Careful's access road: off the highway where it climbs east into the tablelands, up to the Spire
   SPIRE_ROAD,
+  // Ascend's drive: on from the 5G tower's track, south across the shelf to the Dome's gate
+  DOME_ROAD,
 ];
 
 /**

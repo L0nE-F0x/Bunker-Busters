@@ -17,6 +17,7 @@ DC=${A}DryCreek_
 CP=${A}Camp_
 PN=${A}Panopticon_
 SP=${A}Spire_
+DM=${A}Dome_
 build() { local id=$1; shift; node scripts/models/build-glb.mjs "public/models/$id.glb" "$@" --size 1024; }
 
 ids=("$@")
@@ -92,4 +93,22 @@ on noor && build noor ${SP}Noor_Rigged.glb \
 on benny && build benny ${SP}Benny_Rigged.glb \
   --clips ${DC}Doc_Animations.glb:Listening_Gesture=idle,Talk_with_Right_Hand_Open=near,Shrug=ins_shrug \
   --mirror ${DC}Doc_Animations.glb:Listening_Gesture=idle_m
+
+# --- the Singularity Dome: HUNTER (beta), the founder twin, as a hologram on the all-hands stage (his own
+# talk loops; Sol's standing idle between lines); Hunter Vale himself slumped over the guard hut's desk
+# (the same model: Noor's Sleep_on_Desk, pinned, no breath); Gil at the on-call desk (his own doze and
+# answering clips, Sol's chair idle); the Ascend Helpers (Sol's idle, their own walk and fall)
+on hunter && build hunter ${DM}Hunter_Rigged.glb \
+  --clips ${DC}Sol_Animations.glb:Listening_Gesture=idle \
+  --clips ${DM}Hunter_Animations.glb:Talk_with_Hands_Open=near,Talk_Passionately=near2,Talk_with_Left_Hand_Raised=ins_raise \
+  --clips ${SP}Noor_Animations.glb:Sleep_on_Desk=slump \
+  --mirror ${DC}Sol_Animations.glb:Listening_Gesture=idle_m
+on gil && build gil ${DM}Gil_Rigged.glb \
+  --clips ${DC}Sol_Animations.glb:Chair_Sit_Idle_M=idle \
+  --clips ${DM}Gil_Animations.glb:Sit_and_Doze_Off=idle2,Sitting_Answering_Questions=near \
+  --clips ${PN}Ada_Animations.glb:Sit_to_Stand_Transition_F=stand
+on helper && build helper ${DM}Helper_Rigged.glb \
+  --clips ${DC}Sol_Animations.glb:Listening_Gesture=idle \
+  --clips ${DM}Helper_Walking_Basic.glb:walking_man=walk \
+  --clips ${DM}Helper_Animations.glb:falling_down=fall
 true

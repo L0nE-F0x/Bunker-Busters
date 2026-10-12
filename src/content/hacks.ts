@@ -37,6 +37,13 @@ export const DAEMONS: Record<string, DaemonDef> = {
   sentinels: { id: 'sentinels', name: 'SENTINELS · TEST MODE', blurb: 'Every sentinel on the network goes into test mode and stops watching.' },
   office: { id: 'office', name: 'TOP FLOOR · ACCESS', blurb: 'The card reader on Prudence\'s door accepts a card you don\'t have.' },
   cameras: { id: 'cameras', name: 'CAMERAS · LOOP', blurb: 'The cameras loop yesterday\'s footage. Nobody was here yesterday.' },
+  // --- the Singularity Dome: the gate's voiceprint, the airlock, the build farm, the pod, the Helpers
+  voiceprint: { id: 'voiceprint', name: 'VOICEPRINT · ENROL', blurb: 'Your voice goes on the gate\'s list as Hunter\'s. Match: 100%.' },
+  domecams: { id: 'domecams', name: 'DOME CAMERAS · LOOP', blurb: 'The cameras on the rack ends loop an empty aisle.' },
+  domedoor: { id: 'domedoor', name: 'AIRLOCK · OPEN', blurb: 'Both airlock leaves slide back. Facilities logs a dust warning.' },
+  pipeline: { id: 'pipeline', name: 'PIPELINE · HALT', blurb: 'Every build in the farm fails. Nothing new ships until someone fixes it.' },
+  pod: { id: 'pod', name: 'POD · FOUNDER ACCESS', blurb: 'The pod door opens for a founder. You are now a founder.' },
+  helpers: { id: 'helpers', name: 'HELPERS · STANDBY', blurb: 'Every Ascend Helper sits down for a one-minute firmware check.' },
 };
 
 /** Kade terminal difficulty by outpost tier. */

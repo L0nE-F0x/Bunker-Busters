@@ -57,6 +57,8 @@ export abstract class Bunker<S extends BunkerShell = BunkerShell> {
   private greeted = false;
   private droneLoops: (LoopHandle | null)[] = [];
   private _interior: Interior | null = null;
+  /** A sealed inside (interior mode can hide the world). Off for a glass building (the Dome). */
+  protected sealed = true;
   // per-frame scratch (update() runs every frame; no garbage in the hot path)
   private readonly prevFeet = new THREE.Vector2();
   private readonly feet2 = new THREE.Vector2();
@@ -498,7 +500,8 @@ export abstract class Bunker<S extends BunkerShell = BunkerShell> {
    * The inside as a sealed interior (see world/interiors.ts): the builder's `innerBox`; the portals
    * are the `portals` entries' first doors, while they're open.
    */
-  get interior() {
+  get interior(): Interior | null {
+    if (!this.sealed) return null;
     if (this._interior) return this._interior;
     const hb = this.b.innerBox;
     const portals = this.sec.portals.map(({ entry, pad }) => {

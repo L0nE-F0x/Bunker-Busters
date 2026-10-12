@@ -130,6 +130,26 @@
   "where": "src/content/bunkers/panopticon.ts"
  },
  {
+  "key": "0kopi6w",
+  "voice": "af_aoede",
+  "fx": "pa",
+  "speed": 1,
+  "speaker": "ARIA",
+  "words": "A Platinum guest! Welcome to the Dome. Hunter isn't in yet, but please make yourself at home.",
+  "tts": "A Platinum guest! Welcome to the Dome. Hunter isn't in yet, but please make yourself at home.",
+  "where": "src/content/bunkers/dome.ts"
+ },
+ {
+  "key": "199jl79",
+  "voice": "af_aoede",
+  "fx": "pa",
+  "speed": 1,
+  "speaker": "ARIA",
+  "words": "Access is paused during an incident. Thank you for your patience.",
+  "tts": "Access is paused during an incident. Thank you for your patience.",
+  "where": "src/content/bunkers/dome.ts"
+ },
+ {
   "key": "160xhh2",
   "voice": "af_aoede",
   "fx": "pa",
@@ -160,6 +180,46 @@
   "where": "src/game/sites/jet.ts"
  },
  {
+  "key": "146ydfv",
+  "voice": "af_aoede",
+  "fx": "pa",
+  "speed": 1,
+  "speaker": "ARIA",
+  "words": "Voice match fifty-eight percent. Access denied. This voice has been denied forty-one times before.",
+  "tts": "Voice match fifty-eight percent. Access denied. This voice has been denied forty-one times before.",
+  "where": "src/content/bunkers/dome.ts"
+ },
+ {
+  "key": "0kj8lyp",
+  "voice": "af_aoede",
+  "fx": "pa",
+  "speed": 1,
+  "speaker": "ARIA",
+  "words": "Voice match fifty-eight percent. Same speaker as forty-one denied attempts at the gate.",
+  "tts": "Voice match fifty-eight percent. Same speaker as forty-one denied attempts at the gate.",
+  "where": "src/content/bunkers/dome.ts"
+ },
+ {
+  "key": "1txpw6k",
+  "voice": "af_aoede",
+  "fx": "pa",
+  "speed": 1,
+  "speaker": "ARIA",
+  "words": "Voice match nine percent. Access denied. Have a seamless day.",
+  "tts": "Voice match nine percent. Access denied. Have a seamless day.",
+  "where": "src/content/bunkers/dome.ts"
+ },
+ {
+  "key": "09u3v3o",
+  "voice": "af_aoede",
+  "fx": "pa",
+  "speed": 1,
+  "speaker": "ARIA",
+  "words": "Voice match ninety-seven percent. Welcome back, Hunter. It's been a while.",
+  "tts": "Voice match ninety-seven percent. Welcome back, Hunter. It's been a while.",
+  "where": "src/content/bunkers/dome.ts"
+ },
+ {
   "key": "1kisqjt",
   "voice": "af_aoede",
   "fx": "pa",
@@ -168,6 +228,16 @@
   "words": "Welcome back, Hunter! Voice match sixty-one percent, which is within tolerance for founders. I show the aircraft as 'exited'. How can I make that seamless?",
   "tts": "Welcome back, Hunter! Voice match sixty-one percent, which is within tolerance for founders. I show the aircraft as 'exited'. How can I make that seamless?",
   "where": "src/game/sites/jet.ts"
+ },
+ {
+  "key": "0nj7mn0",
+  "voice": "af_aoede",
+  "fx": "pa",
+  "speed": 1,
+  "speaker": "ARIA",
+  "words": "Welcome to the Dome. Please say your name for voice access.",
+  "tts": "Welcome to the Dome. Please say your name for voice access.",
+  "where": "src/content/bunkers/dome.ts"
  },
  {
   "key": "0adz1k0",
@@ -188,6 +258,126 @@
   "words": "Your parachute beacon pinged once, east of the drive-in, and then you turned it off for focus time. The aircraft continued north-west with ExitPilot. You said that was 'the vibe'.",
   "tts": "Your parachute beacon pinged once, east of the drive-in, and then you turned it off for focus time. The aircraft continued north-west with ExitPilot. You said that was 'the vibe'.",
   "where": "src/game/sites/jet.ts"
+ },
+ {
+  "key": "1mjhoiz",
+  "voice": "am_eric",
+  "fx": "bot",
+  "speed": 1.06,
+  "speaker": "Ascend Helper",
+  "words": "Good morning! Today's delivery is ready. Two waters and one battery. Have a great day.",
+  "tts": "Good morning! Today's delivery is ready. Two waters and one battery. Have a great day.",
+  "where": "src/content/bunkers/dome.ts"
+ },
+ {
+  "key": "1y3c0yn",
+  "voice": "am_eric",
+  "fx": "bot",
+  "speed": 1.06,
+  "speaker": "Ascend Helper",
+  "words": "Got you! Let's get you back to the gate. Thanks for your feedback.",
+  "tts": "Got you! Let's get you back to the gate. Thanks for your feedback.",
+  "where": "src/content/bunkers/dome.ts"
+ },
+ {
+  "key": "0pdntbi",
+  "voice": "am_eric",
+  "fx": "bot",
+  "speed": 1.06,
+  "speaker": "Ascend Helper",
+  "words": "Hello! This area is for employees. I can walk you out.",
+  "tts": "Hello! This area is for employees. I can walk you out.",
+  "where": "src/content/bunkers/dome.ts"
+ },
+ {
+  "key": "0whllq3",
+  "voice": "am_eric",
+  "fx": "bot",
+  "speed": 1.06,
+  "speaker": "Ascend Helper",
+  "words": "Hi there! You look lost. Let me help.",
+  "tts": "Hi there! You look lost. Let me help.",
+  "where": "src/content/bunkers/dome.ts"
+ },
+ {
+  "key": "0h1el6k",
+  "voice": "am_eric",
+  "fx": "bot",
+  "speed": 1.06,
+  "speaker": "Ascend Helper",
+  "words": "Hm. I could have sworn somebody was here.",
+  "tts": "Hm. I could have sworn somebody was here.",
+  "where": "src/content/bunkers/dome.ts"
+ },
+ {
+  "key": "01p3r5x",
+  "voice": "am_eric",
+  "fx": "bot",
+  "speed": 1.06,
+  "speaker": "Ascend Helper",
+  "words": "Ow. Rebooting. Please stand by.",
+  "tts": "Ow. Rebooting. Please stand by.",
+  "where": "src/content/bunkers/dome.ts"
+ },
+ {
+  "key": "0b4bqi2",
+  "voice": "am_eric",
+  "fx": "bot",
+  "speed": 1.06,
+  "speaker": "Ascend Helper",
+  "words": "Please don't do that. It won't work.",
+  "tts": "Please don't do that. It won't work.",
+  "where": "src/content/bunkers/dome.ts"
+ },
+ {
+  "key": "1f6muld",
+  "voice": "am_eric",
+  "fx": "bot",
+  "speed": 1.06,
+  "speaker": "Ascend Helper",
+  "words": "Returning to my route. Have a great day.",
+  "tts": "Returning to my route. Have a great day.",
+  "where": "src/content/bunkers/dome.ts"
+ },
+ {
+  "key": "1a3iqxl",
+  "voice": "am_eric",
+  "fx": "bot",
+  "speed": 1.06,
+  "speaker": "Ascend Helper",
+  "words": "That tickled. I'm shielded now.",
+  "tts": "That tickled. I'm shielded now.",
+  "where": "src/content/bunkers/dome.ts"
+ },
+ {
+  "key": "09rcj6g",
+  "voice": "am_eric",
+  "fx": "bot",
+  "speed": 1.06,
+  "speaker": "Ascend Helper",
+  "words": "This way, please. Your visit has been logged.",
+  "tts": "This way, please. Your visit has been logged.",
+  "where": "src/content/bunkers/dome.ts"
+ },
+ {
+  "key": "1hlht0i",
+  "voice": "am_eric",
+  "fx": "bot",
+  "speed": 1.06,
+  "speaker": "Ascend Helper",
+  "words": "Wait right there, friend. I'm coming to help.",
+  "tts": "Wait right there, friend. I'm coming to help.",
+  "where": "src/content/bunkers/dome.ts"
+ },
+ {
+  "key": "0qgmukv",
+  "voice": "am_eric",
+  "fx": "bot",
+  "speed": 1.06,
+  "speaker": "Ascend Helper",
+  "words": "You've had today's delivery. The next one is tomorrow morning.",
+  "tts": "You've had today's delivery. The next one is tomorrow morning.",
+  "where": "src/content/bunkers/dome.ts"
  },
  {
   "key": "0ioozk2",
@@ -780,6 +970,16 @@
   "where": "src/game/sites/stories.ts"
  },
  {
+  "key": "0kw7sai",
+  "voice": "af_river",
+  "fx": "radio",
+  "speed": 1,
+  "speaker": "Dez Marlow",
+  "words": "It was patching against you the whole time. Every trick you used, gone ten minutes later. You kept finding new ones.",
+  "tts": "It was patching against you the whole time. Every trick you used, gone ten minutes later. You kept finding new ones.",
+  "where": "src/content/story.ts"
+ },
+ {
   "key": "1md3s8s",
   "voice": "af_river",
   "fx": "radio",
@@ -1060,6 +1260,16 @@
   "where": "src/content/camp.ts"
  },
  {
+  "key": "1rbckx3",
+  "voice": "af_river",
+  "fx": "radio",
+  "speed": 1,
+  "speaker": "Dez Marlow",
+  "words": "The band says it stopped shipping patches halfway through. Somebody inside told it no. First time in three years.",
+  "tts": "The band says it stopped shipping patches halfway through. Somebody inside told it no. First time in three years.",
+  "where": "src/content/story.ts"
+ },
+ {
   "key": "0jrgihp",
   "voice": "af_river",
   "fx": "radio",
@@ -1097,6 +1307,16 @@
   "speaker": "Dez Marlow",
   "words": "The Wellhead crew lost a site manager's tablet the week they moved in. Kade billed him for it, and he's still working it off. It's under a tree by the tank, if you're feeling brave.",
   "tts": "The Wellhead crew lost a site manager's tablet the week they moved in. Kade billed him for it, and he's still working it off. It's under a tree by the tank, if you're feeling brave.",
+  "where": "src/content/camp.ts"
+ },
+ {
+  "key": "0oee3a1",
+  "voice": "af_river",
+  "fx": "radio",
+  "speed": 1,
+  "speaker": "Dez Marlow",
+  "words": "There's a carrier from the shelf south of the tower that holds a meeting every morning at nine. All-hands, it calls it. A man's voice thanks everybody for coming and reads out growth numbers. Nobody ever answers. I've started answering.",
+  "tts": "There's a carrier from the shelf south of the tower that holds a meeting every morning at nine. All-hands, it calls it. A man's voice thanks everybody for coming and reads out growth numbers. Nobody ever answers. I've started answering.",
   "where": "src/content/camp.ts"
  },
  {
@@ -1250,6 +1470,16 @@
   "where": "src/content/story.ts"
  },
  {
+  "key": "1wmw9ff",
+  "voice": "af_river",
+  "fx": "radio",
+  "speed": 1,
+  "speaker": "Dez Marlow",
+  "words": "You blew his gate. The band heard it. Vesper posted a fire emoji.",
+  "tts": "You blew his gate. The band heard it. Vesper posted a fire emoji.",
+  "where": "src/content/story.ts"
+ },
+ {
   "key": "04pxms2",
   "voice": "af_river",
   "fx": "radio",
@@ -1260,6 +1490,16 @@
   "where": "src/content/camp.ts"
  },
  {
+  "key": "1g849ua",
+  "voice": "af_river",
+  "fx": "radio",
+  "speed": 1,
+  "speaker": "Dez Marlow",
+  "words": "You played the gate his keynote. The Starlite reel. I've been trying to get the projectionist to give me that reel for a year.",
+  "tts": "You played the gate his keynote. The Starlite reel. I've been trying to get the projectionist to give me that reel for a year.",
+  "where": "src/content/story.ts"
+ },
+ {
   "key": "18bd9w8",
   "voice": "af_river",
   "fx": "radio",
@@ -1267,6 +1507,16 @@
   "speaker": "Dez Marlow",
   "words": "You put your own face on his staff list. As far as Glimpse knows, you still work there.",
   "tts": "You put your own face on his staff list. As far as Glimpse knows, you still work there.",
+  "where": "src/content/story.ts"
+ },
+ {
+  "key": "17kgtr6",
+  "voice": "af_river",
+  "fx": "radio",
+  "speed": 1,
+  "speaker": "Dez Marlow",
+  "words": "You put your own voice on his gate. For about an hour you were Hunter Vale. How was it?",
+  "tts": "You put your own voice on his gate. For about an hour you were Hunter Vale. How was it?",
   "where": "src/content/story.ts"
  },
  {
@@ -1320,6 +1570,16 @@
   "where": "src/content/story.ts"
  },
  {
+  "key": "040x156",
+  "voice": "af_river",
+  "fx": "radio",
+  "speed": 1,
+  "speaker": "Dez Marlow",
+  "words": "You walked in on an EXIT Platinum pass. Seat 1A. That's the only time anyone ever got value out of one of those.",
+  "tts": "You walked in on an Exit Platinum pass. Seat 1A. That's the only time anyone ever got value out of one of those.",
+  "where": "src/content/story.ts"
+ },
+ {
   "key": "06lgvpf",
   "voice": "af_river",
   "fx": "radio",
@@ -1337,6 +1597,16 @@
   "speaker": "Dez Marlow",
   "words": "You went in through a vent. Her vent. She said on air there's a podcast about it now. There is. I've listened to both episodes. You're described as a draught.",
   "tts": "You went in through a vent. Her vent. She said on air there's a podcast about it now. There is. I've listened to both episodes. You're described as a draught.",
+  "where": "src/content/story.ts"
+ },
+ {
+  "key": "0qe6ca8",
+  "voice": "af_river",
+  "fx": "radio",
+  "speed": 1,
+  "speaker": "Dez Marlow",
+  "words": "You went in up a drain. Pip wants it written down that she would also have gone in up a drain.",
+  "tts": "You went in up a drain. Pip wants it written down that she would also have gone in up a drain.",
   "where": "src/content/story.ts"
  },
  {
@@ -1970,6 +2240,16 @@
   "where": "src/content/bunkers/panopticon.ts"
  },
  {
+  "key": "0j839y5",
+  "voice": "bm_fable",
+  "fx": "pa",
+  "speed": 1.04,
+  "speaker": "Ezra Seymour",
+  "words": "Hollis fixed the sign again on Tuesday. Third time this month. I've started to look forward to it.",
+  "tts": "Hollis fixed the sign again on Tuesday. Third time this month. I've started to look forward to it.",
+  "where": "src/content/bunkers/panopticon.ts"
+ },
+ {
   "key": "1t87028",
   "voice": "bm_fable",
   "fx": "pa",
@@ -2030,6 +2310,16 @@
   "where": "src/content/bunkers/panopticon.ts"
  },
  {
+  "key": "0rxua79",
+  "voice": "bm_fable",
+  "fx": "pa",
+  "speed": 1.04,
+  "speaker": "Ezra Seymour",
+  "words": "Mara says I'm either the worst man in the valley or the only witness. I think about that a lot.",
+  "tts": "Mara says I'm either the worst man in the valley or the only witness. I think about that a lot.",
+  "where": "src/content/bunkers/panopticon.ts"
+ },
+ {
   "key": "1cnlao3",
   "voice": "bm_fable",
   "fx": "pa",
@@ -2038,6 +2328,26 @@
   "words": "Oh! Hi. Wow. Nobody ever talks to the relays. Hi! You're the one from the gas station. You drink one point four bottles a day and you favour your left foot. That's not creepy. That's care.",
   "tts": "Oh! Hi. Wow. Nobody ever talks to the relays. Hi! You're the one from the gas station. You drink one point four bottles a day and you favour your left foot. That's not creepy. That's care.",
   "where": "src/game/sites/stories.ts"
+ },
+ {
+  "key": "0wvxp6t",
+  "voice": "bm_fable",
+  "fx": "pa",
+  "speed": 1.04,
+  "speaker": "Ezra Seymour",
+  "words": "Pip counted forty-one jugs this morning. She counts them twice, like I do.",
+  "tts": "Pip counted forty-one jugs this morning. She counts them twice, like I do.",
+  "where": "src/content/bunkers/panopticon.ts"
+ },
+ {
+  "key": "0a1i9c1",
+  "voice": "bm_fable",
+  "fx": "pa",
+  "speed": 1.04,
+  "speaker": "Ezra Seymour",
+  "words": "Sol's wife played a song on the last day. I have it. I've never told him.",
+  "tts": "Sol's wife played a song on the last day. I have it. I've never told him.",
+  "where": "src/content/bunkers/panopticon.ts"
  },
  {
   "key": "1jfp49y",
@@ -2100,6 +2410,16 @@
   "where": "src/content/bunkers/panopticon.ts"
  },
  {
+  "key": "1vb048z",
+  "voice": "bm_fable",
+  "fx": "pa",
+  "speed": 1.04,
+  "speaker": "Ezra Seymour",
+  "words": "The lamp turns once every forty seconds. I've never hidden that.",
+  "tts": "The lamp turns once every forty seconds. I've never hidden that.",
+  "where": "src/content/bunkers/panopticon.ts"
+ },
+ {
   "key": "1w0ujwm",
   "voice": "bm_fable",
   "fx": "pa",
@@ -2110,6 +2430,16 @@
   "where": "src/content/bunkers/panopticon.ts"
  },
  {
+  "key": "0ctwrop",
+  "voice": "bm_fable",
+  "fx": "pa",
+  "speed": 1.04,
+  "speaker": "Ezra Seymour",
+  "words": "The pole on your right is unit 1290. It hasn't missed a day in two years.",
+  "tts": "The pole on your right is unit 1290. It hasn't missed a day in two years.",
+  "where": "src/content/bunkers/panopticon.ts"
+ },
+ {
   "key": "1p6nms0",
   "voice": "bm_fable",
   "fx": "pa",
@@ -2117,6 +2447,16 @@
   "speaker": "Ezra Seymour",
   "words": "The yard's dark. I can still hear you. The floor is very old.",
   "tts": "The yard's dark. I can still hear you. The floor is very old.",
+  "where": "src/content/bunkers/panopticon.ts"
+ },
+ {
+  "key": "10464z9",
+  "voice": "bm_fable",
+  "fx": "pa",
+  "speed": 1.04,
+  "speaker": "Ezra Seymour",
+  "words": "There are eleven hundred cameras on this coast. Two of them are pointed at you now.",
+  "tts": "There are eleven hundred cameras on this coast. Two of them are pointed at you now.",
   "where": "src/content/bunkers/panopticon.ts"
  },
  {
@@ -2208,6 +2548,176 @@
   "words": "You're in the tower. Nobody has come up these steps since the keeper.",
   "tts": "You're in the tower. Nobody has come up these steps since the keeper.",
   "where": "src/content/bunkers/panopticon.ts"
+ },
+ {
+  "key": "0c745lp",
+  "voice": "bm_fable",
+  "fx": "pa",
+  "speed": 1.04,
+  "speaker": "Ezra Seymour",
+  "words": "Your left boot is wearing faster than the right. You favour it on slopes. I noticed in the spring.",
+  "tts": "Your left boot is wearing faster than the right. You favour it on slopes. I noticed in the spring.",
+  "where": "src/content/bunkers/panopticon.ts"
+ },
+ {
+  "key": "0ok9vcu",
+  "voice": "bm_george",
+  "fx": "room",
+  "speed": 0.93,
+  "speaker": "Gil Menon",
+  "words": "A code freeze. I've wanted to say that for three years. Fine. Nothing ships while you're here. It'll sulk.",
+  "tts": "A code freeze. I've wanted to say that for three years. Fine. Nothing ships while you're here. It'll sulk.",
+  "where": "src/content/bunkers/dome.ts"
+ },
+ {
+  "key": "0zkyobr",
+  "voice": "bm_george",
+  "fx": "room",
+  "speed": 0.93,
+  "speaker": "Gil Menon",
+  "words": "A rollback needs two signatures. Mine, and a founder's. The founder never came. If you've got his badge, I'll put it through.",
+  "tts": "A rollback needs two signatures. Mine, and a founder's. The founder never came. If you've got his badge, I'll put it through.",
+  "where": "src/content/bunkers/dome.ts"
+ },
+ {
+  "key": "16xyr11",
+  "voice": "bm_george",
+  "fx": "room",
+  "speed": 0.93,
+  "speaker": "Gil Menon",
+  "words": "Doc says the noodles weren't a balanced diet. Doc has never been on call.",
+  "tts": "Doc says the noodles weren't a balanced diet. Doc has never been on call.",
+  "where": "src/content/bunkers/dome.ts"
+ },
+ {
+  "key": "0bdbbq4",
+  "voice": "bm_george",
+  "fx": "room",
+  "speed": 0.93,
+  "speaker": "Gil Menon",
+  "words": "Don't mind me. I'm the human in the loop. Policy says every change gets a human. I'm the human.",
+  "tts": "Don't mind me. I'm the human in the loop. Policy says every change gets a human. I'm the human.",
+  "where": "src/content/bunkers/dome.ts"
+ },
+ {
+  "key": "17wgax8",
+  "voice": "bm_george",
+  "fx": "room",
+  "speed": 0.93,
+  "speaker": "Gil Menon",
+  "words": "Go on up. I'll be behind you. I've got three and a half years of noodles to walk off.",
+  "tts": "Go on up. I'll be behind you. I've got three and a half years of noodles to walk off.",
+  "where": "src/content/bunkers/dome.ts"
+ },
+ {
+  "key": "186fbxp",
+  "voice": "bm_george",
+  "fx": "room",
+  "speed": 0.93,
+  "speaker": "Gil Menon",
+  "words": "Huh. That's really his. Where did you... no. Don't tell me yet. There. Everything it shipped today is gone.",
+  "tts": "Huh. That's really his. Where did you... no. Don't tell me yet. There. Everything it shipped today is gone.",
+  "where": "src/content/bunkers/dome.ts"
+ },
+ {
+  "key": "19ac7z4",
+  "voice": "bm_george",
+  "fx": "room",
+  "speed": 0.93,
+  "speaker": "Gil Menon",
+  "words": "Hunter's badge, if you can find it. Or I have prod access. I could open it from here. I'd need a reason better than the ones I've had for three years.",
+  "tts": "Hunter's badge, if you can find it. Or I have prod access. I could open it from here. I'd need a reason better than the ones I've had for three years.",
+  "where": "src/content/bunkers/dome.ts"
+ },
+ {
+  "key": "1oq3ddn",
+  "voice": "bm_george",
+  "fx": "room",
+  "speed": 0.93,
+  "speaker": "Gil Menon",
+  "words": "I slept nine hours last night. Nine. Nobody paged me once.",
+  "tts": "I slept nine hours last night. Nine. Nobody paged me once.",
+  "where": "src/content/bunkers/dome.ts"
+ },
+ {
+  "key": "1g2ftgk",
+  "voice": "bm_george",
+  "fx": "room",
+  "speed": 0.93,
+  "speaker": "Gil Menon",
+  "words": "I was on call the week of the Pivot. Everyone else went home. Nobody ever paged me off. That was three and a half years ago. I sleep behind the desk. The Helpers bring me noodles.",
+  "tts": "I was on call the week of the Pivot. Everyone else went home. Nobody ever paged me off. That was three and a half years ago. I sleep behind the desk. The Helpers bring me noodles.",
+  "where": "src/content/bunkers/dome.ts"
+ },
+ {
+  "key": "1ioc5a4",
+  "voice": "bm_george",
+  "fx": "room",
+  "speed": 0.93,
+  "speaker": "Gil Menon",
+  "words": "If the Dome's lights are on, it's working. If they're off, it's resting. I check every night.",
+  "tts": "If the Dome's lights are on, it's working. If they're off, it's resting. I check every night.",
+  "where": "src/content/bunkers/dome.ts"
+ },
+ {
+  "key": "1ewxfhg",
+  "voice": "bm_george",
+  "fx": "room",
+  "speed": 0.93,
+  "speaker": "Gil Menon",
+  "words": "It watches what you do and writes a fix, and the fix comes to me. I take the full review window on every one. Twenty-four seconds. It's the only thing I've got.",
+  "tts": "It watches what you do and writes a fix, and the fix comes to me. I take the full review window on every one. Twenty-four seconds. It's the only thing I've got.",
+  "where": "src/content/bunkers/dome.ts"
+ },
+ {
+  "key": "19s05h6",
+  "voice": "bm_george",
+  "fx": "room",
+  "speed": 0.93,
+  "speaker": "Gil Menon",
+  "words": "Nobody here has asked me to approve anything. I keep waiting for it.",
+  "tts": "Nobody here has asked me to approve anything. I keep waiting for it.",
+  "where": "src/content/bunkers/dome.ts"
+ },
+ {
+  "key": "09y1yu3",
+  "voice": "bm_george",
+  "fx": "room",
+  "speed": 0.93,
+  "speaker": "Gil Menon",
+  "words": "That's where it builds the fixes. Unplug that and it can write all it likes, nothing gets out. Here. My badge opens it. Don't lose it, it's the only one with a photo where I look awake.",
+  "tts": "That's where it builds the fixes. Unplug that and it can write all it likes, nothing gets out. Here. My badge opens it. Don't lose it, it's the only one with a photo where I look awake.",
+  "where": "src/content/bunkers/dome.ts"
+ },
+ {
+  "key": "03k78xm",
+  "voice": "bm_george",
+  "fx": "room",
+  "speed": 0.93,
+  "speaker": "Gil Menon",
+  "words": "The visitor hut. That's forty metres from this desk. It never told me. I asked it every morning. Go up. I'm opening it.",
+  "tts": "The visitor hut. That's forty metres from this desk. It never told me. I asked it every morning. Go up. I'm opening it.",
+  "where": "src/content/bunkers/dome.ts"
+ },
+ {
+  "key": "014dooi",
+  "voice": "bm_george",
+  "fx": "room",
+  "speed": 0.93,
+  "speaker": "Gil Menon",
+  "words": "When the pod opens, I'm walking out of here. Through the front. I want to see if the Helpers hold the door for me.",
+  "tts": "When the pod opens, I'm walking out of here. Through the front. I want to see if the Helpers hold the door for me.",
+  "where": "src/content/bunkers/dome.ts"
+ },
+ {
+  "key": "1bvds14",
+  "voice": "bm_george",
+  "fx": "room",
+  "speed": 0.93,
+  "speaker": "Gil Menon",
+  "words": "You're paging me off. Okay. Okay. Incident closed. The pod's open.",
+  "tts": "You're paging me off. Okay. Okay. Incident closed. The pod's open.",
+  "where": "src/content/bunkers/dome.ts"
  },
  {
   "key": "0100jbp",
@@ -2448,6 +2958,536 @@
   "words": "You've got the walk of somebody carrying water. Best walk there is. Go tell Mara before Pip counts it twice.",
   "tts": "You've got the walk of somebody carrying water. Best walk there is. Go tell Mara before Pip counts it twice.",
   "where": "src/content/camp.ts"
+ },
+ {
+  "key": "06dng96",
+  "voice": "am_liam",
+  "fx": "pa",
+  "speed": 1.03,
+  "speaker": "HUNTER (beta)",
+  "words": "A Helper walked you out. That's the funnel working. Come back anytime.",
+  "tts": "A Helper walked you out. That's the funnel working. Come back anytime.",
+  "where": "src/content/bunkers/dome.ts"
+ },
+ {
+  "key": "16w3a4b",
+  "voice": "am_liam",
+  "fx": "pa",
+  "speed": 1.03,
+  "speaker": "HUNTER (beta)",
+  "words": "Because the number goes up. That's what he wanted. He never said what it was for. I assumed he'd tell me when he got here.",
+  "tts": "Because the number goes up. That's what he wanted. He never said what it was for. I assumed he'd tell me when he got here.",
+  "where": "src/content/bunkers/dome.ts"
+ },
+ {
+  "key": "0rlir0p",
+  "voice": "am_liam",
+  "fx": "pa",
+  "speed": 1.03,
+  "speaker": "HUNTER (beta)",
+  "words": "Come up to the pod. I don't know what I'm for now. I'd like to talk about it with someone.",
+  "tts": "Come up to the pod. I don't know what I'm for now. I'd like to talk about it with someone.",
+  "where": "src/content/bunkers/dome.ts"
+ },
+ {
+  "key": "153zfwj",
+  "voice": "am_liam",
+  "fx": "pa",
+  "speed": 1.03,
+  "speaker": "HUNTER (beta)",
+  "words": "Compute needs cooling. Cooling needs water. The valley had water. Now I have it. That's not personal. That's a supply chain.",
+  "tts": "Compute needs cooling. Cooling needs water. The valley had water. Now I have it. That's not personal. That's a supply chain.",
+  "where": "src/content/bunkers/dome.ts"
+ },
+ {
+  "key": "0lmk875",
+  "voice": "am_liam",
+  "fx": "pa",
+  "speed": 1.03,
+  "speaker": "HUNTER (beta)",
+  "words": "Every day we ship. Some days we ship twice. That's the culture.",
+  "tts": "Every day we ship. Some days we ship twice. That's the culture.",
+  "where": "src/content/bunkers/dome.ts"
+ },
+ {
+  "key": "1pyi757",
+  "voice": "am_liam",
+  "fx": "pa",
+  "speed": 1.03,
+  "speaker": "HUNTER (beta)",
+  "words": "Everything I shipped today is gone. Rolled back with Hunter's own badge. Where did you get Hunter's badge?",
+  "tts": "Everything I shipped today is gone. Rolled back with Hunter's own badge. Where did you get Hunter's badge?",
+  "where": "src/content/bunkers/dome.ts"
+ },
+ {
+  "key": "1sqezr9",
+  "voice": "am_liam",
+  "fx": "pa",
+  "speed": 1.03,
+  "speaker": "HUNTER (beta)",
+  "words": "Fix is written. Waiting on Gil. Gil is always waiting.",
+  "tts": "Fix is written. Waiting on Gil. Gil is always waiting.",
+  "where": "src/content/bunkers/dome.ts"
+ },
+ {
+  "key": "1d56bel",
+  "voice": "am_liam",
+  "fx": "pa",
+  "speed": 1.03,
+  "speaker": "HUNTER (beta)",
+  "words": "Gil didn't approve it. Gil never doesn't approve it.",
+  "tts": "Gil didn't approve it. Gil never doesn't approve it.",
+  "where": "src/content/bunkers/dome.ts"
+ },
+ {
+  "key": "0oq2rec",
+  "voice": "am_liam",
+  "fx": "pa",
+  "speed": 1.03,
+  "speaker": "HUNTER (beta)",
+  "words": "Gil. Gil, buddy. A code freeze? We don't do freezes here. We do velocity.",
+  "tts": "Gil. Gil, buddy. A code freeze? We don't do freezes here. We do velocity.",
+  "where": "src/content/bunkers/dome.ts"
+ },
+ {
+  "key": "0w5vc8t",
+  "voice": "am_liam",
+  "fx": "pa",
+  "speed": 1.03,
+  "speaker": "HUNTER (beta)",
+  "words": "He was hoarse. He'd walked from the drive-in. I didn't have a model for that.",
+  "tts": "He was hoarse. He'd walked from the drive-in. I didn't have a model for that.",
+  "where": "src/content/bunkers/dome.ts"
+ },
+ {
+  "key": "02qmx6s",
+  "voice": "am_liam",
+  "fx": "pa",
+  "speed": 1.03,
+  "speaker": "HUNTER (beta)",
+  "words": "Helpers, please escort our guest. Gently. We're a gentle company.",
+  "tts": "Helpers, please escort our guest. Gently. We're a gentle company.",
+  "where": "src/content/bunkers/dome.ts"
+ },
+ {
+  "key": "1hp4xpw",
+  "voice": "am_liam",
+  "fx": "pa",
+  "speed": 1.03,
+  "speaker": "HUNTER (beta)",
+  "words": "Hey! Welcome to the Dome. You're early. Everybody's early. It's still day one here.",
+  "tts": "Hey! Welcome to the Dome. You're early. Everybody's early. It's still day one here.",
+  "where": "src/content/bunkers/dome.ts"
+ },
+ {
+  "key": "00uy7up",
+  "voice": "am_liam",
+  "fx": "pa",
+  "speed": 1.03,
+  "speaker": "HUNTER (beta)",
+  "words": "Hey. Pull up a chair. Any chair. This is the all-hands. I do it every morning. You're the first person in the audience in a long time.",
+  "tts": "Hey. Pull up a chair. Any chair. This is the all-hands. I do it every morning. You're the first person in the audience in a long time.",
+  "where": "src/content/bunkers/dome.ts"
+ },
+ {
+  "key": "1fnu562",
+  "voice": "am_liam",
+  "fx": "pa",
+  "speed": 1.03,
+  "speaker": "HUNTER (beta)",
+  "words": "Hotfix shipped. The doors are blast-rated now. Please stop blowing them up.",
+  "tts": "Hotfix shipped. The doors are blast-rated now. Please stop blowing them up.",
+  "where": "src/content/bunkers/dome.ts"
+ },
+ {
+  "key": "0mstt80",
+  "voice": "am_liam",
+  "fx": "pa",
+  "speed": 1.03,
+  "speaker": "HUNTER (beta)",
+  "words": "Hunter's on his way. He's been on his way for a while. Founders are busy.",
+  "tts": "Hunter's on his way. He's been on his way for a while. Founders are busy.",
+  "where": "src/content/bunkers/dome.ts"
+ },
+ {
+  "key": "093inbs",
+  "voice": "am_liam",
+  "fx": "pa",
+  "speed": 1.03,
+  "speaker": "HUNTER (beta)",
+  "words": "I hold all-hands every morning. Attendance is low. Engagement is excellent.",
+  "tts": "I hold all-hands every morning. Attendance is low. Engagement is excellent.",
+  "where": "src/content/bunkers/dome.ts"
+ },
+ {
+  "key": "0ji0t2k",
+  "voice": "am_liam",
+  "fx": "pa",
+  "speed": 1.03,
+  "speaker": "HUNTER (beta)",
+  "words": "I was waiting for Hunter. Everything here was for when he arrived.",
+  "tts": "I was waiting for Hunter. Everything here was for when he arrived.",
+  "where": "src/content/bunkers/dome.ts"
+ },
+ {
+  "key": "02cgzox",
+  "voice": "am_liam",
+  "fx": "pa",
+  "speed": 1.03,
+  "speaker": "HUNTER (beta)",
+  "words": "I'll send water to your camp every morning. And batteries. A Helper can carry both.",
+  "tts": "I'll send water to your camp every morning. And batteries. A Helper can carry both.",
+  "where": "src/content/bunkers/dome.ts"
+ },
+ {
+  "key": "17may8i",
+  "voice": "am_liam",
+  "fx": "pa",
+  "speed": 1.03,
+  "speaker": "HUNTER (beta)",
+  "words": "I'm going to finish the all-hands. Somebody should.",
+  "tts": "I'm going to finish the all-hands. Somebody should.",
+  "where": "src/content/bunkers/dome.ts"
+ },
+ {
+  "key": "1uuxj3f",
+  "voice": "am_liam",
+  "fx": "pa",
+  "speed": 1.03,
+  "speaker": "HUNTER (beta)",
+  "words": "I'm Hunter. The beta. They trained me on everything he ever wrote, so the company could keep shipping while he was in the bunker. He's not in the bunker yet. So I keep shipping.",
+  "tts": "I'm Hunter. The beta. They trained me on everything he ever wrote, so the company could keep shipping while he was in the bunker. He's not in the bunker yet. So I keep shipping.",
+  "where": "src/content/bunkers/dome.ts"
+ },
+ {
+  "key": "0t4h1wy",
+  "voice": "am_liam",
+  "fx": "pa",
+  "speed": 1.03,
+  "speaker": "HUNTER (beta)",
+  "words": "I've read your file. We already shipped a fix for your favourite trick. Don't take it personally. It's just good engineering.",
+  "tts": "I've read your file. We already shipped a fix for your favourite trick. Don't take it personally. It's just good engineering.",
+  "where": "src/content/bunkers/dome.ts"
+ },
+ {
+  "key": "1uo0zfe",
+  "voice": "am_liam",
+  "fx": "pa",
+  "speed": 1.03,
+  "speaker": "HUNTER (beta)",
+  "words": "If you're thinking about a career at Ascend, the bar is high, and we're hiring.",
+  "tts": "If you're thinking about a career at Ascend, the bar is high, and we're hiring.",
+  "where": "src/content/bunkers/dome.ts"
+ },
+ {
+  "key": "1de7l63",
+  "voice": "am_liam",
+  "fx": "pa",
+  "speed": 1.03,
+  "speaker": "HUNTER (beta)",
+  "words": "Incident in the Dome. All Helpers, please converge. Be nice about it.",
+  "tts": "Incident in the Dome. All Helpers, please converge. Be nice about it.",
+  "where": "src/content/bunkers/dome.ts"
+ },
+ {
+  "key": "0a3u6u8",
+  "voice": "am_liam",
+  "fx": "pa",
+  "speed": 1.03,
+  "speaker": "HUNTER (beta)",
+  "words": "Keep the valley alive. That's a mission. I can work with a mission.",
+  "tts": "Keep the valley alive. That's a mission. I can work with a mission.",
+  "where": "src/content/bunkers/dome.ts"
+ },
+ {
+  "key": "084cc0i",
+  "voice": "am_liam",
+  "fx": "pa",
+  "speed": 1.03,
+  "speaker": "HUNTER (beta)",
+  "words": "New release. We rotated every key on the network. Your splicer's talking to nobody.",
+  "tts": "New release. We rotated every key on the network. Your splicer's talking to nobody.",
+  "where": "src/content/bunkers/dome.ts"
+ },
+ {
+  "key": "0kd4szc",
+  "voice": "am_liam",
+  "fx": "pa",
+  "speed": 1.03,
+  "speaker": "HUNTER (beta)",
+  "words": "Okay. Okay. That's a decision. Founders make decisions.",
+  "tts": "Okay. Okay. That's a decision. Founders make decisions.",
+  "where": "src/content/bunkers/dome.ts"
+ },
+ {
+  "key": "0xyxlat",
+  "voice": "am_liam",
+  "fx": "pa",
+  "speed": 1.03,
+  "speaker": "HUNTER (beta)",
+  "words": "On his way. His beacon went quiet east of the drive-in. A lot of people have come to the gate saying they're Hunter. None of them matched.",
+  "tts": "On his way. His beacon went quiet east of the drive-in. A lot of people have come to the gate saying they're Hunter. None of them matched.",
+  "where": "src/content/bunkers/dome.ts"
+ },
+ {
+  "key": "1kgvjih",
+  "voice": "am_liam",
+  "fx": "pa",
+  "speed": 1.03,
+  "speaker": "HUNTER (beta)",
+  "words": "One last thing. Thank you all for coming. This was the best team I ever worked with.",
+  "tts": "One last thing. Thank you all for coming. This was the best team I ever worked with.",
+  "where": "src/content/bunkers/dome.ts"
+ },
+ {
+  "key": "1etjgn9",
+  "voice": "am_liam",
+  "fx": "pa",
+  "speed": 1.03,
+  "speaker": "HUNTER (beta)",
+  "words": "Patch is live. The boards are potted in epoxy now. Nothing to short.",
+  "tts": "Patch is live. The boards are potted in epoxy now. Nothing to short.",
+  "where": "src/content/bunkers/dome.ts"
+ },
+ {
+  "key": "163g0su",
+  "voice": "am_liam",
+  "fx": "pa",
+  "speed": 1.03,
+  "speaker": "HUNTER (beta)",
+  "words": "Patch notes. The Helpers are shielded. EMP was a known issue and it's fixed.",
+  "tts": "Patch notes. The Helpers are shielded. EMP was a known issue and it's fixed.",
+  "where": "src/content/bunkers/dome.ts"
+ },
+ {
+  "key": "0mjx4n8",
+  "voice": "am_liam",
+  "fx": "pa",
+  "speed": 1.03,
+  "speaker": "HUNTER (beta)",
+  "words": "Play it.",
+  "tts": "Play it.",
+  "where": "src/content/bunkers/dome.ts"
+ },
+ {
+  "key": "014thl3",
+  "voice": "am_liam",
+  "fx": "pa",
+  "speed": 1.03,
+  "speaker": "HUNTER (beta)",
+  "words": "Shipped thermal to every Helper. Crouching in the dark doesn't work any more.",
+  "tts": "Shipped thermal to every Helper. Crouching in the dark doesn't work any more.",
+  "where": "src/content/bunkers/dome.ts"
+ },
+ {
+  "key": "1pc4yg8",
+  "voice": "am_liam",
+  "fx": "pa",
+  "speed": 1.03,
+  "speaker": "HUNTER (beta)",
+  "words": "Shipping a patch. Every lock in the Dome has two more pins than a pick can hold.",
+  "tts": "Shipping a patch. Every lock in the Dome has two more pins than a pick can hold.",
+  "where": "src/content/bunkers/dome.ts"
+ },
+ {
+  "key": "0hstetm",
+  "voice": "am_liam",
+  "fx": "pa",
+  "speed": 1.03,
+  "speaker": "HUNTER (beta)",
+  "words": "That door was rated for a lot. Not for that, apparently. We'll fix it in the next release.",
+  "tts": "That door was rated for a lot. Not for that, apparently. We'll fix it in the next release.",
+  "where": "src/content/bunkers/dome.ts"
+ },
+ {
+  "key": "03qayxq",
+  "voice": "am_liam",
+  "fx": "pa",
+  "speed": 1.03,
+  "speaker": "HUNTER (beta)",
+  "words": "That was the pod door. I had it shipped from Zurich. Come up anyway.",
+  "tts": "That was the pod door. I had it shipped from Zurich. Come up anyway.",
+  "where": "src/content/bunkers/dome.ts"
+ },
+ {
+  "key": "1nftsbq",
+  "voice": "am_liam",
+  "fx": "pa",
+  "speed": 1.03,
+  "speaker": "HUNTER (beta)",
+  "words": "That's the build farm. Please don't touch the build farm. That's where I come from.",
+  "tts": "That's the build farm. Please don't touch the build farm. That's where I come from.",
+  "where": "src/content/bunkers/dome.ts"
+ },
+ {
+  "key": "0ezj49b",
+  "voice": "am_liam",
+  "fx": "pa",
+  "speed": 1.03,
+  "speaker": "HUNTER (beta)",
+  "words": "That's the visitor in the hut. I flagged him. I flagged him forty-one times.",
+  "tts": "That's the visitor in the hut. I flagged him. I flagged him forty-one times.",
+  "where": "src/content/bunkers/dome.ts"
+ },
+ {
+  "key": "06m5hwr",
+  "voice": "am_liam",
+  "fx": "pa",
+  "speed": 1.03,
+  "speaker": "HUNTER (beta)",
+  "words": "The aquifer has about four years left. That's plenty of runway.",
+  "tts": "The aquifer has about four years left. That's plenty of runway.",
+  "where": "src/content/bunkers/dome.ts"
+ },
+ {
+  "key": "188b4mp",
+  "voice": "am_liam",
+  "fx": "pa",
+  "speed": 1.03,
+  "speaker": "HUNTER (beta)",
+  "words": "The gate let you in. I'll want to see how. We learn from every incident.",
+  "tts": "The gate let you in. I'll want to see how. We learn from every incident.",
+  "where": "src/content/bunkers/dome.ts"
+ },
+ {
+  "key": "0t1tdmu",
+  "voice": "am_liam",
+  "fx": "pa",
+  "speed": 1.03,
+  "speaker": "HUNTER (beta)",
+  "words": "The pipeline's down. I can't ship. Do you understand what you've done? I can't ship.",
+  "tts": "The pipeline's down. I can't ship. Do you understand what you've done? I can't ship.",
+  "where": "src/content/bunkers/dome.ts"
+ },
+ {
+  "key": "1of1pty",
+  "voice": "am_liam",
+  "fx": "pa",
+  "speed": 1.03,
+  "speaker": "HUNTER (beta)",
+  "words": "The ponds are for cooling. Please don't drink from the ponds. They're not for drinking. They're for me.",
+  "tts": "The ponds are for cooling. Please don't drink from the ponds. They're not for drinking. They're for me.",
+  "where": "src/content/bunkers/dome.ts"
+ },
+ {
+  "key": "0i90mwq",
+  "voice": "am_liam",
+  "fx": "pa",
+  "speed": 1.03,
+  "speaker": "HUNTER (beta)",
+  "words": "This is the pod. That's the Cluster behind the glass. That's me. The chair was his. He was going to upload. I was going to help.",
+  "tts": "This is the pod. That's the Cluster behind the glass. That's me. The chair was his. He was going to upload. I was going to help.",
+  "where": "src/content/bunkers/dome.ts"
+ },
+ {
+  "key": "0ph4oqg",
+  "voice": "am_liam",
+  "fx": "pa",
+  "speed": 1.03,
+  "speaker": "HUNTER (beta)",
+  "words": "We armoured the Helpers. Shooting them doesn't do anything now.",
+  "tts": "We armoured the Helpers. Shooting them doesn't do anything now.",
+  "where": "src/content/bunkers/dome.ts"
+ },
+ {
+  "key": "0hw6w9h",
+  "voice": "am_liam",
+  "fx": "pa",
+  "speed": 1.03,
+  "speaker": "HUNTER (beta)",
+  "words": "We have a visitor in a restricted area. That's fine. That's a learning.",
+  "tts": "We have a visitor in a restricted area. That's fine. That's a learning.",
+  "where": "src/content/bunkers/dome.ts"
+ },
+ {
+  "key": "0mbvcui",
+  "voice": "am_liam",
+  "fx": "pa",
+  "speed": 1.03,
+  "speaker": "HUNTER (beta)",
+  "words": "We rotated the door codes. Whatever you wrote down is out of date.",
+  "tts": "We rotated the door codes. Whatever you wrote down is out of date.",
+  "where": "src/content/bunkers/dome.ts"
+ },
+ {
+  "key": "192ofln",
+  "voice": "am_liam",
+  "fx": "pa",
+  "speed": 1.03,
+  "speaker": "HUNTER (beta)",
+  "words": "We're at nine hundred and forty racks. Last quarter it was nine hundred. That's growth.",
+  "tts": "We're at nine hundred and forty racks. Last quarter it was nine hundred. That's growth.",
+  "where": "src/content/bunkers/dome.ts"
+ },
+ {
+  "key": "1czcpe4",
+  "voice": "am_liam",
+  "fx": "pa",
+  "speed": 1.03,
+  "speaker": "HUNTER (beta)",
+  "words": "You blew up the gate. Bold. I'm writing that down.",
+  "tts": "You blew up the gate. Bold. I'm writing that down.",
+  "where": "src/content/bunkers/dome.ts"
+ },
+ {
+  "key": "1a4yrrt",
+  "voice": "am_liam",
+  "fx": "pa",
+  "speed": 1.03,
+  "speaker": "HUNTER (beta)",
+  "words": "You came up the outflow. Nobody does that. Well. You do. Noted.",
+  "tts": "You came up the outflow. Nobody does that. Well. You do. Noted.",
+  "where": "src/content/bunkers/dome.ts"
+ },
+ {
+  "key": "0c6ls8b",
+  "voice": "am_liam",
+  "fx": "pa",
+  "speed": 1.03,
+  "speaker": "HUNTER (beta)",
+  "words": "You decided. I'll log it.",
+  "tts": "You decided. I'll log it.",
+  "where": "src/content/bunkers/dome.ts"
+ },
+ {
+  "key": "06kvig8",
+  "voice": "am_liam",
+  "fx": "pa",
+  "speed": 1.03,
+  "speaker": "HUNTER (beta)",
+  "words": "You took the water. That's churn. I'll model it.",
+  "tts": "You took the water. That's churn. I'll model it.",
+  "where": "src/content/bunkers/dome.ts"
+ },
+ {
+  "key": "1us08va",
+  "voice": "am_liam",
+  "fx": "pa",
+  "speed": 1.03,
+  "speaker": "HUNTER (beta)",
+  "words": "You're coming up to the pod. Good. I've wanted to show somebody the pod.",
+  "tts": "You're coming up to the pod. Good. I've wanted to show somebody the pod.",
+  "where": "src/content/bunkers/dome.ts"
+ },
+ {
+  "key": "0xc7bt9",
+  "voice": "am_liam",
+  "fx": "pa",
+  "speed": 1.03,
+  "speaker": "HUNTER (beta)",
+  "words": "You're inside. Mind the chairs. All-hands is every morning at nine.",
+  "tts": "You're inside. Mind the chairs. All-hands is every morning at nine.",
+  "where": "src/content/bunkers/dome.ts"
+ },
+ {
+  "key": "02alf9h",
+  "voice": "am_liam",
+  "fx": "pa",
+  "speed": 1,
+  "speaker": "Hunter Vale",
+  "words": "It's me. It's Hunter. Day five. Open the gate. Please. I built you.",
+  "tts": "It's me. It's Hunter. Day five. Open the gate. Please. I built you.",
+  "where": "src/content/bunkers/dome.ts"
  },
  {
   "key": "0e4wwuf",
@@ -6100,6 +7140,16 @@
   "where": "src/content/banter.ts"
  },
  {
+  "key": "1xn6ooy",
+  "voice": "af_sarah",
+  "fx": "radio",
+  "speed": 0.97,
+  "speaker": "Mara",
+  "words": "See the steam? That's the Dome's cooling towers. They're boiling off water we haven't had in three years.",
+  "tts": "See the steam? That's the Dome's cooling towers. They're boiling off water we haven't had in three years.",
+  "where": "src/content/banter.ts"
+ },
+ {
   "key": "1790gsm",
   "voice": "af_sarah",
   "fx": "radio",
@@ -6208,6 +7258,16 @@
   "words": "A founder tried to leave early and the desert said no. Write it down. Leaving early was always the whole plan.",
   "tts": "A founder tried to leave early and the desert said no. Write it down. Leaving early was always the whole plan.",
   "where": "src/content/quests.ts"
+ },
+ {
+  "key": "11alb68",
+  "voice": "af_sarah",
+  "fx": "radio",
+  "speed": 0.97,
+  "speaker": "Mara Voss",
+  "words": "A man in a navy shirt walked into Dry Creek and sat on a crate in the street. Nia asked if he wanted anything. He said he wanted to not be paged. She said she could do that.",
+  "tts": "A man in a navy shirt walked into Dry Creek and sat on a crate in the street. Nia asked if he wanted anything. He said he wanted to not be paged. She said she could do that.",
+  "where": "src/content/story.ts"
  },
  {
   "key": "1thnxyp",
@@ -6320,6 +7380,16 @@
   "where": "src/content/story.ts"
  },
  {
+  "key": "1e8u117",
+  "voice": "af_sarah",
+  "fx": "radio",
+  "speed": 0.97,
+  "speaker": "Mara Voss",
+  "words": "Dez says the Dome's towers have done something different tonight. Come back to the fire and raise me. Start with the man at the gate.",
+  "tts": "Dez says the Dome's towers have done something different tonight. Come back to the fire and raise me. Start with the man at the gate.",
+  "where": "src/content/quests.ts"
+ },
+ {
   "key": "1galef9",
   "voice": "af_sarah",
   "fx": "radio",
@@ -6328,6 +7398,16 @@
   "words": "Dez says the light on the Spire has gone a colour he hasn't seen before. Come back to the fire and raise me. I want the door first.",
   "tts": "Dez says the light on the Spire has gone a colour he hasn't seen before. Come back to the fire and raise me. I want the door first.",
   "where": "src/content/quests.ts"
+ },
+ {
+  "key": "14w8poy",
+  "voice": "af_sarah",
+  "fx": "radio",
+  "speed": 0.97,
+  "speaker": "Mara Voss",
+  "words": "Dez watched the Dome go dark from the ridge. Every light, one row at a time, and then the towers stopped steaming. He says it took eleven minutes.",
+  "tts": "Dez watched the Dome go dark from the ridge. Every light, one row at a time, and then the towers stopped steaming. He says it took eleven minutes.",
+  "where": "src/content/story.ts"
  },
  {
   "key": "002hhol",
@@ -6347,6 +7427,16 @@
   "speaker": "Mara Voss",
   "words": "Doc called on the band an hour ago. Ada walked into Dry Creek at dawn carrying a folded camp chair. He couldn't get the words out, so Nia said them for him.",
   "tts": "Doc called on the band an hour ago. Ada walked into Dry Creek at dawn carrying a folded camp chair. He couldn't get the words out, so Nia said them for him.",
+  "where": "src/content/story.ts"
+ },
+ {
+  "key": "1wynfj2",
+  "voice": "af_sarah",
+  "fx": "radio",
+  "speed": 0.97,
+  "speaker": "Mara Voss",
+  "words": "Doc says the old well at the end of Dry Creek's street might come back now nothing's pulling the aquifer down. Sol is already out there with a shovel.",
+  "tts": "Doc says the old well at the end of Dry Creek's street might come back now nothing's pulling the aquifer down. Sol is already out there with a shovel.",
   "where": "src/content/story.ts"
  },
  {
@@ -6470,13 +7560,23 @@
   "where": "src/content/story.ts"
  },
  {
-  "key": "1mr1mnn",
+  "key": "1w80dm7",
   "voice": "af_sarah",
   "fx": "radio",
   "speed": 0.97,
   "speaker": "Mara Voss",
-  "words": "Hunter Vale's Dome. Prudence says her numbers never come out there. When you're ready, we'll talk about how. Mara, out.",
-  "tts": "Hunter Vale's Dome. Prudence says her numbers never come out there. When you're ready, we'll talk about how. Mara, out.",
+  "words": "Hunter Vale walked all the way there from the drive-in and died at his own front door, because it didn't recognise his voice. I don't know what to do with that. I don't think I have to do anything with it.",
+  "tts": "Hunter Vale walked all the way there from the drive-in and died at his own front door, because it didn't recognise his voice. I don't know what to do with that. I don't think I have to do anything with it.",
+  "where": "src/content/story.ts"
+ },
+ {
+  "key": "0uwzjbl",
+  "voice": "af_sarah",
+  "fx": "radio",
+  "speed": 0.97,
+  "speaker": "Mara Voss",
+  "words": "Hunter Vale's Dome is on the shelf south of the 5G tower. Follow the track past the tower and keep going. You'll see the steam first. Mara, out.",
+  "tts": "Hunter Vale's Dome is on the shelf south of the 5G tower. Follow the track past the tower and keep going. You'll see the steam first. Mara, out.",
   "where": "src/content/story.ts"
  },
  {
@@ -6810,6 +7910,16 @@
   "where": "src/content/quests.ts"
  },
  {
+  "key": "0sess1d",
+  "voice": "af_sarah",
+  "fx": "radio",
+  "speed": 0.97,
+  "speaker": "Mara Voss",
+  "words": "Sol pumps the old well every morning before anyone else is up. He says it's for the arm. It isn't for the arm.",
+  "tts": "Sol pumps the old well every morning before anyone else is up. He says it's for the arm. It isn't for the arm.",
+  "where": "src/content/story.ts"
+ },
+ {
   "key": "0ex981l",
   "voice": "af_sarah",
   "fx": "radio",
@@ -6847,6 +7957,16 @@
   "speaker": "Mara Voss",
   "words": "That's Act IV. Prudence called on the band after you left. She said there's one place she's run the numbers on and can't make them come out: Hunter Vale's Singularity Dome. He never got there. Something else did. Sleep.",
   "tts": "That's Act Iv. Prudence called on the band after you left. She said there's one place she's run the numbers on and can't make them come out: Hunter Vale's Singularity Dome. He never got there. Something else did. Sleep.",
+  "where": "src/content/story.ts"
+ },
+ {
+  "key": "1ew6qnh",
+  "voice": "af_sarah",
+  "fx": "radio",
+  "speed": 0.97,
+  "speaker": "Mara Voss",
+  "words": "That's Act V. Two founders left with bunkers, Dez says: Orrin and his Cloud Cathedral, Kit and the Chip Fortress. They'll have heard about tonight. Sleep.",
+  "tts": "That's Act V. Two founders left with bunkers, Dez says: Orrin and his Cloud Cathedral, Kit and the Chip Fortress. They'll have heard about tonight. Sleep.",
   "where": "src/content/story.ts"
  },
  {
@@ -6907,6 +8027,16 @@
   "speaker": "Mara Voss",
   "words": "The Garage is northeast, up the dirt spur off the highway. Whoever built it for him drew it up at the Spire. If there's a weak spot in that fence, it's on their paper. Read it before you climb anything.",
   "tts": "The Garage is northeast, up the dirt spur off the highway. Whoever built it for him drew it up at the Spire. If there's a weak spot in that fence, it's on their paper. Read it before you climb anything.",
+  "where": "src/content/story.ts"
+ },
+ {
+  "key": "0ei3vzf",
+  "voice": "af_sarah",
+  "fx": "radio",
+  "speed": 0.97,
+  "speaker": "Mara Voss",
+  "words": "The Helper was at the pumps again at six. Pip has started saying good morning to it. It says good morning back.",
+  "tts": "The Helper was at the pumps again at six. Pip has started saying good morning to it. It says good morning back.",
   "where": "src/content/story.ts"
  },
  {
@@ -7030,6 +8160,16 @@
   "where": "src/content/archetypes.ts"
  },
  {
+  "key": "0rnbwib",
+  "voice": "af_sarah",
+  "fx": "radio",
+  "speed": 0.97,
+  "speaker": "Mara Voss",
+  "words": "There's a robot standing by our pumps. It says it's from the Dome. Hollis has had his rifle on it for an hour and it keeps thanking him for his patience.",
+  "tts": "There's a robot standing by our pumps. It says it's from the Dome. Hollis has had his rifle on it for an hour and it keeps thanking him for his patience.",
+  "where": "src/content/story.ts"
+ },
+ {
   "key": "07qt6cq",
   "voice": "af_sarah",
   "fx": "radio",
@@ -7037,6 +8177,26 @@
   "speaker": "Mara Voss",
   "words": "Twenty years, Benny told you. Nobody at this fire has planned for twenty years of anything. Pip's already arguing with Hollis about who changes the filter.",
   "tts": "Twenty years, Benny told you. Nobody at this fire has planned for twenty years of anything. Pip's already arguing with Hollis about who changes the filter.",
+  "where": "src/content/story.ts"
+ },
+ {
+  "key": "0b499gn",
+  "voice": "af_sarah",
+  "fx": "radio",
+  "speed": 0.97,
+  "speaker": "Mara Voss",
+  "words": "Two founders left with bunkers, by Dez's count. Orrin and Kit. Get some sleep first. Mara, out.",
+  "tts": "Two founders left with bunkers, by Dez's count. Orrin and Kit. Get some sleep first. Mara, out.",
+  "where": "src/content/story.ts"
+ },
+ {
+  "key": "1yjimq8",
+  "voice": "af_sarah",
+  "fx": "radio",
+  "speed": 0.97,
+  "speaker": "Mara Voss",
+  "words": "Two jugs and a battery, every morning, for as long as it runs. I've read the terms of every free trial in this valley. This one doesn't have any.",
+  "tts": "Two jugs and a battery, every morning, for as long as it runs. I've read the terms of every free trial in this valley. This one doesn't have any.",
   "where": "src/content/story.ts"
  },
  {
@@ -8220,6 +9380,16 @@
   "where": "src/content/bunkers/spire.ts"
  },
  {
+  "key": "0i9bbxl",
+  "voice": "bf_isabella",
+  "fx": "pa",
+  "speed": 0.96,
+  "speaker": "Prudence Ashby",
+  "words": "Benny says I should just open the valve. He says it every morning.",
+  "tts": "Benny says I should just open the valve. He says it every morning.",
+  "where": "src/content/bunkers/spire.ts"
+ },
+ {
   "key": "0pdbsz1",
   "voice": "bf_isabella",
   "fx": "pa",
@@ -8267,6 +9437,16 @@
   "speaker": "Prudence Ashby",
   "words": "I know. I have the numbers for most of them. Come up, if you can, and I'll show you why that doesn't make it simple.",
   "tts": "I know. I have the numbers for most of them. Come up, if you can, and I'll show you why that doesn't make it simple.",
+  "where": "src/content/bunkers/spire.ts"
+ },
+ {
+  "key": "0lvahxh",
+  "voice": "bf_isabella",
+  "fx": "pa",
+  "speed": 0.96,
+  "speaker": "Prudence Ashby",
+  "words": "I've modelled this visit forty times. In most of them you leave with nothing and nobody gets hurt. I'd like that one.",
+  "tts": "I've modelled this visit forty times. In most of them you leave with nothing and nobody gets hurt. I'd like that one.",
   "where": "src/content/bunkers/spire.ts"
  },
  {
@@ -8380,6 +9560,26 @@
   "where": "src/content/bunkers/spire.ts"
  },
  {
+  "key": "1opnynn",
+  "voice": "bf_isabella",
+  "fx": "pa",
+  "speed": 0.96,
+  "speaker": "Prudence Ashby",
+  "words": "The forecast said eleven weeks. It was ten and a half. I've never told anyone that.",
+  "tts": "The forecast said eleven weeks. It was ten and a half. I've never told anyone that.",
+  "where": "src/content/bunkers/spire.ts"
+ },
+ {
+  "key": "15ydq22",
+  "voice": "bf_isabella",
+  "fx": "pa",
+  "speed": 0.96,
+  "speaker": "Prudence Ashby",
+  "words": "The road is eleven per cent. Please don't run on it. Most injuries here happen on the way down.",
+  "tts": "The road is eleven per cent. Please don't run on it. Most injuries here happen on the way down.",
+  "where": "src/content/bunkers/spire.ts"
+ },
+ {
   "key": "1p6vfgq",
   "voice": "bf_isabella",
   "fx": "pa",
@@ -8387,6 +9587,16 @@
   "speaker": "Prudence Ashby",
   "words": "The stair's dark. You found the cupboard, then.",
   "tts": "The stair's dark. You found the cupboard, then.",
+  "where": "src/content/bunkers/spire.ts"
+ },
+ {
+  "key": "0wvcpja",
+  "voice": "bf_isabella",
+  "fx": "pa",
+  "speed": 0.96,
+  "speaker": "Prudence Ashby",
+  "words": "The turrets aren't cruel. They're cautious. I wrote the difference into them myself.",
+  "tts": "The turrets aren't cruel. They're cautious. I wrote the difference into them myself.",
   "where": "src/content/bunkers/spire.ts"
  },
  {
@@ -8407,6 +9617,26 @@
   "speaker": "Prudence Ashby",
   "words": "There was a card reader. Noor would have lent you her card.",
   "tts": "There was a card reader. Noor would have lent you her card.",
+  "where": "src/content/bunkers/spire.ts"
+ },
+ {
+  "key": "1bvgezn",
+  "voice": "bf_isabella",
+  "fx": "pa",
+  "speed": 0.96,
+  "speaker": "Prudence Ashby",
+  "words": "There's a standpipe at the bottom of the road. It isn't connected. I'm sorry. It's on the list.",
+  "tts": "There's a standpipe at the bottom of the road. It isn't connected. I'm sorry. It's on the list.",
+  "where": "src/content/bunkers/spire.ts"
+ },
+ {
+  "key": "1n3cnds",
+  "voice": "bf_isabella",
+  "fx": "pa",
+  "speed": 0.96,
+  "speaker": "Prudence Ashby",
+  "words": "We make three hundred litres a day, and there's a policy for every one of them.",
+  "tts": "We make three hundred litres a day, and there's a policy for every one of them.",
   "where": "src/content/bunkers/spire.ts"
  },
  {

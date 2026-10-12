@@ -264,37 +264,37 @@ export const QUESTS: QuestDef[] = [
     start: (v) => v.has('act3.debriefed'),
     steps: [
       {
-        id: 'road', text: 'Reach the Alignment Spire, above the Tube', at: 'spire',
+        id: 'road', text: 'Reach the Alignment Spire, above the Tube', at: 'alignment',
         hint: 'Take the highway east until it climbs into the tablelands. A road with guardrails leaves it on the right, up to a white tower.',
         done: (v) => any(v, 'seen:spire', 'spire.door.open', 'spire.complete'),
       },
       {
-        id: 'fenn', text: 'Find out what happened to Isaac Fenn', optional: true, at: 'spire',
+        id: 'fenn', text: 'Find out what happened to Isaac Fenn', optional: true, at: 'alignment',
         hint: 'A third of the way up the road, against the west guardrail, under a foil blanket.',
         done: (v) => v.has('spire.fenn'),
       },
       {
-        id: 'door', text: 'Get past the ethics door', at: 'spire',
+        id: 'door', text: 'Get past the ethics door', at: 'alignment',
         hint: 'Under the canopy at the top of the road. It asks about things you\'ve done: answer truthfully. Or SPLICE a jailbreak (Electronics 4), show it a red-teamer\'s badge, or blow it (Demolition 5). Crouch over the red beams on the way up. With your weapon away, the sentinels won\'t fire.',
         done: (v) => any(v, 'spire.door.open', 'spire.office.open', 'spire.complete'),
       },
       {
-        id: 'noor', text: 'Wake the red-teamer on the eval floor', optional: true, at: 'spire',
+        id: 'noor', text: 'Wake the red-teamer on the eval floor', optional: true, at: 'alignment',
         hint: 'Up the first stair, in the glass room marked Eval 3. Knock.',
         done: (v) => v.has('spire.noor.met'),
       },
       {
-        id: 'up', text: 'Get to the top floor', at: 'spire',
+        id: 'up', text: 'Get to the top floor', at: 'alignment',
         hint: 'Up the second stair, beside the first. Prudence\'s door takes a card (Noor has one), or SPLICE the reader (Electronics 4), or press the call button and talk to her.',
         done: (v) => any(v, 'spire.office.open', 'spire.complete'),
       },
       {
-        id: 'core', text: 'Decide what happens to the core', at: 'spire',
+        id: 'core', text: 'Decide what happens to the core', at: 'alignment',
         hint: 'At the plant along the north wall of the top floor. Pull the core and carry it home, or open the red valve and send the water down Benny\'s pipe to Dry Creek.',
         done: (v) => v.has('spire.core'),
       },
       {
-        id: 'loot', text: 'Take the water', at: 'spire',
+        id: 'loot', text: 'Take the water', at: 'alignment',
         hint: 'On the top floor: the plant\'s tank, Prudence\'s supply cabinet and Benny\'s bench. The water comes with you even if your pack is full.',
         done: (v) => v.has('spire.complete'),
       },
@@ -303,6 +303,64 @@ export const QUESTS: QuestDef[] = [
     wrap: {
       speaker: 'Mara Voss',
       text: 'Dez says the light on the Spire has gone a colour he hasn\'t seen before. Come back to the fire and raise me. I want the door first.',
+    },
+  },
+
+  {
+    id: 'act5',
+    kind: 'main',
+    title: 'Act V · The Singularity Dome',
+    giver: 'mara',
+    where: 'South of the 5G tower',
+    blurb:
+      'Hunter Vale sold seats on the last flight out, then jumped from his own jet. Prudence says his Dome has been running without him for three and a half years, growing, and drinking an aquifer under the shelf south of the 5G tower. Nobody knows what runs it. Mara wants to know who\'s drinking the valley\'s water, and whether it can be stopped.',
+    start: (v) => v.has('act4.debriefed'),
+    steps: [
+      {
+        id: 'road', text: 'Reach the Singularity Dome, south of the 5G tower', at: 'dome',
+        hint: 'Past the 5G tower, Ascend\'s drive carries on south across the shelf to a glass dome with two steaming towers beside it.',
+        done: (v) => any(v, 'seen:dome', 'dome.gate.open', 'dome.complete'),
+      },
+      {
+        id: 'hut', text: 'Look in the visitor hut', optional: true, at: 'dome',
+        hint: 'Outside the gate, on the west side of the drive. Someone is sitting at the desk.',
+        done: (v) => v.has('dome.hunter'),
+      },
+      {
+        id: 'gate', text: 'Get through the fence', at: 'dome',
+        hint: 'The gate wants Hunter\'s voice: the keynote reel from the Starlite would do. Or an EXIT Platinum pass, SPLICE (Electronics 3), a charge (Demolition 4), or the outfall grate on the east side.',
+        done: (v) => any(v, 'dome.gate.open', 'dome.culvert.open', 'dome.door.open', 'dome.complete'),
+      },
+      {
+        id: 'door', text: 'Get into the dome', at: 'dome',
+        hint: 'The airlock on the dome\'s north side. The keypad wants four digits: the man in the hut knew them. Or short it (Electronics 3), SPLICE it (Electronics 4), or blow it.',
+        done: (v) => any(v, 'dome.door.open', 'dome.pod.open', 'dome.complete'),
+      },
+      {
+        id: 'gil', text: 'Find the human in the loop', optional: true, at: 'dome',
+        hint: 'In the west wing of the dome, at a desk with three monitors and a cot behind it.',
+        done: (v) => v.has('dome.gil.met'),
+      },
+      {
+        id: 'pod', text: 'Get into the pod', at: 'dome',
+        hint: 'Up the spiral round the mast in the middle of the dome. Hunter\'s badge opens the pod door, or Gil can from his desk, or SPLICE it (Electronics 5).',
+        done: (v) => any(v, 'dome.pod.open', 'dome.complete'),
+      },
+      {
+        id: 'end', text: 'Decide what happens to the twin', at: 'dome',
+        hint: 'At the Cluster\'s tank on the south side of the pod. Pull the breaker, or give it a new job.',
+        done: (v) => v.has('dome.end'),
+      },
+      {
+        id: 'loot', text: 'Take the water', at: 'dome',
+        hint: 'In the pod: the chilled-water tap, Hunter\'s locker and the spares cage. The water comes with you even if your pack is full.',
+        done: (v) => v.has('dome.complete'),
+      },
+    ],
+    reward: { xp: 700, items: [{ id: 'water', qty: 4 }, { id: 'battery', qty: 2 }, { id: 'medkit', qty: 2 }], rep: { compact: 2, mara: 1 } },
+    wrap: {
+      speaker: 'Mara Voss',
+      text: 'Dez says the Dome\'s towers have done something different tonight. Come back to the fire and raise me. Start with the man at the gate.',
     },
   },
 

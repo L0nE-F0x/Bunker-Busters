@@ -254,7 +254,7 @@ export class ApexBuilder implements BunkerShell {
     flood.add(b, box(1.4, 0.7, 0.04, mx, 10.4, mz + 0.57));
     this.slots.flood = flood.intensity;
     b.add(m.black, box(0.7, 0.4, 0.7, mx, 11.2, mz));
-    this.halos.add(this.w(mx, 11.5, mz), '#ff3020', 1.2, ApexBuilder.CH.BLINK, 2);
+    this.halos.add(new THREE.Vector3(mx, 11.5, mz), '#ff3020', 1.2, ApexBuilder.CH.BLINK, 2);
     const avi = this.pal.slot('#ff2a14', 4);
     this.slots.aviation = avi.intensity;
     avi.add(b, cyl(0.12, 0.12, 0.2, mx, 11.5, mz, 8));
@@ -428,9 +428,9 @@ export class ApexBuilder implements BunkerShell {
     b.add(m.black, box(2.2, 2.4, 2.2, tx, TH + 1.2, tz));
     // aviation lights up the tower and on the nose; they blink
     avi2(b, cyl(0.16, 0.16, 0.25, tx, TH + 2.5, tz, 8));
-    for (const y of [16, 31]) this.halos.add(this.w(tx + S + 0.2, y, tz), '#ff2a14', 2.4, ApexBuilder.CH.BLINK, 2.5);
+    for (const y of [16, 31]) this.halos.add(new THREE.Vector3(tx + S + 0.2, y, tz), '#ff2a14', 2.4, ApexBuilder.CH.BLINK, 2.5);
     // the top light is the one you see from Dry Creek at night
-    this.halos.add(this.w(tx, TH + 2.6, tz), '#ff2a14', 6, ApexBuilder.CH.BLINK, 3);
+    this.halos.add(new THREE.Vector3(tx, TH + 2.6, tz), '#ff2a14', 6, ApexBuilder.CH.BLINK, 3);
     this.points.rocket = this.w(cx, 3, cz + 5);
 
     // a portable stair and fuel lines to the pedestal
@@ -625,7 +625,7 @@ export class ApexBuilder implements BunkerShell {
       }
       b.add(m.lattice, box(0.04, 2.6, 0.04, lx, h + 3.9, -1), box(0.04, 2.6, 0.04, lx, h + 3.9, 11));
     }
-    this.halos.add(this.w(-10, 2.9, z0 + 0.3), '#ff3020', 0.9, ApexBuilder.CH.ALARM, 2);
+    this.halos.add(new THREE.Vector3(-10, 2.9, z0 + 0.3), '#ff3020', 0.9, ApexBuilder.CH.ALARM, 2);
     // alarm beacons over the airlock and on the mast
     const beaconSlot = this.pal.slot('#ff2a14', 6);
     this.slots.beacon = beaconSlot.intensity;
@@ -841,7 +841,7 @@ export class ApexBuilder implements BunkerShell {
       d.add(m.black, box(0.3, 0.1, 9, x, room - 0.06, -29.5));
       roomStrip.add(d, box(0.22, 0.02, 8.8, x, room - 0.11, -29.5));
     }
-    this.halos.add(this.w(-10, room - 0.3, -24.5), '#ff3020', 1, ApexBuilder.CH.ALARM, 2);
+    this.halos.add(new THREE.Vector3(-10, room - 0.3, -24.5), '#ff3020', 1, ApexBuilder.CH.ALARM, 2);
   }
 
   /**

@@ -3,6 +3,16 @@
 Each `## vX.Y.Z` section becomes the GitHub release notes and the "what's new" list in the in-app
 update notice (the first few bullets). `scripts/release.sh` refuses to release a version without one.
 
+## v0.9.0
+- **The Singularity Dome is open.** Act V plays to the end: past the 5G tower, Ascend's drive carries on south to Hunter Vale's glass dome on the shelf under the striped range, with two cooling towers steaming beside it. At night it glows blue from across the valley. Mara debriefs you at the fire and names the founders who are left
+- **It learns.** The founder twin that runs the Dome reads your record before you reach the fence and ships a fix for your favourite trick. Inside, every method you use gets patched: picks stop working, codes rotate, the Helpers get shielding, armour or thermal. Keep changing how you do it, or find the engineer who has to approve every fix
+- **Ascend Helpers.** Polite humanoid robots walk the yard and the racks. They don't hurt anyone; if one catches you it walks you back to the gate and thanks you for your feedback. Shoot one or EMP it and it falls over and reboots later
+- **The man at the gate.** Hunter Vale walked all the way there from the drive-in, and his own gate didn't recognise his voice. What he left in the visitor hut opens more than one door. The keynote reel from the Starlite and the EXIT pass from his jet both work on his gate
+- **Pull the plug, or give it a job.** At the top of the dome, decide what happens to the twin. Switch it off and Dry Creek's old well comes back; give it a new job and a Helper brings water and a battery to the camp every morning
+- **Two new people.** Gil, the last on-call engineer, who has approved every patch for three and a half years and will happily stop, and the hologram of Hunter giving the all-hands to two hundred empty chairs. Gil turns up in Dry Creek afterwards
+- **More voices.** 123 new lines: the twin, Gil, the Helpers, ARIA at the gate, Hunter's last memo and Mara's debrief. Ezra's and Prudence's remarks over their speakers while you hang around outside are voiced for the first time too
+- **Fixes:** the Act IV quest marker pointed at the 5G tower (the wrong Spire) instead of the Alignment Spire; the glows round lamps and beacons at Apex Vault, the Panopticon and the Spire (the Spire's safety-level ring, its tip, the Panopticon's lamp) were drawn far away from them; on Linux, quitting the desktop app no longer crashes it in the graphics driver (it left a large crash file every time)
+
 ## v0.8.1
 - **Wolves move like wolves.** They walk, trot and gallop now instead of playing one walk at every speed, and their paws stay on the sand: before, their feet sank out of sight and slid along the ground. They step round when they turn, their tails are tucked when they're hit and stream out when they run, and the dead ones lie on the ground instead of half inside it. Coyotes too
 - **Kade crews walk on real motion capture.** Contractors walk, run and crouch on recorded movement with their feet planted, turn their legs the way they're going, back up properly, and take small steps when they turn on the spot. Their bodies and guns move with their steps, and on patrol they carry the rifle low in one hand. Fixed a crew member who reached his post and kept walking on the spot

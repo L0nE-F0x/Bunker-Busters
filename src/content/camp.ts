@@ -50,6 +50,10 @@ export const RUMOURS: Rumour[] = [
     id: 'spire', when: (v) => v.has('act3.debriefed') && !v.has('spire.complete'),
     text: 'There\'s a carrier out of the east tablelands that only ever says one thing. Current safety level, one. Every hour on the hour, for three years. Last night it said two. Somebody up there is nervous about us.',
   },
+  {
+    id: 'dome', when: (v) => v.has('act4.debriefed') && !v.has('dome.complete'),
+    text: 'There\'s a carrier from the shelf south of the tower that holds a meeting every morning at nine. All-hands, it calls it. A man\'s voice thanks everybody for coming and reads out growth numbers. Nobody ever answers. I\'ve started answering.',
+  },
   // ---- the places themselves (a Kade outpost goes on the map when the band names it)
   {
     id: 'rp7', op: 'rp7', when: (v) => !v.has('seen:rp7'),

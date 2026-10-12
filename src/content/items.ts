@@ -239,6 +239,12 @@ const defs: ItemDef[] = [
     description: 'The heart of the Spire\'s water plant: a frosted steel cartridge that pulls water out of the air. Benny says it would keep a camp going for twenty years. Take it to the camp.',
     flavor: 'CORE · DO NOT REMOVE WHILE RUNNING. Keep it upright.',
   },
+  // --- the Singularity Dome ---
+  {
+    id: 'vale_badge', name: 'Hunter Vale\'s Lanyard', category: 'intel', weight: 0, stack: 1, value: 0, icon: 'badge',
+    description: 'Gold on black: H. VALE · FOUNDER, with a photo of a man at a keynote. From the visitor hut outside the Dome. The pod door reads it, and so does Gil.',
+    flavor: 'The clip is bent where he slept on it.',
+  },
   // --- the Panopticon ---
   {
     id: 'archive_drive', name: 'The Valley Archive', category: 'intel', weight: 0.3, stack: 1, value: 0, icon: 'drive',

@@ -25,11 +25,21 @@ const opt = (k, d = null) => { const i = rest.indexOf(`--${k}`); return i < 0 ? 
 const flag = (k) => rest.includes(`--${k}`);
 
 async function api(method, path, body) {
-  const r = await fetch(API + path, {
-    method,
-    headers: { Authorization: `Bearer ${KEY}`, 'Content-Type': 'application/json' },
-    body: body ? JSON.stringify(body) : undefined,
-  });
+  // GETs (polls) retry through network blips; a POST could start a paid task twice, so it doesn't
+  let r;
+  for (let tries = 0; ; tries++) {
+    try {
+      r = await fetch(API + path, {
+        method,
+        headers: { Authorization: `Bearer ${KEY}`, 'Content-Type': 'application/json' },
+        body: body ? JSON.stringify(body) : undefined,
+      });
+      break;
+    } catch (e) {
+      if (method !== 'GET' || tries >= 20) throw e;
+      await new Promise((ok) => setTimeout(ok, 5000));
+    }
+  }
   const text = await r.text();
   if (!r.ok) throw new Error(`${method} ${path}: HTTP ${r.status} ${text.slice(0, 400)}`);
   return text ? JSON.parse(text) : {};

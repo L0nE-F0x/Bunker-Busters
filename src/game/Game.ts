@@ -38,6 +38,8 @@ import { Apex } from './bunker/apex/Apex';
 import { Panopticon } from './bunker/panopticon/Panopticon';
 import { Spire } from './bunker/spire/Spire';
 import { SpireTaps } from './bunker/spire/taps';
+import { Dome } from './bunker/dome/Dome';
+import { DomeAfter } from './bunker/dome/after';
 import type { Bunker } from './bunker/Bunker';
 import { Settlement } from './town/Settlement';
 import { buildSites, Errands, type Site } from './sites';
@@ -62,6 +64,7 @@ import { GARAGE } from '@/content/bunkers/garage';
 import { APEX } from '@/content/bunkers/apex';
 import { PANOPTICON } from '@/content/bunkers/panopticon';
 import { SPIRE } from '@/content/bunkers/spire';
+import { DOME } from '@/content/bunkers/dome';
 import { ITEMS, HOTBAR_ITEMS, KEEP_ON_DEATH } from '@/content/items';
 import { KadeTerminals } from './combat/terminals';
 import { OUTPOSTS } from '@/content/recovery';
@@ -149,8 +152,10 @@ export class Game {
   apex!: Apex;
   panopticon!: Panopticon;
   spire!: Spire;
+  dome!: Dome;
   /** The core at the camp, or the standpipe at Dry Creek (after Act IV). */
   spireTaps: SpireTaps | null = null;
+  domeAfter: DomeAfter | null = null;
   /** Every bunker (the Garage first): interactables, update/cull, interiors, EMP, alarms. */
   bunkers: Bunker[] = [];
   settlement!: Settlement;
@@ -364,9 +369,12 @@ export class Game {
     this.apex = new Apex(this.ctx);
     this.panopticon = new Panopticon(this.ctx);
     this.spire = new Spire(this.ctx);
-    this.bunkers = [this.garage, this.apex, this.panopticon, this.spire];
+    this.dome = new Dome(this.ctx);
+    this.bunkers = [this.garage, this.apex, this.panopticon, this.spire, this.dome];
     // the Spire's sentinels are hostiles, and they need to know whether you're holding a weapon
     this.spire.attach(this.combat, () => !!this.arms?.equipped);
+    // the Dome's Helpers are hostiles too (shootable; they never hurt you)
+    this.dome.attach(this.combat);
     this.combat.sparks = this.garage.sparks;
     // wolves won't follow you to the fire or into a town
     this.fauna.safe = [{ p: this.landmarks.campPosition.clone(), r: 30 }];
@@ -378,6 +386,8 @@ export class Game {
     this.panopticon.addPeople(NpcCrowd.models);
     // Prudence, Noor and Benny in the Spire, likewise
     this.spire.addPeople(NpcCrowd.models);
+    // the Dome: the hologram, Gil, Hunter in the hut, the Helpers
+    this.dome.addPeople(NpcCrowd.models);
     // routines (content/routines.ts): who is in which seat or spot, by the hour and the story
     NpcCrowd.schedule = (st) => routineOpen(st, { playing: this.mode === 'playing', hour: this.atmo.hour, has: (f) => !!this.state?.has(f) });
     this.landmarks.addCampPeople();
@@ -413,11 +423,14 @@ export class Game {
     this.interactables.push(...this.stories.interactables);
     this.spireTaps = new SpireTaps(this.ctx, this.landmarks, (x, z) => this.clearSpot(x, z));
     this.interactables.push(...this.spireTaps.interactables);
+    this.domeAfter = new DomeAfter(this.ctx, this.landmarks, NpcCrowd.models, (x, z) => this.clearSpot(x, z));
+    this.interactables.push(...this.domeAfter.interactables);
     if (!SKIP.has('env')) this.buildEnvironment();
     if (SKIP.has('garage')) this.scene.remove(this.garage.b.group, this.garage.drone.group);
     if (SKIP.has('apex')) this.scene.remove(this.apex.b.group);
     if (SKIP.has('panopticon')) this.scene.remove(this.panopticon.b.group);
     if (SKIP.has('spire')) this.scene.remove(this.spire.b.group);
+    if (SKIP.has('dome')) this.scene.remove(this.dome.b.group, this.dome.helperGroup);
     if (SKIP.has('ui')) document.getElementById('ui')!.style.display = 'none';
     if (SKIP.has('terrain')) this.scene.remove(this.terrain.mesh, this.terrain.far);
     if (SKIP.has('sky')) this.scene.remove(this.atmo.sky);
@@ -597,7 +610,7 @@ export class Game {
       hf: this.hf,
       scene: this.scene,
       get puffs() { return self.puffs; },
-      caught: (reason: string) => this.caught(reason),
+      caught: (reason: string, opts?: { to?: THREE.Vector3; yaw?: number; gentle?: boolean }) => this.caught(reason, opts),
     } as unknown as GameContext;
   }
 
@@ -970,7 +983,8 @@ export class Game {
         const why = await this.ui.camp({
           radioLabel: debrief ? 'Radio Mara · read the names' : s.has('apex.complete') && !s.has('act2.debriefed') ? 'Radio Mara · the water came east'
             : s.has('panopticon.complete') && !s.has('act3.debriefed') ? 'Radio Mara · the lamp went out'
-              : s.has('spire.complete') && s.has('spire.core') && !s.has('act4.debriefed') ? 'Radio Mara · the Spire' : 'Raise Mara on the radio',
+              : s.has('spire.complete') && s.has('spire.core') && !s.has('act4.debriefed') ? 'Radio Mara · the Spire'
+                : s.has('dome.complete') && s.has('dome.end') && !s.has('act5.debriefed') ? 'Radio Mara · the Dome' : 'Raise Mara on the radio',
           people: CAMP.filter((m) => m.present(campView())).map((m) => ({ id: m.id, name: m.name, role: m.role })),
           onRest: () => {
             const full = s.skill('survival') >= 5;
@@ -1180,6 +1194,11 @@ export class Game {
     // ?at=spire starts at the foot of its road (Act IV without the walk)
     if (new URLSearchParams(location.search).get('at') === 'spire') {
       spawn = this.spire.b.points.road.clone();
+      spawn.y = this.hf.heightAt(spawn.x, spawn.z) + 0.2;
+    }
+    // ?at=dome starts on Ascend's drive, short of the gate (Act V without the walk)
+    if (new URLSearchParams(location.search).get('at') === 'dome') {
+      spawn = this.dome.b.points.road.clone();
       spawn.y = this.hf.heightAt(spawn.x, spawn.z) + 0.2;
     }
     this.player = new Player(this.physics, state.data.archetype, spawn);
@@ -1410,13 +1429,14 @@ export class Game {
     if (!silent) this.ui.toast(ok ? 'Game saved.' : 'Save failed (storage blocked?)', ok ? 'good' : 'bad');
   }
 
-  private caught(reason: string) {
+  private caught(reason: string, opts: { to?: THREE.Vector3; yaw?: number; gentle?: boolean } = {}) {
     this.audio.sting('caught');
     if (!this.state || !this.player) return;
     const s = this.state;
     s.data.stats.caught++;
     // Exit Plan (Stealth capstone): you planned for this. Nothing lost but the walk back.
-    const exit = s.capstone('stealth') === 'exit';
+    // (gentle: the Dome's Helpers walk you out; they don't take anything either)
+    const exit = s.capstone('stealth') === 'exit' || !!opts.gentle;
     if (!exit) {
       s.data.thirst = Math.max(0, s.data.thirst - 12);
       s.data.hunger = Math.max(0, s.data.hunger - 6);
@@ -1430,20 +1450,22 @@ export class Game {
         s.removeItem('lockpick', 1);
         if (s.data.health > 25) s.damage(20);
       }
-      const p = this.garage.outsidePoint;
+      const p = opts.to?.clone() ?? this.garage.outsidePoint;
       p.y = this.hf.heightAt(p.x, p.z) + 0.2;
       this.player!.teleport(p);
-      this.cam.snap(0, 0);
-      this.garage.alarm = 0.01;
-      this.garage.drone.detection = 0;
-      this.garage.drone.state = 'patrol';
+      this.cam.snap(opts.yaw ?? 0, 0);
+      if (!opts.to) {
+        this.garage.alarm = 0.01;
+        this.garage.drone.detection = 0;
+        this.garage.drone.state = 'patrol';
+      }
       this.audio.setAlarm(false);
     }, 1500);
     setTimeout(() => {
       this.ui.fade(false);
       this.player!.frozen = false;
       this.busy = false;
-      if (exit) this.ui.toast('Exit Plan: you got tased, but you kept the pick.', 'good');
+      if (opts.gentle) { /* the Dome says its own piece */ } else if (exit) this.ui.toast('Exit Plan: you got tased, but you kept the pick.', 'good');
       else if (s.set('tut.caught')) this.ui.subtitle('Mara Voss', 'SeedBot graduates people. Crouch, or don\'t let it look at you. The pick was the expensive part.');
     }, 3600);
   }
@@ -1916,6 +1938,12 @@ export class Game {
       out.push({ id: 'spire', x: sx, z: sz, label: s.has('spire.complete') ? 'The Alignment Spire (busted)' : 'The Alignment Spire · Tier 4', color: s.has('spire.complete') ? '#7d725f' : '#ff3a6e', kind: 'bunker',
         note: s.has('spire.complete') ? 'Prudence Ashby\'s tower above the Tube. You took the water, and you decided what happened to the core.' : 'Prudence Ashby\'s tower on the first bench of the eastern tablelands, above the Tube. The road up to it leaves the highway where it climbs into the hills.' });
     }
+    const [dx, , dz] = DOME.location.position;
+    const nearDome = this.player ? Math.hypot(this.player.position.x - dx, this.player.position.z - dz) < 160 : false;
+    if (s.has('dome.marker') || s.has('act4.debriefed') || nearDome || s.has('dome.complete')) {
+      out.push({ id: 'dome', x: dx, z: dz, label: s.has('dome.complete') ? 'The Singularity Dome (busted)' : 'The Singularity Dome · Tier 5', color: s.has('dome.complete') ? '#7d725f' : '#ff3a6e', kind: 'bunker',
+        note: s.has('dome.complete') ? 'Hunter Vale\'s glass dome on the shelf south of the 5G tower. You took the water, and you decided what the twin does now.' : 'Hunter Vale\'s glass dome on the shelf south of the 5G tower, under the striped range. Ascend\'s drive runs to it from the tower\'s track.' });
+    }
     for (const it of WORLD_INTEL) {
       if (s.has(`intel:${it.id}`)) continue;
       const known = it.id === 'intel.gas.note' || s.has(`rumour.${it.id}`) || this.map.revealedAt(it.position[0], it.position[2]) > 100;
@@ -1943,8 +1971,8 @@ export class Game {
 
   /** The tracked quest (or the main story) speaks unless you're standing at the Garage. */
   private objective(): string {
-    const here = this.garage.objective() || this.apex.objective() || this.panopticon.objective() || this.spire.objective();
-    const label = !here || this.garage.objective() ? undefined : this.apex.objective() ? 'Act II · Apex Vault' : this.panopticon.objective() ? 'Act III · The Panopticon' : 'Act IV · The Alignment Spire';
+    const here = this.garage.objective() || this.apex.objective() || this.panopticon.objective() || this.spire.objective() || this.dome.objective();
+    const label = !here || this.garage.objective() ? undefined : this.apex.objective() ? 'Act II · Apex Vault' : this.panopticon.objective() ? 'Act III · The Panopticon' : this.spire.objective() ? 'Act IV · The Alignment Spire' : 'Act V · The Singularity Dome';
     return this.story ? this.story.objective(here, label).text : here;
   }
 
@@ -2024,6 +2052,7 @@ export class Game {
     this.errands?.update(dt, this.camera.position);
     this.stories?.update(dt, this.camera.position);
     this.spireTaps?.update(dt);
+    this.domeAfter?.update(dt);
     for (const b of this.bunkers) {
       if (this.mode !== 'playing') b.update(dt);
       b.cull(this.camera.position);
@@ -2326,6 +2355,12 @@ export class Game {
         s.set('seen:spire');
         s.set('spire.marker');
         this.ui.banner('THE ALIGNMENT SPIRE', 'A white tower with a light on top that tells you how worried it is. Prudence Ashby has thought very carefully about you. Tier 4.', 'info');
+      }
+      const [dmx, , dmz] = DOME.location.position;
+      if (!s.has('seen:dome') && Math.hypot(player.position.x - dmx, player.position.z - dmz) < 130) {
+        s.set('seen:dome');
+        s.set('dome.marker');
+        this.ui.banner('THE SINGULARITY DOME', 'A glass dome full of servers, two towers steaming beside it, and something inside still running Hunter Vale\'s company. Tier 5.', 'info');
       }
       for (const c of WORLD_CACHES) {
         if (s.has(c.id) || s.has(`approach:${c.id}`)) continue;

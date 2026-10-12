@@ -58,6 +58,15 @@ const SPOTS = {
     game.cam.snap(Math.atan2(-60, -94), 0.15); }`,
   spireLobby: `{ const o = game.spire.b.origin; game.player.teleport(o.clone().add({ x: 1, y: 0.2, z: -4.5 })); game.atmo.hour = 16.5; await next();
     game.cam.snap(Math.atan2(-1, -8.5) + Math.PI, -0.05); }`,
+  // the Singularity Dome (Tier 5): up the drive at it, the yard by the towers, the chairs inside, and from the shelf at night
+  domeRoad: `{ const o = game.dome.b.origin; tp(o.x + 2, o.z - 62); game.atmo.hour = 16.5; await next();
+    game.cam.snap(Math.atan2(-2, -62), 0.12); }`,
+  domeYard: `{ const o = game.dome.b.origin; tp(o.x + 36, o.z - 16); game.atmo.hour = 16.5; await next();
+    game.cam.snap(Math.atan2(18, -40), 0.15); }`,
+  domeInside: `{ const o = game.dome.b.origin; game.player.teleport(o.clone().add({ x: 0, y: 0.2, z: -16 })); game.atmo.hour = 16.5; await next();
+    game.cam.snap(Math.PI, 0.1); }`,
+  domeNight: `{ const o = game.dome.b.origin; tp(o.x - 45, o.z - 70); game.atmo.hour = 21.8; await next();
+    game.cam.snap(Math.atan2(45, 70), 0.08); }`,
   panValley: `{ const o = game.panopticon.b.origin; tp(o.x + 4, o.z + 70); game.atmo.hour = 16.5; await next();
     game.cam.snap(0, 0.08); }`,
   wolves: `{ tp(-60, 180); game.atmo.hour = 10; await next(); game.cam.snap(0, -0.03); await next();

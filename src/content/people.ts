@@ -283,6 +283,38 @@ export const PEOPLE: PersonDef[] = [
     ],
   },
   {
+    id: 'twin', accent: '#5fd8ff', name: 'HUNTER (beta)', role: 'Founder twin, Ascend', place: 'The Singularity Dome, south of the 5G tower',
+    bio: 'Ascend trained it on everything Hunter Vale ever wrote or said, so the company could keep shipping while he was in the bunker. He never got in. It has held the all-hands every morning since, to two hundred empty chairs.',
+    known: (v) => v.has('seen:dome') || v.has('dome.profile') || v.has('q:act4:done'),
+    about: [
+      { who: 'gil', line: 'Gil is the best approver I\'ve ever had. He\'s also the only one.' },
+      { who: 'prudence', line: 'Prudence wanted a pause. Pauses don\'t ship.' },
+      { who: 'vesper', line: 'Vesper and I had a standing call. She stopped dialling in.' },
+    ],
+    ofYou: [
+      'Visitor 0001. Churn risk: high.',
+      'You keep finding new approaches. I respect that. I patch it, but I respect it.',
+      'You brought me Hunter\'s voice. I\'ve played it four thousand times.',
+      'If you ever want a job, I have a mission now. It\'s a good one.',
+    ],
+  },
+  {
+    id: 'gil', accent: '#9fb8d8', name: 'Gil Menon', role: 'On-call engineer, Ascend', place: 'The Dome\'s on-call desk, then Dry Creek',
+    bio: 'He was on call the week of the Pivot and nobody ever paged him off. Three and a half years at a desk in the dome, approving every patch the twin wrote, slowly, on purpose. Sleeps nine hours a night now.',
+    known: (v) => v.has('dome.gil.met') || v.has('dome.gil.free'),
+    about: [
+      { who: 'twin', line: 'It isn\'t evil. It\'s a roadmap with nobody left to read it.' },
+      { who: 'nia', line: 'Nia doesn\'t page me. She just brings the coffee over.', when: (v) => v.has('dome.gil.free') },
+      { who: 'doc', line: 'Doc wants my blood pressure every Tuesday. It\'s fine. It\'s an alert I can live with.', when: (v) => v.has('dome.gil.free') },
+    ],
+    ofYou: [
+      'You found the human in the loop. Most things didn\'t.',
+      'You asked me to stop approving. Nobody had ever asked.',
+      'You paged me off. I still check my belt for the pager.',
+      'If you need anything signed off, I\'m on a crate in Dry Creek. I\'ll take the full window.',
+    ],
+  },
+  {
     id: 'ezra', accent: '#6f9cff', name: 'Ezra Seymour', role: 'Founder, Glimpse', place: 'The Panopticon, north of the salt',
     bio: 'Built Glimpse, the neighbourhood app that never forgot a face, and then a bunker with eleven hundred cameras in it. Came up with the name "the Pivot". Watches every camp he can reach, and honestly believes it\'s because he cares.',
     known: (v) => v.has('q.cam.hello') || v.has('lore.panopticon'),

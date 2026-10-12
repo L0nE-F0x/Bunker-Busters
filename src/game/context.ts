@@ -85,5 +85,6 @@ export interface GameContext {
   /** Kicked-up dust (landings, impacts). */
   puffs?: DustPuffs;
   /** Knock the player out and respawn them outside (used by drone zaps). */
-  caught: (reason: string) => void;
+  /** Caught: fade out, back outside. `to` (and `yaw`): where (default the Garage's gate); `gentle`: nothing taken, no damage. */
+  caught: (reason: string, opts?: { to?: THREE.Vector3; yaw?: number; gentle?: boolean }) => void;
 }

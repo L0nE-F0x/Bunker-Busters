@@ -492,8 +492,8 @@ export class PanopticonBuilder implements BunkerShell {
     const core = this.pal.slot(GLIMPSE_BLUE, 8);
     this.slots.lampCore = core.intensity;
     core.add(b, place(new THREE.SphereGeometry(0.55, 16, 10), 0, LY + 2.1, 0), cyl(0.2, 0.3, 0.9, 0, LY + 1.3, 0, 10));
-    this.halos.add(this.w(0, LY + 2.1, 0), '#7fa8ff', 5.5, PanopticonBuilder.CH.LAMP, 2.2);
-    this.halos.add(this.w(0, LY + 2.1, 0), '#bcd2ff', 2.0, PanopticonBuilder.CH.LAMP, 3);
+    this.halos.add(new THREE.Vector3(0, LY + 2.1, 0), '#7fa8ff', 5.5, PanopticonBuilder.CH.LAMP, 2.2);
+    this.halos.add(new THREE.Vector3(0, LY + 2.1, 0), '#bcd2ff', 2.0, PanopticonBuilder.CH.LAMP, 3);
     // aerials clamped to the shaft, a dish facing the valley, red aviation lights
     for (const [t, y0, h] of [[0.6, 22, 9], [2.4, 24, 7], [4.1, 20, 11]] as [number, number, number][]) {
       const p = P(rAt(y0) + 0.25, t);
@@ -508,7 +508,7 @@ export class PanopticonBuilder implements BunkerShell {
     for (const t of [0, Math.PI]) {
       const p = P(RTOP + 1.0, t, GALLERY + 1.5);
       avi.add(b, cyl(0.1, 0.1, 0.18, p.x, p.y, p.z, 8));
-      this.halos.add(this.w(p.x, p.y, p.z), '#ff3020', 1.0, PanopticonBuilder.CH.BLINK, 2);
+      this.halos.add(new THREE.Vector3(p.x, p.y, p.z), '#ff3020', 1.0, PanopticonBuilder.CH.BLINK, 2);
     }
     // the four tower cameras (4.8 m), looking out over the yard
     for (const [id, t] of Object.entries(CAM_T)) {

@@ -73,6 +73,7 @@ export type PersonId =
   | 'tanner' | 'vesper'
   | 'ezra' | 'ada'
   | 'prudence' | 'noor'
+  | 'twin' | 'gil'
   | 'creek' | 'compact';
 
 export type SolutionKind = 'stealth' | 'hack' | 'force' | 'social' | 'lockpick';

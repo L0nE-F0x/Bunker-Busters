@@ -223,7 +223,10 @@ for (const f of files) {
         if (who) emit(who, pieces(tx.value), rel);
       }
       const taunts = prop('taunts'), name = prop('name');
-      if (taunts && name && str(name.value) && unwrap(taunts.value).type === 'ArrayExpression') emit(str(name.value), pieces(taunts.value), rel);
+      // (inline, or a const array in the same file: `taunts: TAUNTS`)
+      let tv = taunts && unwrap(taunts.value);
+      if (tv && tv.type === 'Identifier') tv = unwrap(decl(tv, new Set()));
+      if (tv && name && str(name.value) && tv.type === 'ArrayExpression') emit(str(name.value), pieces(tv), rel);
     }
     if (n.type === 'CallExpression' && n.arguments.length >= 2) {
       const c = n.callee;

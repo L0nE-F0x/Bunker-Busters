@@ -70,6 +70,8 @@ WORLD.push(
   ['place-panopticon', free([-283, 2, -296], [-297, 16, -350], 50, 18.9)],
   // the Alignment Spire from the flats west of its bench, the low sun on its face
   ['place-spire', free([322, 2.5, 34], [378, 26, 2], 46, 17.55)],
+  // the Singularity Dome at dusk from Ascend's drive: the glass lit blue from inside, the towers steaming
+  ['place-dome', free([118, 2.0, 252], [150, 9, 318], 46, 18.35)],
   // Photon Park's panel rows at sunset, low along a row
   ['place-solar', free([-178, 1.7, 296], [-212, 1.2, 316], 48, 17.6)],
 );

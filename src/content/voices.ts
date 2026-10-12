@@ -54,6 +54,11 @@ export const CAST: Record<string, CastVoice> = {
   'benny adeyemi': { voice: 'am_michael', fx: 'room', speed: 0.92 },
   'careful door': { voice: 'bf_lily', fx: 'pa', speed: 0.97 },
   'careful sentinel': { voice: 'bf_lily', fx: 'bot', speed: 1.0 },
+  // the Singularity Dome (content/bunkers/dome.ts): the founder twin has Hunter's voice (the keynote's),
+  // over the Dome's speakers; Gil at his desk; one polite voice for every Ascend Helper. The gate is ARIA's
+  'hunter (beta)': { voice: 'am_liam', fx: 'pa', speed: 1.03 },
+  'gil menon': { voice: 'bm_george', fx: 'room', speed: 0.93 },
+  'ascend helper': { voice: 'am_eric', fx: 'bot', speed: 1.06 },
 };
 
 const ALIAS: Record<string, string> = { mara: 'mara voss' };

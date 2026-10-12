@@ -451,7 +451,7 @@ export class SpireBuilder implements BunkerShell {
     for (const s of lv) s.add(b, place(new THREE.TorusGeometry(ringR, 0.07, 6, 72), 0, ringY, 0, Math.PI / 2));
     for (let i = 0; i < 10; i++) {
       const p = P(ringR + 0.1, (i / 10) * Math.PI * 2, ringY);
-      lv.forEach((_, k) => this.halos.add(this.w(p.x, p.y, p.z), CSL_COLORS[k], 3.2, C.L1 + k, 1.4));
+      lv.forEach((_, k) => this.halos.add(new THREE.Vector3(p.x, p.y, p.z), CSL_COLORS[k], 3.2, C.L1 + k, 1.4));
     }
     // twelve condenser fins up the taper (the plant's cold surfaces), a faint line of water light at
     // their edges at night
@@ -479,11 +479,11 @@ export class SpireBuilder implements BunkerShell {
     // the tip: a slim mast, the beacon in the level's colour, and a red aviation light
     b.add(m.brushed, cyl(0.06, 0.12, 4, 0, SP.TIP + 2, 0, 8));
     for (const s of lv) s.add(b, place(new THREE.SphereGeometry(0.28, 12, 8), 0, SP.TIP + 0.4, 0));
-    lv.forEach((_, k) => this.halos.add(this.w(0, SP.TIP + 0.4, 0), CSL_COLORS[k], 7, C.L1 + k, 1.8));
+    lv.forEach((_, k) => this.halos.add(new THREE.Vector3(0, SP.TIP + 0.4, 0), CSL_COLORS[k], 7, C.L1 + k, 1.8));
     const avi = this.pal.slot('#ff2a14', 4);
     this.slots.aviation = avi.intensity;
     avi.add(b, place(new THREE.SphereGeometry(0.12, 8, 6), 0, SP.TIP + 4.1, 0));
-    this.halos.add(this.w(0, SP.TIP + 4.1, 0), '#ff3020', 2.4, C.BLINK, 2);
+    this.halos.add(new THREE.Vector3(0, SP.TIP + 4.1, 0), '#ff3020', 2.4, C.BLINK, 2);
     this.points.tip = this.w(0, SP.TIP, 0);
   }
 
@@ -532,7 +532,7 @@ export class SpireBuilder implements BunkerShell {
     const soffit = this.pal.slot('#ffd9a8', 3);
     this.slots.canopy = soffit.intensity;
     soffit.add(b, box(cw - 1.2, 0.02, 0.12, 0, H - 0.01, cz - 0.6), box(cw - 1.2, 0.02, 0.12, 0, H - 0.01, cz + 0.6));
-    this.halos.add(this.w(0, H - 0.2, cz - 0.6), '#ffcf98', 2.4, SpireBuilder.CH.CANOPY, 1.2);
+    this.halos.add(new THREE.Vector3(0, H - 0.2, cz - 0.6), '#ffcf98', 2.4, SpireBuilder.CH.CANOPY, 1.2);
     // the door's mat and the floor stencil
     b.add(m.dark, box(GATE * 2 + 0.6, 0.02, 1.6, 0, 0.01, PORT_Z - 0.9));
     b.add(m.print, spirePrint('floorRail', 3.0, 0.75, M(0, 0.03, PORT_Z - 2.6, 0, -Math.PI / 2)));
@@ -702,7 +702,7 @@ export class SpireBuilder implements BunkerShell {
     coreMesh.rotation.y = ht;
     this.core.add(coreMesh);
     this.points.core = this.w(hx + Math.sin(ht) * 1.0, y + 1.1, hz + Math.cos(ht) * 1.0);
-    this.halos.add(this.w(hx + Math.sin(ht) * 0.5, y + 0.8, hz + Math.cos(ht) * 0.5), '#7ff0ff', 1.6, SpireBuilder.CH.PLANT, 0.8);
+    this.halos.add(new THREE.Vector3(hx + Math.sin(ht) * 0.5, y + 0.8, hz + Math.cos(ht) * 0.5), '#7ff0ff', 1.6, SpireBuilder.CH.PLANT, 0.8);
     // the distribution valve east of the tank: a red wheel on a riser that goes down through the floor
     const vx = 0.95, vz = -4.4;
     d.add(m.brushed, beam(V(tx + 1.0, y + 1.0, tz), V(vx, y + 1.0, vz), 0.06, 8), beam(V(vx, y + 1.0, vz), V(vx, y - 0.2, vz), 0.06, 8));

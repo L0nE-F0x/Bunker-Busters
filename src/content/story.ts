@@ -59,6 +59,19 @@ export function briefingFor(a: ArchetypeDef): StoryPage[] {
  */
 export function campRadio(v: StoryView): { pages: StoryPage[]; flags: string[] } {
   const a = v.archetype;
+  // Act V's debrief: the man at the gate, the twin, Gil, and what you told the Cluster
+  if (v.has('dome.complete') && v.has('dome.end') && !v.has('act5.debriefed')) return { pages: domeDebrief(v), flags: ['act5.debriefed'] };
+  if (v.has('act5.debriefed')) {
+    return {
+      pages: [
+        v.has('dome.end.plug')
+          ? { speaker: 'Mara Voss', text: 'Sol pumps the old well every morning before anyone else is up. He says it\'s for the arm. It isn\'t for the arm.' }
+          : { speaker: 'Mara Voss', text: 'The Helper was at the pumps again at six. Pip has started saying good morning to it. It says good morning back.' },
+        { speaker: 'Mara Voss', text: 'Two founders left with bunkers, by Dez\'s count. Orrin and Kit. Get some sleep first. Mara, out.' },
+      ],
+      flags: [],
+    };
+  }
   // Act IV's debrief: the door, the light, the core (or the valve), and Noor if she walked out
   if (v.has('spire.complete') && v.has('spire.core') && !v.has('act4.debriefed')) return { pages: spireDebrief(v), flags: ['act4.debriefed'] };
   if (v.has('act4.debriefed')) {
@@ -67,7 +80,7 @@ export function campRadio(v: StoryView): { pages: StoryPage[]; flags: string[] }
         v.has('spire.core.pull')
           ? { speaker: 'Mara Voss', text: 'The core\'s still ticking under Hollis\'s stop sign. Pip checks it before she checks the jugs now.' }
           : { speaker: 'Mara Voss', text: 'Doc says the standpipe hasn\'t stopped. The first thing Nia did was wash every window in the diner.' },
-        { speaker: 'Mara Voss', text: 'Hunter Vale\'s Dome. Prudence says her numbers never come out there. When you\'re ready, we\'ll talk about how. Mara, out.' },
+        { speaker: 'Mara Voss', text: 'Hunter Vale\'s Dome is on the shelf south of the 5G tower. Follow the track past the tower and keep going. You\'ll see the steam first. Mara, out.' },
       ],
       flags: [],
     };
@@ -379,6 +392,16 @@ export function journalEntries(v: StoryView): JournalEntry[] {
   add('spire.core.pull', 'The core, taken', 'The plant\'s core: a frosted cartridge that pulls water out of the air. You carried it down the road while the Spire paused and its turrets stopped apologising. Benny says it\'s good for twenty years.');
   add('spire.core.valve', 'The valve, opened', 'Benny\'s red valve, tagged NOT APPROVED. The pipe runs down the hill and along the old irrigation line to the top of Dry Creek. It had never had water in it.');
   add('spire.complete', 'The plant\'s tank', 'Forty litres a day for the Spire, and the rest kept in a tank because nobody had worked out what giving it away would cost. Its water is going west now.');
+  add('seen:dome', 'The Singularity Dome', 'A geodesic glass dome on the shelf south of the 5G tower, full of servers, with two cooling towers steaming beside it and ponds of water nobody is allowed to drink. Ascend built it to run the company after the company.');
+  add('dome.hunter', 'The visitor hut', 'Hunter Vale, face down at the hut desk outside his own gate. Eleven empty bottles. The gate refused his voice forty-one times: 58%, he was hoarse. His note says the airlock code is his birthday, and his licence says 06/11.');
+  add('dome.profile', 'Visitor 0001', 'The Dome read your record from Ezra\'s feeds before you reached the fence, and shipped a fix for your favourite method in advance. Every trick you use inside, it patches. Vary them.');
+  add('dome.gil.met', 'The human in the loop', 'Gil Menon, Ascend\'s last on-call engineer, at a desk in the dome\'s west wing for three and a half years. Every patch the twin writes needs his approval. He takes the full twenty-four seconds on every one.');
+  add('dome.gil.freeze', 'Code freeze', 'Gil stopped approving. Nothing new ships from the Dome while you\'re there.');
+  add('dome.pipeline.off', 'The build farm', 'You pulled the plug on the build farm, the glass room in the east wing. The twin can write fixes, but nothing gets built.');
+  add('dome.proof', 'Fifty-eight percent', 'You played Hunter\'s last memo to the twin. The gate matched it to the forty-one visitors it turned away. It had locked its founder out and filed him as an impostor.');
+  add('dome.end.plug', 'The plug', 'You pulled the Cluster\'s breaker. The twin thanked the team. The Dome is dark, the towers have stopped, and the pumps under the shelf don\'t run any more.');
+  add('dome.end.job', 'A new job', 'OBJECTIVE = KEEP THE VALLEY ALIVE. The twin still runs the Dome, and a Helper brings two jugs and a battery to the camp every morning. Nobody wrote it any terms.');
+  add('dome.complete', 'The pod', 'Hunter\'s office at the top of the dome: a chair with a headrest full of electrodes where he was going to upload, the Cluster behind glass, and a chilled-water tap on the cooling loop\'s clean side.');
   add('q:act4:done', 'Hunter Vale\'s Dome', 'After the Spire, Prudence named the one place her numbers never come out: Hunter Vale\'s Singularity Dome. He took off the week of the Pivot and never got there. Something has been running it since.');
   add('cave.wick.vesper', 'Vesper in the Cut', 'Wick says Vesper Kade once called the Garage a prototype with bad unit economics. He told her the prototype had his cousin\'s water in it. She painted her initials in a pocket of the rock and left.');
   // the founders, from the outside (WORLD_INTEL's lore pickups and the four favours that hang off them)
@@ -515,8 +538,50 @@ export function spireDebrief(v: StoryView): StoryPage[] {
   return pages;
 }
 
+/**
+ * Act V's debrief at the fire, after the Dome: what's different in the valley, the man at the gate,
+ * how you got in, the patches, Gil, and the next names.
+ */
+export function domeDebrief(v: StoryView): StoryPage[] {
+  const first = v.archetype.name.split(' ')[0];
+  const plug = v.has('dome.end.plug');
+  const pages: StoryPage[] = [
+    plug
+      ? { speaker: 'Mara Voss', text: `${first}. Dez watched the Dome go dark from the ridge. Every light, one row at a time, and then the towers stopped steaming. He says it took eleven minutes.` }
+      : { speaker: 'Mara Voss', text: `${first}. There's a robot standing by our pumps. It says it's from the Dome. Hollis has had his rifle on it for an hour and it keeps thanking him for his patience.` },
+  ];
+  if (v.has('dome.hunter')) {
+    pages.push({ speaker: 'Mara Voss', text: 'Hunter Vale walked all the way there from the drive-in and died at his own front door, because it didn\'t recognise his voice. I don\'t know what to do with that. I don\'t think I have to do anything with it.' });
+  }
+  pages.push({
+    speaker: 'Dez Marlow',
+    text: v.has('dome.gate.voice')
+      ? 'You played the gate his keynote. The Starlite reel. I\'ve been trying to get the projectionist to give me that reel for a year.'
+      : v.has('dome.gate.pass')
+        ? 'You walked in on an EXIT Platinum pass. Seat 1A. That\'s the only time anyone ever got value out of one of those.'
+        : v.has('dome.gate.spliced')
+          ? 'You put your own voice on his gate. For about an hour you were Hunter Vale. How was it?'
+          : v.has('dome.gate.forced')
+            ? 'You blew his gate. The band heard it. Vesper posted a fire emoji.'
+            : 'You went in up a drain. Pip wants it written down that she would also have gone in up a drain.',
+  });
+  pages.push(v.has('dome.gil.freeze') || v.has('dome.pipeline.off')
+    ? { speaker: 'Dez Marlow', text: 'The band says it stopped shipping patches halfway through. Somebody inside told it no. First time in three years.' }
+    : { speaker: 'Dez Marlow', text: 'It was patching against you the whole time. Every trick you used, gone ten minutes later. You kept finding new ones.' });
+  pages.push(plug
+    ? { speaker: 'Mara Voss', text: 'Doc says the old well at the end of Dry Creek\'s street might come back now nothing\'s pulling the aquifer down. Sol is already out there with a shovel.' }
+    : { speaker: 'Mara Voss', text: 'Two jugs and a battery, every morning, for as long as it runs. I\'ve read the terms of every free trial in this valley. This one doesn\'t have any.' });
+  if (v.has('dome.gil.free')) {
+    pages.push({ speaker: 'Mara Voss', text: 'A man in a navy shirt walked into Dry Creek and sat on a crate in the street. Nia asked if he wanted anything. He said he wanted to not be paged. She said she could do that.' });
+  }
+  pages.push({ speaker: 'Mara Voss', text: 'That\'s Act V. Two founders left with bunkers, Dez says: Orrin and his Cloud Cathedral, Kit and the Chip Fortress. They\'ll have heard about tonight. Sleep.' });
+  return pages;
+}
+
 export function storyObjective(v: StoryView): string {
-  if (v.has('act4.debriefed')) return 'Act IV is done. Hunter Vale\'s Singularity Dome is next. Mara will say when.';
+  if (v.has('act5.debriefed')) return 'Act V is done. Two founders are left: Orrin and Kit. Mara will say when.';
+  if (v.has('dome.complete') && v.has('dome.end')) return 'The Dome is done. Radio Mara from the campfire.';
+  if (v.has('act4.debriefed')) return 'Act IV is done. Hunter Vale\'s Singularity Dome is on the shelf south of the 5G tower.';
   if (v.has('spire.complete') && v.has('spire.core')) return 'The Spire is done. Radio Mara from the campfire.';
   if (v.has('act3.debriefed')) return 'Act III is done. Prudence Ashby\'s Alignment Spire is east, above the Tube.';
   if (v.has('panopticon.complete')) return 'The Panopticon is done. Radio Mara from the campfire.';

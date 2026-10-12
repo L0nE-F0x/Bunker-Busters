@@ -11,7 +11,20 @@ import { GARAGE } from '@/content/bunkers/garage';
 import { actionWord } from '@/engine/bindings';
 import { APEX } from '@/content/bunkers/apex';
 import { PANOPTICON } from '@/content/bunkers/panopticon';
+import { SPIRE } from '@/content/bunkers/spire';
+import { DOME } from '@/content/bunkers/dome';
 import { OUTPOSTS } from '@/content/recovery';
+
+/**
+ * Quest steps' `at` for the bunkers past the Garage. ('alignment', not 'spire': `spire` is the 5G
+ * tower's landmark id, and Act IV's marker used to point there.)
+ */
+const BUNKER_AT: Record<string, readonly number[]> = {
+  apex: APEX.location.position,
+  panopticon: PANOPTICON.location.position,
+  alignment: SPIRE.location.position,
+  dome: DOME.location.position,
+};
 
 /** Seconds between two banter lines, at least. Exploring should feel accompanied, not narrated. */
 const BANTER_GAP = 40;
@@ -250,6 +263,8 @@ export class Story {
 
   private placeOf(at: string): [number, number] | null {
     if (at === 'garage') return [GARAGE.location.position[0], GARAGE.location.position[2]];
+    const bk = BUNKER_AT[at];
+    if (bk) return [bk[0], bk[2]];
     const lm = LANDMARKS.find((l) => l.id === at);
     if (lm) return [lm.position[0], lm.position[2]];
     const op = OUTPOSTS.find((o) => o.id === at);
@@ -269,8 +284,8 @@ export class Story {
     }
     const spot = STORY_SPOTS[step.at];
     if (spot) return { x: spot[0], z: spot[1], label: q.title };
-    if (step.at === 'apex') return { x: APEX.location.position[0], z: APEX.location.position[2], label: q.title };
-    if (step.at === 'panopticon') return { x: PANOPTICON.location.position[0], z: PANOPTICON.location.position[2], label: q.title };
+    const bk = BUNKER_AT[step.at];
+    if (bk) return { x: bk[0], z: bk[2], label: q.title };
     const lm = LANDMARKS.find((l) => l.id === step.at);
     if (lm) return { x: lm.position[0], z: lm.position[2], label: q.title };
     const op = OUTPOSTS.find((o) => o.id === step.at);

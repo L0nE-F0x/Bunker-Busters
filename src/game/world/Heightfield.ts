@@ -3,6 +3,7 @@ import { WORLD_SIZE, WORLD_SEED, HIGHWAY, SIDE_ROADS, LANDMARKS, CAVE_TRAIL, SAL
 import { APEX, APEX_PAD, APEX_BLOCK_PAD } from '@/content/bunkers/apex';
 import { PANOPTICON, PANOPTICON_PAD } from '@/content/bunkers/panopticon';
 import { SPIRE, SPIRE_PAD, SPIRE_RAMP } from '@/content/bunkers/spire';
+import { DOME, DOME_PAD } from '@/content/bunkers/dome';
 import { GARAGE } from '@/content/bunkers/garage';
 import { OUTPOSTS } from '@/content/recovery';
 
@@ -82,6 +83,8 @@ export class Heightfield {
     this.zones.push({ x: PANOPTICON.location.position[0], z: PANOPTICON.location.position[2], ...PANOPTICON_PAD });
     // the Alignment Spire's pad, cut into the first bench of the eastern tablelands (its ramp is carved after)
     this.zones.push({ x: SPIRE.location.position[0], z: SPIRE.location.position[2], ...SPIRE_PAD });
+    // the Singularity Dome's pad on the shelf under the southern range
+    this.zones.push({ x: DOME.location.position[0], z: DOME.location.position[2], ...DOME_PAD });
     // her road squeezes past a mesa spur north of the pad: open the cut a little
     this.zones.push({ x: -351, z: -62, r: 9, falloff: 14 });
     // Kade outposts sit on pads of their own
