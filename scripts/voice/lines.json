@@ -390,6 +390,46 @@
   "where": "src/game/sites/driveinArt.ts"
  },
  {
+  "key": "1falxx0",
+  "voice": "af_kore",
+  "fx": "room",
+  "speed": 1.02,
+  "speaker": "Associate",
+  "words": "Don't stand in my lane. I'm at a hundred and four percent and I'd like to stay there.",
+  "tts": "Don't stand in my lane. I'm at a hundred and four percent and I'd like to stay there.",
+  "where": "src/content/bunkers/cathedral.ts"
+ },
+ {
+  "key": "0hjuvgp",
+  "voice": "af_kore",
+  "fx": "room",
+  "speed": 1.02,
+  "speaker": "Associate",
+  "words": "If you're going up to him, the stairs are behind the altar. We don't go up.",
+  "tts": "If you're going up to him, the stairs are behind the altar. We don't go up.",
+  "where": "src/content/bunkers/cathedral.ts"
+ },
+ {
+  "key": "15w15qd",
+  "voice": "af_kore",
+  "fx": "room",
+  "speed": 1.02,
+  "speaker": "Associate",
+  "words": "Same tote again. Same toaster. I've picked this toaster six hundred times.",
+  "tts": "Same tote again. Same toaster. I've picked this toaster six hundred times.",
+  "where": "src/content/bunkers/cathedral.ts"
+ },
+ {
+  "key": "00dgv1h",
+  "voice": "af_kore",
+  "fx": "room",
+  "speed": 1.02,
+  "speaker": "Associate",
+  "words": "You're not on the schedule. That means you're not here. I didn't see you.",
+  "tts": "You're not on the schedule. That means you're not here. I didn't see you.",
+  "where": "src/content/bunkers/cathedral.ts"
+ },
+ {
   "key": "0qn02mh",
   "voice": "am_michael",
   "fx": "room",
@@ -797,6 +837,16 @@
   "speaker": "Dez Marlow",
   "words": "A camp up on the ridge road says a white drone came down under the Spire, way back, and its little blue light still blinks at night. Glimpse drones carry memory cards. I would very much like that memory card.",
   "tts": "A camp up on the ridge road says a white drone came down under the Spire, way back, and its little blue light still blinks at night. Glimpse drones carry memory cards. I would very much like that memory card.",
+  "where": "src/content/camp.ts"
+ },
+ {
+  "key": "1gcbfzg",
+  "voice": "af_river",
+  "fx": "radio",
+  "speed": 1,
+  "speaker": "Dez Marlow",
+  "words": "A Dropt drone came over the camp last week with a parcel under it. It went round twice, like it was looking for an address, and flew back north. Pip wants to know what was in the box.",
+  "tts": "A Dropt drone came over the camp last week with a parcel under it. It went round twice, like it was looking for an address, and flew back north. Pip wants to know what was in the box.",
   "where": "src/content/camp.ts"
  },
  {
@@ -1480,6 +1530,26 @@
   "where": "src/content/story.ts"
  },
  {
+  "key": "01v1mbo",
+  "voice": "af_river",
+  "fx": "radio",
+  "speed": 1,
+  "speaker": "Dez Marlow",
+  "words": "You came in through the dock. Orrin told the whole band. He said nothing had come in through the dock in three years and he sounded hurt.",
+  "tts": "You came in through the dock. Orrin told the whole band. He said nothing had come in through the dock in three years and he sounded hurt.",
+  "where": "src/content/story.ts"
+ },
+ {
+  "key": "1j9dcg3",
+  "voice": "af_river",
+  "fx": "radio",
+  "speed": 1,
+  "speaker": "Dez Marlow",
+  "words": "You got returned to sender. Pip wants to know what it's like being carried by drones. I told her not to ask you yet.",
+  "tts": "You got returned to sender. Pip wants to know what it's like being carried by drones. I told her not to ask you yet.",
+  "where": "src/content/story.ts"
+ },
+ {
   "key": "04pxms2",
   "voice": "af_river",
   "fx": "radio",
@@ -2028,6 +2098,96 @@
   "words": "You look dehydrated. Everybody looks dehydrated. I say it anyway.",
   "tts": "You look dehydrated. Everybody looks dehydrated. I say it anyway.",
   "where": "src/content/townBarks.ts"
+ },
+ {
+  "key": "0ril7s7",
+  "voice": "af_alloy",
+  "fx": "bot",
+  "speed": 1.08,
+  "speaker": "Dropt drone",
+  "words": "Address confirmed. Please hold still for delivery.",
+  "tts": "Address confirmed. Please hold still for delivery.",
+  "where": "src/content/bunkers/cathedral.ts"
+ },
+ {
+  "key": "0i2mbv3",
+  "voice": "af_alloy",
+  "fx": "bot",
+  "speed": 1.08,
+  "speaker": "Dropt drone",
+  "words": "Address not found. Returning to base.",
+  "tts": "Address not found. Returning to base.",
+  "where": "src/content/bunkers/cathedral.ts"
+ },
+ {
+  "key": "1g03o9c",
+  "voice": "af_alloy",
+  "fx": "bot",
+  "speed": 1.08,
+  "speaker": "Dropt drone",
+  "words": "Delivery for Last Chance. Two waters, one ration. Ordered by the associates. Have a good day.",
+  "tts": "Delivery for Last Chance. Two waters, one ration. Ordered by the associates. Have a good day.",
+  "where": "src/content/bunkers/cathedral.ts"
+ },
+ {
+  "key": "1bj9gej",
+  "voice": "af_alloy",
+  "fx": "bot",
+  "speed": 1.08,
+  "speaker": "Dropt drone",
+  "words": "New drop-off point logged. Converging.",
+  "tts": "New drop-off point logged. Converging.",
+  "where": "src/content/bunkers/cathedral.ts"
+ },
+ {
+  "key": "1g6mka1",
+  "voice": "af_alloy",
+  "fx": "bot",
+  "speed": 1.08,
+  "speaker": "Dropt drone",
+  "words": "Obstruction reported. Inspecting.",
+  "tts": "Obstruction reported. Inspecting.",
+  "where": "src/content/bunkers/cathedral.ts"
+ },
+ {
+  "key": "0s1p4wq",
+  "voice": "af_alloy",
+  "fx": "bot",
+  "speed": 1.08,
+  "speaker": "Dropt drone",
+  "words": "Recipient located. Thank you for choosing Dropt.",
+  "tts": "Recipient located. Thank you for choosing Dropt.",
+  "where": "src/content/bunkers/cathedral.ts"
+ },
+ {
+  "key": "1ykv0pu",
+  "voice": "af_alloy",
+  "fx": "bot",
+  "speed": 1.08,
+  "speaker": "Dropt drone",
+  "words": "Returned to sender. Thank you for choosing Dropt.",
+  "tts": "Returned to sender. Thank you for choosing Dropt.",
+  "where": "src/content/bunkers/cathedral.ts"
+ },
+ {
+  "key": "1gzgduk",
+  "voice": "af_alloy",
+  "fx": "bot",
+  "speed": 1.08,
+  "speaker": "Dropt drone",
+  "words": "Returning to base for maintenance.",
+  "tts": "Returning to base for maintenance.",
+  "where": "src/content/bunkers/cathedral.ts"
+ },
+ {
+  "key": "0t9jofg",
+  "voice": "af_alloy",
+  "fx": "bot",
+  "speed": 1.08,
+  "speaker": "Dropt drone",
+  "words": "Rider nine. Order eighty-eight, ten forty-seven is running late.",
+  "tts": "Rider nine. Order eighty-eight, ten forty-seven is running late.",
+  "where": "src/content/bunkers/cathedral.ts"
  },
  {
   "key": "0wytue8",
@@ -2948,6 +3108,16 @@
   "words": "You talked to him. A man in a hole north of the salt, who knows how I take my coffee. Fine. Let him watch. He can watch me keep a sign lit for people who aren't him.",
   "tts": "You talked to him. A man in a hole north of the salt, who knows how I take my coffee. Fine. Let him watch. He can watch me keep a sign lit for people who aren't him.",
   "where": "src/content/camp.ts"
+ },
+ {
+  "key": "0bkjjd1",
+  "voice": "am_onyx",
+  "fx": "radio",
+  "speed": 0.94,
+  "speaker": "Hollis Grange",
+  "words": "You went in as a return. On Rider 9's order number. That kid would have told everyone on nineteen about it.",
+  "tts": "You went in as a return. On Rider 9's order number. That kid would have told everyone on nineteen about it.",
+  "where": "src/content/story.ts"
  },
  {
   "key": "18zwvfc",
@@ -7010,6 +7180,136 @@
   "where": "src/content/bunkers/panopticon.ts"
  },
  {
+  "key": "0rfsj1x",
+  "voice": "af_bella",
+  "fx": "room",
+  "speed": 0.97,
+  "speaker": "Lo Ibarra",
+  "words": "Bea and the twins went on to Waitlist City. I'm staying here for a while. Nobody here has a rate.",
+  "tts": "Bea and the twins went on to Waitlist City. I'm staying here for a while. Nobody here has a rate.",
+  "where": "src/content/bunkers/cathedral.ts"
+ },
+ {
+  "key": "0405yc8",
+  "voice": "af_bella",
+  "fx": "room",
+  "speed": 0.97,
+  "speaker": "Lo Ibarra",
+  "words": "I keep waking up at five fifteen. Pip says I'll stop. Pip is twelve.",
+  "tts": "I keep waking up at five fifteen. Pip says I'll stop. Pip is twelve.",
+  "where": "src/content/bunkers/cathedral.ts"
+ },
+ {
+  "key": "0lqs44l",
+  "voice": "af_bella",
+  "fx": "room",
+  "speed": 0.97,
+  "speaker": "Lo Ibarra",
+  "words": "I'm still on shift. Somebody has to be.",
+  "tts": "I'm still on shift. Somebody has to be.",
+  "where": "src/content/bunkers/cathedral.ts"
+ },
+ {
+  "key": "0xpo8w6",
+  "voice": "af_bella",
+  "fx": "room",
+  "speed": 0.97,
+  "speaker": "Lo Ibarra",
+  "words": "If there's a choice up there, give it to us. We know where everything is. We've known where everything is for four years. He only knows where it's going.",
+  "tts": "If there's a choice up there, give it to us. We know where everything is. We've known where everything is for four years. He only knows where it's going.",
+  "where": "src/content/bunkers/cathedral.ts"
+ },
+ {
+  "key": "0rqiju9",
+  "voice": "af_bella",
+  "fx": "room",
+  "speed": 0.97,
+  "speaker": "Lo Ibarra",
+  "words": "Lo Ibarra. Shift lead. Fourteen hundred and seven shifts. There were thirty of us on the floor the morning it happened. There are four now.",
+  "tts": "Lo Ibarra. Shift lead. Fourteen hundred and seven shifts. There were thirty of us on the floor the morning it happened. There are four now.",
+  "where": "src/content/bunkers/cathedral.ts"
+ },
+ {
+  "key": "1tkdiwk",
+  "voice": "af_bella",
+  "fx": "room",
+  "speed": 0.97,
+  "speaker": "Lo Ibarra",
+  "words": "Mara asked me what I want to do now. I said I don't know. It was the first time in four years anyone asked.",
+  "tts": "Mara asked me what I want to do now. I said I don't know. It was the first time in four years anyone asked.",
+  "where": "src/content/bunkers/cathedral.ts"
+ },
+ {
+  "key": "0skpc4a",
+  "voice": "af_bella",
+  "fx": "room",
+  "speed": 0.97,
+  "speaker": "Lo Ibarra",
+  "words": "Okay. Okay. Go on, then. And don't stand in aisle nine. Bea's at a hundred and four.",
+  "tts": "Okay. Okay. Go on, then. And don't stand in aisle nine. Bea's at a hundred and four.",
+  "where": "src/content/bunkers/cathedral.ts"
+ },
+ {
+  "key": "0ht9d5r",
+  "voice": "af_bella",
+  "fx": "room",
+  "speed": 0.97,
+  "speaker": "Lo Ibarra",
+  "words": "Tell Hollis his jugs are stacked wrong. Heavy at the bottom. It's not hard.",
+  "tts": "Tell Hollis his jugs are stacked wrong. Heavy at the bottom. It's not hard.",
+  "where": "src/content/bunkers/cathedral.ts"
+ },
+ {
+  "key": "1mr9vmx",
+  "voice": "af_bella",
+  "fx": "room",
+  "speed": 0.97,
+  "speaker": "Lo Ibarra",
+  "words": "The doors open at shift end. Shift end is a field in his system, and it's blank. People went out through the dock in the first year. The drones brought them back. We get water when we make rate. We make rate.",
+  "tts": "The doors open at shift end. Shift end is a field in his system, and it's blank. People went out through the dock in the first year. The drones brought them back. We get water when we make rate. We make rate.",
+  "where": "src/content/bunkers/cathedral.ts"
+ },
+ {
+  "key": "1uomm5n",
+  "voice": "af_bella",
+  "fx": "room",
+  "speed": 0.97,
+  "speaker": "Lo Ibarra",
+  "words": "The drives stop for anything without a badge, and then a floor drone comes to see what stopped them. Here. Mateo's badge. He doesn't need it any more. Keep it on the outside of your coat.",
+  "tts": "The drives stop for anything without a badge, and then a floor drone comes to see what stopped them. Here. Mateo's badge. He doesn't need it any more. Keep it on the outside of your coat.",
+  "where": "src/content/bunkers/cathedral.ts"
+ },
+ {
+  "key": "0bntcow",
+  "voice": "af_bella",
+  "fx": "room",
+  "speed": 0.97,
+  "speaker": "Lo Ibarra",
+  "words": "This is Lo. Effective now, the doors are open, and the drones deliver to people. Orrin, you're on aisle nine at six.",
+  "tts": "This is Lo. Effective now, the doors are open, and the drones deliver to people. Orrin, you're on aisle nine at six.",
+  "where": "src/content/bunkers/cathedral.ts"
+ },
+ {
+  "key": "00uwrqy",
+  "voice": "af_bella",
+  "fx": "room",
+  "speed": 0.97,
+  "speaker": "Lo Ibarra",
+  "words": "Up the stair behind the altar. Zero, zero, zero, one. Day one. He thinks it's inspiring. I've never been up. None of us have.",
+  "tts": "Up the stair behind the altar. Zero, zero, zero, one. Day one. He thinks it's inspiring. I've never been up. None of us have.",
+  "where": "src/content/bunkers/cathedral.ts"
+ },
+ {
+  "key": "0uzjddg",
+  "voice": "af_bella",
+  "fx": "room",
+  "speed": 0.97,
+  "speaker": "Lo Ibarra",
+  "words": "You're not on the schedule. Don't stand there, the drives will stop and it goes on my rate. Over here. What do you want?",
+  "tts": "You're not on the schedule. Don't stand there, the drives will stop and it goes on my rate. Over here. What do you want?",
+  "where": "src/content/bunkers/cathedral.ts"
+ },
+ {
   "key": "1x2ff7l",
   "voice": "af_sarah",
   "fx": "radio",
@@ -7067,6 +7367,16 @@
   "speaker": "Mara",
   "words": "Get some sleep. Then go see who in Dry Creek would walk west with you. Nobody walks to Apex alone.",
   "tts": "Get some sleep. Then go see who in Dry Creek would walk west with you. Nobody walks to Apex alone.",
+  "where": "src/content/banter.ts"
+ },
+ {
+  "key": "0m2bfvj",
+  "voice": "af_sarah",
+  "fx": "radio",
+  "speed": 0.97,
+  "speaker": "Mara",
+  "words": "Hear that? Like a hive. That's the swarm. Dez counted eight of them circling the tower one night, all with their lights on.",
+  "tts": "Hear that? Like a hive. That's the swarm. Dez counted eight of them circling the tower one night, all with their lights on.",
   "where": "src/content/banter.ts"
  },
  {
@@ -7250,6 +7560,16 @@
   "where": "src/content/banter.ts"
  },
  {
+  "key": "1t4sffj",
+  "voice": "af_sarah",
+  "fx": "radio",
+  "speed": 0.97,
+  "speaker": "Mara Voss",
+  "words": "A drone landed by the pumps at dawn, put a parcel on the ground, told Hollis to have a good day and flew back north. Hollis opened it with a stick.",
+  "tts": "A drone landed by the pumps at dawn, put a parcel on the ground, told Hollis to have a good day and flew back north. Hollis opened it with a stick.",
+  "where": "src/content/story.ts"
+ },
+ {
   "key": "01eproa",
   "voice": "af_sarah",
   "fx": "radio",
@@ -7360,6 +7680,16 @@
   "where": "src/content/story.ts"
  },
  {
+  "key": "1ot10w3",
+  "voice": "af_sarah",
+  "fx": "radio",
+  "speed": 0.97,
+  "speaker": "Mara Voss",
+  "words": "Dez can see the Cathedral from the ridge, and he says the drones are doing something different. Come back to the fire and raise me. Tell me about the people inside.",
+  "tts": "Dez can see the Cathedral from the ridge, and he says the drones are doing something different. Come back to the fire and raise me. Tell me about the people inside.",
+  "where": "src/content/quests.ts"
+ },
+ {
   "key": "1ypbztj",
   "voice": "af_sarah",
   "fx": "radio",
@@ -7398,6 +7728,16 @@
   "words": "Dez says the light on the Spire has gone a colour he hasn't seen before. Come back to the fire and raise me. I want the door first.",
   "tts": "Dez says the light on the Spire has gone a colour he hasn't seen before. Come back to the fire and raise me. I want the door first.",
   "where": "src/content/quests.ts"
+ },
+ {
+  "key": "1wzbglv",
+  "voice": "af_sarah",
+  "fx": "radio",
+  "speed": 0.97,
+  "speaker": "Mara Voss",
+  "words": "Dez watched from the ridge. The drones flew into the bell tower one at a time, the lights went out down the nave, and then four people walked out of the front door and stood in the lot.",
+  "tts": "Dez watched from the ridge. The drones flew into the bell tower one at a time, the lights went out down the nave, and then four people walked out of the front door and stood in the lot.",
+  "where": "src/content/story.ts"
  },
  {
   "key": "14w8poy",
@@ -7660,6 +8000,16 @@
   "where": "src/content/archetypes.ts"
  },
  {
+  "key": "1dq110s",
+  "voice": "af_sarah",
+  "fx": "radio",
+  "speed": 0.97,
+  "speaker": "Mara Voss",
+  "words": "Kit Szabo is the last of them. Dez says the Chip Fortress is under the southern range, west of the Dome, and you can see the frost on it from the road. Get some sleep first. Mara, out.",
+  "tts": "Kit Szabo is the last of them. Dez says the Chip Fortress is under the southern range, west of the Dome, and you can see the frost on it from the road. Get some sleep first. Mara, out.",
+  "where": "src/content/story.ts"
+ },
+ {
   "key": "1afpm15",
   "voice": "af_sarah",
   "fx": "radio",
@@ -7688,6 +8038,36 @@
   "words": "Len, you talked a man out of his own gate. Useful. Don't make a habit of enjoying it.",
   "tts": "Len, you talked a man out of his own gate. Useful. Don't make a habit of enjoying it.",
   "where": "src/content/archetypes.ts"
+ },
+ {
+  "key": "1dbcmpu",
+  "voice": "af_sarah",
+  "fx": "radio",
+  "speed": 0.97,
+  "speaker": "Mara Voss",
+  "words": "Lo came here. The other three went on to Waitlist City. She said she wanted to see a place with no rate. I told her we have a ledger, and she said that's different.",
+  "tts": "Lo came here. The other three went on to Waitlist City. She said she wanted to see a place with no rate. I told her we have a ledger, and she said that's different.",
+  "where": "src/content/story.ts"
+ },
+ {
+  "key": "1s0pfn4",
+  "voice": "af_sarah",
+  "fx": "radio",
+  "speed": 0.97,
+  "speaker": "Mara Voss",
+  "words": "Lo restacked Hollis's jugs this morning. Heavy at the bottom. He watched her do it and didn't say a word.",
+  "tts": "Lo restacked Hollis's jugs this morning. Heavy at the bottom. He watched her do it and didn't say a word.",
+  "where": "src/content/story.ts"
+ },
+ {
+  "key": "0x0k9cx",
+  "voice": "af_sarah",
+  "fx": "radio",
+  "speed": 0.97,
+  "speaker": "Mara Voss",
+  "words": "Lo runs it now. Orrin works the returns table. Dez asked him over the band how he likes it, and he said his rate is improving.",
+  "tts": "Lo runs it now. Orrin works the returns table. Dez asked him over the band how he likes it, and he said his rate is improving.",
+  "where": "src/content/story.ts"
  },
  {
   "key": "1rsve3t",
@@ -7767,6 +8147,16 @@
   "speaker": "Mara Voss",
   "words": "One more thing, when you have legs for it. ColdStorage, the data centre far northeast. It's still warm. Warm means power, and power out here means somebody is still paying. I'd like to know who.",
   "tts": "One more thing, when you have legs for it. ColdStorage, the data centre far northeast. It's still warm. Warm means power, and power out here means somebody is still paying. I'd like to know who.",
+  "where": "src/content/story.ts"
+ },
+ {
+  "key": "1es3m9m",
+  "voice": "af_sarah",
+  "fx": "radio",
+  "speed": 0.97,
+  "speaker": "Mara Voss",
+  "words": "Orrin Sayle's Cathedral is in the north basin, between the Longshot and ColdStorage. Take the highway east past Recovery Point 7 and follow Dropt's road north. You'll hear the drones before you see it. Mara, out.",
+  "tts": "Orrin Sayle's Cathedral is in the north basin, between the Longshot and ColdStorage. Take the highway east past Recovery Point 7 and follow Dropt's road north. You'll hear the drones before you see it. Mara, out.",
   "where": "src/content/story.ts"
  },
  {
@@ -7970,6 +8360,16 @@
   "where": "src/content/story.ts"
  },
  {
+  "key": "0jseobx",
+  "voice": "af_sarah",
+  "fx": "radio",
+  "speed": 0.97,
+  "speaker": "Mara Voss",
+  "words": "That's Act VI. One founder left with a bunker, Dez says: Kit Szabo and the Chip Fortress. Sleep.",
+  "tts": "That's Act Vi. One founder left with a bunker, Dez says: Kit Szabo and the Chip Fortress. Sleep.",
+  "where": "src/content/story.ts"
+ },
+ {
   "key": "0kxs1r3",
   "voice": "af_sarah",
   "fx": "radio",
@@ -8007,6 +8407,16 @@
   "speaker": "Mara Voss",
   "words": "The drive is in the ammo tin with the ledger and the chat. Three years of who gave and who took. If there's ever a court, it goes in first, and I'll be there to read it.",
   "tts": "The drive is in the ammo tin with the ledger and the chat. Three years of who gave and who took. If there's ever a court, it goes in first, and I'll be there to read it.",
+  "where": "src/content/story.ts"
+ },
+ {
+  "key": "0fng340",
+  "voice": "af_sarah",
+  "fx": "radio",
+  "speed": 0.97,
+  "speaker": "Mara Voss",
+  "words": "The drone came at six again. Pip has a column in the ledger for it now. It hasn't been late once.",
+  "tts": "The drone came at six again. Pip has a column in the ledger for it now. It hasn't been late once.",
   "where": "src/content/story.ts"
  },
  {
@@ -8170,6 +8580,16 @@
   "where": "src/content/story.ts"
  },
  {
+  "key": "077wov8",
+  "voice": "af_sarah",
+  "fx": "radio",
+  "speed": 0.97,
+  "speaker": "Mara Voss",
+  "words": "Thirty people on that floor when the doors locked, and four left. Making rate for water. I keep doing the subtraction.",
+  "tts": "Thirty people on that floor when the doors locked, and four left. Making rate for water. I keep doing the subtraction.",
+  "where": "src/content/story.ts"
+ },
+ {
   "key": "07qt6cq",
   "voice": "af_sarah",
   "fx": "radio",
@@ -8177,16 +8597,6 @@
   "speaker": "Mara Voss",
   "words": "Twenty years, Benny told you. Nobody at this fire has planned for twenty years of anything. Pip's already arguing with Hollis about who changes the filter.",
   "tts": "Twenty years, Benny told you. Nobody at this fire has planned for twenty years of anything. Pip's already arguing with Hollis about who changes the filter.",
-  "where": "src/content/story.ts"
- },
- {
-  "key": "0b499gn",
-  "voice": "af_sarah",
-  "fx": "radio",
-  "speed": 0.97,
-  "speaker": "Mara Voss",
-  "words": "Two founders left with bunkers, by Dez's count. Orrin and Kit. Get some sleep first. Mara, out.",
-  "tts": "Two founders left with bunkers, by Dez's count. Orrin and Kit. Get some sleep first. Mara, out.",
   "where": "src/content/story.ts"
  },
  {
@@ -9028,6 +9438,356 @@
   "words": "You got past the front door, so either you told it the truth or you broke it. Sit down. You're making the turret nervous.",
   "tts": "You got past the front door, so either you told it the truth or you broke it. Sit down. You're making the turret nervous.",
   "where": "src/content/bunkers/spire.ts"
+ },
+ {
+  "key": "18inmho",
+  "voice": "am_santa",
+  "fx": "room",
+  "speed": 0.98,
+  "speaker": "Orrin",
+  "words": "Come in, come in. You must be the customer. Can I get you anything? I can get you anything. That used to be a figure of speech.",
+  "tts": "Come in, come in. You must be the customer. Can I get you anything? I can get you anything. That used to be a figure of speech.",
+  "where": "src/content/bunkers/cathedral.ts"
+ },
+ {
+  "key": "084wqj6",
+  "voice": "am_santa",
+  "fx": "room",
+  "speed": 0.98,
+  "speaker": "Orrin",
+  "words": "Did you know the toaster is in four different bins? I didn't know that. I ordered it six hundred times.",
+  "tts": "Did you know the toaster is in four different bins? I didn't know that. I ordered it six hundred times.",
+  "where": "src/content/bunkers/cathedral.ts"
+ },
+ {
+  "key": "0ut75bn",
+  "voice": "am_santa",
+  "fx": "room",
+  "speed": 0.98,
+  "speaker": "Orrin",
+  "words": "I placed an order this morning. Nobody picked it. I've never had to wait before.",
+  "tts": "I placed an order this morning. Nobody picked it. I've never had to wait before.",
+  "where": "src/content/bunkers/cathedral.ts"
+ },
+ {
+  "key": "1vizwtr",
+  "voice": "am_santa",
+  "fx": "room",
+  "speed": 0.98,
+  "speaker": "Orrin",
+  "words": "Is there anything else I can help you with today?",
+  "tts": "Is there anything else I can help you with today?",
+  "where": "src/content/bunkers/cathedral.ts"
+ },
+ {
+  "key": "1g0agjp",
+  "voice": "am_santa",
+  "fx": "room",
+  "speed": 0.98,
+  "speaker": "Orrin",
+  "words": "It's very quiet without the drives. I didn't know the building made a sound on its own.",
+  "tts": "It's very quiet without the drives. I didn't know the building made a sound on its own.",
+  "where": "src/content/bunkers/cathedral.ts"
+ },
+ {
+  "key": "105q5x9",
+  "voice": "am_santa",
+  "fx": "room",
+  "speed": 0.98,
+  "speaker": "Orrin",
+  "words": "Lo? Lo, the doors are open. Lo, it isn't shift end. Lo.",
+  "tts": "Lo? Lo, the doors are open. Lo, it isn't shift end. Lo.",
+  "where": "src/content/bunkers/cathedral.ts"
+ },
+ {
+  "key": "1k66piv",
+  "voice": "am_santa",
+  "fx": "room",
+  "speed": 0.98,
+  "speaker": "Orrin",
+  "words": "Me. I place the orders every morning. If nobody orders, the network forgets how to deliver, and then it's gone. So I order. I open everything. I rate it. Then I send it back down. Returns are part of the experience.",
+  "tts": "Me. I place the orders every morning. If nobody orders, the network forgets how to deliver, and then it's gone. So I order. I open everything. I rate it. Then I send it back down. Returns are part of the experience.",
+  "where": "src/content/bunkers/cathedral.ts"
+ },
+ {
+  "key": "0ptwtv3",
+  "voice": "am_santa",
+  "fx": "room",
+  "speed": 0.98,
+  "speaker": "Orrin",
+  "words": "My rate is thirty-one percent. Lo says that's a learning curve. Lo is being kind.",
+  "tts": "My rate is thirty-one percent. Lo says that's a learning curve. Lo is being kind.",
+  "where": "src/content/bunkers/cathedral.ts"
+ },
+ {
+  "key": "0vhp9o6",
+  "voice": "am_santa",
+  "fx": "room",
+  "speed": 0.98,
+  "speaker": "Orrin",
+  "words": "Orrin Sayle. I started Dropt in a garage with a van and a scanner. Ten minutes or it's free. Then two days to any bunker in the country. Then week nine.",
+  "tts": "Orrin Sayle. I started Dropt in a garage with a van and a scanner. Ten minutes or it's free. Then two days to any bunker in the country. Then week nine.",
+  "where": "src/content/bunkers/cathedral.ts"
+ },
+ {
+  "key": "0oi205y",
+  "voice": "am_santa",
+  "fx": "room",
+  "speed": 0.98,
+  "speaker": "Orrin",
+  "words": "That's the Reserve. Dropt Spring, twelve hundred bottles. It's for the customer.",
+  "tts": "That's the Reserve. Dropt Spring, twelve hundred bottles. It's for the customer.",
+  "where": "src/content/bunkers/cathedral.ts"
+ },
+ {
+  "key": "1lebmko",
+  "voice": "am_santa",
+  "fx": "room",
+  "speed": 0.98,
+  "speaker": "Orrin",
+  "words": "The best team I've ever had. Fourteen hundred shifts without a missed pick. I would never let them go. That's the culture here. We don't let people go.",
+  "tts": "The best team I've ever had. Fourteen hundred shifts without a missed pick. I would never let them go. That's the culture here. We don't let people go.",
+  "where": "src/content/bunkers/cathedral.ts"
+ },
+ {
+  "key": "067kd1x",
+  "voice": "am_santa",
+  "fx": "room",
+  "speed": 0.98,
+  "speaker": "Orrin",
+  "words": "Transfer of ownership. I wrote that form. I never thought anyone would fill it in.",
+  "tts": "Transfer of ownership. I wrote that form. I never thought anyone would fill it in.",
+  "where": "src/content/bunkers/cathedral.ts"
+ },
+ {
+  "key": "1bugt2z",
+  "voice": "am_santa",
+  "fx": "room",
+  "speed": 0.98,
+  "speaker": "Orrin",
+  "words": "What are you doing? That's the site key. That's not a customer feature.",
+  "tts": "What are you doing? That's the site key. That's not a customer feature.",
+  "where": "src/content/bunkers/cathedral.ts"
+ },
+ {
+  "key": "0a1d96i",
+  "voice": "am_santa",
+  "fx": "room",
+  "speed": 0.98,
+  "speaker": "Orrin",
+  "words": "Whoever is standing in this office. Today, that's you. Congratulations.",
+  "tts": "Whoever is standing in this office. Today, that's you. Congratulations.",
+  "where": "src/content/bunkers/cathedral.ts"
+ },
+ {
+  "key": "1tp8hzz",
+  "voice": "am_santa",
+  "fx": "pa",
+  "speed": 1,
+  "speaker": "Orrin Sayle",
+  "words": "A return! Wonderful. No questions asked. That's the policy.",
+  "tts": "A return! Wonderful. No questions asked. That's the policy.",
+  "where": "src/content/bunkers/cathedral.ts"
+ },
+ {
+  "key": "02hk57h",
+  "voice": "am_santa",
+  "fx": "pa",
+  "speed": 1,
+  "speaker": "Orrin Sayle",
+  "words": "Every customer matters. There's only one now, so he matters a great deal.",
+  "tts": "Every customer matters. There's only one now, so he matters a great deal.",
+  "where": "src/content/bunkers/cathedral.ts"
+ },
+ {
+  "key": "0l0u23s",
+  "voice": "am_santa",
+  "fx": "pa",
+  "speed": 1,
+  "speaker": "Orrin Sayle",
+  "words": "Hello! Welcome to the Cathedral. You're a customer now. Everybody who comes this far is a customer.",
+  "tts": "Hello! Welcome to the Cathedral. You're a customer now. Everybody who comes this far is a customer.",
+  "where": "src/content/bunkers/cathedral.ts"
+ },
+ {
+  "key": "1hu1a66",
+  "voice": "am_santa",
+  "fx": "pa",
+  "speed": 1,
+  "speaker": "Orrin Sayle",
+  "words": "If you're lost, stand still. Something will find you. That's the whole idea of the company.",
+  "tts": "If you're lost, stand still. Something will find you. That's the whole idea of the company.",
+  "where": "src/content/bunkers/cathedral.ts"
+ },
+ {
+  "key": "0k06fmu",
+  "voice": "am_santa",
+  "fx": "pa",
+  "speed": 1,
+  "speaker": "Orrin Sayle",
+  "words": "Lo, if you can hear this, the rate on aisle nine is down. I believe in aisle nine.",
+  "tts": "Lo, if you can hear this, the rate on aisle nine is down. I believe in aisle nine.",
+  "where": "src/content/bunkers/cathedral.ts"
+ },
+ {
+  "key": "0rcyoyg",
+  "voice": "am_santa",
+  "fx": "pa",
+  "speed": 1,
+  "speaker": "Orrin Sayle",
+  "words": "Lo, there's a person in the system. Please find out whose they are.",
+  "tts": "Lo, there's a person in the system. Please find out whose they are.",
+  "where": "src/content/bunkers/cathedral.ts"
+ },
+ {
+  "key": "0ujl20v",
+  "voice": "am_santa",
+  "fx": "pa",
+  "speed": 1,
+  "speaker": "Orrin Sayle",
+  "words": "Obstruction on the floor. That goes on somebody's rate. Probably Lo's.",
+  "tts": "Obstruction on the floor. That goes on somebody's rate. Probably Lo's.",
+  "where": "src/content/bunkers/cathedral.ts"
+ },
+ {
+  "key": "1bu2bzh",
+  "voice": "am_santa",
+  "fx": "pa",
+  "speed": 1,
+  "speaker": "Orrin Sayle",
+  "words": "Please stay on the marked walkway. The drones can't tell a person from an address. Honestly, neither can I.",
+  "tts": "Please stay on the marked walkway. The drones can't tell a person from an address. Honestly, neither can I.",
+  "where": "src/content/bunkers/cathedral.ts"
+ },
+ {
+  "key": "0rzuw12",
+  "voice": "am_santa",
+  "fx": "pa",
+  "speed": 1,
+  "speaker": "Orrin Sayle",
+  "words": "Returned to sender. That's fine. Most people come back.",
+  "tts": "Returned to sender. That's fine. Most people come back.",
+  "where": "src/content/bunkers/cathedral.ts"
+ },
+ {
+  "key": "1s5lyph",
+  "voice": "am_santa",
+  "fx": "pa",
+  "speed": 1,
+  "speaker": "Orrin Sayle",
+  "words": "Something is where it shouldn't be. That's a logistics problem, and logistics is what we do.",
+  "tts": "Something is where it shouldn't be. That's a logistics problem, and logistics is what we do.",
+  "where": "src/content/bunkers/cathedral.ts"
+ },
+ {
+  "key": "0hvc7s2",
+  "voice": "am_santa",
+  "fx": "pa",
+  "speed": 1,
+  "speaker": "Orrin Sayle",
+  "words": "That was my door. It was a regular door. I don't know why you'd do that to a regular door.",
+  "tts": "That was my door. It was a regular door. I don't know why you'd do that to a regular door.",
+  "where": "src/content/bunkers/cathedral.ts"
+ },
+ {
+  "key": "0l0k36k",
+  "voice": "am_santa",
+  "fx": "pa",
+  "speed": 1,
+  "speaker": "Orrin Sayle",
+  "words": "That's the dock. Nothing has come in through the dock in three years. Please don't be the first.",
+  "tts": "That's the dock. Nothing has come in through the dock in three years. Please don't be the first.",
+  "where": "src/content/bunkers/cathedral.ts"
+ },
+ {
+  "key": "1luz28j",
+  "voice": "am_santa",
+  "fx": "pa",
+  "speed": 1,
+  "speaker": "Orrin Sayle",
+  "words": "The drones aren't armed. They're just very good at their jobs.",
+  "tts": "The drones aren't armed. They're just very good at their jobs.",
+  "where": "src/content/bunkers/cathedral.ts"
+ },
+ {
+  "key": "1eszb6x",
+  "voice": "am_santa",
+  "fx": "pa",
+  "speed": 1,
+  "speaker": "Orrin Sayle",
+  "words": "The rose window is a clock. When the hand reaches the top, a delivery goes out. It's always reaching the top.",
+  "tts": "The rose window is a clock. When the hand reaches the top, a delivery goes out. It's always reaching the top.",
+  "where": "src/content/bunkers/cathedral.ts"
+ },
+ {
+  "key": "046enmo",
+  "voice": "am_santa",
+  "fx": "pa",
+  "speed": 1,
+  "speaker": "Orrin Sayle",
+  "words": "Today we have shipped three hundred and twelve orders, and every one of them was on time.",
+  "tts": "Today we have shipped three hundred and twelve orders, and every one of them was on time.",
+  "where": "src/content/bunkers/cathedral.ts"
+ },
+ {
+  "key": "0847cq7",
+  "voice": "am_santa",
+  "fx": "pa",
+  "speed": 1,
+  "speaker": "Orrin Sayle",
+  "words": "We have an exception on the floor. Drones, please resolve it.",
+  "tts": "We have an exception on the floor. Drones, please resolve it.",
+  "where": "src/content/bunkers/cathedral.ts"
+ },
+ {
+  "key": "1ss5t0t",
+  "voice": "am_santa",
+  "fx": "pa",
+  "speed": 1,
+  "speaker": "Orrin Sayle",
+  "words": "We used to be able to get anything to any bunker in two days. Then we couldn't. We still apologise for the inconvenience.",
+  "tts": "We used to be able to get anything to any bunker in two days. Then we couldn't. We still apologise for the inconvenience.",
+  "where": "src/content/bunkers/cathedral.ts"
+ },
+ {
+  "key": "0j639fs",
+  "voice": "am_santa",
+  "fx": "pa",
+  "speed": 1,
+  "speaker": "Orrin Sayle",
+  "words": "You blew up the dock door. I've logged it as damaged in transit.",
+  "tts": "You blew up the dock door. I've logged it as damaged in transit.",
+  "where": "src/content/bunkers/cathedral.ts"
+ },
+ {
+  "key": "1bhl901",
+  "voice": "am_santa",
+  "fx": "pa",
+  "speed": 1,
+  "speaker": "Orrin Sayle",
+  "words": "You took the Reserve. I'll mark the order as fulfilled.",
+  "tts": "You took the Reserve. I'll mark the order as fulfilled.",
+  "where": "src/content/bunkers/cathedral.ts"
+ },
+ {
+  "key": "0msws4x",
+  "voice": "am_santa",
+  "fx": "pa",
+  "speed": 1,
+  "speaker": "Orrin Sayle",
+  "words": "You're coming up. Good. I always come down to meet a customer, but my knees don't.",
+  "tts": "You're coming up. Good. I always come down to meet a customer, but my knees don't.",
+  "where": "src/content/bunkers/cathedral.ts"
+ },
+ {
+  "key": "0h8opw3",
+  "voice": "am_santa",
+  "fx": "pa",
+  "speed": 1,
+  "speaker": "Orrin Sayle",
+  "words": "You're on the floor. Mind the drives. They have right of way, and they know it.",
+  "tts": "You're on the floor. Mind the drives. They have right of way, and they know it.",
+  "where": "src/content/bunkers/cathedral.ts"
  },
  {
   "key": "078nvws",

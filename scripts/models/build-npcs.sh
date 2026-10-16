@@ -18,6 +18,8 @@ CP=${A}Camp_
 PN=${A}Panopticon_
 SP=${A}Spire_
 DM=${A}Dome_
+CT=${A}Cathedral_
+FT=${A}Fortress_
 build() { local id=$1; shift; node scripts/models/build-glb.mjs "public/models/$id.glb" "$@" --size 1024; }
 
 ids=("$@")
@@ -110,5 +112,36 @@ on gil && build gil ${DM}Gil_Rigged.glb \
 on helper && build helper ${DM}Helper_Rigged.glb \
   --clips ${DC}Sol_Animations.glb:Listening_Gesture=idle \
   --clips ${DM}Helper_Walking_Basic.glb:walking_man=walk \
+  --clips ${DM}Helper_Animations.glb:falling_down=fall
+
+# --- the Cloud Cathedral: Orrin on his feet at the office desk (on the phone to nobody; afterwards he
+# may be down on the floor picking), and the associates (one model, four people: Lo at the lead's
+# desk, two pickers at their stations, one carrying totes). Pick, carry and the breathe-and-look are
+# the associate's own clips (carry walks in place: `!`); the rest are borrowed
+on orrin && build orrin ${CT}Orrin_Rigged.glb \
+  --clips ${DC}Sol_Animations.glb:Listening_Gesture=idle,Talk_with_Hands_Open=near \
+  --clips ${CT}Orrin_Animations.glb:Phone_Conversation=idle2 \
+  --clips ${DC}Inez_Animations.glb:Checkout_Gesture=ins_checkout \
+  --clips ${CT}Associate_Animations.glb:Female_Bend_Over_Pick_Up_Inspect=pick \
+  --mirror ${DC}Sol_Animations.glb:Listening_Gesture=idle_m
+on assoc && build assoc ${CT}Associate_Rigged.glb \
+  --clips ${DC}Sol_Animations.glb:Listening_Gesture=idle,Talk_with_Hands_Open=near \
+  --clips ${CT}Associate_Animations.glb:Short_Breathe_and_Look_Around=idle2,Female_Bend_Over_Pick_Up_Inspect=pick,Carry_Heavy_Object_Walk=carry! \
+  --clips ${CT}Associate_Walking_Basic.glb:walking_man=walk \
+  --mirror ${DC}Sol_Animations.glb:Listening_Gesture=idle_m
+
+# --- the Chip Fortress: Kit (standing, and in her chair at the allocation desk), and the cooling
+# technicians (one model, a respirator on the head bone; Sol's idle, their own walk and look-round,
+# the Helper's fall)
+on kit && build kit ${FT}Kit_Rigged.glb \
+  --clips ${DC}Sol_Animations.glb:Listening_Gesture=idle,Talk_with_Hands_Open=near \
+  --clips ${PN}Ezra_Animations.glb:Scheming_Hand_Rub=ins_rub,Sit_on_Chair_Arms_Crossed=sit \
+  --clips ${DC}Sol_Animations.glb:Sitting_Answering_Questions=sit_near \
+  --mirror ${DC}Sol_Animations.glb:Listening_Gesture=idle_m
+on tech && build tech ${FT}Tech_Rigged.glb \
+  --clips ${DC}Sol_Animations.glb:Listening_Gesture=idle \
+  --clips ${CT}Associate_Animations.glb:Short_Breathe_and_Look_Around=idle2 \
+  --clips ${FT}Tech_Walking_Basic.glb:walking_man=walk \
+  --clips ${FT}Tech_Animations.glb:Walk_Slowly_and_Look_Around=look \
   --clips ${DM}Helper_Animations.glb:falling_down=fall
 true

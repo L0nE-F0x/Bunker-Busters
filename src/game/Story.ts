@@ -13,6 +13,7 @@ import { APEX } from '@/content/bunkers/apex';
 import { PANOPTICON } from '@/content/bunkers/panopticon';
 import { SPIRE } from '@/content/bunkers/spire';
 import { DOME } from '@/content/bunkers/dome';
+import { CATHEDRAL } from '@/content/bunkers/cathedral';
 import { OUTPOSTS } from '@/content/recovery';
 
 /**
@@ -24,6 +25,7 @@ const BUNKER_AT: Record<string, readonly number[]> = {
   panopticon: PANOPTICON.location.position,
   alignment: SPIRE.location.position,
   dome: DOME.location.position,
+  cathedral: CATHEDRAL.location.position,
 };
 
 /** Seconds between two banter lines, at least. Exploring should feel accompanied, not narrated. */

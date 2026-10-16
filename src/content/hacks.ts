@@ -37,6 +37,11 @@ export const DAEMONS: Record<string, DaemonDef> = {
   sentinels: { id: 'sentinels', name: 'SENTINELS · TEST MODE', blurb: 'Every sentinel on the network goes into test mode and stops watching.' },
   office: { id: 'office', name: 'TOP FLOOR · ACCESS', blurb: 'The card reader on Prudence\'s door accepts a card you don\'t have.' },
   cameras: { id: 'cameras', name: 'CAMERAS · LOOP', blurb: 'The cameras loop yesterday\'s footage. Nobody was here yesterday.' },
+  // --- the Cloud Cathedral: the returns kiosk, the swarm, the floor, the office
+  returnslabel: { id: 'returnslabel', name: 'RETURNS · PRINT LABEL', blurb: 'The kiosk prints a return label for a tote with nothing in it yet.' },
+  swarm: { id: 'swarm', name: 'SWARM · RETURN TO BASE', blurb: 'Every drone over the lot flies home to the bell tower and lands for maintenance.' },
+  pods: { id: 'pods', name: 'FLOOR · E-STOP', blurb: 'Every drive on the floor stops dead for ninety seconds.' },
+  cathoffice: { id: 'cathoffice', name: 'DAY 1 OFFICE · UNLOCK', blurb: 'The office door\'s strike lets go. The log says Orrin opened it.' },
   // --- the Singularity Dome: the gate's voiceprint, the airlock, the build farm, the pod, the Helpers
   voiceprint: { id: 'voiceprint', name: 'VOICEPRINT · ENROL', blurb: 'Your voice goes on the gate\'s list as Hunter\'s. Match: 100%.' },
   domecams: { id: 'domecams', name: 'DOME CAMERAS · LOOP', blurb: 'The cameras on the rack ends loop an empty aisle.' },

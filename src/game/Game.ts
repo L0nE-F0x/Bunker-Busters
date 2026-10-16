@@ -40,6 +40,8 @@ import { Spire } from './bunker/spire/Spire';
 import { SpireTaps } from './bunker/spire/taps';
 import { Dome } from './bunker/dome/Dome';
 import { DomeAfter } from './bunker/dome/after';
+import { Cathedral } from './bunker/cathedral/Cathedral';
+import { CathedralAfter } from './bunker/cathedral/after';
 import type { Bunker } from './bunker/Bunker';
 import { Settlement } from './town/Settlement';
 import { buildSites, Errands, type Site } from './sites';
@@ -65,6 +67,7 @@ import { APEX } from '@/content/bunkers/apex';
 import { PANOPTICON } from '@/content/bunkers/panopticon';
 import { SPIRE } from '@/content/bunkers/spire';
 import { DOME } from '@/content/bunkers/dome';
+import { CATHEDRAL } from '@/content/bunkers/cathedral';
 import { ITEMS, HOTBAR_ITEMS, KEEP_ON_DEATH } from '@/content/items';
 import { KadeTerminals } from './combat/terminals';
 import { OUTPOSTS } from '@/content/recovery';
@@ -156,6 +159,8 @@ export class Game {
   /** The core at the camp, or the standpipe at Dry Creek (after Act IV). */
   spireTaps: SpireTaps | null = null;
   domeAfter: DomeAfter | null = null;
+  cathedral!: Cathedral;
+  cathedralAfter: CathedralAfter | null = null;
   /** Every bunker (the Garage first): interactables, update/cull, interiors, EMP, alarms. */
   bunkers: Bunker[] = [];
   settlement!: Settlement;
@@ -370,11 +375,14 @@ export class Game {
     this.panopticon = new Panopticon(this.ctx);
     this.spire = new Spire(this.ctx);
     this.dome = new Dome(this.ctx);
-    this.bunkers = [this.garage, this.apex, this.panopticon, this.spire, this.dome];
+    this.cathedral = new Cathedral(this.ctx);
+    this.bunkers = [this.garage, this.apex, this.panopticon, this.spire, this.dome, this.cathedral];
     // the Spire's sentinels are hostiles, and they need to know whether you're holding a weapon
     this.spire.attach(this.combat, () => !!this.arms?.equipped);
     // the Dome's Helpers are hostiles too (shootable; they never hurt you)
     this.dome.attach(this.combat);
+    // the Cathedral's drones: shootable, and they need Combat's line of sight
+    this.cathedral.attach(this.combat);
     this.combat.sparks = this.garage.sparks;
     // wolves won't follow you to the fire or into a town
     this.fauna.safe = [{ p: this.landmarks.campPosition.clone(), r: 30 }];
@@ -388,6 +396,8 @@ export class Game {
     this.spire.addPeople(NpcCrowd.models);
     // the Dome: the hologram, Gil, Hunter in the hut, the Helpers
     this.dome.addPeople(NpcCrowd.models);
+    // the Cathedral: Orrin in his office, Lo and the associates on the floor
+    this.cathedral.addPeople(NpcCrowd.models);
     // routines (content/routines.ts): who is in which seat or spot, by the hour and the story
     NpcCrowd.schedule = (st) => routineOpen(st, { playing: this.mode === 'playing', hour: this.atmo.hour, has: (f) => !!this.state?.has(f) });
     this.landmarks.addCampPeople();
@@ -425,12 +435,15 @@ export class Game {
     this.interactables.push(...this.spireTaps.interactables);
     this.domeAfter = new DomeAfter(this.ctx, this.landmarks, NpcCrowd.models, (x, z) => this.clearSpot(x, z));
     this.interactables.push(...this.domeAfter.interactables);
+    this.cathedralAfter = new CathedralAfter(this.ctx, this.landmarks, NpcCrowd.models, (x, z) => this.clearSpot(x, z));
+    this.interactables.push(...this.cathedralAfter.interactables);
     if (!SKIP.has('env')) this.buildEnvironment();
     if (SKIP.has('garage')) this.scene.remove(this.garage.b.group, this.garage.drone.group);
     if (SKIP.has('apex')) this.scene.remove(this.apex.b.group);
     if (SKIP.has('panopticon')) this.scene.remove(this.panopticon.b.group);
     if (SKIP.has('spire')) this.scene.remove(this.spire.b.group);
     if (SKIP.has('dome')) this.scene.remove(this.dome.b.group, this.dome.helperGroup);
+    if (SKIP.has('cathedral')) this.scene.remove(this.cathedral.b.group);
     if (SKIP.has('ui')) document.getElementById('ui')!.style.display = 'none';
     if (SKIP.has('terrain')) this.scene.remove(this.terrain.mesh, this.terrain.far);
     if (SKIP.has('sky')) this.scene.remove(this.atmo.sky);
@@ -984,7 +997,8 @@ export class Game {
           radioLabel: debrief ? 'Radio Mara · read the names' : s.has('apex.complete') && !s.has('act2.debriefed') ? 'Radio Mara · the water came east'
             : s.has('panopticon.complete') && !s.has('act3.debriefed') ? 'Radio Mara · the lamp went out'
               : s.has('spire.complete') && s.has('spire.core') && !s.has('act4.debriefed') ? 'Radio Mara · the Spire'
-                : s.has('dome.complete') && s.has('dome.end') && !s.has('act5.debriefed') ? 'Radio Mara · the Dome' : 'Raise Mara on the radio',
+                : s.has('dome.complete') && s.has('dome.end') && !s.has('act5.debriefed') ? 'Radio Mara · the Dome'
+                  : s.has('cathedral.complete') && s.has('cathedral.end') && !s.has('act6.debriefed') ? 'Radio Mara · the Cathedral' : 'Raise Mara on the radio',
           people: CAMP.filter((m) => m.present(campView())).map((m) => ({ id: m.id, name: m.name, role: m.role })),
           onRest: () => {
             const full = s.skill('survival') >= 5;
@@ -1199,6 +1213,11 @@ export class Game {
     // ?at=dome starts on Ascend's drive, short of the gate (Act V without the walk)
     if (new URLSearchParams(location.search).get('at') === 'dome') {
       spawn = this.dome.b.points.road.clone();
+      spawn.y = this.hf.heightAt(spawn.x, spawn.z) + 0.2;
+    }
+    // ?at=cathedral starts on Dropt's service road, short of the lot (Act VI without the walk)
+    if (new URLSearchParams(location.search).get('at') === 'cathedral') {
+      spawn = this.cathedral.b.points.road.clone();
       spawn.y = this.hf.heightAt(spawn.x, spawn.z) + 0.2;
     }
     this.player = new Player(this.physics, state.data.archetype, spawn);
@@ -1944,6 +1963,12 @@ export class Game {
       out.push({ id: 'dome', x: dx, z: dz, label: s.has('dome.complete') ? 'The Singularity Dome (busted)' : 'The Singularity Dome · Tier 5', color: s.has('dome.complete') ? '#7d725f' : '#ff3a6e', kind: 'bunker',
         note: s.has('dome.complete') ? 'Hunter Vale\'s glass dome on the shelf south of the 5G tower. You took the water, and you decided what the twin does now.' : 'Hunter Vale\'s glass dome on the shelf south of the 5G tower, under the striped range. Ascend\'s drive runs to it from the tower\'s track.' });
     }
+    const [cx, , cz] = CATHEDRAL.location.position;
+    const nearCath = this.player ? Math.hypot(this.player.position.x - cx, this.player.position.z - cz) < 170 : false;
+    if (s.has('cathedral.marker') || s.has('act5.debriefed') || nearCath || s.has('cathedral.complete')) {
+      out.push({ id: 'cathedral', x: cx, z: cz, label: s.has('cathedral.complete') ? 'The Cloud Cathedral (busted)' : 'The Cloud Cathedral · Tier 6', color: s.has('cathedral.complete') ? '#7d725f' : '#ff3a6e', kind: 'bunker',
+        note: s.has('cathedral.complete') ? 'Orrin Sayle\'s fulfilment centre in the north basin. You took the Reserve, and you decided who the Cathedral belongs to.' : 'Orrin Sayle\'s fulfilment centre in the north basin, between the Longshot and ColdStorage. Dropt\'s service road leaves the highway east of Recovery Point 7.' });
+    }
     for (const it of WORLD_INTEL) {
       if (s.has(`intel:${it.id}`)) continue;
       const known = it.id === 'intel.gas.note' || s.has(`rumour.${it.id}`) || this.map.revealedAt(it.position[0], it.position[2]) > 100;
@@ -1971,8 +1996,8 @@ export class Game {
 
   /** The tracked quest (or the main story) speaks unless you're standing at the Garage. */
   private objective(): string {
-    const here = this.garage.objective() || this.apex.objective() || this.panopticon.objective() || this.spire.objective() || this.dome.objective();
-    const label = !here || this.garage.objective() ? undefined : this.apex.objective() ? 'Act II · Apex Vault' : this.panopticon.objective() ? 'Act III · The Panopticon' : this.spire.objective() ? 'Act IV · The Alignment Spire' : 'Act V · The Singularity Dome';
+    const here = this.garage.objective() || this.apex.objective() || this.panopticon.objective() || this.spire.objective() || this.dome.objective() || this.cathedral.objective();
+    const label = !here || this.garage.objective() ? undefined : this.apex.objective() ? 'Act II · Apex Vault' : this.panopticon.objective() ? 'Act III · The Panopticon' : this.spire.objective() ? 'Act IV · The Alignment Spire' : this.dome.objective() ? 'Act V · The Singularity Dome' : 'Act VI · The Cloud Cathedral';
     return this.story ? this.story.objective(here, label).text : here;
   }
 
@@ -2053,6 +2078,7 @@ export class Game {
     this.stories?.update(dt, this.camera.position);
     this.spireTaps?.update(dt);
     this.domeAfter?.update(dt);
+    this.cathedralAfter?.update(dt);
     for (const b of this.bunkers) {
       if (this.mode !== 'playing') b.update(dt);
       b.cull(this.camera.position);
@@ -2361,6 +2387,12 @@ export class Game {
         s.set('seen:dome');
         s.set('dome.marker');
         this.ui.banner('THE SINGULARITY DOME', 'A glass dome full of servers, two towers steaming beside it, and something inside still running Hunter Vale\'s company. Tier 5.', 'info');
+      }
+      const [ctx2, , ctz] = CATHEDRAL.location.position;
+      if (!s.has('seen:cathedral') && Math.hypot(player.position.x - ctx2, player.position.z - ctz) < 140) {
+        s.set('seen:cathedral');
+        s.set('cathedral.marker');
+        this.ui.banner('THE CLOUD CATHEDRAL', 'A warehouse built like a church, a rose window that tells the time, and a swarm of delivery drones circling the bell tower. Orrin Sayle is still taking orders. Tier 6.', 'info');
       }
       for (const c of WORLD_CACHES) {
         if (s.has(c.id) || s.has(`approach:${c.id}`)) continue;

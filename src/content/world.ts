@@ -1,6 +1,7 @@
 import type { IntelItem, LandmarkDef } from './types';
 import { SPIRE_ROAD } from './bunkers/spire';
 import { DOME_ROAD } from './bunkers/dome';
+import { CATHEDRAL_ROAD } from './bunkers/cathedral';
 
 /** Size of the playable square in metres (centred on the origin). */
 export const WORLD_SIZE = 840;
@@ -21,6 +22,8 @@ export const SIDE_ROADS: [number, number][][] = [
   SPIRE_ROAD,
   // Ascend's drive: on from the 5G tower's track, south across the shelf to the Dome's gate
   DOME_ROAD,
+  // Dropt's service road: off the highway east of Recovery Point 7, north across the basin to the lot
+  CATHEDRAL_ROAD,
 ];
 
 /**

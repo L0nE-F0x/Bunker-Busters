@@ -12,7 +12,8 @@
 // --shots <dir> saves a screenshot per spot (A/B the look of a change at the same views).
 // Spots: camp (night, fire), creek (Dry Creek noon), highway (noon), garage (inside), fight, wolves,
 // wellhead / wellheadNight (from Dry Creek, ~150 m from the Kade Wellhead outpost), spireRoad / spireCourt /
-// spireNight / spireLobby (the Alignment Spire), panValley (the Panopticon's valley, for comparison).
+// spireNight / spireLobby (the Alignment Spire), domeRoad / domeYard / domeInside / domeNight, cathRoad / cathLot /
+// cathInside / cathNight (the Cloud Cathedral), panValley (the Panopticon's valley, for comparison).
 import fs from 'node:fs';
 import path from 'node:path';
 import { launch, waitForGame } from './browser.mjs';
@@ -67,6 +68,15 @@ const SPOTS = {
     game.cam.snap(Math.PI, 0.1); }`,
   domeNight: `{ const o = game.dome.b.origin; tp(o.x - 45, o.z - 70); game.atmo.hour = 21.8; await next();
     game.cam.snap(Math.atan2(45, 70), 0.08); }`,
+  // the Cloud Cathedral (Tier 6): up Dropt's road at it, the lot under the swarm, the nave over the floor, and at night
+  cathRoad: `{ const o = game.cathedral.b.origin; tp(o.x + 4, o.z + 70); game.atmo.hour = 16.5; await next();
+    game.cam.snap(Math.atan2(4, 70), 0.12); }`,
+  cathLot: `{ const o = game.cathedral.b.origin; tp(o.x + 10, o.z + 40); game.atmo.hour = 16.5; await next();
+    game.cam.snap(Math.atan2(10, 40), 0.18); }`,
+  cathInside: `{ const o = game.cathedral.b.origin; game.player.teleport(o.clone().add({ x: 0, y: 0.2, z: 20 })); game.atmo.hour = 16.5; await next();
+    game.cam.snap(0, 0.05); }`,
+  cathNight: `{ const o = game.cathedral.b.origin; tp(o.x - 35, o.z + 85); game.atmo.hour = 21.8; await next();
+    game.cam.snap(Math.atan2(-35, 85), 0.1); }`,
   panValley: `{ const o = game.panopticon.b.origin; tp(o.x + 4, o.z + 70); game.atmo.hour = 16.5; await next();
     game.cam.snap(0, 0.08); }`,
   wolves: `{ tp(-60, 180); game.atmo.hour = 10; await next(); game.cam.snap(0, -0.03); await next();

@@ -29,6 +29,8 @@ export class Player {
   /** Both arms full of something heavy (the Spire's core): no running. */
   heavy = false;
   frozen = false;
+  /** Held crouched whatever the input (riding the Cathedral's returns line in a tote). */
+  forceCrouch = false;
   interactPose = 0;
   speedMult = 1;
   flashlight = false;
@@ -134,7 +136,7 @@ export class Player {
       const m = Math.hypot(mx, mz);
       if (m > 1) { mx /= m; mz /= m; }
     }
-    const wantCrouch = !this.frozen && input.act('crouch');
+    const wantCrouch = this.forceCrouch || (!this.frozen && input.act('crouch'));
     this.setCrouch(wantCrouch);
     const moving = mx !== 0 || mz !== 0;
     this.sprinting = moving && !this.crouching && !this.heavy && input.act('sprint') && mz > 0 && this.stumble < 0.3 && !this.winded;

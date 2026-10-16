@@ -74,6 +74,8 @@ export type PersonId =
   | 'ezra' | 'ada'
   | 'prudence' | 'noor'
   | 'twin' | 'gil'
+  | 'orrin' | 'lo'
+  | 'kit'
   | 'creek' | 'compact';
 
 export type SolutionKind = 'stealth' | 'hack' | 'force' | 'social' | 'lockpick';

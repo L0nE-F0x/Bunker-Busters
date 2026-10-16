@@ -59,6 +59,13 @@ export const CAST: Record<string, CastVoice> = {
   'hunter (beta)': { voice: 'am_liam', fx: 'pa', speed: 1.03 },
   'gil menon': { voice: 'bm_george', fx: 'room', speed: 0.93 },
   'ascend helper': { voice: 'am_eric', fx: 'bot', speed: 1.06 },
+  // the Cloud Cathedral (content/bunkers/cathedral.ts): Orrin on the PA and in his office, Lo on the
+  // floor, the other associates, and one voice for every Dropt drone
+  'orrin sayle': { voice: 'am_santa', fx: 'pa', speed: 1.0 },
+  orrin: { voice: 'am_santa', fx: 'room', speed: 0.98 },
+  'lo ibarra': { voice: 'af_bella', fx: 'room', speed: 0.97 },
+  associate: { voice: 'af_kore', fx: 'room', speed: 1.02 },
+  'dropt drone': { voice: 'af_alloy', fx: 'bot', speed: 1.08 },
 };
 
 const ALIAS: Record<string, string> = { mara: 'mara voss' };

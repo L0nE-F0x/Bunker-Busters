@@ -363,6 +363,53 @@ export const QUESTS: QuestDef[] = [
       text: 'Dez says the Dome\'s towers have done something different tonight. Come back to the fire and raise me. Start with the man at the gate.',
     },
   },
+  {
+    id: 'act6',
+    kind: 'main',
+    title: 'Act VI · The Cloud Cathedral',
+    giver: 'mara',
+    where: 'The north basin',
+    blurb:
+      'Orrin Sayle ran Dropt, and the cloud it ran on. Nimbus at ColdStorage was one of his. Dez has heard drones over the north basin every night for a month, flying loops round something with a tower. Mara wants to know what Orrin is sitting on, and who is in there with him.',
+    start: (v) => v.has('act5.debriefed'),
+    steps: [
+      {
+        id: 'road', text: 'Reach the Cloud Cathedral in the north basin', at: 'cathedral',
+        hint: 'Dropt\'s service road leaves the highway east of Recovery Point 7 and runs north across the basin. Look for a bell tower with drones round it.',
+        done: (v) => any(v, 'seen:cathedral', 'cathedral.returns.open', 'cathedral.dock.open', 'cathedral.complete'),
+      },
+      {
+        id: 'in', text: 'Get inside', at: 'cathedral',
+        hint: 'The returns kiosk on the east wall wants a Dropt order number, and Rider 9 had one. Or the dock door further along: pick the wicket, short the controller (Electronics 3), or a charge. Keep under cover from the drones.',
+        done: (v) => any(v, 'cathedral.returns.open', 'cathedral.dock.open', 'cathedral.office.open', 'cathedral.complete'),
+      },
+      {
+        id: 'lo', text: 'Find whoever is running the shift', optional: true, at: 'cathedral',
+        hint: 'On the west side of the crossing, past the floor, at a stand-up desk with a whiteboard behind it.',
+        done: (v) => v.has('cathedral.lo.met'),
+      },
+      {
+        id: 'office', text: 'Get into the Day 1 office', at: 'cathedral',
+        hint: 'Up the stair on the east side of the apse, behind the altar. Four digits on the keypad, SPLICE (Electronics 4), or a charge.',
+        done: (v) => any(v, 'cathedral.office.open', 'cathedral.complete'),
+      },
+      {
+        id: 'end', text: 'Decide who the Cathedral belongs to', at: 'cathedral',
+        hint: 'At Orrin\'s console in the office. Turn the site key, or fill in the transfer form.',
+        done: (v) => v.has('cathedral.end'),
+      },
+      {
+        id: 'loot', text: 'Take the Reserve', at: 'cathedral',
+        hint: 'In the office: the pallet of water, Orrin\'s desk and the returns shelf. The water comes with you even if your pack is full.',
+        done: (v) => v.has('cathedral.complete'),
+      },
+    ],
+    reward: { xp: 750, items: [{ id: 'water', qty: 4 }, { id: 'ration', qty: 2 }, { id: 'medkit', qty: 2 }], rep: { compact: 2, mara: 1 } },
+    wrap: {
+      speaker: 'Mara Voss',
+      text: 'Dez can see the Cathedral from the ridge, and he says the drones are doing something different. Come back to the fire and raise me. Tell me about the people inside.',
+    },
+  },
 
   // ------------------------------------------------------------------ Dry Creek
   {

@@ -4,6 +4,7 @@ import { APEX, APEX_PAD, APEX_BLOCK_PAD } from '@/content/bunkers/apex';
 import { PANOPTICON, PANOPTICON_PAD } from '@/content/bunkers/panopticon';
 import { SPIRE, SPIRE_PAD, SPIRE_RAMP } from '@/content/bunkers/spire';
 import { DOME, DOME_PAD } from '@/content/bunkers/dome';
+import { CATHEDRAL, CATHEDRAL_PAD } from '@/content/bunkers/cathedral';
 import { GARAGE } from '@/content/bunkers/garage';
 import { OUTPOSTS } from '@/content/recovery';
 
@@ -85,6 +86,8 @@ export class Heightfield {
     this.zones.push({ x: SPIRE.location.position[0], z: SPIRE.location.position[2], ...SPIRE_PAD });
     // the Singularity Dome's pad on the shelf under the southern range
     this.zones.push({ x: DOME.location.position[0], z: DOME.location.position[2], ...DOME_PAD });
+    // the Cloud Cathedral's pad and lot in the north basin
+    this.zones.push({ x: CATHEDRAL.location.position[0], z: CATHEDRAL.location.position[2], ...CATHEDRAL_PAD });
     // her road squeezes past a mesa spur north of the pad: open the cut a little
     this.zones.push({ x: -351, z: -62, r: 9, falloff: 14 });
     // Kade outposts sit on pads of their own

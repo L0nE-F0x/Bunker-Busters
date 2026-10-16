@@ -239,6 +239,12 @@ const defs: ItemDef[] = [
     description: 'The heart of the Spire\'s water plant: a frosted steel cartridge that pulls water out of the air. Benny says it would keep a camp going for twenty years. Take it to the camp.',
     flavor: 'CORE · DO NOT REMOVE WHILE RUNNING. Keep it upright.',
   },
+  // --- the Cloud Cathedral ---
+  {
+    id: 'mateo_badge', name: 'Mateo\'s Badge', category: 'intel', weight: 0, stack: 1, value: 0, icon: 'badge',
+    description: 'An orange Dropt associate badge on a coiled lanyard: M. ROJAS · PICKER · SHIFT 1. Lo gave it to you. The drives on the Cathedral\'s floor route round it, and the floor drones count you as staff.',
+    flavor: 'The photo is of a man who has just been told to smile.',
+  },
   // --- the Singularity Dome ---
   {
     id: 'vale_badge', name: 'Hunter Vale\'s Lanyard', category: 'intel', weight: 0, stack: 1, value: 0, icon: 'badge',

@@ -315,6 +315,38 @@ export const PEOPLE: PersonDef[] = [
     ],
   },
   {
+    id: 'orrin', accent: '#ff8a3a', name: 'Orrin Sayle', role: 'Founder, Dropt', place: 'The Cloud Cathedral, north basin',
+    bio: 'Started Dropt in a garage with a van and a scanner, and ended up owning the cloud it ran on. Sealed himself into his last warehouse with the night shift and kept ordering, because if nobody orders, the network forgets how.',
+    known: (v) => v.has('seen:cathedral') || v.has('cathedral.orrin') || v.has('act5.debriefed'),
+    about: [
+      { who: 'lo', line: 'Lo has the best rate in the building. I tell her so every week.' },
+      { who: 'vesper', line: 'Vesper once asked for two-day delivery on a rocket part. We did it in one.' },
+      { who: 'kit', line: 'Kit never sold me a chip at list price. Nobody got a chip at list.' },
+    ],
+    ofYou: [
+      'You turned the key. I keep placing orders, and nothing comes.',
+      'A customer. My only one for a while.',
+      'You came in as a return. Nobody has ever done that. I keep thinking about it.',
+      'Lo says you can come on the floor any time. She says it like she means it.',
+    ],
+  },
+  {
+    id: 'lo', accent: '#e8661e', name: 'Lo Ibarra', role: 'Shift lead, Dropt', place: 'The Cathedral floor',
+    bio: 'Shift lead the night of the Pivot, and every night since: fourteen hundred and seven shifts in a building whose doors only opened at shift end. Kept four of the thirty alive by making rate.',
+    known: (v) => v.has('cathedral.lo.met'),
+    about: [
+      { who: 'orrin', line: 'He knows where everything is going. He has no idea where anything is.' },
+      { who: 'hollis', line: 'Hollis stacks jugs like a man who has never been timed.', when: (v) => v.has('cathedral.assoc.gone') },
+      { who: 'pip', line: 'Pip asked me to teach her to pick. I said no. She\'s going to ask again.', when: (v) => v.has('cathedral.assoc.gone') },
+    ],
+    ofYou: [
+      'You weren\'t on the schedule, and you made a mess of my floor.',
+      'You weren\'t on the schedule. Down there, that\'s a compliment.',
+      'You took Mateo\'s badge. Look after it.',
+      'You opened the doors. I stood in the lot for an hour before I knew what to do.',
+    ],
+  },
+  {
     id: 'ezra', accent: '#6f9cff', name: 'Ezra Seymour', role: 'Founder, Glimpse', place: 'The Panopticon, north of the salt',
     bio: 'Built Glimpse, the neighbourhood app that never forgot a face, and then a bunker with eleven hundred cameras in it. Came up with the name "the Pivot". Watches every camp he can reach, and honestly believes it\'s because he cares.',
     known: (v) => v.has('q.cam.hello') || v.has('lore.panopticon'),

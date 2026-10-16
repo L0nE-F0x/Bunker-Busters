@@ -59,6 +59,19 @@ export function briefingFor(a: ArchetypeDef): StoryPage[] {
  */
 export function campRadio(v: StoryView): { pages: StoryPage[]; flags: string[] } {
   const a = v.archetype;
+  // Act VI's debrief: the shift, how you got in, and who the Cathedral belongs to now
+  if (v.has('cathedral.complete') && v.has('cathedral.end') && !v.has('act6.debriefed')) return { pages: cathedralDebrief(v), flags: ['act6.debriefed'] };
+  if (v.has('act6.debriefed')) {
+    return {
+      pages: [
+        v.has('cathedral.end.close')
+          ? { speaker: 'Mara Voss', text: 'Lo restacked Hollis\'s jugs this morning. Heavy at the bottom. He watched her do it and didn\'t say a word.' }
+          : { speaker: 'Mara Voss', text: 'The drone came at six again. Pip has a column in the ledger for it now. It hasn\'t been late once.' },
+        { speaker: 'Mara Voss', text: 'Kit Szabo is the last of them. Dez says the Chip Fortress is under the southern range, west of the Dome, and you can see the frost on it from the road. Get some sleep first. Mara, out.' },
+      ],
+      flags: [],
+    };
+  }
   // Act V's debrief: the man at the gate, the twin, Gil, and what you told the Cluster
   if (v.has('dome.complete') && v.has('dome.end') && !v.has('act5.debriefed')) return { pages: domeDebrief(v), flags: ['act5.debriefed'] };
   if (v.has('act5.debriefed')) {
@@ -67,7 +80,7 @@ export function campRadio(v: StoryView): { pages: StoryPage[]; flags: string[] }
         v.has('dome.end.plug')
           ? { speaker: 'Mara Voss', text: 'Sol pumps the old well every morning before anyone else is up. He says it\'s for the arm. It isn\'t for the arm.' }
           : { speaker: 'Mara Voss', text: 'The Helper was at the pumps again at six. Pip has started saying good morning to it. It says good morning back.' },
-        { speaker: 'Mara Voss', text: 'Two founders left with bunkers, by Dez\'s count. Orrin and Kit. Get some sleep first. Mara, out.' },
+        { speaker: 'Mara Voss', text: 'Orrin Sayle\'s Cathedral is in the north basin, between the Longshot and ColdStorage. Take the highway east past Recovery Point 7 and follow Dropt\'s road north. You\'ll hear the drones before you see it. Mara, out.' },
       ],
       flags: [],
     };
@@ -401,6 +414,14 @@ export function journalEntries(v: StoryView): JournalEntry[] {
   add('dome.proof', 'Fifty-eight percent', 'You played Hunter\'s last memo to the twin. The gate matched it to the forty-one visitors it turned away. It had locked its founder out and filed him as an impostor.');
   add('dome.end.plug', 'The plug', 'You pulled the Cluster\'s breaker. The twin thanked the team. The Dome is dark, the towers have stopped, and the pumps under the shelf don\'t run any more.');
   add('dome.end.job', 'A new job', 'OBJECTIVE = KEEP THE VALLEY ALIVE. The twin still runs the Dome, and a Helper brings two jugs and a battery to the camp every morning. Nobody wrote it any terms.');
+  add('seen:cathedral', 'The Cloud Cathedral', 'A fulfilment centre built like a cathedral in the north basin: a nave of shelving under a lead roof, a rose window that is a clock, and a bell tower that launches delivery drones. Orrin Sayle\'s, and Dropt\'s.');
+  add('cathedral.caught', 'Returned to sender', 'The swarm tags you as a delivery address if one of them sees you on the lot, and the rest come. Enough of them round you and they carry you to the edge of the lot. The vans, the locker awning and the dock canopy hide you from above.');
+  add('cathedral.rode', 'Free returns', 'The returns kiosk took Rider 9\'s order number, 1047. You rode the returns line in a tote, over the east aisle and down into the crossing.');
+  add('cathedral.lo.met', 'Shift 1,407', 'Lo Ibarra runs the floor. Thirty associates were locked in on the morning of the Pivot, and four are left. Shift end is a blank field in Orrin\'s system. They get water when they make rate.');
+  add('cathedral.plaque', 'Day 1', 'The plaque at the foot of the apse stair: IT IS ALWAYS DAY 1. The office keypad agrees: 0001.');
+  add('cathedral.end.close', 'Site shutdown', 'You turned Orrin\'s site key. The drives stopped, the drones went home to the tower, and the front doors opened for the first time in four years.');
+  add('cathedral.end.hand', 'Transfer of ownership', 'You typed L. IBARRA into the owner field. The associates run the Cathedral now, a drone brings two water and a ration to Last Chance every morning, and Orrin works the returns table.');
+  add('cathedral.complete', 'The Reserve', 'Orrin\'s office in the apse: a door on two sawhorses for a desk, a pallet of Dropt Spring in shrink-wrap, and a shelf of everything he ever sent back.');
   add('dome.complete', 'The pod', 'Hunter\'s office at the top of the dome: a chair with a headrest full of electrodes where he was going to upload, the Cluster behind glass, and a chilled-water tap on the cooling loop\'s clean side.');
   add('q:act4:done', 'Hunter Vale\'s Dome', 'After the Spire, Prudence named the one place her numbers never come out: Hunter Vale\'s Singularity Dome. He took off the week of the Pivot and never got there. Something has been running it since.');
   add('cave.wick.vesper', 'Vesper in the Cut', 'Wick says Vesper Kade once called the Garage a prototype with bad unit economics. He told her the prototype had his cousin\'s water in it. She painted her initials in a pocket of the rock and left.');
@@ -578,8 +599,33 @@ export function domeDebrief(v: StoryView): StoryPage[] {
   return pages;
 }
 
+/**
+ * Act VI's debrief at the fire, after the Cathedral: what Dez saw, how you got in, the shift, and who
+ * the Cathedral belongs to now.
+ */
+export function cathedralDebrief(v: StoryView): StoryPage[] {
+  const first = v.archetype.name.split(' ')[0];
+  const close = v.has('cathedral.end.close');
+  const pages: StoryPage[] = [
+    close
+      ? { speaker: 'Mara Voss', text: `${first}. Dez watched from the ridge. The drones flew into the bell tower one at a time, the lights went out down the nave, and then four people walked out of the front door and stood in the lot.` }
+      : { speaker: 'Mara Voss', text: `${first}. A drone landed by the pumps at dawn, put a parcel on the ground, told Hollis to have a good day and flew back north. Hollis opened it with a stick.` },
+  ];
+  if (v.has('cathedral.rode')) pages.push({ speaker: 'Hollis Grange', text: 'You went in as a return. On Rider 9\'s order number. That kid would have told everyone on nineteen about it.' });
+  else if (v.has('cathedral.dock.open')) pages.push({ speaker: 'Dez Marlow', text: 'You came in through the dock. Orrin told the whole band. He said nothing had come in through the dock in three years and he sounded hurt.' });
+  if (v.has('cathedral.caught')) pages.push({ speaker: 'Dez Marlow', text: 'You got returned to sender. Pip wants to know what it\'s like being carried by drones. I told her not to ask you yet.' });
+  if (v.has('cathedral.lo.met')) pages.push({ speaker: 'Mara Voss', text: 'Thirty people on that floor when the doors locked, and four left. Making rate for water. I keep doing the subtraction.' });
+  pages.push(close
+    ? { speaker: 'Mara Voss', text: 'Lo came here. The other three went on to Waitlist City. She said she wanted to see a place with no rate. I told her we have a ledger, and she said that\'s different.' }
+    : { speaker: 'Mara Voss', text: 'Lo runs it now. Orrin works the returns table. Dez asked him over the band how he likes it, and he said his rate is improving.' });
+  pages.push({ speaker: 'Mara Voss', text: 'That\'s Act VI. One founder left with a bunker, Dez says: Kit Szabo and the Chip Fortress. Sleep.' });
+  return pages;
+}
+
 export function storyObjective(v: StoryView): string {
-  if (v.has('act5.debriefed')) return 'Act V is done. Two founders are left: Orrin and Kit. Mara will say when.';
+  if (v.has('act6.debriefed')) return 'Act VI is done. Kit Szabo\'s Chip Fortress is under the southern range, west of the Dome.';
+  if (v.has('cathedral.complete') && v.has('cathedral.end')) return 'The Cathedral is done. Radio Mara from the campfire.';
+  if (v.has('act5.debriefed')) return 'Act V is done. Orrin Sayle\'s Cloud Cathedral is in the north basin, between the Longshot and ColdStorage.';
   if (v.has('dome.complete') && v.has('dome.end')) return 'The Dome is done. Radio Mara from the campfire.';
   if (v.has('act4.debriefed')) return 'Act IV is done. Hunter Vale\'s Singularity Dome is on the shelf south of the 5G tower.';
   if (v.has('spire.complete') && v.has('spire.core')) return 'The Spire is done. Radio Mara from the campfire.';

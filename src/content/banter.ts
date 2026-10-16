@@ -142,6 +142,12 @@ export const BANTER: Banter[] = [
     text: 'That white needle on the bench is the real one. The light on top is green. Let\'s try to keep it that way.',
   },
   {
+    id: 'cathedral', speaker: 'Mara',
+    near: { x: 198, z: -252, r: 180 },
+    when: (v) => v.has('act5.debriefed') && !v.has('seen:cathedral'),
+    text: 'Hear that? Like a hive. That\'s the swarm. Dez counted eight of them circling the tower one night, all with their lights on.',
+  },
+  {
     id: 'dome', speaker: 'Mara',
     near: { x: 150, z: 318, r: 170 },
     when: (v) => v.has('act4.debriefed') && !v.has('seen:dome'),

@@ -4,6 +4,8 @@
 //   node scripts/models/build-glb.mjs public/models/x.glb Assets/X_Rigged.glb \
 //        [--clips Assets/X_Animations.glb[:Idle,Talk_with_Hands_Open]] [--clips Assets/X_Walking_Basic.glb:walking_man=Walk]
 //        [--mirror Assets/Y_Animations.glb:Chair_Sit_Idle_M=idle_m] [--size 1024] [--q 4] [--maps base|all]
+//   A `!` after a clip's new name (`Carry_Heavy_Object_Walk=carry!`) makes it walk in place: the
+//   hips' drift across the ground over the clip is taken out (the game moves the character itself).
 //
 // What it does (no dependencies; ffmpeg for the textures):
 //   - drops the base's own clips (Meshy rigs carry an empty `clip0`), then merges the named clips
@@ -257,6 +259,8 @@ for (const { spec, mirror } of clipSpecs) {
     console.log(`  ${path.basename(file)}: ${mirror ? 'mirrored' : 'retargeted (rest poses differ)'}; rest aligned: ${r.log.join(', ')}`);
   }
   const want = list ? new Map(list.split(',').map((s) => { const [a, b] = s.split('='); return [a, b ?? a]; })) : null;
+  const inPlace = new Set();
+  if (want) for (const [k, v] of want) if (v.endsWith('!')) { want.set(k, v.slice(0, -1)); inPlace.add(v.slice(0, -1)); }
   for (const a of g.json.animations ?? []) {
     const short = a.name.includes('|') ? a.name.split('|')[1] : a.name;
     const key = want ? [...want.keys()].find((k) => k === a.name || k === short) : short;
@@ -281,14 +285,28 @@ for (const { spec, mirror } of clipSpecs) {
       // mirrored: across the midplane (the Armature has no rotation: x is the body's left)
       const scale = c.target.path === 'translation' && Math.abs(hipRatio - 1) > 0.01;
       const flip = c.target.path === 'translation' && mirror;
-      if (scale || flip) {
+      const still = c.target.path === 'translation' && inPlace.has(name);
+      if (scale || flip || still) {
         const acc = out.accessors[output] = { ...out.accessors[output] };
         const bytes = Buffer.from(accessorBytes(g, s.output));
         const f = new Float32Array(bytes.buffer, bytes.byteOffset, bytes.length / 4);
         const k = scale ? hipRatio : 1;
         for (let i = 0; i < f.length; i++) f[i] *= k * (flip && i % 3 === 0 ? -1 : 1);
+        if (still) {
+          // the drift from the first key to the last, spread linearly over the clip's time (x and z)
+          const tb = Buffer.from(accessorBytes(g, s.input));
+          const ts = new Float32Array(tb.buffer, tb.byteOffset, tb.length / 4);
+          const n = ts.length, T = ts[n - 1] - ts[0] || 1;
+          const dx = f[(n - 1) * 3] - f[0], dz = f[(n - 1) * 3 + 2] - f[2];
+          for (let i = 0; i < n; i++) { const u = (ts[i] - ts[0]) / T; f[i * 3] -= dx * u; f[i * 3 + 2] -= dz * u; }
+          delete acc.min;
+          delete acc.max;
+          let lo = [Infinity, Infinity, Infinity], hi = [-Infinity, -Infinity, -Infinity];
+          for (let i = 0; i < n; i++) for (let j = 0; j < 3; j++) { lo[j] = Math.min(lo[j], f[i * 3 + j]); hi[j] = Math.max(hi[j], f[i * 3 + j]); }
+          acc.min = lo; acc.max = hi;
+        }
         acc.bufferView = addView(bytes);
-        const lo = acc.min?.map((v) => v * k), hi = acc.max?.map((v) => v * k);
+        const lo = still ? null : acc.min?.map((v) => v * k), hi = still ? null : acc.max?.map((v) => v * k);
         if (lo && hi) {
           if (flip) [lo[0], hi[0]] = [-hi[0], -lo[0]];
           acc.min = lo;
