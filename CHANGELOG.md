@@ -3,7 +3,7 @@
 Each `## vX.Y.Z` section becomes the GitHub release notes and the "what's new" list in the in-app
 update notice (the first few bullets). `scripts/release.sh` refuses to release a version without one.
 
-## v0.10.0
+## v1.0.0
 - **The story is finished.** Act VIII: Dez finally places the carrier he couldn't find, and it's under the camp. Bunker Zero is sixty rungs below the forecourt at Last Chance, built by the woman who built every other bunker in the valley. Raise Mara after the Fortress's debrief to start it
 - **The showroom.** Every founder's defences as they were first drawn: Tanner's tin-can tripwires, Ezra's cameras, Prudence's laser grid, Vesper's airlock (the code is the time on the clock over it), and two polite Doormen who walk you back to the ladder. At the end, a board with four units of power and a round door that wants two. Each display has a placard with the change orders the founder signed, which are the ways you got in
 - **Who gets the well.** Keep the master key and Zero belongs to Last Chance, or break it and send the well up to a standpipe on the forecourt for anyone who walks up the highway. Either way the camp drinks every day afterwards, and Mara's last debrief ends the story. The valley stays open: keep playing as long as you like

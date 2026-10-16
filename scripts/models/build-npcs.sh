@@ -143,4 +143,12 @@ on tech && build tech ${FT}Tech_Rigged.glb \
   --clips ${FT}Tech_Walking_Basic.glb:walking_man=walk \
   --clips ${FT}Tech_Animations.glb:Walk_Slowly_and_Look_Around=look \
   --clips ${DM}Helper_Animations.glb:falling_down=fall
+
+# --- Bunker Zero: Agnes on her feet at the drafting table (all borrowed: Sol's standing idle and
+# talk, Inez's counter gesture for working at the table)
+ZR=${A}Zero_
+on agnes && build agnes ${ZR}Agnes_Rigged.glb \
+  --clips ${DC}Sol_Animations.glb:Listening_Gesture=idle,Talk_with_Hands_Open=near \
+  --clips ${DC}Inez_Animations.glb:Checkout_Gesture=ins_checkout \
+  --mirror ${DC}Sol_Animations.glb:Listening_Gesture=idle_m
 true

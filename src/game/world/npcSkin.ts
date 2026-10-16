@@ -24,8 +24,8 @@ import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
  * something changed.
  */
 
-/** Characters that have a model: Dry Creek's six, the camp's four, the Panopticon's four (Ezra, Ada, two reviewers), the Spire's three, the Dome's three (Hunter, Gil, the Helpers), the Cathedral's two (Orrin, the associates), the Fortress's two (Kit, the technicians). */
-export const NPC_MODELS = ['nia', 'doc', 'inez', 'sol', 'ren', 'wick', 'mara', 'hollis', 'pip', 'dez', 'ezra', 'ada', 'rev1', 'rev2', 'prudence', 'noor', 'benny', 'hunter', 'gil', 'helper', 'orrin', 'assoc', 'kit', 'tech'] as const;
+/** Characters that have a model: Dry Creek's six, the camp's four, the Panopticon's four (Ezra, Ada, two reviewers), the Spire's three, the Dome's three (Hunter, Gil, the Helpers), the Cathedral's two (Orrin, the associates), the Fortress's two (Kit, the technicians), and Agnes in Bunker Zero. */
+export const NPC_MODELS = ['nia', 'doc', 'inez', 'sol', 'ren', 'wick', 'mara', 'hollis', 'pip', 'dez', 'ezra', 'ada', 'rev1', 'rev2', 'prudence', 'noor', 'benny', 'hunter', 'gil', 'helper', 'orrin', 'assoc', 'kit', 'tech', 'agnes'] as const;
 /** Head props, in Head-bone space (1 unit = 1 cm there; fits from Assets/MESHY_ASSETS.md §5). */
 export const NPC_PROPS: Record<string, { file: string; pos: [number, number, number]; rot: [number, number, number]; scale: number }> = {
   hollis: { file: 'truckercap', pos: [-1.7, 20.3, 2.6], rot: [-7.5, 3.2, 3.6], scale: 16 },

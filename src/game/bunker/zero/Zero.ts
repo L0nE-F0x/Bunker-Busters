@@ -16,7 +16,7 @@ import { NpcCrowd, type NpcLook } from '../../world/npc';
 import type { GameContext } from '../../context';
 import type { Combat } from '../../combat/Combat';
 
-/** Agnes's procedural figure (the Meshy model replaces it when `agnes` is in NPC_MODELS). */
+/** Agnes's procedural figure: the fallback if her model fails to load (and under `?procnpc`). */
 const AGNES_LOOK: NpcLook = { skin: '#c9a48a', hair: '#8c8984', hairStyle: 'crop', fem: true, build: 0.92, height: 0.93, shirt: '#a07e56', pants: '#4a3a2c', boots: '#4a3020' };
 
 /**
