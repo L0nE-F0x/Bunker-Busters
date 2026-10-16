@@ -194,7 +194,7 @@ export class CathedralBuilder implements BunkerShell {
   /** A sliding door leaf along x at z (or along z at x when `alongZ`). */
   private slideDoor(id: string, a0: number, a1: number, y0: number, at: number, h: number, amount: number, leaf: (b: MeshBatch, w: number) => void, alongZ = false) {
     const pivot = new THREE.Group();
-    if (alongZ) { pivot.position.set(at, y0, a0); pivot.rotation.y = -Math.PI / 2; } else pivot.position.set(a0, y0, at);
+    if (alongZ) { pivot.position.set(at, y0, a0); pivot.rotation.y = -Math.PI / 2; pivot.userData.z0 = a0; pivot.userData.slideZ = amount; } else pivot.position.set(a0, y0, at);
     pivot.userData.x0 = alongZ ? at : a0;
     const lb = new MeshBatch();
     leaf(lb, a1 - a0);
@@ -203,7 +203,7 @@ export class CathedralBuilder implements BunkerShell {
     const mid = (a0 + a1) / 2;
     const pos = alongZ ? this.w(at, y0 + h / 2, mid) : this.w(mid, y0 + h / 2, at);
     const half = alongZ ? V(0.12, h / 2, Math.abs(a1 - a0) / 2) : V(Math.abs(a1 - a0) / 2, h / 2, 0.12);
-    this.doors[id] = { pivot, open: 0, target: 0, collider: this.physics.addBox(pos, half), axis: 'slide', amount, colliderSpec: { pos, half } };
+    this.doors[id] = { pivot, open: 0, target: 0, collider: this.physics.addBox(pos, half), axis: 'slide', amount: alongZ ? 0 : amount, colliderSpec: { pos, half } };
     return pivot;
   }
 

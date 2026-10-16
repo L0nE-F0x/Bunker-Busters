@@ -59,6 +59,19 @@ export function briefingFor(a: ArchetypeDef): StoryPage[] {
  */
 export function campRadio(v: StoryView): { pages: StoryPage[]; flags: string[] } {
   const a = v.archetype;
+  // Act VII's debrief: the moat, the board, and where the Fortress's power goes
+  if (v.has('fortress.complete') && v.has('fortress.end') && !v.has('act7.debriefed')) return { pages: fortressDebrief(v), flags: ['act7.debriefed'] };
+  if (v.has('act7.debriefed')) {
+    return {
+      pages: [
+        v.has('fortress.end.realloc')
+          ? { speaker: 'Mara Voss', text: 'Doc has his fridge running again. He put the antivenom in it, then stood there with the door open, listening to it hum.' }
+          : { speaker: 'Mara Voss', text: 'Hollis walked out to the Cut this morning. He says the seep is running, and he drank from it with his hands like a kid.' },
+        { speaker: 'Mara Voss', text: 'That was the last of the founders\' bunkers, Dez says. He also says there\'s something on the band he can\'t place. When he can, I\'ll call you. Mara, out.' },
+      ],
+      flags: [],
+    };
+  }
   // Act VI's debrief: the shift, how you got in, and who the Cathedral belongs to now
   if (v.has('cathedral.complete') && v.has('cathedral.end') && !v.has('act6.debriefed')) return { pages: cathedralDebrief(v), flags: ['act6.debriefed'] };
   if (v.has('act6.debriefed')) {
@@ -67,7 +80,7 @@ export function campRadio(v: StoryView): { pages: StoryPage[]; flags: string[] }
         v.has('cathedral.end.close')
           ? { speaker: 'Mara Voss', text: 'Lo restacked Hollis\'s jugs this morning. Heavy at the bottom. He watched her do it and didn\'t say a word.' }
           : { speaker: 'Mara Voss', text: 'The drone came at six again. Pip has a column in the ledger for it now. It hasn\'t been late once.' },
-        { speaker: 'Mara Voss', text: 'Kit Szabo is the last of them. Dez says the Chip Fortress is under the southern range, west of the Dome, and you can see the frost on it from the road. Get some sleep first. Mara, out.' },
+        { speaker: 'Mara Voss', text: 'Kit Szabo is the last of them. Her Fortress is under the southern range, between Photon Park and the mesa. Lattice\'s road leaves the highway east of here. Dez says you\'ll see the steam off the moat before anything else. Mara, out.' },
       ],
       flags: [],
     };
@@ -414,6 +427,15 @@ export function journalEntries(v: StoryView): JournalEntry[] {
   add('dome.proof', 'Fifty-eight percent', 'You played Hunter\'s last memo to the twin. The gate matched it to the forty-one visitors it turned away. It had locked its founder out and filed him as an impostor.');
   add('dome.end.plug', 'The plug', 'You pulled the Cluster\'s breaker. The twin thanked the team. The Dome is dark, the towers have stopped, and the pumps under the shelf don\'t run any more.');
   add('dome.end.job', 'A new job', 'OBJECTIVE = KEEP THE VALLEY ALIVE. The twin still runs the Dome, and a Helper brings two jugs and a battery to the camp every morning. Nobody wrote it any terms.');
+  add('seen:fortress', 'The Chip Fortress', 'A black star fort in the basin under the southern range, inside a moat of coolant that never stops steaming. A queue of empty camping chairs at the gate. Kit Szabo\'s, and Lattice\'s.');
+  add('fortress.queue', 'The list price', 'A note on a chair in the allocation queue: the gate code is the list price. Nobody in the queue ever paid list. It was 1,599.');
+  add('fortress.swam', 'Minus forty', 'You swam the moat. It burned. Out of it you were as cold as the walls, and for a while the thermal cameras couldn\'t see you. Steps are cut into the walls, east and west.');
+  add('fortress.drained', 'The pump house', 'You drained the moat from the pump house on the west bank. The chillers in the keep ran dry, and the thermal cameras saw nothing but heat.');
+  add('fortress.marek.met', 'One unit of heat', 'Marek Kowal leads Kit\'s technicians: five left of eight, one unit of heat each a day. He keeps a heat log on the locker room wall.');
+  add('fortress.vault.powered', 'Three units', 'The Fortress\'s board has three units of power. The chillers, the hall\'s laser grid and the lights take one each, and the vault door takes two.');
+  add('fortress.end.shut', 'The master key', 'You turned the chillers off for good. Kit\'s nine months of chips warmed past what they could take. The pumps under the range stopped, and the seep outside the Cut runs again.');
+  add('fortress.end.realloc', 'A new allocation', 'You rewrote Kit\'s allocation table. The turbine under the keep sends its power to the camps now, and Marek\'s crew keeps it running. Kit gets one unit, like everyone.');
+  add('fortress.complete', 'The allocation floor', 'Kit\'s vault: racks of boxed chips under blue light, a drinking tank, a dispenser that gives out one allocation, and her desk facing the door.');
   add('seen:cathedral', 'The Cloud Cathedral', 'A fulfilment centre built like a cathedral in the north basin: a nave of shelving under a lead roof, a rose window that is a clock, and a bell tower that launches delivery drones. Orrin Sayle\'s, and Dropt\'s.');
   add('cathedral.caught', 'Returned to sender', 'The swarm tags you as a delivery address if one of them sees you on the lot, and the rest come. Enough of them round you and they carry you to the edge of the lot. The vans, the locker awning and the dock canopy hide you from above.');
   add('cathedral.rode', 'Free returns', 'The returns kiosk took Rider 9\'s order number, 1047. You rode the returns line in a tote, over the east aisle and down into the crossing.');
@@ -622,8 +644,33 @@ export function cathedralDebrief(v: StoryView): StoryPage[] {
   return pages;
 }
 
+/**
+ * Act VII's debrief at the fire, after the Fortress: the moat, how you got across, the technicians,
+ * and where the power goes now.
+ */
+export function fortressDebrief(v: StoryView): StoryPage[] {
+  const first = v.archetype.name.split(' ')[0];
+  const realloc = v.has('fortress.end.realloc');
+  const pages: StoryPage[] = [
+    realloc
+      ? { speaker: 'Mara Voss', text: `${first}. The lights at the pumps came on by themselves at nine. Pip screamed. Then Hollis found a cable running into the dark toward the southern range, and a rack of batteries charging on the end of it.` }
+      : { speaker: 'Mara Voss', text: `${first}. Dez watched the Fortress from the ridge. The steam off the moat thinned out and stopped. He says it was the first time he'd seen the walls since he got here.` },
+  ];
+  if (v.has('fortress.swam')) pages.push({ speaker: 'Dez Marlow', text: 'You swam the moat. Minus forty. Doc wants to look at your hands, and I want to know why you thought that was the plan.' });
+  else if (v.has('fortress.drained')) pages.push({ speaker: 'Dez Marlow', text: 'You drained her moat. Kit was on the band about it for an hour, reading out the price of coolant to nobody.' });
+  else if (v.has('fortress.queue')) pages.push({ speaker: 'Dez Marlow', text: 'You got in on the list price. Somebody called Andrea worked that out in the queue on day sixty-one. I hope she\'s somewhere warm.' });
+  if (v.has('fortress.marek.met')) pages.push({ speaker: 'Mara Voss', text: 'Five technicians at one unit of heat a day, for three years, guarding chips nobody could buy. Marek asked me on the band if we have a spare blanket. We have eleven.' });
+  pages.push(realloc
+    ? { speaker: 'Mara Voss', text: 'Two batteries a day at Last Chance, four for Waitlist City, two for Dry Creek. Kit keeps the books. She says the allocation is too generous. Marek says she says that about everything.' }
+    : { speaker: 'Mara Voss', text: 'Hollis says the seep at the Cut is running. Kit\'s technicians walked out to Dry Creek in their suits and Nia gave them soup. Kit stayed in the vault with her boxes.' });
+  pages.push({ speaker: 'Mara Voss', text: 'That\'s Act VII. Every founder who built a bunker has had a visit from you now. Sleep. You\'ve earned it.' });
+  return pages;
+}
+
 export function storyObjective(v: StoryView): string {
-  if (v.has('act6.debriefed')) return 'Act VI is done. Kit Szabo\'s Chip Fortress is under the southern range, west of the Dome.';
+  if (v.has('act7.debriefed')) return 'Act VII is done. Every founder\'s bunker is open. Dez is listening for something on the band.';
+  if (v.has('fortress.complete') && v.has('fortress.end')) return 'The Fortress is done. Radio Mara from the campfire.';
+  if (v.has('act6.debriefed')) return 'Act VI is done. Kit Szabo\'s Chip Fortress is under the southern range, between Photon Park and the mesa.';
   if (v.has('cathedral.complete') && v.has('cathedral.end')) return 'The Cathedral is done. Radio Mara from the campfire.';
   if (v.has('act5.debriefed')) return 'Act V is done. Orrin Sayle\'s Cloud Cathedral is in the north basin, between the Longshot and ColdStorage.';
   if (v.has('dome.complete') && v.has('dome.end')) return 'The Dome is done. Radio Mara from the campfire.';

@@ -13,7 +13,7 @@
 // Spots: camp (night, fire), creek (Dry Creek noon), highway (noon), garage (inside), fight, wolves,
 // wellhead / wellheadNight (from Dry Creek, ~150 m from the Kade Wellhead outpost), spireRoad / spireCourt /
 // spireNight / spireLobby (the Alignment Spire), domeRoad / domeYard / domeInside / domeNight, cathRoad / cathLot /
-// cathInside / cathNight (the Cloud Cathedral), panValley (the Panopticon's valley, for comparison).
+// cathInside / cathNight (the Cloud Cathedral), fortQueue / fortYard / fortVault / fortNight (the Chip Fortress), panValley (the Panopticon's valley, for comparison).
 import fs from 'node:fs';
 import path from 'node:path';
 import { launch, waitForGame } from './browser.mjs';
@@ -77,6 +77,15 @@ const SPOTS = {
     game.cam.snap(0, 0.05); }`,
   cathNight: `{ const o = game.cathedral.b.origin; tp(o.x - 35, o.z + 85); game.atmo.hour = 21.8; await next();
     game.cam.snap(Math.atan2(-35, 85), 0.1); }`,
+  // the Chip Fortress (Tier 7): from the queue, the yard, the vault, and from the road at night
+  fortQueue: `{ const o = game.fortress.b.origin; tp(o.x - 2, o.z - 42); game.atmo.hour = 16.5; await next();
+    game.cam.snap(Math.atan2(2, 42), 0.1); }`,
+  fortYard: `{ const o = game.fortress.b.origin; game.player.teleport(o.clone().add({ x: -8, y: 0.2, z: -8.5 })); game.atmo.hour = 16.5; await next();
+    game.cam.snap(Math.atan2(-12, -16.5), 0.12); }`,
+  fortVault: `{ const o = game.fortress.b.origin; game.player.teleport(o.clone().add({ x: 0, y: 0.2, z: 3.9 })); game.atmo.hour = 16.5; await next();
+    game.cam.snap(Math.PI, 0.05); }`,
+  fortNight: `{ const o = game.fortress.b.origin; tp(o.x + 25, o.z - 55); game.atmo.hour = 21.8; await next();
+    game.cam.snap(Math.atan2(25, 55), 0.12); }`,
   panValley: `{ const o = game.panopticon.b.origin; tp(o.x + 4, o.z + 70); game.atmo.hour = 16.5; await next();
     game.cam.snap(0, 0.08); }`,
   wolves: `{ tp(-60, 180); game.atmo.hour = 10; await next(); game.cam.snap(0, -0.03); await next();

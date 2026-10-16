@@ -66,6 +66,12 @@ export const CAST: Record<string, CastVoice> = {
   'lo ibarra': { voice: 'af_bella', fx: 'room', speed: 0.97 },
   associate: { voice: 'af_kore', fx: 'room', speed: 1.02 },
   'dropt drone': { voice: 'af_alloy', fx: 'bot', speed: 1.08 },
+  // the Chip Fortress (content/bunkers/fortress.ts): Kit on the PA and at her desk, Marek and the
+  // technicians through their respirators (the radio's muffle)
+  'kit szabo': { voice: 'af_nova', fx: 'pa', speed: 0.98 },
+  kit: { voice: 'af_nova', fx: 'room', speed: 0.97 },
+  'marek kowal': { voice: 'bm_daniel', fx: 'radio', speed: 0.94 },
+  'cooling tech': { voice: 'am_michael', fx: 'radio', speed: 1.0 },
 };
 
 const ALIAS: Record<string, string> = { mara: 'mara voss' };

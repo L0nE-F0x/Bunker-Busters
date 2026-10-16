@@ -239,6 +239,12 @@ const defs: ItemDef[] = [
     description: 'The heart of the Spire\'s water plant: a frosted steel cartridge that pulls water out of the air. Benny says it would keep a camp going for twenty years. Take it to the camp.',
     flavor: 'CORE · DO NOT REMOVE WHILE RUNNING. Keep it upright.',
   },
+  // --- the Chip Fortress ---
+  {
+    id: 'marek_badge', name: 'Marek\'s Badge', category: 'intel', weight: 0, stack: 1, value: 0, icon: 'badge',
+    description: 'A Lattice technician\'s badge, frosted at the edges: M. KOWAL · LEAD · COOLING. It opens the Fortress keep\'s door and the technicians\' lockers.',
+    flavor: 'The clip is tied on with wire.',
+  },
   // --- the Cloud Cathedral ---
   {
     id: 'mateo_badge', name: 'Mateo\'s Badge', category: 'intel', weight: 0, stack: 1, value: 0, icon: 'badge',

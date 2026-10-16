@@ -410,6 +410,58 @@ export const QUESTS: QuestDef[] = [
       text: 'Dez can see the Cathedral from the ridge, and he says the drones are doing something different. Come back to the fire and raise me. Tell me about the people inside.',
     },
   },
+  {
+    id: 'act7',
+    kind: 'main',
+    title: 'Act VII · The Chip Fortress',
+    giver: 'mara',
+    where: 'Under the southern range',
+    blurb:
+      'Kit Szabo ran Lattice, and sold the chips everyone needed a few at a time, to whoever she liked. Her Fortress sits in a moat of coolant under the southern range, pulling groundwater out of the hills for its chillers and holding nine months of supply nobody can buy. She is the last founder with a bunker. Mara wants to know what all that power is for.',
+    start: (v) => v.has('act6.debriefed'),
+    steps: [
+      {
+        id: 'road', text: 'Reach the Chip Fortress under the southern range', at: 'fortress',
+        hint: 'Lattice\'s road leaves the highway east of Last Chance and runs south round the west side of the mesa. Look for the steam off the moat.',
+        done: (v) => any(v, 'seen:fortress', 'fortress.bridge.open', 'fortress.complete'),
+      },
+      {
+        id: 'moat', text: 'Get across the moat', at: 'fortress',
+        hint: 'The gatehouse by the queue lowers the drawbridge for a four-digit code; somebody in the queue had a theory. Or SPLICE it (Electronics 3), blow the winch (Demolition 4), drain the moat at the pump house on the west bank, or swim it and pick the frost door in the west wall.',
+        done: (v) => any(v, 'fortress.bridge.open', 'fortress.postern.open', 'fortress.keep.open', 'fortress.complete'),
+      },
+      {
+        id: 'keep', text: 'Get into the keep', at: 'fortress',
+        hint: 'The keep\'s door is on its north face. Pick it, short it (Electronics 4), SPLICE it, or ask the technicians.',
+        done: (v) => any(v, 'fortress.keep.open', 'fortress.complete'),
+      },
+      {
+        id: 'marek', text: 'Find the lead technician', optional: true, at: 'fortress',
+        hint: 'In the locker room on the east side of the keep\'s hall, sitting next to a heater.',
+        done: (v) => v.has('fortress.marek.met'),
+      },
+      {
+        id: 'vault', text: 'Power the vault door', at: 'fortress',
+        hint: 'The power board is in the west room. It has three units and the vault door needs two, so switch off what you can do without.',
+        done: (v) => any(v, 'fortress.vault.open', 'fortress.complete'),
+      },
+      {
+        id: 'end', text: 'Decide where the Fortress\'s power goes', at: 'fortress',
+        hint: 'At the allocation console on Kit\'s desk. Turn the master key and let the chillers die, or rewrite the table.',
+        done: (v) => v.has('fortress.end'),
+      },
+      {
+        id: 'loot', text: 'Take the water', at: 'fortress',
+        hint: 'In the vault: the drinking tank, the dispenser and Kit\'s desk. The water comes with you even if your pack is full.',
+        done: (v) => v.has('fortress.complete'),
+      },
+    ],
+    reward: { xp: 800, items: [{ id: 'water', qty: 4 }, { id: 'battery', qty: 2 }, { id: 'medkit', qty: 2 }], rep: { compact: 2, mara: 1 } },
+    wrap: {
+      speaker: 'Mara Voss',
+      text: 'Dez says the steam over the southern range looks different tonight. Come back to the fire and raise me.',
+    },
+  },
 
   // ------------------------------------------------------------------ Dry Creek
   {

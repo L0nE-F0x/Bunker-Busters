@@ -30,6 +30,8 @@ export const NPC_MODELS = ['nia', 'doc', 'inez', 'sol', 'ren', 'wick', 'mara', '
 export const NPC_PROPS: Record<string, { file: string; pos: [number, number, number]; rot: [number, number, number]; scale: number }> = {
   hollis: { file: 'truckercap', pos: [-1.7, 20.3, 2.6], rot: [-7.5, 3.2, 3.6], scale: 16 },
   dez: { file: 'headset', pos: [-1.0, 10.3, -14.2], rot: [-20.9, 2.3, 3.3], scale: 13.5 },
+  // the Chip Fortress's cooling technicians wear Kade's respirator (the model came out bare-faced)
+  tech: { file: 'respirator', pos: [0.4, 12.4, -2.4], rot: [-6, 0, 0], scale: 13.5 },
 };
 /**
  * Props in a hand, placed in the mitt's frame (measured from the mesh at bind: X wrist → fingers,

@@ -37,6 +37,10 @@ export const DAEMONS: Record<string, DaemonDef> = {
   sentinels: { id: 'sentinels', name: 'SENTINELS · TEST MODE', blurb: 'Every sentinel on the network goes into test mode and stops watching.' },
   office: { id: 'office', name: 'TOP FLOOR · ACCESS', blurb: 'The card reader on Prudence\'s door accepts a card you don\'t have.' },
   cameras: { id: 'cameras', name: 'CAMERAS · LOOP', blurb: 'The cameras loop yesterday\'s footage. Nobody was here yesterday.' },
+  // --- the Chip Fortress: the gatehouse, the thermal cameras, the keep door
+  bridge: { id: 'bridge', name: 'GATE · LOWER BRIDGE', blurb: 'The winch pays out and the drawbridge comes down across the moat.' },
+  thermcams: { id: 'thermcams', name: 'THERMAL · RECALIBRATE', blurb: 'Every thermal camera re-zeros on the coolant and sees nothing warmer than minus forty.' },
+  keepdoor: { id: 'keepdoor', name: 'KEEP · OPEN', blurb: 'The keep door unlocks. The log says Marek did it.' },
   // --- the Cloud Cathedral: the returns kiosk, the swarm, the floor, the office
   returnslabel: { id: 'returnslabel', name: 'RETURNS · PRINT LABEL', blurb: 'The kiosk prints a return label for a tote with nothing in it yet.' },
   swarm: { id: 'swarm', name: 'SWARM · RETURN TO BASE', blurb: 'Every drone over the lot flies home to the bell tower and lands for maintenance.' },

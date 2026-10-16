@@ -74,6 +74,8 @@ WORLD.push(
   ['place-dome', free([118, 2.0, 252], [150, 9, 318], 46, 18.35)],
   // the Cloud Cathedral at dusk from the end of Dropt's road: the rose window lit, drones round the bell tower
   ['place-cathedral', free([206, 2.6, -182], [198, 13, -252], 50, 18.25)],
+  // the Chip Fortress at dusk from above the queue: the moat glowing, vapour off it, the keep black inside
+  ['place-fortress', free([-106, 8, 276], [-127, 3, 322], 50, 17.85)],
   // Photon Park's panel rows at sunset, low along a row
   ['place-solar', free([-178, 1.7, 296], [-212, 1.2, 316], 48, 17.6)],
 );

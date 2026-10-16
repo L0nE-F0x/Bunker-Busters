@@ -5,6 +5,7 @@ import { PANOPTICON, PANOPTICON_PAD } from '@/content/bunkers/panopticon';
 import { SPIRE, SPIRE_PAD, SPIRE_RAMP } from '@/content/bunkers/spire';
 import { DOME, DOME_PAD } from '@/content/bunkers/dome';
 import { CATHEDRAL, CATHEDRAL_PAD } from '@/content/bunkers/cathedral';
+import { FORTRESS, FORTRESS_PAD, FORTRESS_MOAT } from '@/content/bunkers/fortress';
 import { GARAGE } from '@/content/bunkers/garage';
 import { OUTPOSTS } from '@/content/recovery';
 
@@ -88,6 +89,8 @@ export class Heightfield {
     this.zones.push({ x: DOME.location.position[0], z: DOME.location.position[2], ...DOME_PAD });
     // the Cloud Cathedral's pad and lot in the north basin
     this.zones.push({ x: CATHEDRAL.location.position[0], z: CATHEDRAL.location.position[2], ...CATHEDRAL_PAD });
+    // the Chip Fortress's pad in the basin under the southern range (its moat is carved after)
+    this.zones.push({ x: FORTRESS.location.position[0], z: FORTRESS.location.position[2], ...FORTRESS_PAD });
     // her road squeezes past a mesa spur north of the pad: open the cut a little
     this.zones.push({ x: -351, z: -62, r: 9, falloff: 14 });
     // Kade outposts sit on pads of their own
@@ -182,6 +185,7 @@ export class Heightfield {
     }
     this.carveTrail();
     this.carveRamp(SPIRE_RAMP, SPIRE_PAD.target);
+    this.carveMoat();
     // the canyon's terrace risers, half-blended into the Spire's pad and the ramp's banks, come out
     // as rows of teeth at this grid size: relax them into plain slopes (the flat parts stay flat)
     const [sx, , sz] = SPIRE.location.position, pr = SPIRE_PAD.r;
@@ -192,6 +196,24 @@ export class Heightfield {
       const ramp = smoothstep(5.5, 8, rd) * smoothstep(24, 15, rd);
       return Math.max(pad, ramp);
     }, 6, sx, sz, 110);
+  }
+
+  /**
+   * The Chip Fortress's moat: a ring trench in its pad, `depth` below the pad, between the radii (the
+   * builder lines it with walls that hide the grid's slopes and hold the player in).
+   */
+  private carveMoat() {
+    const { res, step, size, heights } = this;
+    const half = size / 2;
+    const [fx, , fz] = FORTRESS.location.position, { r0, r1, depth } = FORTRESS_MOAT, bed = FORTRESS_PAD.target - depth;
+    const i0 = Math.floor((fx - r1 - 4 + half) / step), i1 = Math.ceil((fx + r1 + 4 + half) / step);
+    const j0 = Math.floor((fz - r1 - 4 + half) / step), j1 = Math.ceil((fz + r1 + 4 + half) / step);
+    for (let j = Math.max(0, j0); j <= Math.min(res - 1, j1); j++) {
+      for (let i = Math.max(0, i0); i <= Math.min(res - 1, i1); i++) {
+        const d = Math.hypot(-half + i * step - fx, -half + j * step - fz);
+        if (d > r0 + 0.4 && d < r1 - 0.4) heights[j * res + i] = bed;
+      }
+    }
   }
 
   /**

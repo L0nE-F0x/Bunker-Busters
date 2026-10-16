@@ -51,6 +51,10 @@ export const RUMOURS: Rumour[] = [
     text: 'There\'s a carrier out of the east tablelands that only ever says one thing. Current safety level, one. Every hour on the hour, for three years. Last night it said two. Somebody up there is nervous about us.',
   },
   {
+    id: 'fortress', when: (v) => v.has('act6.debriefed') && !v.has('fortress.complete'),
+    text: 'There\'s a queue outside a fort under the southern range. Camping chairs, a ticket machine, nobody in them. Somebody on the band says he waited there for sixty days for a graphics card. He doesn\'t say if he got one.',
+  },
+  {
     id: 'cathedral', when: (v) => v.has('act5.debriefed') && !v.has('cathedral.complete'),
     text: 'A Dropt drone came over the camp last week with a parcel under it. It went round twice, like it was looking for an address, and flew back north. Pip wants to know what was in the box.',
   },

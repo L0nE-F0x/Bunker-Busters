@@ -331,6 +331,22 @@ export const PEOPLE: PersonDef[] = [
     ],
   },
   {
+    id: 'kit', accent: '#9fd8ff', name: 'Kit Szabo', role: 'Founder, Lattice', place: 'The Chip Fortress, under the southern range',
+    bio: 'Ran Lattice, which made the chips everyone needed, and sold them a few at a time to whoever she liked. Built a star fort with a moat of coolant for nine months of supply, and has spent three years waiting for the price to peak.',
+    known: (v) => v.has('seen:fortress') || v.has('fortress.kit') || v.has('act6.debriefed'),
+    about: [
+      { who: 'orrin', line: 'Orrin wanted chips at list. Everyone wanted chips at list.' },
+      { who: 'vesper', line: 'Vesper bought two hundred units for a rocket that flew once. I never asked what for.' },
+      { who: 'twin', line: 'Hunter\'s twin ran on my chips. It was my best customer for three years and it never paid.' },
+    ],
+    ofYou: [
+      'You cooked nine months of supply. I have the numbers. I look at them.',
+      'You\'re in the queue. Everyone\'s in the queue.',
+      'You got in at list price. Nobody gets in at list.',
+      'You gave everyone an allocation. It isn\'t an allocation any more. It works anyway.',
+    ],
+  },
+  {
     id: 'lo', accent: '#e8661e', name: 'Lo Ibarra', role: 'Shift lead, Dropt', place: 'The Cathedral floor',
     bio: 'Shift lead the night of the Pivot, and every night since: fourteen hundred and seven shifts in a building whose doors only opened at shift end. Kept four of the thirty alive by making rate.',
     known: (v) => v.has('cathedral.lo.met'),

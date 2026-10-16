@@ -42,6 +42,8 @@ import { Dome } from './bunker/dome/Dome';
 import { DomeAfter } from './bunker/dome/after';
 import { Cathedral } from './bunker/cathedral/Cathedral';
 import { CathedralAfter } from './bunker/cathedral/after';
+import { Fortress } from './bunker/fortress/Fortress';
+import { FortressAfter } from './bunker/fortress/after';
 import type { Bunker } from './bunker/Bunker';
 import { Settlement } from './town/Settlement';
 import { buildSites, Errands, type Site } from './sites';
@@ -68,6 +70,7 @@ import { PANOPTICON } from '@/content/bunkers/panopticon';
 import { SPIRE } from '@/content/bunkers/spire';
 import { DOME } from '@/content/bunkers/dome';
 import { CATHEDRAL } from '@/content/bunkers/cathedral';
+import { FORTRESS } from '@/content/bunkers/fortress';
 import { ITEMS, HOTBAR_ITEMS, KEEP_ON_DEATH } from '@/content/items';
 import { KadeTerminals } from './combat/terminals';
 import { OUTPOSTS } from '@/content/recovery';
@@ -161,6 +164,8 @@ export class Game {
   domeAfter: DomeAfter | null = null;
   cathedral!: Cathedral;
   cathedralAfter: CathedralAfter | null = null;
+  fortress!: Fortress;
+  fortressAfter: FortressAfter | null = null;
   /** Every bunker (the Garage first): interactables, update/cull, interiors, EMP, alarms. */
   bunkers: Bunker[] = [];
   settlement!: Settlement;
@@ -376,13 +381,16 @@ export class Game {
     this.spire = new Spire(this.ctx);
     this.dome = new Dome(this.ctx);
     this.cathedral = new Cathedral(this.ctx);
-    this.bunkers = [this.garage, this.apex, this.panopticon, this.spire, this.dome, this.cathedral];
+    this.fortress = new Fortress(this.ctx);
+    this.bunkers = [this.garage, this.apex, this.panopticon, this.spire, this.dome, this.cathedral, this.fortress];
     // the Spire's sentinels are hostiles, and they need to know whether you're holding a weapon
     this.spire.attach(this.combat, () => !!this.arms?.equipped);
     // the Dome's Helpers are hostiles too (shootable; they never hurt you)
     this.dome.attach(this.combat);
     // the Cathedral's drones: shootable, and they need Combat's line of sight
     this.cathedral.attach(this.combat);
+    // the Fortress's technicians: shootable (they go down and get up again), never hurt you
+    this.fortress.attach(this.combat);
     this.combat.sparks = this.garage.sparks;
     // wolves won't follow you to the fire or into a town
     this.fauna.safe = [{ p: this.landmarks.campPosition.clone(), r: 30 }];
@@ -398,6 +406,8 @@ export class Game {
     this.dome.addPeople(NpcCrowd.models);
     // the Cathedral: Orrin in his office, Lo and the associates on the floor
     this.cathedral.addPeople(NpcCrowd.models);
+    // the Fortress: Kit at her desk, Marek in the locker room, the technicians
+    this.fortress.addPeople(NpcCrowd.models);
     // routines (content/routines.ts): who is in which seat or spot, by the hour and the story
     NpcCrowd.schedule = (st) => routineOpen(st, { playing: this.mode === 'playing', hour: this.atmo.hour, has: (f) => !!this.state?.has(f) });
     this.landmarks.addCampPeople();
@@ -437,6 +447,8 @@ export class Game {
     this.interactables.push(...this.domeAfter.interactables);
     this.cathedralAfter = new CathedralAfter(this.ctx, this.landmarks, NpcCrowd.models, (x, z) => this.clearSpot(x, z));
     this.interactables.push(...this.cathedralAfter.interactables);
+    this.fortressAfter = new FortressAfter(this.ctx, this.landmarks, (x, z) => this.clearSpot(x, z));
+    this.interactables.push(...this.fortressAfter.interactables);
     if (!SKIP.has('env')) this.buildEnvironment();
     if (SKIP.has('garage')) this.scene.remove(this.garage.b.group, this.garage.drone.group);
     if (SKIP.has('apex')) this.scene.remove(this.apex.b.group);
@@ -444,6 +456,7 @@ export class Game {
     if (SKIP.has('spire')) this.scene.remove(this.spire.b.group);
     if (SKIP.has('dome')) this.scene.remove(this.dome.b.group, this.dome.helperGroup);
     if (SKIP.has('cathedral')) this.scene.remove(this.cathedral.b.group);
+    if (SKIP.has('fortress')) this.scene.remove(this.fortress.b.group);
     if (SKIP.has('ui')) document.getElementById('ui')!.style.display = 'none';
     if (SKIP.has('terrain')) this.scene.remove(this.terrain.mesh, this.terrain.far);
     if (SKIP.has('sky')) this.scene.remove(this.atmo.sky);
@@ -998,7 +1011,8 @@ export class Game {
             : s.has('panopticon.complete') && !s.has('act3.debriefed') ? 'Radio Mara · the lamp went out'
               : s.has('spire.complete') && s.has('spire.core') && !s.has('act4.debriefed') ? 'Radio Mara · the Spire'
                 : s.has('dome.complete') && s.has('dome.end') && !s.has('act5.debriefed') ? 'Radio Mara · the Dome'
-                  : s.has('cathedral.complete') && s.has('cathedral.end') && !s.has('act6.debriefed') ? 'Radio Mara · the Cathedral' : 'Raise Mara on the radio',
+                  : s.has('cathedral.complete') && s.has('cathedral.end') && !s.has('act6.debriefed') ? 'Radio Mara · the Cathedral'
+                    : s.has('fortress.complete') && s.has('fortress.end') && !s.has('act7.debriefed') ? 'Radio Mara · the Fortress' : 'Raise Mara on the radio',
           people: CAMP.filter((m) => m.present(campView())).map((m) => ({ id: m.id, name: m.name, role: m.role })),
           onRest: () => {
             const full = s.skill('survival') >= 5;
@@ -1213,6 +1227,11 @@ export class Game {
     // ?at=dome starts on Ascend's drive, short of the gate (Act V without the walk)
     if (new URLSearchParams(location.search).get('at') === 'dome') {
       spawn = this.dome.b.points.road.clone();
+      spawn.y = this.hf.heightAt(spawn.x, spawn.z) + 0.2;
+    }
+    // ?at=fortress starts on Lattice's road at the back of the queue (Act VII without the walk)
+    if (new URLSearchParams(location.search).get('at') === 'fortress') {
+      spawn = this.fortress.b.points.road.clone();
       spawn.y = this.hf.heightAt(spawn.x, spawn.z) + 0.2;
     }
     // ?at=cathedral starts on Dropt's service road, short of the lot (Act VI without the walk)
@@ -1969,6 +1988,12 @@ export class Game {
       out.push({ id: 'cathedral', x: cx, z: cz, label: s.has('cathedral.complete') ? 'The Cloud Cathedral (busted)' : 'The Cloud Cathedral · Tier 6', color: s.has('cathedral.complete') ? '#7d725f' : '#ff3a6e', kind: 'bunker',
         note: s.has('cathedral.complete') ? 'Orrin Sayle\'s fulfilment centre in the north basin. You took the Reserve, and you decided who the Cathedral belongs to.' : 'Orrin Sayle\'s fulfilment centre in the north basin, between the Longshot and ColdStorage. Dropt\'s service road leaves the highway east of Recovery Point 7.' });
     }
+    const [fx, , fz] = FORTRESS.location.position;
+    const nearFort = this.player ? Math.hypot(this.player.position.x - fx, this.player.position.z - fz) < 160 : false;
+    if (s.has('fortress.marker') || s.has('act6.debriefed') || nearFort || s.has('fortress.complete')) {
+      out.push({ id: 'fortress', x: fx, z: fz, label: s.has('fortress.complete') ? 'The Chip Fortress (busted)' : 'The Chip Fortress · Tier 7', color: s.has('fortress.complete') ? '#7d725f' : '#ff3a6e', kind: 'bunker',
+        note: s.has('fortress.complete') ? 'Kit Szabo\'s star fort under the southern range. You took the water, and you decided where its power goes.' : 'Kit Szabo\'s star fort in the basin under the southern range, between Photon Park and the mesa, inside a moat of coolant. Lattice\'s road runs south from the highway near Last Chance.' });
+    }
     for (const it of WORLD_INTEL) {
       if (s.has(`intel:${it.id}`)) continue;
       const known = it.id === 'intel.gas.note' || s.has(`rumour.${it.id}`) || this.map.revealedAt(it.position[0], it.position[2]) > 100;
@@ -1996,8 +2021,8 @@ export class Game {
 
   /** The tracked quest (or the main story) speaks unless you're standing at the Garage. */
   private objective(): string {
-    const here = this.garage.objective() || this.apex.objective() || this.panopticon.objective() || this.spire.objective() || this.dome.objective() || this.cathedral.objective();
-    const label = !here || this.garage.objective() ? undefined : this.apex.objective() ? 'Act II · Apex Vault' : this.panopticon.objective() ? 'Act III · The Panopticon' : this.spire.objective() ? 'Act IV · The Alignment Spire' : this.dome.objective() ? 'Act V · The Singularity Dome' : 'Act VI · The Cloud Cathedral';
+    const here = this.garage.objective() || this.apex.objective() || this.panopticon.objective() || this.spire.objective() || this.dome.objective() || this.cathedral.objective() || this.fortress.objective();
+    const label = !here || this.garage.objective() ? undefined : this.apex.objective() ? 'Act II · Apex Vault' : this.panopticon.objective() ? 'Act III · The Panopticon' : this.spire.objective() ? 'Act IV · The Alignment Spire' : this.dome.objective() ? 'Act V · The Singularity Dome' : this.cathedral.objective() ? 'Act VI · The Cloud Cathedral' : 'Act VII · The Chip Fortress';
     return this.story ? this.story.objective(here, label).text : here;
   }
 
@@ -2079,6 +2104,7 @@ export class Game {
     this.spireTaps?.update(dt);
     this.domeAfter?.update(dt);
     this.cathedralAfter?.update(dt);
+    this.fortressAfter?.update();
     for (const b of this.bunkers) {
       if (this.mode !== 'playing') b.update(dt);
       b.cull(this.camera.position);
@@ -2393,6 +2419,12 @@ export class Game {
         s.set('seen:cathedral');
         s.set('cathedral.marker');
         this.ui.banner('THE CLOUD CATHEDRAL', 'A warehouse built like a church, a rose window that tells the time, and a swarm of delivery drones circling the bell tower. Orrin Sayle is still taking orders. Tier 6.', 'info');
+      }
+      const [ftx, , ftz] = FORTRESS.location.position;
+      if (!s.has('seen:fortress') && Math.hypot(player.position.x - ftx, player.position.z - ftz) < 130) {
+        s.set('seen:fortress');
+        s.set('fortress.marker');
+        this.ui.banner('THE CHIP FORTRESS', 'A black star fort in a moat that never stops steaming, and a queue of empty chairs at the gate. Kit Szabo is still waiting for the price to peak. Tier 7.', 'info');
       }
       for (const c of WORLD_CACHES) {
         if (s.has(c.id) || s.has(`approach:${c.id}`)) continue;

@@ -820,6 +820,106 @@
   "where": "src/game/combat/Machines.ts"
  },
  {
+  "key": "0uxsoxu",
+  "voice": "am_michael",
+  "fx": "radio",
+  "speed": 1,
+  "speaker": "Cooling tech",
+  "words": "Back to the queue. Sorry. It's her rule, not mine.",
+  "tts": "Back to the queue. Sorry. It's her rule, not mine.",
+  "where": "src/content/bunkers/fortress.ts"
+ },
+ {
+  "key": "0oyhvpn",
+  "voice": "am_michael",
+  "fx": "radio",
+  "speed": 1,
+  "speaker": "Cooling tech",
+  "words": "Gone. Good. Back to the coolers.",
+  "tts": "Gone. Good. Back to the coolers.",
+  "where": "src/content/bunkers/fortress.ts"
+ },
+ {
+  "key": "0lso0e9",
+  "voice": "am_michael",
+  "fx": "radio",
+  "speed": 1,
+  "speaker": "Cooling tech",
+  "words": "Got you. Come on, out over the bridge. Mind the ice.",
+  "tts": "Got you. Come on, out over the bridge. Mind the ice.",
+  "where": "src/content/bunkers/fortress.ts"
+ },
+ {
+  "key": "08wcu1e",
+  "voice": "am_michael",
+  "fx": "radio",
+  "speed": 1,
+  "speaker": "Cooling tech",
+  "words": "Hey. You're not on the allocation. Stay there.",
+  "tts": "Hey. You're not on the allocation. Stay there.",
+  "where": "src/content/bunkers/fortress.ts"
+ },
+ {
+  "key": "0dca0vh",
+  "voice": "am_michael",
+  "fx": "radio",
+  "speed": 1,
+  "speaker": "Cooling tech",
+  "words": "I didn't see anyone. That's what I'm writing down.",
+  "tts": "I didn't see anyone. That's what I'm writing down.",
+  "where": "src/content/bunkers/fortress.ts"
+ },
+ {
+  "key": "0o88hqz",
+  "voice": "am_michael",
+  "fx": "radio",
+  "speed": 1,
+  "speaker": "Cooling tech",
+  "words": "Ow. Okay. Okay. I'm staying down.",
+  "tts": "Ow. Okay. Okay. I'm staying down.",
+  "where": "src/content/bunkers/fortress.ts"
+ },
+ {
+  "key": "1kyhp2y",
+  "voice": "am_michael",
+  "fx": "radio",
+  "speed": 1,
+  "speaker": "Cooling tech",
+  "words": "Please stop. The suit's thick, but not that thick.",
+  "tts": "Please stop. The suit's thick, but not that thick.",
+  "where": "src/content/bunkers/fortress.ts"
+ },
+ {
+  "key": "02oecei",
+  "voice": "am_michael",
+  "fx": "radio",
+  "speed": 1,
+  "speaker": "Cooling tech",
+  "words": "Somebody's here. It's too cold to chase you, so don't make me.",
+  "tts": "Somebody's here. It's too cold to chase you, so don't make me.",
+  "where": "src/content/bunkers/fortress.ts"
+ },
+ {
+  "key": "0qxxk4z",
+  "voice": "am_michael",
+  "fx": "radio",
+  "speed": 1,
+  "speaker": "Cooling tech",
+  "words": "Stop right there. Please. My hands don't work fast in this.",
+  "tts": "Stop right there. Please. My hands don't work fast in this.",
+  "where": "src/content/bunkers/fortress.ts"
+ },
+ {
+  "key": "0eidyho",
+  "voice": "am_michael",
+  "fx": "radio",
+  "speed": 1,
+  "speaker": "Cooling tech",
+  "words": "That buzzed. Nothing in this suit is electric.",
+  "tts": "That buzzed. Nothing in this suit is electric.",
+  "where": "src/content/bunkers/fortress.ts"
+ },
+ {
   "key": "0qycsbf",
   "voice": "af_river",
   "fx": "radio",
@@ -1420,6 +1520,16 @@
   "where": "src/content/camp.ts"
  },
  {
+  "key": "03gttyf",
+  "voice": "af_river",
+  "fx": "radio",
+  "speed": 1,
+  "speaker": "Dez Marlow",
+  "words": "There's a queue outside a fort under the southern range. Camping chairs, a ticket machine, nobody in them. Somebody on the band says he waited there for sixty days for a graphics card. He doesn't say if he got one.",
+  "tts": "There's a queue outside a fort under the southern range. Camping chairs, a ticket machine, nobody in them. Somebody on the band says he waited there for sixty days for a graphics card. He doesn't say if he got one.",
+  "where": "src/content/camp.ts"
+ },
+ {
   "key": "074najl",
   "voice": "af_river",
   "fx": "radio",
@@ -1540,6 +1650,26 @@
   "where": "src/content/story.ts"
  },
  {
+  "key": "1iuvkau",
+  "voice": "af_river",
+  "fx": "radio",
+  "speed": 1,
+  "speaker": "Dez Marlow",
+  "words": "You drained her moat. Kit was on the band about it for an hour, reading out the price of coolant to nobody.",
+  "tts": "You drained her moat. Kit was on the band about it for an hour, reading out the price of coolant to nobody.",
+  "where": "src/content/story.ts"
+ },
+ {
+  "key": "1k1ok2y",
+  "voice": "af_river",
+  "fx": "radio",
+  "speed": 1,
+  "speaker": "Dez Marlow",
+  "words": "You got in on the list price. Somebody called Andrea worked that out in the queue on day sixty-one. I hope she's somewhere warm.",
+  "tts": "You got in on the list price. Somebody called Andrea worked that out in the queue on day sixty-one. I hope she's somewhere warm.",
+  "where": "src/content/story.ts"
+ },
+ {
   "key": "1j9dcg3",
   "voice": "af_river",
   "fx": "radio",
@@ -1607,6 +1737,16 @@
   "speaker": "Dez Marlow",
   "words": "You spliced her airlock. Her own door thought you were a delivery. She's posted about zero trust eleven times since, and none of them make sense, which is how you know they're hers.",
   "tts": "You spliced her airlock. Her own door thought you were a delivery. She's posted about zero trust eleven times since, and none of them make sense, which is how you know they're hers.",
+  "where": "src/content/story.ts"
+ },
+ {
+  "key": "12u7idx",
+  "voice": "af_river",
+  "fx": "radio",
+  "speed": 1,
+  "speaker": "Dez Marlow",
+  "words": "You swam the moat. Minus forty. Doc wants to look at your hands, and I want to know why you thought that was the plan.",
+  "tts": "You swam the moat. Minus forty. Doc wants to look at your hands, and I want to know why you thought that was the plan.",
   "where": "src/content/story.ts"
  },
  {
@@ -7160,6 +7300,366 @@
   "where": "src/content/recovery.ts"
  },
  {
+  "key": "1866k1l",
+  "voice": "af_nova",
+  "fx": "room",
+  "speed": 0.97,
+  "speaker": "Kit",
+  "words": "Do you know what that was worth? Do you know what that would have been worth?",
+  "tts": "Do you know what that was worth? Do you know what that would have been worth?",
+  "where": "src/content/bunkers/fortress.ts"
+ },
+ {
+  "key": "14y5twf",
+  "voice": "af_nova",
+  "fx": "room",
+  "speed": 0.97,
+  "speaker": "Kit",
+  "words": "Everyone gets one unit of heat a day. Me too. One unit, every person, every day. That's fair. That's the definition of fair.",
+  "tts": "Everyone gets one unit of heat a day. Me too. One unit, every person, every day. That's fair. That's the definition of fair.",
+  "where": "src/content/bunkers/fortress.ts"
+ },
+ {
+  "key": "0a3mo8c",
+  "voice": "af_nova",
+  "fx": "room",
+  "speed": 0.97,
+  "speaker": "Kit",
+  "words": "From under the range. The chillers need it, so I bought the rights before anyone thought to. You can buy the rights to anything if you get in early.",
+  "tts": "From under the range. The chillers need it, so I bought the rights before anyone thought to. You can buy the rights to anything if you get in early.",
+  "where": "src/content/bunkers/fortress.ts"
+ },
+ {
+  "key": "0in931j",
+  "voice": "af_nova",
+  "fx": "room",
+  "speed": 0.97,
+  "speaker": "Kit",
+  "words": "I keep checking the price feed. It's still not updating.",
+  "tts": "I keep checking the price feed. It's still not updating.",
+  "where": "src/content/bunkers/fortress.ts"
+ },
+ {
+  "key": "0k989kw",
+  "voice": "af_nova",
+  "fx": "room",
+  "speed": 0.97,
+  "speaker": "Kit",
+  "words": "I still count the boxes. I just don't know what for.",
+  "tts": "I still count the boxes. I just don't know what for.",
+  "where": "src/content/bunkers/fortress.ts"
+ },
+ {
+  "key": "0axjzi2",
+  "voice": "af_nova",
+  "fx": "room",
+  "speed": 0.97,
+  "speaker": "Kit",
+  "words": "Kit Szabo. I ran Lattice. Everybody needed what I made, so I sold it a few at a time, to people I liked. Prices went up. That was the business. It was a very good business.",
+  "tts": "Kit Szabo. I ran Lattice. Everybody needed what I made, so I sold it a few at a time, to people I liked. Prices went up. That was the business. It was a very good business.",
+  "where": "src/content/bunkers/fortress.ts"
+ },
+ {
+  "key": "1h4fh54",
+  "voice": "af_nova",
+  "fx": "room",
+  "speed": 0.97,
+  "speaker": "Kit",
+  "words": "Last Chance took two units today. Waitlist City took four. Somebody has to keep the books.",
+  "tts": "Last Chance took two units today. Waitlist City took four. Somebody has to keep the books.",
+  "where": "src/content/bunkers/fortress.ts"
+ },
+ {
+  "key": "1vbfiga",
+  "voice": "af_nova",
+  "fx": "room",
+  "speed": 0.97,
+  "speaker": "Kit",
+  "words": "Marek brought me soup. I didn't ask for soup. I ate the soup.",
+  "tts": "Marek brought me soup. I didn't ask for soup. I ate the soup.",
+  "where": "src/content/bunkers/fortress.ts"
+ },
+ {
+  "key": "0e9um7r",
+  "voice": "af_nova",
+  "fx": "room",
+  "speed": 0.97,
+  "speaker": "Kit",
+  "words": "Nine months of supply. The price was still going up when everyone stopped buying. It'll come back. Prices always come back.",
+  "tts": "Nine months of supply. The price was still going up when everyone stopped buying. It'll come back. Prices always come back.",
+  "where": "src/content/bunkers/fortress.ts"
+ },
+ {
+  "key": "1985q0a",
+  "voice": "af_nova",
+  "fx": "room",
+  "speed": 0.97,
+  "speaker": "Kit",
+  "words": "No. No, the stock can't take heat. That's nine months. That's nine months of supply.",
+  "tts": "No. No, the stock can't take heat. That's nine months. That's nine months of supply.",
+  "where": "src/content/bunkers/fortress.ts"
+ },
+ {
+  "key": "0kioc1p",
+  "voice": "af_nova",
+  "fx": "room",
+  "speed": 0.97,
+  "speaker": "Kit",
+  "words": "Supply is constrained. It always will be.",
+  "tts": "Supply is constrained. It always will be.",
+  "where": "src/content/bunkers/fortress.ts"
+ },
+ {
+  "key": "1cml6my",
+  "voice": "af_nova",
+  "fx": "room",
+  "speed": 0.97,
+  "speaker": "Kit",
+  "words": "You can't give it to everyone. If everyone gets an allocation, it isn't an allocation.",
+  "tts": "You can't give it to everyone. If everyone gets an allocation, it isn't an allocation.",
+  "where": "src/content/bunkers/fortress.ts"
+ },
+ {
+  "key": "1bwufpe",
+  "voice": "af_nova",
+  "fx": "room",
+  "speed": 0.97,
+  "speaker": "Kit",
+  "words": "You're not on the allocation list. Nobody is on the allocation list. That's what makes it an allocation.",
+  "tts": "You're not on the allocation list. Nobody is on the allocation list. That's what makes it an allocation.",
+  "where": "src/content/bunkers/fortress.ts"
+ },
+ {
+  "key": "1vpa020",
+  "voice": "af_nova",
+  "fx": "pa",
+  "speed": 0.98,
+  "speaker": "Kit Szabo",
+  "words": "Back of the queue. That's where everybody goes.",
+  "tts": "Back of the queue. That's where everybody goes.",
+  "where": "src/content/bunkers/fortress.ts"
+ },
+ {
+  "key": "17xclaw",
+  "voice": "af_nova",
+  "fx": "pa",
+  "speed": 0.98,
+  "speaker": "Kit Szabo",
+  "words": "Demand is at an all-time high. Supply is exactly where I left it.",
+  "tts": "Demand is at an all-time high. Supply is exactly where I left it.",
+  "where": "src/content/bunkers/fortress.ts"
+ },
+ {
+  "key": "1i1lgxp",
+  "voice": "af_nova",
+  "fx": "pa",
+  "speed": 0.98,
+  "speaker": "Kit Szabo",
+  "words": "Everyone stay where you are. Nothing moves until I say it moves.",
+  "tts": "Everyone stay where you are. Nothing moves until I say it moves.",
+  "where": "src/content/bunkers/fortress.ts"
+ },
+ {
+  "key": "1gj0iqo",
+  "voice": "af_nova",
+  "fx": "pa",
+  "speed": 0.98,
+  "speaker": "Kit Szabo",
+  "words": "Everything in the Fortress is accounted for. Everything. I count it every morning.",
+  "tts": "Everything in the Fortress is accounted for. Everything. I count it every morning.",
+  "where": "src/content/bunkers/fortress.ts"
+ },
+ {
+  "key": "1b51sl3",
+  "voice": "af_nova",
+  "fx": "pa",
+  "speed": 0.98,
+  "speaker": "Kit Szabo",
+  "words": "Fine. Come in. Mind the racks. Every box in here is worth more than you.",
+  "tts": "Fine. Come in. Mind the racks. Every box in here is worth more than you.",
+  "where": "src/content/bunkers/fortress.ts"
+ },
+ {
+  "key": "1tdp5cx",
+  "voice": "af_nova",
+  "fx": "pa",
+  "speed": 0.98,
+  "speaker": "Kit Szabo",
+  "words": "If you're here for chips, take a ticket. If you're here for water, take a ticket.",
+  "tts": "If you're here for chips, take a ticket. If you're here for water, take a ticket.",
+  "where": "src/content/bunkers/fortress.ts"
+ },
+ {
+  "key": "0v55mpj",
+  "voice": "af_nova",
+  "fx": "pa",
+  "speed": 0.98,
+  "speaker": "Kit Szabo",
+  "words": "My technicians get one unit of heat a day. Same as me. That's fair.",
+  "tts": "My technicians get one unit of heat a day. Same as me. That's fair.",
+  "where": "src/content/bunkers/fortress.ts"
+ },
+ {
+  "key": "1a7lllf",
+  "voice": "af_nova",
+  "fx": "pa",
+  "speed": 0.98,
+  "speaker": "Kit Szabo",
+  "words": "Somebody lowered my bridge. That's an unauthorised allocation of bridge.",
+  "tts": "Somebody lowered my bridge. That's an unauthorised allocation of bridge.",
+  "where": "src/content/bunkers/fortress.ts"
+ },
+ {
+  "key": "1fpmvxm",
+  "voice": "af_nova",
+  "fx": "pa",
+  "speed": 0.98,
+  "speaker": "Kit Szabo",
+  "words": "That door was on back order for a year. I'm adding it to your account.",
+  "tts": "That door was on back order for a year. I'm adding it to your account.",
+  "where": "src/content/bunkers/fortress.ts"
+ },
+ {
+  "key": "0sjvwh9",
+  "voice": "af_nova",
+  "fx": "pa",
+  "speed": 0.98,
+  "speaker": "Kit Szabo",
+  "words": "That's an incident. Incidents come out of the heat budget.",
+  "tts": "That's an incident. Incidents come out of the heat budget.",
+  "where": "src/content/bunkers/fortress.ts"
+ },
+ {
+  "key": "051e252",
+  "voice": "af_nova",
+  "fx": "pa",
+  "speed": 0.98,
+  "speaker": "Kit Szabo",
+  "words": "The chillers are off. Marek, the chillers are off. The stock can't take heat.",
+  "tts": "The chillers are off. Marek, the chillers are off. The stock can't take heat.",
+  "where": "src/content/bunkers/fortress.ts"
+ },
+ {
+  "key": "190hz1i",
+  "voice": "af_nova",
+  "fx": "pa",
+  "speed": 0.98,
+  "speaker": "Kit Szabo",
+  "words": "The list price is the list price. Nobody has ever paid the list price.",
+  "tts": "The list price is the list price. Nobody has ever paid the list price.",
+  "where": "src/content/bunkers/fortress.ts"
+ },
+ {
+  "key": "0cdfvo3",
+  "voice": "af_nova",
+  "fx": "pa",
+  "speed": 0.98,
+  "speaker": "Kit Szabo",
+  "words": "The moat is minus forty degrees. Please don't test that. People test that.",
+  "tts": "The moat is minus forty degrees. Please don't test that. People test that.",
+  "where": "src/content/bunkers/fortress.ts"
+ },
+ {
+  "key": "0fctxr7",
+  "voice": "af_nova",
+  "fx": "pa",
+  "speed": 0.98,
+  "speaker": "Kit Szabo",
+  "words": "The next allocation window opens in nine months. It's been nine months for three years.",
+  "tts": "The next allocation window opens in nine months. It's been nine months for three years.",
+  "where": "src/content/bunkers/fortress.ts"
+ },
+ {
+  "key": "0ku80gt",
+  "voice": "af_nova",
+  "fx": "pa",
+  "speed": 0.98,
+  "speaker": "Kit Szabo",
+  "words": "There is an unallocated person in the Fortress. Technicians, please allocate them out.",
+  "tts": "There is an unallocated person in the Fortress. Technicians, please allocate them out.",
+  "where": "src/content/bunkers/fortress.ts"
+ },
+ {
+  "key": "15eqzec",
+  "voice": "af_nova",
+  "fx": "pa",
+  "speed": 0.98,
+  "speaker": "Kit Szabo",
+  "words": "Who drained my moat? That was nine thousand litres of coolant at list price.",
+  "tts": "Who drained my moat? That was nine thousand litres of coolant at list price.",
+  "where": "src/content/bunkers/fortress.ts"
+ },
+ {
+  "key": "15qdu5h",
+  "voice": "af_nova",
+  "fx": "pa",
+  "speed": 0.98,
+  "speaker": "Kit Szabo",
+  "words": "You blew the vault door. I can't even be angry. I'm impressed by the demand.",
+  "tts": "You blew the vault door. I can't even be angry. I'm impressed by the demand.",
+  "where": "src/content/bunkers/fortress.ts"
+ },
+ {
+  "key": "15wphup",
+  "voice": "af_nova",
+  "fx": "pa",
+  "speed": 0.98,
+  "speaker": "Kit Szabo",
+  "words": "You blew the winch. Do you know the lead time on a winch?",
+  "tts": "You blew the winch. Do you know the lead time on a winch?",
+  "where": "src/content/bunkers/fortress.ts"
+ },
+ {
+  "key": "0nl74yq",
+  "voice": "af_nova",
+  "fx": "pa",
+  "speed": 0.98,
+  "speaker": "Kit Szabo",
+  "words": "You came in by the frost door. My own technicians don't like using the frost door.",
+  "tts": "You came in by the frost door. My own technicians don't like using the frost door.",
+  "where": "src/content/bunkers/fortress.ts"
+ },
+ {
+  "key": "11c6asv",
+  "voice": "af_nova",
+  "fx": "pa",
+  "speed": 0.98,
+  "speaker": "Kit Szabo",
+  "words": "You swam the moat. It's minus forty. You're either very cold or very stupid.",
+  "tts": "You swam the moat. It's minus forty. You're either very cold or very stupid.",
+  "where": "src/content/bunkers/fortress.ts"
+ },
+ {
+  "key": "1b5ncog",
+  "voice": "af_nova",
+  "fx": "pa",
+  "speed": 0.98,
+  "speaker": "Kit Szabo",
+  "words": "You took the water. That was allocated. I'll reallocate.",
+  "tts": "You took the water. That was allocated. I'll reallocate.",
+  "where": "src/content/bunkers/fortress.ts"
+ },
+ {
+  "key": "16wzrg5",
+  "voice": "af_nova",
+  "fx": "pa",
+  "speed": 0.98,
+  "speaker": "Kit Szabo",
+  "words": "You're in the keep. Please don't touch anything. Everything in here is spoken for.",
+  "tts": "You're in the keep. Please don't touch anything. Everything in here is spoken for.",
+  "where": "src/content/bunkers/fortress.ts"
+ },
+ {
+  "key": "1t369t6",
+  "voice": "af_nova",
+  "fx": "pa",
+  "speed": 0.98,
+  "speaker": "Kit Szabo",
+  "words": "You're in the queue. Everyone is in the queue. Please hold your position.",
+  "tts": "You're in the queue. Everyone is in the queue. Please hold your position.",
+  "where": "src/content/bunkers/fortress.ts"
+ },
+ {
   "key": "05nk1uj",
   "voice": "am_liam",
   "fx": "room",
@@ -7470,6 +7970,16 @@
   "where": "src/content/banter.ts"
  },
  {
+  "key": "0xffmcd",
+  "voice": "af_sarah",
+  "fx": "radio",
+  "speed": 0.97,
+  "speaker": "Mara",
+  "words": "That white haze under the range is the moat. Dez says it's coolant, not water. Don't drink it, and don't fall in it.",
+  "tts": "That white haze under the range is the moat. Dez says it's coolant, not water. Don't drink it, and don't fall in it.",
+  "where": "src/content/banter.ts"
+ },
+ {
   "key": "0fmwt41",
   "voice": "af_sarah",
   "fx": "radio",
@@ -7730,6 +8240,16 @@
   "where": "src/content/quests.ts"
  },
  {
+  "key": "1ur1mx0",
+  "voice": "af_sarah",
+  "fx": "radio",
+  "speed": 0.97,
+  "speaker": "Mara Voss",
+  "words": "Dez says the steam over the southern range looks different tonight. Come back to the fire and raise me.",
+  "tts": "Dez says the steam over the southern range looks different tonight. Come back to the fire and raise me.",
+  "where": "src/content/quests.ts"
+ },
+ {
   "key": "1wzbglv",
   "voice": "af_sarah",
   "fx": "radio",
@@ -7750,6 +8270,16 @@
   "where": "src/content/story.ts"
  },
  {
+  "key": "1qi9djj",
+  "voice": "af_sarah",
+  "fx": "radio",
+  "speed": 0.97,
+  "speaker": "Mara Voss",
+  "words": "Dez watched the Fortress from the ridge. The steam off the moat thinned out and stopped. He says it was the first time he'd seen the walls since he got here.",
+  "tts": "Dez watched the Fortress from the ridge. The steam off the moat thinned out and stopped. He says it was the first time he'd seen the walls since he got here.",
+  "where": "src/content/story.ts"
+ },
+ {
   "key": "002hhol",
   "voice": "af_sarah",
   "fx": "radio",
@@ -7767,6 +8297,16 @@
   "speaker": "Mara Voss",
   "words": "Doc called on the band an hour ago. Ada walked into Dry Creek at dawn carrying a folded camp chair. He couldn't get the words out, so Nia said them for him.",
   "tts": "Doc called on the band an hour ago. Ada walked into Dry Creek at dawn carrying a folded camp chair. He couldn't get the words out, so Nia said them for him.",
+  "where": "src/content/story.ts"
+ },
+ {
+  "key": "1awy6ck",
+  "voice": "af_sarah",
+  "fx": "radio",
+  "speed": 0.97,
+  "speaker": "Mara Voss",
+  "words": "Doc has his fridge running again. He put the antivenom in it, then stood there with the door open, listening to it hum.",
+  "tts": "Doc has his fridge running again. He put the antivenom in it, then stood there with the door open, listening to it hum.",
   "where": "src/content/story.ts"
  },
  {
@@ -7850,6 +8390,16 @@
   "where": "src/content/story.ts"
  },
  {
+  "key": "0o3zr1b",
+  "voice": "af_sarah",
+  "fx": "radio",
+  "speed": 0.97,
+  "speaker": "Mara Voss",
+  "words": "Five technicians at one unit of heat a day, for three years, guarding chips nobody could buy. Marek asked me on the band if we have a spare blanket. We have eleven.",
+  "tts": "Five technicians at one unit of heat a day, for three years, guarding chips nobody could buy. Marek asked me on the band if we have a spare blanket. We have eleven.",
+  "where": "src/content/story.ts"
+ },
+ {
   "key": "02plbym",
   "voice": "af_sarah",
   "fx": "radio",
@@ -7890,6 +8440,16 @@
   "where": "src/game/Game.ts"
  },
  {
+  "key": "0ibvty5",
+  "voice": "af_sarah",
+  "fx": "radio",
+  "speed": 0.97,
+  "speaker": "Mara Voss",
+  "words": "Hollis says the seep at the Cut is running. Kit's technicians walked out to Dry Creek in their suits and Nia gave them soup. Kit stayed in the vault with her boxes.",
+  "tts": "Hollis says the seep at the Cut is running. Kit's technicians walked out to Dry Creek in their suits and Nia gave them soup. Kit stayed in the vault with her boxes.",
+  "where": "src/content/story.ts"
+ },
+ {
   "key": "1ili5xc",
   "voice": "af_sarah",
   "fx": "radio",
@@ -7897,6 +8457,16 @@
   "speaker": "Mara Voss",
   "words": "Hollis says you talked to the camera. To a man called Ezra. Who knows how much we drink.",
   "tts": "Hollis says you talked to the camera. To a man called Ezra. Who knows how much we drink.",
+  "where": "src/content/story.ts"
+ },
+ {
+  "key": "0p44ara",
+  "voice": "af_sarah",
+  "fx": "radio",
+  "speed": 0.97,
+  "speaker": "Mara Voss",
+  "words": "Hollis walked out to the Cut this morning. He says the seep is running, and he drank from it with his hands like a kid.",
+  "tts": "Hollis walked out to the Cut this morning. He says the seep is running, and he drank from it with his hands like a kid.",
   "where": "src/content/story.ts"
  },
  {
@@ -8000,13 +8570,13 @@
   "where": "src/content/archetypes.ts"
  },
  {
-  "key": "1dq110s",
+  "key": "1hs9xrn",
   "voice": "af_sarah",
   "fx": "radio",
   "speed": 0.97,
   "speaker": "Mara Voss",
-  "words": "Kit Szabo is the last of them. Dez says the Chip Fortress is under the southern range, west of the Dome, and you can see the frost on it from the road. Get some sleep first. Mara, out.",
-  "tts": "Kit Szabo is the last of them. Dez says the Chip Fortress is under the southern range, west of the Dome, and you can see the frost on it from the road. Get some sleep first. Mara, out.",
+  "words": "Kit Szabo is the last of them. Her Fortress is under the southern range, between Photon Park and the mesa. Lattice's road leaves the highway east of here. Dez says you'll see the steam off the moat before anything else. Mara, out.",
+  "tts": "Kit Szabo is the last of them. Her Fortress is under the southern range, between Photon Park and the mesa. Lattice's road leaves the highway east of here. Dez says you'll see the steam off the moat before anything else. Mara, out.",
   "where": "src/content/story.ts"
  },
  {
@@ -8320,6 +8890,16 @@
   "where": "src/content/story.ts"
  },
  {
+  "key": "08tnk2g",
+  "voice": "af_sarah",
+  "fx": "radio",
+  "speed": 0.97,
+  "speaker": "Mara Voss",
+  "words": "That was the last of the founders' bunkers, Dez says. He also says there's something on the band he can't place. When he can, I'll call you. Mara, out.",
+  "tts": "That was the last of the founders' bunkers, Dez says. He also says there's something on the band he can't place. When he can, I'll call you. Mara, out.",
+  "where": "src/content/story.ts"
+ },
+ {
   "key": "06ffmml",
   "voice": "af_sarah",
   "fx": "radio",
@@ -8367,6 +8947,16 @@
   "speaker": "Mara Voss",
   "words": "That's Act VI. One founder left with a bunker, Dez says: Kit Szabo and the Chip Fortress. Sleep.",
   "tts": "That's Act Vi. One founder left with a bunker, Dez says: Kit Szabo and the Chip Fortress. Sleep.",
+  "where": "src/content/story.ts"
+ },
+ {
+  "key": "0u2gund",
+  "voice": "af_sarah",
+  "fx": "radio",
+  "speed": 0.97,
+  "speaker": "Mara Voss",
+  "words": "That's Act VII. Every founder who built a bunker has had a visit from you now. Sleep. You've earned it.",
+  "tts": "That's Act Vii. Every founder who built a bunker has had a visit from you now. Sleep. You've earned it.",
   "where": "src/content/story.ts"
  },
  {
@@ -8490,6 +9080,16 @@
   "where": "src/content/story.ts"
  },
  {
+  "key": "0e6g36t",
+  "voice": "af_sarah",
+  "fx": "radio",
+  "speed": 0.97,
+  "speaker": "Mara Voss",
+  "words": "The lights at the pumps came on by themselves at nine. Pip screamed. Then Hollis found a cable running into the dark toward the southern range, and a rack of batteries charging on the end of it.",
+  "tts": "The lights at the pumps came on by themselves at nine. Pip screamed. Then Hollis found a cable running into the dark toward the southern range, and a rack of batteries charging on the end of it.",
+  "where": "src/content/story.ts"
+ },
+ {
   "key": "1wr093x",
   "voice": "af_sarah",
   "fx": "radio",
@@ -8597,6 +9197,16 @@
   "speaker": "Mara Voss",
   "words": "Twenty years, Benny told you. Nobody at this fire has planned for twenty years of anything. Pip's already arguing with Hollis about who changes the filter.",
   "tts": "Twenty years, Benny told you. Nobody at this fire has planned for twenty years of anything. Pip's already arguing with Hollis about who changes the filter.",
+  "where": "src/content/story.ts"
+ },
+ {
+  "key": "0dqdu0n",
+  "voice": "af_sarah",
+  "fx": "radio",
+  "speed": 0.97,
+  "speaker": "Mara Voss",
+  "words": "Two batteries a day at Last Chance, four for Waitlist City, two for Dry Creek. Kit keeps the books. She says the allocation is too generous. Marek says she says that about everything.",
+  "tts": "Two batteries a day at Last Chance, four for Waitlist City, two for Dry Creek. Kit keeps the books. She says the allocation is too generous. Marek says she says that about everything.",
   "where": "src/content/story.ts"
  },
  {
@@ -8718,6 +9328,106 @@
   "words": "You've seen the place. Fence, drone, megaphone. SeedBot's battery is a joke and he knows it. If a door won't open, there's always a second way: the intercom, the fence, the fuse box. Don't die on a door this small.",
   "tts": "You've seen the place. Fence, drone, megaphone. Seed Bot's battery is a joke and he knows it. If a door won't open, there's always a second way: the intercom, the fence, the fuse box. Don't die on a door this small.",
   "where": "src/content/story.ts"
+ },
+ {
+  "key": "1xrwma2",
+  "voice": "bm_daniel",
+  "fx": "radio",
+  "speed": 0.94,
+  "speaker": "Marek Kowal",
+  "words": "Marek. Lead technician. Eight of us came in with her. There are five now. We keep her stock at minus four and ourselves at about plus six.",
+  "tts": "Marek. Lead technician. Eight of us came in with her. There are five now. We keep her stock at minus four and ourselves at about plus six.",
+  "where": "src/content/bunkers/fortress.ts"
+ },
+ {
+  "key": "19t6vwm",
+  "voice": "bm_daniel",
+  "fx": "radio",
+  "speed": 0.94,
+  "speaker": "Marek Kowal",
+  "words": "She counts. Every morning, every box. Then she checks a price feed that hasn't updated in three years. Then she counts again.",
+  "tts": "She counts. Every morning, every box. Then she checks a price feed that hasn't updated in three years. Then she counts again.",
+  "where": "src/content/bunkers/fortress.ts"
+ },
+ {
+  "key": "0j7kpao",
+  "voice": "bm_daniel",
+  "fx": "radio",
+  "speed": 0.94,
+  "speaker": "Marek Kowal",
+  "words": "Shut the door behind you. We get one unit of heat a day and that door eats half of it. Who are you?",
+  "tts": "Shut the door behind you. We get one unit of heat a day and that door eats half of it. Who are you?",
+  "where": "src/content/bunkers/fortress.ts"
+ },
+ {
+  "key": "1vzjy0s",
+  "voice": "bm_daniel",
+  "fx": "radio",
+  "speed": 0.94,
+  "speaker": "Marek Kowal",
+  "words": "Take mine. It opens the keep door and the lockers. If she asks, I dropped it in the moat. That's happened before.",
+  "tts": "Take mine. It opens the keep door and the lockers. If she asks, I dropped it in the moat. That's happened before.",
+  "where": "src/content/bunkers/fortress.ts"
+ },
+ {
+  "key": "1vs5s8w",
+  "voice": "bm_daniel",
+  "fx": "radio",
+  "speed": 0.94,
+  "speaker": "Marek Kowal",
+  "words": "The board in the west room runs everything. Three units. The vault door wants two. Switch off what you can live without. Not the chillers, she'll say. She always says.",
+  "tts": "The board in the west room runs everything. Three units. The vault door wants two. Switch off what you can live without. Not the chillers, she'll say. She always says.",
+  "where": "src/content/bunkers/fortress.ts"
+ },
+ {
+  "key": "0rvecsc",
+  "voice": "bm_daniel",
+  "fx": "radio",
+  "speed": 0.94,
+  "speaker": "Marek Kowal",
+  "words": "Then go and do it before the heat runs out.",
+  "tts": "Then go and do it before the heat runs out.",
+  "where": "src/content/bunkers/fortress.ts"
+ },
+ {
+  "key": "0gvpyi1",
+  "voice": "bm_daniel",
+  "fx": "radio",
+  "speed": 0.94,
+  "speaker": "Marek Kowal",
+  "words": "There's a turbine under the keep that could run every camp in the valley. Give it to them. We'll keep it running. We'd just like to be warm while we do it.",
+  "tts": "There's a turbine under the keep that could run every camp in the valley. Give it to them. We'll keep it running. We'd just like to be warm while we do it.",
+  "where": "src/content/bunkers/fortress.ts"
+ },
+ {
+  "key": "1vkaju5",
+  "voice": "bm_daniel",
+  "fx": "radio",
+  "speed": 0.94,
+  "speaker": "Marek Kowal",
+  "words": "This is Marek. The turbine's on the camp line. Kit, you're on the list too. One unit. Same as everyone.",
+  "tts": "This is Marek. The turbine's on the camp line. Kit, you're on the list too. One unit. Same as everyone.",
+  "where": "src/content/bunkers/fortress.ts"
+ },
+ {
+  "key": "1gw4va5",
+  "voice": "bm_daniel",
+  "fx": "radio",
+  "speed": 0.94,
+  "speaker": "Marek Kowal",
+  "words": "Two charged for Last Chance. The rack fills up again overnight. Don't say thanks, say when you need more.",
+  "tts": "Two charged for Last Chance. The rack fills up again overnight. Don't say thanks, say when you need more.",
+  "where": "src/content/bunkers/fortress.ts"
+ },
+ {
+  "key": "1976c74",
+  "voice": "bm_daniel",
+  "fx": "radio",
+  "speed": 0.94,
+  "speaker": "Marek Kowal",
+  "words": "Whatever happens to her, the coolers still need someone. That's us.",
+  "tts": "Whatever happens to her, the coolers still need someone. That's us.",
+  "where": "src/content/bunkers/fortress.ts"
  },
  {
   "key": "0mnkw25",

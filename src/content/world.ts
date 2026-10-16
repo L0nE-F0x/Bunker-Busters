@@ -2,6 +2,7 @@ import type { IntelItem, LandmarkDef } from './types';
 import { SPIRE_ROAD } from './bunkers/spire';
 import { DOME_ROAD } from './bunkers/dome';
 import { CATHEDRAL_ROAD } from './bunkers/cathedral';
+import { FORTRESS_ROAD } from './bunkers/fortress';
 
 /** Size of the playable square in metres (centred on the origin). */
 export const WORLD_SIZE = 840;
@@ -24,6 +25,8 @@ export const SIDE_ROADS: [number, number][][] = [
   DOME_ROAD,
   // Dropt's service road: off the highway east of Recovery Point 7, north across the basin to the lot
   CATHEDRAL_ROAD,
+  // Lattice's road: south off the highway near Last Chance, round the west of the mesa to the queue
+  FORTRESS_ROAD,
 ];
 
 /**

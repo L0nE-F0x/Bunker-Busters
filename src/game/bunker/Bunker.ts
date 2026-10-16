@@ -558,7 +558,7 @@ export abstract class Bunker<S extends BunkerShell = BunkerShell> {
     const night = ctx.atmo.uNight.value as number;
     const stealthMult = ctx.state.archetype.stats.stealth * stealthMeter(this.s.skill('stealth')) * (this.s.skill('electronics') >= 3 ? 0.85 : 1);
     this.chest.copy(p).setY(p.y + (player.crouching ? 0.7 : 1.2));
-    this.cameras?.update(dt, this.t, this.chest, stealthMult * (player.crouching ? 0.6 : 1), player.collider);
+    this.cameras?.update(dt, this.t, this.chest, stealthMult * (player.crouching ? 0.6 : 1) * this.cameraSight(), player.collider);
     this.drones.forEach((drone, i) => {
       drone.update(dt, {
         playerChest: this.chest,
@@ -608,7 +608,9 @@ export abstract class Bunker<S extends BunkerShell = BunkerShell> {
     for (const d of Object.values(this.b.doors)) {
       d.open += (d.target - d.open) * (1 - Math.exp(-3 * dt));
       // sliding doors move along x from where the builder put them (userData.x0); the rest swing
-      if (d.axis === 'slide') d.pivot.position.x = (d.pivot.userData.x0 ?? 0) + d.open * d.amount;
+      // (a leaf in a wall that runs along z slides along z: userData.slideZ, from userData.z0)
+      if (d.axis === 'slide' && d.pivot.userData.slideZ !== undefined) d.pivot.position.z = d.pivot.userData.z0 + d.open * d.pivot.userData.slideZ;
+      else if (d.axis === 'slide') d.pivot.position.x = (d.pivot.userData.x0 ?? 0) + d.open * d.amount;
       else d.pivot.rotation.y = d.open * d.amount;
     }
   }
@@ -624,6 +626,11 @@ export abstract class Bunker<S extends BunkerShell = BunkerShell> {
       this.droneLoops[i]?.setPosition(drone.position);
     });
     this.updateLights(dt, night);
+  }
+
+  /** How well the security cameras can see you right now (1; the Fortress's thermal cameras go blind, or see through the dark). */
+  protected cameraSight(): number {
+    return 1;
   }
 
   /** Per-frame visual upkeep with a player (before doors and hazards). */

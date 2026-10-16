@@ -130,14 +130,13 @@ on assoc && build assoc ${CT}Associate_Rigged.glb \
   --clips ${CT}Associate_Walking_Basic.glb:walking_man=walk \
   --mirror ${DC}Sol_Animations.glb:Listening_Gesture=idle_m
 
-# --- the Chip Fortress: Kit (standing, and in her chair at the allocation desk), and the cooling
+# --- the Chip Fortress: Kit in her chair at the allocation desk (seated clips only), and the cooling
 # technicians (one model, a respirator on the head bone; Sol's idle, their own walk and look-round,
 # the Helper's fall)
 on kit && build kit ${FT}Kit_Rigged.glb \
-  --clips ${DC}Sol_Animations.glb:Listening_Gesture=idle,Talk_with_Hands_Open=near \
-  --clips ${PN}Ezra_Animations.glb:Scheming_Hand_Rub=ins_rub,Sit_on_Chair_Arms_Crossed=sit \
-  --clips ${DC}Sol_Animations.glb:Sitting_Answering_Questions=sit_near \
-  --mirror ${DC}Sol_Animations.glb:Listening_Gesture=idle_m
+  --clips ${DC}Sol_Animations.glb:Chair_Sit_Idle_M=idle,Sitting_Answering_Questions=near \
+  --clips ${DM}Gil_Animations.glb:Sit_and_Doze_Off=idle2 \
+  --mirror ${DC}Sol_Animations.glb:Chair_Sit_Idle_M=idle_m
 on tech && build tech ${FT}Tech_Rigged.glb \
   --clips ${DC}Sol_Animations.glb:Listening_Gesture=idle \
   --clips ${CT}Associate_Animations.glb:Short_Breathe_and_Look_Around=idle2 \
