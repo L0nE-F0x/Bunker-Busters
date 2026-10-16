@@ -347,6 +347,22 @@ export const PEOPLE: PersonDef[] = [
     ],
   },
   {
+    id: 'agnes', accent: '#c9a24a', name: 'Agnes Price', role: 'Owner, Deepwell Shelter Systems', place: 'Bunker Zero, under Last Chance',
+    bio: 'Built every founder\'s bunker in the valley and wrote down every corner they cut. Paid for her own out of their change orders: a well, a cistern and two hundred bunks under a gas station, for whoever was left. Then she couldn\'t choose who that was.',
+    known: (v) => v.has('zero.agnes') || v.has('zero.known'),
+    about: [
+      { who: 'tanner', line: 'Tanner wanted a guard drone. He could afford about a third of one, so that\'s what he got.' },
+      { who: 'kit', line: 'Kit paid every invoice the day it came. She never paid for one thing she didn\'t need.' },
+      { who: 'mara', line: 'Mara signed my permit without reading it. I made sure it was one she wouldn\'t read.', when: (v) => v.has('zero.agnes') },
+    ],
+    ofYou: [
+      'You blew my doors. They were good doors.',
+      'I built a showroom for visitors and never had one until you.',
+      'You got through every door I ever hung. That doesn\'t happen.',
+      'Come down any time. Use the ladder, not a charge.',
+    ],
+  },
+  {
     id: 'lo', accent: '#e8661e', name: 'Lo Ibarra', role: 'Shift lead, Dropt', place: 'The Cathedral floor',
     bio: 'Shift lead the night of the Pivot, and every night since: fourteen hundred and seven shifts in a building whose doors only opened at shift end. Kept four of the thirty alive by making rate.',
     known: (v) => v.has('cathedral.lo.met'),

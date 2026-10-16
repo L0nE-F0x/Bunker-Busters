@@ -121,6 +121,8 @@ export class Atmosphere {
   sunElevation = 0;
   sunColor = new THREE.Color();
   envIntensity = 0.6;
+  /** 0 outdoors … 1 underground (Game sets it from Bunker Zero): dims the sky's fill and the sun. */
+  cover = 0;
   /** Suggested camera exposure for the post stack. */
   exposure = 1;
   windDir = new THREE.Vector2(0.9, 0.35).normalize();
@@ -581,7 +583,7 @@ export class Atmosphere {
       const target = this.wallVis * smoothN(reach + 80, reach - 60, this.wallDist);
       this.sunShade += (target - this.sunShade) * Math.min(1, dt * 1.5);
     }
-    this.sun.intensity = lerp(a.sunI, b.sunI, t) * Math.max(0.05, horizonFade) * (1 - this.dustiness * 0.35) * (1 - st * 0.93) * (1 - this.sunShade * 0.7);
+    this.sun.intensity = lerp(a.sunI, b.sunI, t) * Math.max(0.05, horizonFade) * (1 - this.dustiness * 0.35) * (1 - st * 0.93) * (1 - this.sunShade * 0.7) * (1 - this.cover);
     if (!isDay) this.sun.color.set('#6f8cd0');
     (this.uSunLight.value as THREE.Color).copy(this.sun.color).multiplyScalar(this.sun.intensity);
     this.sun.position.copy(focus).addScaledVector(lightDir, 300);
@@ -602,6 +604,12 @@ export class Atmosphere {
         this.hemi.color.lerp(tmpB.set('#c8c4ff'), Math.min(1, this.flash));
         this.hemi.intensity += this.flash * st * 2.2;
       }
+    }
+    // under the ground (Bunker Zero): the sky's light doesn't reach, so the fill goes (the sun went above,
+    // before uSunLight copied it: some materials light themselves from that)
+    if (this.cover > 0) {
+      this.hemi.intensity *= 1 - this.cover * 0.8;
+      this.envIntensity *= 1 - this.cover * 0.75;
     }
     this.scene.environmentIntensity = this.envIntensity;
   }

@@ -44,6 +44,7 @@ import { Cathedral } from './bunker/cathedral/Cathedral';
 import { CathedralAfter } from './bunker/cathedral/after';
 import { Fortress } from './bunker/fortress/Fortress';
 import { FortressAfter } from './bunker/fortress/after';
+import { Zero } from './bunker/zero/Zero';
 import type { Bunker } from './bunker/Bunker';
 import { Settlement } from './town/Settlement';
 import { buildSites, Errands, type Site } from './sites';
@@ -51,7 +52,7 @@ import { Stories } from './sites/stories';
 import { Player } from './player/Player';
 import { FirstPersonCamera } from './player/FirstPersonCamera';
 import { Hands, HAND_LOOKS, torchLight } from './player/Hands';
-import { GameState, saveGame, loadGame, loadSettings, saveSettings, clearSave, type Settings } from './State';
+import { GameState, saveGame, loadGame, loadSettings, saveSettings, clearSave, START_DAY, type Settings } from './State';
 import type { GameContext, Interactable, UIBridge } from './context';
 import { UI, type HudFrame } from '@/ui/UI';
 import { MapData, LANDMARK_MARKERS, type MapMarker } from '@/ui/Minimap';
@@ -71,6 +72,7 @@ import { SPIRE } from '@/content/bunkers/spire';
 import { DOME } from '@/content/bunkers/dome';
 import { CATHEDRAL } from '@/content/bunkers/cathedral';
 import { FORTRESS } from '@/content/bunkers/fortress';
+import { ZERO } from '@/content/bunkers/zero';
 import { ITEMS, HOTBAR_ITEMS, KEEP_ON_DEATH } from '@/content/items';
 import { KadeTerminals } from './combat/terminals';
 import { OUTPOSTS } from '@/content/recovery';
@@ -166,6 +168,7 @@ export class Game {
   cathedralAfter: CathedralAfter | null = null;
   fortress!: Fortress;
   fortressAfter: FortressAfter | null = null;
+  zero!: Zero;
   /** Every bunker (the Garage first): interactables, update/cull, interiors, EMP, alarms. */
   bunkers: Bunker[] = [];
   settlement!: Settlement;
@@ -382,7 +385,8 @@ export class Game {
     this.dome = new Dome(this.ctx);
     this.cathedral = new Cathedral(this.ctx);
     this.fortress = new Fortress(this.ctx);
-    this.bunkers = [this.garage, this.apex, this.panopticon, this.spire, this.dome, this.cathedral, this.fortress];
+    this.zero = new Zero(this.ctx);
+    this.bunkers = [this.garage, this.apex, this.panopticon, this.spire, this.dome, this.cathedral, this.fortress, this.zero];
     // the Spire's sentinels are hostiles, and they need to know whether you're holding a weapon
     this.spire.attach(this.combat, () => !!this.arms?.equipped);
     // the Dome's Helpers are hostiles too (shootable; they never hurt you)
@@ -391,9 +395,11 @@ export class Game {
     this.cathedral.attach(this.combat);
     // the Fortress's technicians: shootable (they go down and get up again), never hurt you
     this.fortress.attach(this.combat);
+    // Zero's Doormen: shootable, they walk you back to the ladder
+    this.zero.attach(this.combat);
     this.combat.sparks = this.garage.sparks;
     // wolves won't follow you to the fire or into a town
-    this.fauna.safe = [{ p: this.landmarks.campPosition.clone(), r: 30 }];
+    this.fauna.safe = [{ p: this.landmarks.campPosition.clone(), r: 30 }, { p: this.zero.b.w(2, 0, -45), r: 52 }];
     for (const lm of LANDMARKS) if (lm.kind === 'town') this.fauna.safe.push({ p: new THREE.Vector3(lm.position[0], 0, lm.position[2]), r: 75 });
     // the Meshy townsfolk (before the warm-up; ?procnpc keeps the procedural figures)
     const bunkerMsg = 'Building a doomsday bunker (pre-revenue)';
@@ -408,6 +414,8 @@ export class Game {
     this.cathedral.addPeople(NpcCrowd.models);
     // the Fortress: Kit at her desk, Marek in the locker room, the technicians
     this.fortress.addPeople(NpcCrowd.models);
+    // Zero: Agnes at her drafting table, the Doormen
+    this.zero.addPeople(NpcCrowd.models);
     // routines (content/routines.ts): who is in which seat or spot, by the hour and the story
     NpcCrowd.schedule = (st) => routineOpen(st, { playing: this.mode === 'playing', hour: this.atmo.hour, has: (f) => !!this.state?.has(f) });
     this.landmarks.addCampPeople();
@@ -457,6 +465,7 @@ export class Game {
     if (SKIP.has('dome')) this.scene.remove(this.dome.b.group, this.dome.helperGroup);
     if (SKIP.has('cathedral')) this.scene.remove(this.cathedral.b.group);
     if (SKIP.has('fortress')) this.scene.remove(this.fortress.b.group);
+    if (SKIP.has('zero')) this.scene.remove(this.zero.b.group);
     if (SKIP.has('ui')) document.getElementById('ui')!.style.display = 'none';
     if (SKIP.has('terrain')) this.scene.remove(this.terrain.mesh, this.terrain.far);
     if (SKIP.has('sky')) this.scene.remove(this.atmo.sky);
@@ -636,7 +645,8 @@ export class Game {
       hf: this.hf,
       scene: this.scene,
       get puffs() { return self.puffs; },
-      caught: (reason: string, opts?: { to?: THREE.Vector3; yaw?: number; gentle?: boolean }) => this.caught(reason, opts),
+      caught: (reason: string, opts?: { to?: THREE.Vector3; yaw?: number; gentle?: boolean; keepY?: boolean }) => this.caught(reason, opts),
+      climb: (to: THREE.Vector3, yaw: number, text: string, done?: () => void) => this.climb(to, yaw, text, done),
     } as unknown as GameContext;
   }
 
@@ -1012,7 +1022,8 @@ export class Game {
               : s.has('spire.complete') && s.has('spire.core') && !s.has('act4.debriefed') ? 'Radio Mara · the Spire'
                 : s.has('dome.complete') && s.has('dome.end') && !s.has('act5.debriefed') ? 'Radio Mara · the Dome'
                   : s.has('cathedral.complete') && s.has('cathedral.end') && !s.has('act6.debriefed') ? 'Radio Mara · the Cathedral'
-                    : s.has('fortress.complete') && s.has('fortress.end') && !s.has('act7.debriefed') ? 'Radio Mara · the Fortress' : 'Raise Mara on the radio',
+                    : s.has('fortress.complete') && s.has('fortress.end') && !s.has('act7.debriefed') ? 'Radio Mara · the Fortress'
+                      : s.has('zero.complete') && s.has('zero.end') && !s.has('act8.debriefed') ? 'Radio Mara · Bunker Zero' : 'Raise Mara on the radio',
           people: CAMP.filter((m) => m.present(campView())).map((m) => ({ id: m.id, name: m.name, role: m.role })),
           onRest: () => {
             const full = s.skill('survival') >= 5;
@@ -1036,6 +1047,19 @@ export class Game {
             const call = campRadio({ has: (f) => s.has(f), archetype: s.archetype });
             await this.ui.pages(call.pages, 'Back to the fire');
             for (const f of call.flags) s.set(f);
+            // the last debrief: the end of the story (the valley stays open)
+            if (call.flags.includes('act8.debriefed')) {
+              const st = s.data.stats;
+              const day = START_DAY + (s.data.days ?? 0);
+              const hours = Math.max(1, Math.round(st.playTime / 3600));
+              await this.ui.pages([{
+                speaker: 'Bunker Busters',
+                text: `Day ${day.toLocaleString('en-GB')}. Eight bunkers, from a garage with a fence nobody paid for to a well under your own camp. You picked ${st.picks} lock${st.picks === 1 ? '' : 's'}, got caught ${st.caught} time${st.caught === 1 ? '' : 's'}, and spent about ${hours} hour${hours === 1 ? '' : 's'} on the road.\nThat's the end of the story. The valley is still there, and so is the road. Thank you for playing.`,
+              }], 'Back to the valley');
+              this.audio.sting('busted');
+              this.ui.banner('BUNKER MASTER', 'Every door in the valley, opened.', 'good');
+              this.save(true);
+            }
             // the Spire's core goes on the bench by the pumps (spire/taps.ts draws it there from now on)
             if (call.flags.includes('act4.debriefed') && s.count('purifier_core')) {
               s.removeItem('purifier_core', 1);
@@ -1237,6 +1261,11 @@ export class Game {
     // ?at=cathedral starts on Dropt's service road, short of the lot (Act VI without the walk)
     if (new URLSearchParams(location.search).get('at') === 'cathedral') {
       spawn = this.cathedral.b.points.road.clone();
+      spawn.y = this.hf.heightAt(spawn.x, spawn.z) + 0.2;
+    }
+    // ?at=zero starts on the forecourt by the manway (Act VIII without the walk; the test sets its flags)
+    if (new URLSearchParams(location.search).get('at') === 'zero') {
+      spawn = this.zero.b.points.surfaceOut.clone();
       spawn.y = this.hf.heightAt(spawn.x, spawn.z) + 0.2;
     }
     this.player = new Player(this.physics, state.data.archetype, spawn);
@@ -1467,7 +1496,25 @@ export class Game {
     if (!silent) this.ui.toast(ok ? 'Game saved.' : 'Save failed (storage blocked?)', ok ? 'good' : 'bad');
   }
 
-  private caught(reason: string, opts: { to?: THREE.Vector3; yaw?: number; gentle?: boolean } = {}) {
+  /** Bunker Zero's ladder: a fade with a line of text, and you're at the other end. */
+  private climb(to: THREE.Vector3, yaw: number, text: string, done?: () => void) {
+    if (!this.player || this.busy) return;
+    this.busy = true;
+    this.player.frozen = true;
+    this.ui.fade(true, text);
+    setTimeout(() => {
+      this.player!.teleport(to);
+      this.cam.snap(yaw, 0);
+    }, 900);
+    setTimeout(() => {
+      this.ui.fade(false);
+      this.player!.frozen = false;
+      this.busy = false;
+      done?.();
+    }, 2100);
+  }
+
+  private caught(reason: string, opts: { to?: THREE.Vector3; yaw?: number; gentle?: boolean; keepY?: boolean } = {}) {
     this.audio.sting('caught');
     if (!this.state || !this.player) return;
     const s = this.state;
@@ -1489,7 +1536,7 @@ export class Game {
         if (s.data.health > 25) s.damage(20);
       }
       const p = opts.to?.clone() ?? this.garage.outsidePoint;
-      p.y = this.hf.heightAt(p.x, p.z) + 0.2;
+      if (!opts.keepY) p.y = this.hf.heightAt(p.x, p.z) + 0.2;
       this.player!.teleport(p);
       this.cam.snap(opts.yaw ?? 0, 0);
       if (!opts.to) {
@@ -1994,6 +2041,11 @@ export class Game {
       out.push({ id: 'fortress', x: fx, z: fz, label: s.has('fortress.complete') ? 'The Chip Fortress (busted)' : 'The Chip Fortress · Tier 7', color: s.has('fortress.complete') ? '#7d725f' : '#ff3a6e', kind: 'bunker',
         note: s.has('fortress.complete') ? 'Kit Szabo\'s star fort under the southern range. You took the water, and you decided where its power goes.' : 'Kit Szabo\'s star fort in the basin under the southern range, between Photon Park and the mesa, inside a moat of coolant. Lattice\'s road runs south from the highway near Last Chance.' });
     }
+    if (s.has('zero.known') || s.has('zero.complete')) {
+      const [zx, , zz] = ZERO.location.position;
+      out.push({ id: 'zero', x: zx, z: zz, label: s.has('zero.complete') ? 'Bunker Zero (busted)' : 'Bunker Zero · Tier 8', color: s.has('zero.complete') ? '#7d725f' : '#ff3a6e', kind: 'bunker',
+        note: s.has('zero.complete') ? 'Agnes Price\'s well, under the forecourt. You decided who it belongs to.' : 'Under the forecourt at Last Chance: the diesel manway east of the store, and sixty rungs down. Agnes Price built every bunker in the valley, and this one is hers.' });
+    }
     for (const it of WORLD_INTEL) {
       if (s.has(`intel:${it.id}`)) continue;
       const known = it.id === 'intel.gas.note' || s.has(`rumour.${it.id}`) || this.map.revealedAt(it.position[0], it.position[2]) > 100;
@@ -2021,8 +2073,8 @@ export class Game {
 
   /** The tracked quest (or the main story) speaks unless you're standing at the Garage. */
   private objective(): string {
-    const here = this.garage.objective() || this.apex.objective() || this.panopticon.objective() || this.spire.objective() || this.dome.objective() || this.cathedral.objective() || this.fortress.objective();
-    const label = !here || this.garage.objective() ? undefined : this.apex.objective() ? 'Act II · Apex Vault' : this.panopticon.objective() ? 'Act III · The Panopticon' : this.spire.objective() ? 'Act IV · The Alignment Spire' : this.dome.objective() ? 'Act V · The Singularity Dome' : this.cathedral.objective() ? 'Act VI · The Cloud Cathedral' : 'Act VII · The Chip Fortress';
+    const here = this.garage.objective() || this.apex.objective() || this.panopticon.objective() || this.spire.objective() || this.dome.objective() || this.cathedral.objective() || this.fortress.objective() || this.zero.objective();
+    const label = !here || this.garage.objective() ? undefined : this.apex.objective() ? 'Act II · Apex Vault' : this.panopticon.objective() ? 'Act III · The Panopticon' : this.spire.objective() ? 'Act IV · The Alignment Spire' : this.dome.objective() ? 'Act V · The Singularity Dome' : this.cathedral.objective() ? 'Act VI · The Cloud Cathedral' : this.fortress.objective() ? 'Act VII · The Chip Fortress' : 'Act VIII · Bunker Zero';
     return this.story ? this.story.objective(here, label).text : here;
   }
 
@@ -2061,12 +2113,14 @@ export class Game {
 
     const focusPos = this.player ? this.player.position : this.camera.position;
     this.weather.update(dt, this.mode === 'playing' && !this.ui.modalOpen);
+    this.atmo.cover = damp(this.atmo.cover, this.mode === 'playing' && this.zero?.underground ? 1 : 0, 4, dt);
     this.atmo.update(dt, focusPos);
     updateRim(this.atmo.sunColor, 0.35 + (1 - Math.min(1, Math.max(0, this.atmo.sunElevation * 3))) * 0.5);
     (this.post.godrayColor.value as THREE.Color).copy(this.atmo.sunColor).multiplyScalar(this.atmo.isNight ? 0.25 : 1);
     // eye adaptation follows the sun; a storm's murk opens the eye a little and adds grit
     const st = this.weather.intensity;
-    this.post.exposure.value = this.atmo.exposure * (1 + st * 0.25);
+    // ...and under the ground (Bunker Zero) the eye opens up as if it were night
+    this.post.exposure.value = this.atmo.exposure * (1 + st * 0.25) * (1 + this.atmo.cover * Math.max(0, 1.6 / this.atmo.exposure - 1));
     this.post.grain.value = 0.045 + st * 0.025;
 
     // controllers: play input while playing, menu navigation otherwise

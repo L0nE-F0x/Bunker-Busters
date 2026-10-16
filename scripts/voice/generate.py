@@ -50,6 +50,19 @@ def finish(u, wav, tmp):
     return u["key"]
 
 
+def style(k, voice):
+    """A Kokoro voice name, or a blend of them ("bf_alice*0.6+am_onyx*0.4"; bare names weigh the
+    same): the weighted mean of their style vectors. The first voice decides the accent."""
+    if "+" not in voice:
+        return voice
+    parts = []
+    for p in voice.split("+"):
+        name, _, w = p.partition("*")
+        parts.append((name.strip(), float(w) if w else 1.0))
+    total = sum(w for _, w in parts)
+    return sum(k.get_voice_style(name) * (w / total) for name, w in parts)
+
+
 def main():
     force = "--force" in sys.argv
     units = json.loads((ROOT / "scripts/voice/lines.json").read_text())
@@ -68,7 +81,7 @@ def main():
         jobs = []
         for i, u in enumerate(todo):
             lang = "en-gb" if u["voice"].startswith("b") else "en-us"
-            samples, rate = k.create(u["tts"], voice=u["voice"], speed=u["speed"], lang=lang)
+            samples, rate = k.create(u["tts"], voice=style(k, u["voice"]), speed=u["speed"], lang=lang)
             wav = f"{tmp}/{u['key']}.wav"
             sf.write(wav, samples, rate)
             jobs.append(pool.submit(finish, u, wav, tmp))

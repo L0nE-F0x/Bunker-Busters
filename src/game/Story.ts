@@ -15,6 +15,7 @@ import { SPIRE } from '@/content/bunkers/spire';
 import { DOME } from '@/content/bunkers/dome';
 import { CATHEDRAL } from '@/content/bunkers/cathedral';
 import { FORTRESS } from '@/content/bunkers/fortress';
+import { ZERO } from '@/content/bunkers/zero';
 import { OUTPOSTS } from '@/content/recovery';
 
 /**
@@ -28,6 +29,7 @@ const BUNKER_AT: Record<string, readonly number[]> = {
   dome: DOME.location.position,
   cathedral: CATHEDRAL.location.position,
   fortress: FORTRESS.location.position,
+  zero: ZERO.location.position,
 };
 
 /** Seconds between two banter lines, at least. Exploring should feel accompanied, not narrated. */

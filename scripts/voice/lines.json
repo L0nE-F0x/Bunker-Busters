@@ -130,6 +130,366 @@
   "where": "src/content/bunkers/panopticon.ts"
  },
  {
+  "key": "0b52s9y",
+  "voice": "af_nicole*0.75+am_santa*0.25",
+  "fx": "room",
+  "speed": 0.9,
+  "speaker": "Agnes",
+  "words": "A bore, two thousand one hundred feet, into water the Kade pumps never got near. A cistern, two hundred bunks, and stores for ten years. I paid for it with eleven percent on every change order those people signed. The sign on the pylon was mine as well. Last Chance. It was supposed to tell people where to stop.",
+  "tts": "A bore, two thousand one hundred feet, into water the Kade pumps never got near. A cistern, two hundred bunks, and stores for ten years. I paid for it with eleven percent on every change order those people signed. The sign on the pylon was mine as well. Last Chance. It was supposed to tell people where to stop.",
+  "where": "src/content/bunkers/zero.ts"
+ },
+ {
+  "key": "1aatzsx",
+  "voice": "af_nicole*0.75+am_santa*0.25",
+  "fx": "room",
+  "speed": 0.9,
+  "speaker": "Agnes",
+  "words": "A family from Waitlist City came down the ladder this morning and asked where the queue was. I told them there isn't one.",
+  "tts": "A family from Waitlist City came down the ladder this morning and asked where the queue was. I told them there isn't one.",
+  "where": "src/content/bunkers/zero.ts"
+ },
+ {
+  "key": "0f4rawc",
+  "voice": "af_nicole*0.75+am_santa*0.25",
+  "fx": "room",
+  "speed": 0.9,
+  "speaker": "Agnes",
+  "words": "Agnes Price. Deepwell Shelter Systems. My father dug wells, and in sixty-one he started selling fallout shelters to ranchers. I sold doors to men who thought the world was ending. They were right, which was bad for everybody except me.",
+  "tts": "Agnes Price. Deepwell Shelter Systems. My father dug wells, and in sixty-one he started selling fallout shelters to ranchers. I sold doors to men who thought the world was ending. They were right, which was bad for everybody except me.",
+  "where": "src/content/bunkers/zero.ts"
+ },
+ {
+  "key": "0d1hb5s",
+  "voice": "af_nicole*0.75+am_santa*0.25",
+  "fx": "room",
+  "speed": 0.9,
+  "speaker": "Agnes",
+  "words": "Every morning. Pip counts the jugs out loud on the forecourt, and the manway carries it straight down. I knew how much water you had before Mara did.",
+  "tts": "Every morning. Pip counts the jugs out loud on the forecourt, and the manway carries it straight down. I knew how much water you had before Mara did.",
+  "where": "src/content/bunkers/zero.ts"
+ },
+ {
+  "key": "1jhah27",
+  "voice": "af_nicole*0.75+am_santa*0.25",
+  "fx": "room",
+  "speed": 0.9,
+  "speaker": "Agnes",
+  "words": "Every one. My plate is on every door you opened, down by the bottom hinge. Nobody ever looks at the bottom hinge. And every client cut something to save money. I wrote it down each time and had them sign it. You got in through their signatures.",
+  "tts": "Every one. My plate is on every door you opened, down by the bottom hinge. Nobody ever looks at the bottom hinge. And every client cut something to save money. I wrote it down each time and had them sign it. You got in through their signatures.",
+  "where": "src/content/bunkers/zero.ts"
+ },
+ {
+  "key": "1vl8onm",
+  "voice": "af_nicole*0.75+am_santa*0.25",
+  "fx": "room",
+  "speed": 0.9,
+  "speaker": "Agnes",
+  "words": "I came down that ladder on the day of the Pivot to open it. Two hundred bunks, and four thousand people on the band. I couldn't pick. So I didn't pick anyone. I locked it, and I waited for somebody who could get through every door I ever built. That's you, so you choose.",
+  "tts": "I came down that ladder on the day of the Pivot to open it. Two hundred bunks, and four thousand people on the band. I couldn't pick. So I didn't pick anyone. I locked it, and I waited for somebody who could get through every door I ever built. That's you, so you choose.",
+  "where": "src/content/bunkers/zero.ts"
+ },
+ {
+  "key": "1wslozh",
+  "voice": "af_nicole*0.75+am_santa*0.25",
+  "fx": "room",
+  "speed": 0.9,
+  "speaker": "Agnes",
+  "words": "I can hear the key on her string when she climbs down. It sounds like my father's.",
+  "tts": "I can hear the key on her string when she climbs down. It sounds like my father's.",
+  "where": "src/content/bunkers/zero.ts"
+ },
+ {
+  "key": "07guzfa",
+  "voice": "af_nicole*0.75+am_santa*0.25",
+  "fx": "room",
+  "speed": 0.9,
+  "speaker": "Agnes",
+  "words": "I went up and looked at the sign. Hollis keeps it very clean.",
+  "tts": "I went up and looked at the sign. Hollis keeps it very clean.",
+  "where": "src/content/bunkers/zero.ts"
+ },
+ {
+  "key": "1mm66p4",
+  "voice": "af_nicole*0.75+am_santa*0.25",
+  "fx": "room",
+  "speed": 0.9,
+  "speaker": "Agnes",
+  "words": "It's decided now. That's all I wanted.",
+  "tts": "It's decided now. That's all I wanted.",
+  "where": "src/content/bunkers/zero.ts"
+ },
+ {
+  "key": "18j6zxd",
+  "voice": "af_nicole*0.75+am_santa*0.25",
+  "fx": "room",
+  "speed": 0.9,
+  "speaker": "Agnes",
+  "words": "Mara came down this morning. She didn't say anything. She counted the bunks.",
+  "tts": "Mara came down this morning. She didn't say anything. She counted the bunks.",
+  "where": "src/content/bunkers/zero.ts"
+ },
+ {
+  "key": "0dwtojr",
+  "voice": "af_nicole*0.75+am_santa*0.25",
+  "fx": "room",
+  "speed": 0.9,
+  "speaker": "Agnes",
+  "words": "More than you'd think. The pump runs on a timer into the cistern. Throw the red handle behind the board and it goes up the surface line instead, to a standpipe on the forecourt, every day for as long as the bore holds. That's years.",
+  "tts": "More than you'd think. The pump runs on a timer into the cistern. Throw the red handle behind the board and it goes up the surface line instead, to a standpipe on the forecourt, every day for as long as the bore holds. That's years.",
+  "where": "src/content/bunkers/zero.ts"
+ },
+ {
+  "key": "0gmlll1",
+  "voice": "af_nicole*0.75+am_santa*0.25",
+  "fx": "room",
+  "speed": 0.9,
+  "speaker": "Agnes",
+  "words": "That's what they all said. Every one of them, at the bottom of the ladder.",
+  "tts": "That's what they all said. Every one of them, at the bottom of the ladder.",
+  "where": "src/content/bunkers/zero.ts"
+ },
+ {
+  "key": "1m13m58",
+  "voice": "af_nicole*0.75+am_santa*0.25",
+  "fx": "room",
+  "speed": 0.9,
+  "speaker": "Agnes",
+  "words": "The master key is in the board on the wall. It opens every door I ever hung. If you put it on Mara's string, Last Chance never goes thirsty again and decides who comes down the ladder. If you break it, nobody can lock Zero again, and it belongs to whoever walks up the highway. I had three years to decide and I couldn't.",
+  "tts": "The master key is in the board on the wall. It opens every door I ever hung. If you put it on Mara's string, Last Chance never goes thirsty again and decides who comes down the ladder. If you break it, nobody can lock Zero again, and it belongs to whoever walks up the highway. I had three years to decide and I couldn't.",
+  "where": "src/content/bunkers/zero.ts"
+ },
+ {
+  "key": "1t373tr",
+  "voice": "af_nicole*0.75+am_santa*0.25",
+  "fx": "room",
+  "speed": 0.9,
+  "speaker": "Agnes",
+  "words": "Then that's done. I'd like to go up and look at the sign.",
+  "tts": "Then that's done. I'd like to go up and look at the sign.",
+  "where": "src/content/bunkers/zero.ts"
+ },
+ {
+  "key": "00xwi2r",
+  "voice": "af_nicole*0.75+am_santa*0.25",
+  "fx": "room",
+  "speed": 0.9,
+  "speaker": "Agnes",
+  "words": "You came down my ladder and through my showroom. Sit down if you like. I've been standing at this table for three years and I'm not about to stop.",
+  "tts": "You came down my ladder and through my showroom. Sit down if you like. I've been standing at this table for three years and I'm not about to stop.",
+  "where": "src/content/bunkers/zero.ts"
+ },
+ {
+  "key": "0k9dfo5",
+  "voice": "af_nicole*0.75+am_santa*0.25",
+  "fx": "pa",
+  "speed": 0.92,
+  "speaker": "Agnes Price",
+  "words": "Back to the ladder. Most people need two goes at that room.",
+  "tts": "Back to the ladder. Most people need two goes at that room.",
+  "where": "src/content/bunkers/zero.ts"
+ },
+ {
+  "key": "1vjafq8",
+  "voice": "af_nicole*0.75+am_santa*0.25",
+  "fx": "pa",
+  "speed": 0.92,
+  "speaker": "Agnes Price",
+  "words": "Come in. Wipe your feet. I'm at the back, by the well.",
+  "tts": "Come in. Wipe your feet. I'm at the back, by the well.",
+  "where": "src/content/bunkers/zero.ts"
+ },
+ {
+  "key": "0og353p",
+  "voice": "af_nicole*0.75+am_santa*0.25",
+  "fx": "pa",
+  "speed": 0.92,
+  "speaker": "Agnes Price",
+  "words": "Doormen, the showroom, please. Gently.",
+  "tts": "Doormen, the showroom, please. Gently.",
+  "where": "src/content/bunkers/zero.ts"
+ },
+ {
+  "key": "1os9n19",
+  "voice": "af_nicole*0.75+am_santa*0.25",
+  "fx": "pa",
+  "speed": 0.92,
+  "speaker": "Agnes Price",
+  "words": "Every door has a weak point. The job is getting the client to sign for it.",
+  "tts": "Every door has a weak point. The job is getting the client to sign for it.",
+  "where": "src/content/bunkers/zero.ts"
+ },
+ {
+  "key": "0jcor04",
+  "voice": "af_nicole*0.75+am_santa*0.25",
+  "fx": "pa",
+  "speed": 0.92,
+  "speaker": "Agnes Price",
+  "words": "Ezra wanted a camera on everything. I asked him who would watch them. He said he would, and he did.",
+  "tts": "Ezra wanted a camera on everything. I asked him who would watch them. He said he would, and he did.",
+  "where": "src/content/bunkers/zero.ts"
+ },
+ {
+  "key": "0imkm0h",
+  "voice": "af_nicole*0.75+am_santa*0.25",
+  "fx": "pa",
+  "speed": 0.92,
+  "speaker": "Agnes Price",
+  "words": "Hunter paid for the glass in advance. He never came for the keys.",
+  "tts": "Hunter paid for the glass in advance. He never came for the keys.",
+  "where": "src/content/bunkers/zero.ts"
+ },
+ {
+  "key": "1gddmod",
+  "voice": "af_nicole*0.75+am_santa*0.25",
+  "fx": "pa",
+  "speed": 0.92,
+  "speaker": "Agnes Price",
+  "words": "It isn't locked. It never was. It's just heavy.",
+  "tts": "It isn't locked. It never was. It's just heavy.",
+  "where": "src/content/bunkers/zero.ts"
+ },
+ {
+  "key": "0wx81vf",
+  "voice": "af_nicole*0.75+am_santa*0.25",
+  "fx": "pa",
+  "speed": 0.92,
+  "speaker": "Agnes Price",
+  "words": "Kit asked for a moat. I asked her, a moat of what? She said, whatever costs the most.",
+  "tts": "Kit asked for a moat. I asked her, a moat of what? She said, whatever costs the most.",
+  "where": "src/content/bunkers/zero.ts"
+ },
+ {
+  "key": "0hdj1mb",
+  "voice": "af_nicole*0.75+am_santa*0.25",
+  "fx": "pa",
+  "speed": 0.92,
+  "speaker": "Agnes Price",
+  "words": "Orrin wanted every door to open by itself. A door that opens by itself opens for anybody.",
+  "tts": "Orrin wanted every door to open by itself. A door that opens by itself opens for anybody.",
+  "where": "src/content/bunkers/zero.ts"
+ },
+ {
+  "key": "05bsy1v",
+  "voice": "af_nicole*0.75+am_santa*0.25",
+  "fx": "pa",
+  "speed": 0.92,
+  "speaker": "Agnes Price",
+  "words": "Prudence sent me forty pages of policy for her front door. I built it to page three.",
+  "tts": "Prudence sent me forty pages of policy for her front door. I built it to page three.",
+  "where": "src/content/bunkers/zero.ts"
+ },
+ {
+  "key": "1gfp105",
+  "voice": "af_nicole*0.75+am_santa*0.25",
+  "fx": "pa",
+  "speed": 0.92,
+  "speaker": "Agnes Price",
+  "words": "Take what you need. That's what it's for. It's what it was always for.",
+  "tts": "Take what you need. That's what it's for. It's what it was always for.",
+  "where": "src/content/bunkers/zero.ts"
+ },
+ {
+  "key": "1ldnkxp",
+  "voice": "af_nicole*0.75+am_santa*0.25",
+  "fx": "pa",
+  "speed": 0.92,
+  "speaker": "Agnes Price",
+  "words": "Tanner cut the north-east fence to save four hundred dollars. I wrote it on his drawing in red.",
+  "tts": "Tanner cut the north-east fence to save four hundred dollars. I wrote it on his drawing in red.",
+  "where": "src/content/bunkers/zero.ts"
+ },
+ {
+  "key": "0wcr4nc",
+  "voice": "af_nicole*0.75+am_santa*0.25",
+  "fx": "pa",
+  "speed": 0.92,
+  "speaker": "Agnes Price",
+  "words": "That gate was a prototype. You could have read the clock.",
+  "tts": "That gate was a prototype. You could have read the clock.",
+  "where": "src/content/bunkers/zero.ts"
+ },
+ {
+  "key": "1mfdfdy",
+  "voice": "af_nicole*0.75+am_santa*0.25",
+  "fx": "pa",
+  "speed": 0.92,
+  "speaker": "Agnes Price",
+  "words": "That's sixty rungs. My father put them in by hand. Mind the door at the bottom, it's older than both of us.",
+  "tts": "That's sixty rungs. My father put them in by hand. Mind the door at the bottom, it's older than both of us.",
+  "where": "src/content/bunkers/zero.ts"
+ },
+ {
+  "key": "0hzlcw8",
+  "voice": "af_nicole*0.75+am_santa*0.25",
+  "fx": "pa",
+  "speed": 0.92,
+  "speaker": "Agnes Price",
+  "words": "That's the alarm. It's loud on purpose. I never liked a quiet alarm.",
+  "tts": "That's the alarm. It's loud on purpose. I never liked a quiet alarm.",
+  "where": "src/content/bunkers/zero.ts"
+ },
+ {
+  "key": "07b714k",
+  "voice": "af_nicole*0.75+am_santa*0.25",
+  "fx": "pa",
+  "speed": 0.92,
+  "speaker": "Agnes Price",
+  "words": "That's the board I sold Kit, except mine tells the truth about the numbers.",
+  "tts": "That's the board I sold Kit, except mine tells the truth about the numbers.",
+  "where": "src/content/bunkers/zero.ts"
+ },
+ {
+  "key": "0un2diz",
+  "voice": "af_nicole*0.75+am_santa*0.25",
+  "fx": "pa",
+  "speed": 0.92,
+  "speaker": "Agnes Price",
+  "words": "This is the showroom. Every door I ever sold, the way I drew it before the client got to it.",
+  "tts": "This is the showroom. Every door I ever sold, the way I drew it before the client got to it.",
+  "where": "src/content/bunkers/zero.ts"
+ },
+ {
+  "key": "088kcnv",
+  "voice": "af_nicole*0.75+am_santa*0.25",
+  "fx": "pa",
+  "speed": 0.92,
+  "speaker": "Agnes Price",
+  "words": "Vesper changed her airlock code eleven times in the first week. Then she let the clock do it.",
+  "tts": "Vesper changed her airlock code eleven times in the first week. Then she let the clock do it.",
+  "where": "src/content/bunkers/zero.ts"
+ },
+ {
+  "key": "1gg4zu8",
+  "voice": "af_nicole*0.75+am_santa*0.25",
+  "fx": "pa",
+  "speed": 0.92,
+  "speaker": "Agnes Price",
+  "words": "Vesper wanted a code nobody could remember, so I made the code the time. She thought that was very clever.",
+  "tts": "Vesper wanted a code nobody could remember, so I made the code the time. She thought that was very clever.",
+  "where": "src/content/bunkers/zero.ts"
+ },
+ {
+  "key": "1v4tr1h",
+  "voice": "af_nicole*0.75+am_santa*0.25",
+  "fx": "pa",
+  "speed": 0.92,
+  "speaker": "Agnes Price",
+  "words": "You blew Model Zero. I suppose that's a review.",
+  "tts": "You blew Model Zero. I suppose that's a review.",
+  "where": "src/content/bunkers/zero.ts"
+ },
+ {
+  "key": "1qcs6rj",
+  "voice": "af_nicole*0.75+am_santa*0.25",
+  "fx": "pa",
+  "speed": 0.92,
+  "speaker": "Agnes Price",
+  "words": "You set that off. Stand still and they'll walk you back.",
+  "tts": "You set that off. Stand still and they'll walk you back.",
+  "where": "src/content/bunkers/zero.ts"
+ },
+ {
   "key": "0kopi6w",
   "voice": "af_aoede",
   "fx": "pa",
@@ -920,6 +1280,116 @@
   "where": "src/content/bunkers/fortress.ts"
  },
  {
+  "key": "0n7x736",
+  "voice": "am_eric",
+  "fx": "bot",
+  "speed": 1,
+  "speaker": "Deepwell doorman",
+  "words": "Excuse me. You're not on the tour.",
+  "tts": "Excuse me. You're not on the tour.",
+  "where": "src/content/bunkers/zero.ts"
+ },
+ {
+  "key": "157ywt9",
+  "voice": "am_eric",
+  "fx": "bot",
+  "speed": 1,
+  "speaker": "Deepwell doorman",
+  "words": "It was the lights. Resuming.",
+  "tts": "It was the lights. Resuming.",
+  "where": "src/content/bunkers/zero.ts"
+ },
+ {
+  "key": "0kpdebd",
+  "voice": "am_eric",
+  "fx": "bot",
+  "speed": 1,
+  "speaker": "Deepwell doorman",
+  "words": "No visitors in the showroom. Resuming.",
+  "tts": "No visitors in the showroom. Resuming.",
+  "where": "src/content/bunkers/zero.ts"
+ },
+ {
+  "key": "1buwyj8",
+  "voice": "am_eric",
+  "fx": "bot",
+  "speed": 1,
+  "speaker": "Deepwell doorman",
+  "words": "Please stop. The casing is a prototype.",
+  "tts": "Please stop. The casing is a prototype.",
+  "where": "src/content/bunkers/zero.ts"
+ },
+ {
+  "key": "0tech5k",
+  "voice": "am_eric",
+  "fx": "bot",
+  "speed": 1,
+  "speaker": "Deepwell doorman",
+  "words": "Please wait there. Someone will show you out.",
+  "tts": "Please wait there. Someone will show you out.",
+  "where": "src/content/bunkers/zero.ts"
+ },
+ {
+  "key": "15dq50e",
+  "voice": "am_eric",
+  "fx": "bot",
+  "speed": 1,
+  "speaker": "Deepwell doorman",
+  "words": "Power withdrawn. Sitting down.",
+  "tts": "Power withdrawn. Sitting down.",
+  "where": "src/content/bunkers/zero.ts"
+ },
+ {
+  "key": "1k5lyg6",
+  "voice": "am_eric",
+  "fx": "bot",
+  "speed": 1,
+  "speaker": "Deepwell doorman",
+  "words": "Thank you for visiting the showroom. Please mind the step.",
+  "tts": "Thank you for visiting the showroom. Please mind the step.",
+  "where": "src/content/bunkers/zero.ts"
+ },
+ {
+  "key": "0kx9qdx",
+  "voice": "am_eric",
+  "fx": "bot",
+  "speed": 1,
+  "speaker": "Deepwell doorman",
+  "words": "That had no effect. Please don't do it again.",
+  "tts": "That had no effect. Please don't do it again.",
+  "where": "src/content/bunkers/zero.ts"
+ },
+ {
+  "key": "1if0oa6",
+  "voice": "am_eric",
+  "fx": "bot",
+  "speed": 1,
+  "speaker": "Deepwell doorman",
+  "words": "This way, please. The ladder is behind you.",
+  "tts": "This way, please. The ladder is behind you.",
+  "where": "src/content/bunkers/zero.ts"
+ },
+ {
+  "key": "0dl3gtr",
+  "voice": "am_eric",
+  "fx": "bot",
+  "speed": 1,
+  "speaker": "Deepwell doorman",
+  "words": "Unit down. Please notify Deepwell service.",
+  "tts": "Unit down. Please notify Deepwell service.",
+  "where": "src/content/bunkers/zero.ts"
+ },
+ {
+  "key": "06x6ju9",
+  "voice": "am_eric",
+  "fx": "bot",
+  "speed": 1,
+  "speaker": "Deepwell doorman",
+  "words": "Visitor in the showroom. Please stand still.",
+  "tts": "Visitor in the showroom. Please stand still.",
+  "where": "src/content/bunkers/zero.ts"
+ },
+ {
   "key": "0qycsbf",
   "voice": "af_river",
   "fx": "radio",
@@ -948,6 +1418,16 @@
   "words": "A Dropt drone came over the camp last week with a parcel under it. It went round twice, like it was looking for an address, and flew back north. Pip wants to know what was in the box.",
   "tts": "A Dropt drone came over the camp last week with a parcel under it. It went round twice, like it was looking for an address, and flew back north. Pip wants to know what was in the box.",
   "where": "src/content/camp.ts"
+ },
+ {
+  "key": "03mkk6l",
+  "voice": "af_river",
+  "fx": "radio",
+  "speed": 1,
+  "speaker": "Dez Marlow",
+  "words": "Agnes says her Doormen walked you back to the ladder. She sounded proud of them.",
+  "tts": "Agnes says her Doormen walked you back to the ladder. She sounded proud of them.",
+  "where": "src/content/story.ts"
  },
  {
   "key": "1bz9khi",
@@ -1070,6 +1550,16 @@
   "where": "src/content/camp.ts"
  },
  {
+  "key": "13xqw9e",
+  "voice": "af_river",
+  "fx": "radio",
+  "speed": 1,
+  "speaker": "Dez Marlow",
+  "words": "Four dials and the depth of a well. I'd have tried my birthday.",
+  "tts": "Four dials and the depth of a well. I'd have tried my birthday.",
+  "where": "src/content/story.ts"
+ },
+ {
   "key": "0zsll9b",
   "voice": "af_river",
   "fx": "radio",
@@ -1088,6 +1578,16 @@
   "words": "Heads up. A Kade road pair just clocked in near you. They're walking your way.",
   "tts": "Heads up. A Kade road pair just clocked in near you. They're walking your way.",
   "where": "src/game/sites/errands.ts"
+ },
+ {
+  "key": "1k4qz58",
+  "voice": "af_river",
+  "fx": "radio",
+  "speed": 1,
+  "speaker": "Dez Marlow",
+  "words": "I placed it. The carrier I couldn't find. The needle pins when I point the aerial at the ground. It's under us. It's under the forecourt.",
+  "tts": "I placed it. The carrier I couldn't find. The needle pins when I point the aerial at the ground. It's under us. It's under the forecourt.",
+  "where": "src/content/story.ts"
  },
  {
   "key": "00luugb",
@@ -1410,6 +1910,16 @@
   "where": "src/content/camp.ts"
  },
  {
+  "key": "0llfcg0",
+  "voice": "af_river",
+  "fx": "radio",
+  "speed": 1,
+  "speaker": "Dez Marlow",
+  "words": "Ten past two. She's on again. Tonight it was hinges: the weight each one carries, the grease, how often. She sounds like somebody reading to a kid who won't sleep. She's right under my feet.",
+  "tts": "Ten past two. She's on again. Tonight it was hinges: the weight each one carries, the grease, how often. She sounds like somebody reading to a kid who won't sleep. She's right under my feet.",
+  "where": "src/content/camp.ts"
+ },
+ {
   "key": "1rbckx3",
   "voice": "af_river",
   "fx": "radio",
@@ -1608,6 +2118,16 @@
   "words": "Vesper's feed says she's pivoting. I recorded it. All of it. I'm going to play it back to her at the trial. That was Pip's idea, and it's the best one anyone's had.",
   "tts": "Vesper's feed says she's pivoting. I recorded it. All of it. I'm going to play it back to her at the trial. That was Pip's idea, and it's the best one anyone's had.",
   "where": "src/content/camp.ts"
+ },
+ {
+  "key": "1d9z03f",
+  "voice": "af_river",
+  "fx": "radio",
+  "speed": 1,
+  "speaker": "Dez Marlow",
+  "words": "We heard her bell come up the vent pipe. Hollis spilled his coffee, and he never spills his coffee.",
+  "tts": "We heard her bell come up the vent pipe. Hollis spilled his coffee, and he never spills his coffee.",
+  "where": "src/content/story.ts"
  },
  {
   "key": "01wbhtl",
@@ -7990,6 +8510,16 @@
   "where": "src/content/banter.ts"
  },
  {
+  "key": "1ok86ly",
+  "voice": "af_sarah",
+  "fx": "radio",
+  "speed": 0.97,
+  "speaker": "Mara",
+  "words": "That's the manway. Hollis has had his truck on it since the day we got here. Four dials.",
+  "tts": "That's the manway. Hollis has had his truck on it since the day we got here. Four dials.",
+  "where": "src/content/banter.ts"
+ },
+ {
   "key": "1k03mxw",
   "voice": "af_sarah",
   "fx": "radio",
@@ -8090,6 +8620,16 @@
   "where": "src/content/quests.ts"
  },
  {
+  "key": "0hdhhs0",
+  "voice": "af_sarah",
+  "fx": "radio",
+  "speed": 0.97,
+  "speaker": "Mara Voss",
+  "words": "A man from Dry Creek came down the ladder today and asked for a bunk. I said yes. I'm keeping a list now. I hate that I'm keeping a list.",
+  "tts": "A man from Dry Creek came down the ladder today and asked for a bunk. I said yes. I'm keeping a list now. I hate that I'm keeping a list.",
+  "where": "src/content/story.ts"
+ },
+ {
   "key": "11alb68",
   "voice": "af_sarah",
   "fx": "radio",
@@ -8107,6 +8647,16 @@
   "speaker": "Mara Voss",
   "words": "A woman in a cream hoodie walked into Dry Creek this afternoon and asked Nia if anyone needed a radio fixed. Nia gave her coffee and tea. She's still deciding.",
   "tts": "A woman in a cream hoodie walked into Dry Creek this afternoon and asked Nia if anyone needed a radio fixed. Nia gave her coffee and tea. She's still deciding.",
+  "where": "src/content/story.ts"
+ },
+ {
+  "key": "19qiq01",
+  "voice": "af_sarah",
+  "fx": "radio",
+  "speed": 0.97,
+  "speaker": "Mara Voss",
+  "words": "Agnes Price. She built every one of them, Tanner's garage to Kit's fort, and then she sat under our forecourt and listened to us ration water.",
+  "tts": "Agnes Price. She built every one of them, Tanner's garage to Kit's fort, and then she sat under our forecourt and listened to us ration water.",
   "where": "src/content/story.ts"
  },
  {
@@ -8188,6 +8738,16 @@
   "words": "Bunkrly never sold bunkers. It resold seats in Apex Vault, and Vesper Kade only takes payment in water. Every jug SeedBot lifted off our road went west, to keep Tanner on her waitlist. He's number four thousand and twelve. He was never getting in.",
   "tts": "Bunker dot lee never sold bunkers. It resold seats in Apex Vault, and Vesper Kade only takes payment in water. Every jug Seed Bot lifted off our road went west, to keep Tanner on her waitlist. He's number four thousand and twelve. He was never getting in.",
   "where": "src/content/story.ts"
+ },
+ {
+  "key": "1h2oe7g",
+  "voice": "af_sarah",
+  "fx": "radio",
+  "speed": 0.97,
+  "speaker": "Mara Voss",
+  "words": "Come up the ladder and come to the fire. I want to hear it from you, not from the band.",
+  "tts": "Come up the ladder and come to the fire. I want to hear it from you, not from the band.",
+  "where": "src/content/quests.ts"
  },
  {
   "key": "1ot10w3",
@@ -8490,6 +9050,16 @@
   "where": "src/content/story.ts"
  },
  {
+  "key": "0ncjyvw",
+  "voice": "af_sarah",
+  "fx": "radio",
+  "speed": 0.97,
+  "speaker": "Mara Voss",
+  "words": "I don't remember signing it. I signed a lot of things that year. Hollis says the diesel manway by the store has a padlock with four dials on it, and he's parked on it for three years. Open it. Be careful. Mara, out.",
+  "tts": "I don't remember signing it. I signed a lot of things that year. Hollis says the diesel manway by the store has a padlock with four dials on it, and he's parked on it for three years. Open it. Be careful. Mara, out.",
+  "where": "src/content/story.ts"
+ },
+ {
   "key": "1p6rxwe",
   "voice": "af_sarah",
   "fx": "radio",
@@ -8517,6 +9087,16 @@
   "speaker": "Mara Voss",
   "words": "If you can hear this, you're still outside. Good. That's the job. Day 1,284 after the Pivot. Last Chance has three days of water, if Pip counts generously. Tanner Pivotson's drone has been lifting our jugs off the highway all week.",
   "tts": "If you can hear this, you're still outside. Good. That's the job. Day 1,284 after the Pivot. Last Chance has three days of water, if Pip counts generously. Tanner Pivotson's drone has been lifting our jugs off the highway all week.",
+  "where": "src/content/story.ts"
+ },
+ {
+  "key": "1drsws4",
+  "voice": "af_sarah",
+  "fx": "radio",
+  "speed": 0.97,
+  "speaker": "Mara Voss",
+  "words": "If you want me, I'm by the fire. I'm always by the fire. Mara, out.",
+  "tts": "If you want me, I'm by the fire. I'm always by the fire. Mara, out.",
   "where": "src/content/story.ts"
  },
  {
@@ -8577,6 +9157,16 @@
   "speaker": "Mara Voss",
   "words": "Kit Szabo is the last of them. Her Fortress is under the southern range, between Photon Park and the mesa. Lattice's road leaves the highway east of here. Dez says you'll see the steam off the moat before anything else. Mara, out.",
   "tts": "Kit Szabo is the last of them. Her Fortress is under the southern range, between Photon Park and the mesa. Lattice's road leaves the highway east of here. Dez says you'll see the steam off the moat before anything else. Mara, out.",
+  "where": "src/content/story.ts"
+ },
+ {
+  "key": "1qzm80z",
+  "voice": "af_sarah",
+  "fx": "radio",
+  "speed": 0.97,
+  "speaker": "Mara Voss",
+  "words": "Last Chance has a bunker now. Dry Creek asked on the band who decides who comes down. I said I do. I heard myself say it.",
+  "tts": "Last Chance has a bunker now. Dry Creek asked on the band who decides who comes down. I said I do. I heard myself say it.",
   "where": "src/content/story.ts"
  },
  {
@@ -8760,6 +9350,16 @@
   "where": "src/content/archetypes.ts"
  },
  {
+  "key": "045jghz",
+  "voice": "af_sarah",
+  "fx": "radio",
+  "speed": 0.97,
+  "speaker": "Mara Voss",
+  "words": "Pip counted the line at the standpipe this morning. Forty-one. She says it's the first number in three years she was glad to see go up.",
+  "tts": "Pip counted the line at the standpipe this morning. Forty-one. She says it's the first number in three years she was glad to see go up.",
+  "where": "src/content/story.ts"
+ },
+ {
   "key": "1fkq9bk",
   "voice": "af_sarah",
   "fx": "radio",
@@ -8840,6 +9440,16 @@
   "where": "src/content/story.ts"
  },
  {
+  "key": "00sruee",
+  "voice": "af_sarah",
+  "fx": "radio",
+  "speed": 0.97,
+  "speaker": "Mara Voss",
+  "words": "She was under us the whole time. Three and a half years, listening to Pip count the jugs. I want to be angry, and I am. I also think I'd have done the same, and that's worse.",
+  "tts": "She was under us the whole time. Three and a half years, listening to Pip count the jugs. I want to be angry, and I am. I also think I'd have done the same, and that's worse.",
+  "where": "src/content/story.ts"
+ },
+ {
   "key": "14e40j7",
   "voice": "af_sarah",
   "fx": "radio",
@@ -8890,13 +9500,13 @@
   "where": "src/content/story.ts"
  },
  {
-  "key": "08tnk2g",
+  "key": "0fswrgf",
   "voice": "af_sarah",
   "fx": "radio",
   "speed": 0.97,
   "speaker": "Mara Voss",
-  "words": "That was the last of the founders' bunkers, Dez says. He also says there's something on the band he can't place. When he can, I'll call you. Mara, out.",
-  "tts": "That was the last of the founders' bunkers, Dez says. He also says there's something on the band he can't place. When he can, I'll call you. Mara, out.",
+  "words": "That's Act Eight. That's every door in the valley. Sleep, and nobody has to sit up with the water tonight.",
+  "tts": "That's Act Eight. That's every door in the valley. Sleep, and nobody has to sit up with the water tonight.",
   "where": "src/content/story.ts"
  },
  {
@@ -9040,6 +9650,16 @@
   "where": "src/content/story.ts"
  },
  {
+  "key": "0mjar52",
+  "voice": "af_sarah",
+  "fx": "radio",
+  "speed": 0.97,
+  "speaker": "Mara Voss",
+  "words": "The key's on my string, next to the permit. Neither of them weighs anything, and I keep checking they're there.",
+  "tts": "The key's on my string, next to the permit. Neither of them weighs anything, and I keep checking they're there.",
+  "where": "src/content/story.ts"
+ },
+ {
   "key": "0kz1wet",
   "voice": "af_sarah",
   "fx": "radio",
@@ -9087,6 +9707,16 @@
   "speaker": "Mara Voss",
   "words": "The lights at the pumps came on by themselves at nine. Pip screamed. Then Hollis found a cable running into the dark toward the southern range, and a rack of batteries charging on the end of it.",
   "tts": "The lights at the pumps came on by themselves at nine. Pip screamed. Then Hollis found a cable running into the dark toward the southern range, and a rack of batteries charging on the end of it.",
+  "where": "src/content/story.ts"
+ },
+ {
+  "key": "19lqhqy",
+  "voice": "af_sarah",
+  "fx": "radio",
+  "speed": 0.97,
+  "speaker": "Mara Voss",
+  "words": "The manway is east of the store, where Hollis parks. Four dials. The permit says the bore goes down two thousand one hundred feet. Mara, out.",
+  "tts": "The manway is east of the store, where Hollis parks. Four dials. The permit says the bore goes down two thousand one hundred feet. Mara, out.",
   "where": "src/content/story.ts"
  },
  {
@@ -9180,6 +9810,26 @@
   "where": "src/content/story.ts"
  },
  {
+  "key": "121pcnr",
+  "voice": "af_sarah",
+  "fx": "radio",
+  "speed": 0.97,
+  "speaker": "Mara Voss",
+  "words": "There's a standpipe on the forecourt and a line of people at it. Pip tried to start a ledger, and Hollis took the pencil off her.",
+  "tts": "There's a standpipe on the forecourt and a line of people at it. Pip tried to start a ledger, and Hollis took the pencil off her.",
+  "where": "src/content/story.ts"
+ },
+ {
+  "key": "1jc0rpm",
+  "voice": "af_sarah",
+  "fx": "radio",
+  "speed": 0.97,
+  "speaker": "Mara Voss",
+  "words": "There's a woman on it every night at ten past two, reading out door specifications. Hinges, bolts, the depth of a bore. Last night she read one I know. County water, permit nought nought nought one, a test bore at Last Chance Gas, two thousand one hundred feet. I signed it.",
+  "tts": "There's a woman on it every night at ten past two, reading out door specifications. Hinges, bolts, the depth of a bore. Last night she read one I know. County water, permit nought nought nought one, a test bore at Last Chance Gas, two thousand one hundred feet. I signed it.",
+  "where": "src/content/story.ts"
+ },
+ {
   "key": "077wov8",
   "voice": "af_sarah",
   "fx": "radio",
@@ -9188,6 +9838,26 @@
   "words": "Thirty people on that floor when the doors locked, and four left. Making rate for water. I keep doing the subtraction.",
   "tts": "Thirty people on that floor when the doors locked, and four left. Making rate for water. I keep doing the subtraction.",
   "where": "src/content/story.ts"
+ },
+ {
+  "key": "0g4a0ba",
+  "voice": "af_sarah",
+  "fx": "radio",
+  "speed": 0.97,
+  "speaker": "Mara Voss",
+  "words": "This is Mara. Bring it up. I'll put it on the string with the permit.",
+  "tts": "This is Mara. Bring it up. I'll put it on the string with the permit.",
+  "where": "src/content/bunkers/zero.ts"
+ },
+ {
+  "key": "0b3yyr5",
+  "voice": "af_sarah",
+  "fx": "radio",
+  "speed": 0.97,
+  "speaker": "Mara Voss",
+  "words": "This is Mara. There's water coming out of the forecourt. Hollis is standing in it with his boots on.",
+  "tts": "This is Mara. There's water coming out of the forecourt. Hollis is standing in it with his boots on.",
+  "where": "src/content/bunkers/zero.ts"
  },
  {
   "key": "07qt6cq",
@@ -9230,6 +9900,16 @@
   "where": "src/content/story.ts"
  },
  {
+  "key": "1dlhiaz",
+  "voice": "af_sarah",
+  "fx": "radio",
+  "speed": 0.97,
+  "speaker": "Mara Voss",
+  "words": "Waitlist City is walking south, a few at a time. Zero has two hundred bunks, and Agnes says the well can take more than that. We'll find out.",
+  "tts": "Waitlist City is walking south, a few at a time. Zero has two hundred bunks, and Agnes says the well can take more than that. We'll find out.",
+  "where": "src/content/story.ts"
+ },
+ {
   "key": "0cs45p1",
   "voice": "af_sarah",
   "fx": "radio",
@@ -9248,6 +9928,16 @@
   "words": "We drink. I'll hate it every single time.",
   "tts": "We drink. I'll hate it every single time.",
   "where": "src/content/story.ts"
+ },
+ {
+  "key": "0xeaiyk",
+  "voice": "af_sarah",
+  "fx": "radio",
+  "speed": 0.97,
+  "speaker": "Mara Voss",
+  "words": "What was that? Was that the forecourt? Somebody tell me that wasn't the forecourt.",
+  "tts": "What was that? Was that the forecourt? Somebody tell me that wasn't the forecourt.",
+  "where": "src/content/bunkers/zero.ts"
  },
  {
   "key": "1kt2ew8",
@@ -10688,6 +11378,26 @@
   "words": "THE OTHER COLUMN is four pages now. I'm practising the voices for the trial.",
   "tts": "The Other Column is four pages now. I'm practising the voices for the trial.",
   "where": "src/content/camp.ts"
+ },
+ {
+  "key": "1lkk3vk",
+  "voice": "af_sky",
+  "fx": "radio",
+  "speed": 1.02,
+  "speaker": "Pip Okafor",
+  "words": "Two and a tin. Mara counted them and then I counted them. Sign here.",
+  "tts": "Two and a tin. Mara counted them and then I counted them. Sign here.",
+  "where": "src/content/bunkers/zero.ts"
+ },
+ {
+  "key": "1a10edd",
+  "voice": "af_sky",
+  "fx": "radio",
+  "speed": 1.02,
+  "speaker": "Pip Okafor",
+  "words": "Two for you, and I'm not writing it down. I'm not writing any of it down any more.",
+  "tts": "Two for you, and I'm not writing it down. I'm not writing any of it down any more.",
+  "where": "src/content/bunkers/zero.ts"
  },
  {
   "key": "0lr5omb",

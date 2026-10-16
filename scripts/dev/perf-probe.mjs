@@ -13,7 +13,8 @@
 // Spots: camp (night, fire), creek (Dry Creek noon), highway (noon), garage (inside), fight, wolves,
 // wellhead / wellheadNight (from Dry Creek, ~150 m from the Kade Wellhead outpost), spireRoad / spireCourt /
 // spireNight / spireLobby (the Alignment Spire), domeRoad / domeYard / domeInside / domeNight, cathRoad / cathLot /
-// cathInside / cathNight (the Cloud Cathedral), fortQueue / fortYard / fortVault / fortNight (the Chip Fortress), panValley (the Panopticon's valley, for comparison).
+// cathInside / cathNight (the Cloud Cathedral), fortQueue / fortYard / fortVault / fortNight (the Chip Fortress),
+// zeroForecourt / zeroShowroom / zeroHall / zeroDorm (Bunker Zero), panValley (the Panopticon's valley, for comparison).
 import fs from 'node:fs';
 import path from 'node:path';
 import { launch, waitForGame } from './browser.mjs';
@@ -86,6 +87,15 @@ const SPOTS = {
     game.cam.snap(Math.PI, 0.05); }`,
   fortNight: `{ const o = game.fortress.b.origin; tp(o.x + 25, o.z - 55); game.atmo.hour = 21.8; await next();
     game.cam.snap(Math.atan2(25, 55), 0.12); }`,
+  // Bunker Zero (Tier 8): the forecourt by the manway, the showroom, the well hall, the dormitory
+  zeroForecourt: `{ const o = game.zero.b.origin; tp(o.x + 3, o.z + 6); game.atmo.hour = 16.5; await next();
+    game.cam.snap(Math.atan2(-3, -6) + Math.PI, 0.05); }`,
+  zeroShowroom: `{ const o = game.zero.b.origin; game.player.teleport(o.clone().add({ x: 0, y: -25.9, z: -5.6 })); game.atmo.hour = 16.5; await next();
+    game.cam.snap(0, 0.02); }`,
+  zeroHall: `{ const o = game.zero.b.origin; game.state.set('zero.zero.open'); game.zero.applyFlags(true); game.player.teleport(o.clone().add({ x: -1.5, y: -25.9, z: -48.5 })); game.atmo.hour = 16.5; await next();
+    game.cam.snap(-0.25, 0.05); }`,
+  zeroDorm: `{ const o = game.zero.b.origin; game.player.teleport(o.clone().add({ x: 0, y: -25.9, z: -66 })); game.atmo.hour = 16.5; await next();
+    game.cam.snap(0, 0); }`,
   panValley: `{ const o = game.panopticon.b.origin; tp(o.x + 4, o.z + 70); game.atmo.hour = 16.5; await next();
     game.cam.snap(0, 0.08); }`,
   wolves: `{ tp(-60, 180); game.atmo.hour = 10; await next(); game.cam.snap(0, -0.03); await next();

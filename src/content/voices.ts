@@ -72,6 +72,12 @@ export const CAST: Record<string, CastVoice> = {
   kit: { voice: 'af_nova', fx: 'room', speed: 0.97 },
   'marek kowal': { voice: 'bm_daniel', fx: 'radio', speed: 0.94 },
   'cooling tech': { voice: 'am_michael', fx: 'radio', speed: 1.0 },
+  // Bunker Zero (content/bunkers/zero.ts): Agnes over the PA and at her drafting table (every Kokoro
+  // woman is taken, so she's a blend: generate.py averages the styles), and the Doormen, who are
+  // Ascend Helpers she bought from Hunter
+  'agnes price': { voice: 'af_nicole*0.75+am_santa*0.25', fx: 'pa', speed: 0.92 },
+  agnes: { voice: 'af_nicole*0.75+am_santa*0.25', fx: 'room', speed: 0.9 },
+  'deepwell doorman': { voice: 'am_eric', fx: 'bot', speed: 1.0 },
 };
 
 const ALIAS: Record<string, string> = { mara: 'mara voss' };

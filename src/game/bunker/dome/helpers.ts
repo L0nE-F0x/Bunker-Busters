@@ -230,6 +230,17 @@ export class Helper implements Hostile {
     this.seen = 0;
   }
 
+  /** Power back on after `standDown` said 'off' (Bunker Zero's board): it gets up and goes back to its route. */
+  wake() {
+    if (this.state !== 'off') return;
+    this.state = 'back';
+    this.alive = true;
+    this.hp = 60;
+    this.seen = 0;
+    this.trail = [];
+    this.animMoving = null;
+  }
+
   /** Drop it where it stands (shot, EMP). */
   knock(how: 'shot' | 'emp', dur: number) {
     if (this.state === 'down' || this.state === 'off') return;

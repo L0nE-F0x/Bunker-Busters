@@ -41,6 +41,10 @@ export const DAEMONS: Record<string, DaemonDef> = {
   bridge: { id: 'bridge', name: 'GATE · LOWER BRIDGE', blurb: 'The winch pays out and the drawbridge comes down across the moat.' },
   thermcams: { id: 'thermcams', name: 'THERMAL · RECALIBRATE', blurb: 'Every thermal camera re-zeros on the coolant and sees nothing warmer than minus forty.' },
   keepdoor: { id: 'keepdoor', name: 'KEEP · OPEN', blurb: 'The keep door unlocks. The log says Marek did it.' },
+  // --- Bunker Zero: the clock gate, Model Zero, the Doormen
+  clockgate: { id: 'clockgate', name: 'GATE · HOLD OPEN', blurb: 'The clock gate slides into the wall and stays there. The flip clock keeps the time.' },
+  zerodoor: { id: 'zerodoor', name: 'MODEL ZERO · RELEASE', blurb: 'Model Zero\'s eighth cylinder turns without its power, and the door swings out of the rock.' },
+  doormen: { id: 'doormen', name: 'DOORMEN · CHARGE CYCLE', blurb: 'Both Doormen get a message that their batteries are low, and sit down where they are.' },
   // --- the Cloud Cathedral: the returns kiosk, the swarm, the floor, the office
   returnslabel: { id: 'returnslabel', name: 'RETURNS · PRINT LABEL', blurb: 'The kiosk prints a return label for a tote with nothing in it yet.' },
   swarm: { id: 'swarm', name: 'SWARM · RETURN TO BASE', blurb: 'Every drone over the lot flies home to the bell tower and lands for maintenance.' },

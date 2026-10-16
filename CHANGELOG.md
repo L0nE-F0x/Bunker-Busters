@@ -4,6 +4,9 @@ Each `## vX.Y.Z` section becomes the GitHub release notes and the "what's new" l
 update notice (the first few bullets). `scripts/release.sh` refuses to release a version without one.
 
 ## v0.10.0
+- **The story is finished.** Act VIII: Dez finally places the carrier he couldn't find, and it's under the camp. Bunker Zero is sixty rungs below the forecourt at Last Chance, built by the woman who built every other bunker in the valley. Raise Mara after the Fortress's debrief to start it
+- **The showroom.** Every founder's defences as they were first drawn: Tanner's tin-can tripwires, Ezra's cameras, Prudence's laser grid, Vesper's airlock (the code is the time on the clock over it), and two polite Doormen who walk you back to the ladder. At the end, a board with four units of power and a round door that wants two. Each display has a placard with the change orders the founder signed, which are the ways you got in
+- **Who gets the well.** Keep the master key and Zero belongs to Last Chance, or break it and send the well up to a standpipe on the forecourt for anyone who walks up the highway. Either way the camp drinks every day afterwards, and Mara's last debrief ends the story. The valley stays open: keep playing as long as you like
 - **The Cloud Cathedral is open.** Act VI: Orrin Sayle's fulfilment centre in the north basin, built like a cathedral, with a rose window that tells the time and a bell tower that launches delivery drones. Dropt's road leaves the highway east of Recovery Point 7
 - **The swarm.** Drones circle the lot and tag anyone they see as a delivery address. The rest come, and enough of them together carry you back to the edge of the lot. Hide under the vans and the awnings, shoot them down, ground them at the tower, or carry Rider 9's open order and they'll let you be
 - **Ride in as a return.** The returns kiosk takes an order number, and you ride the line in a tote over the aisle and into the heart of the building. Or go in through the dock, where robots shuffle the shelving cell by cell and stop for anything in their way
@@ -11,7 +14,8 @@ update notice (the first few bullets). `scripts/release.sh` refuses to release a
 - **Three units of power.** The Fortress's board runs the chillers, a laser grid, the lights and the vault door, and there isn't enough for all of them. Choose what to switch off
 - **Two endings each.** Shut the Cathedral and let the night shift walk out, or hand it to them and get a delivery at camp every morning. Cook Kit's nine months of chips, or send the Fortress's power to the camps
 - **New people.** Orrin and the four associates still on the shift that started on Pivot Day, led by Lo; Kit, waiting for the price to peak, and Marek's technicians on one unit of heat a day. Lo comes to the camp if she walks out
-- **More voices.** 147 new lines for Orrin, Lo, the associates, the drones, Kit, Marek and the technicians, and Mara's two debriefs
+- **New people.** Agnes Price, the builder, at her drafting table by the well, and her two Doormen
+- **More voices.** 218 new lines for Orrin, Lo, the associates, the drones, Kit, Marek, the technicians, Agnes and the Doormen, and Mara's three debriefs
 
 ## v0.9.0
 - **The Singularity Dome is open.** Act V plays to the end: past the 5G tower, Ascend's drive carries on south to Hunter Vale's glass dome on the shelf under the striped range, with two cooling towers steaming beside it. At night it glows blue from across the valley. Mara debriefs you at the fire and names the founders who are left

@@ -462,6 +462,63 @@ export const QUESTS: QuestDef[] = [
       text: 'Dez says the steam over the southern range looks different tonight. Come back to the fire and raise me.',
     },
   },
+  {
+    id: 'act8',
+    kind: 'main',
+    title: 'Act VIII · Bunker Zero',
+    giver: 'mara',
+    where: 'Under Last Chance',
+    blurb:
+      'Dez placed the carrier he couldn\'t find: it comes up out of the ground under the forecourt. A woman reads door specifications on it every night at ten past two, and one of them was a permit Mara signed for a bore at Last Chance Gas, two thousand one hundred feet deep. Whoever is down there built more than a well.',
+    start: (v) => v.has('zero.known'),
+    steps: [
+      {
+        id: 'hatch', text: 'Open the manway on the forecourt', at: 'zero',
+        hint: 'East of the store, where Hollis parks. The padlock has four dials, and Mara\'s permit has the bore\'s depth. Or pick it, or blow it in the middle of the camp.',
+        done: (v) => any(v, 'zero.hatch.open', 'zero.complete'),
+      },
+      {
+        id: 'down', text: 'Climb down', at: 'zero',
+        hint: 'Sixty rungs from the manway. The door at the bottom isn\'t locked.',
+        done: (v) => any(v, 'zero.door61.open', 'zero.complete'),
+      },
+      {
+        id: 'gate', text: 'Get through the clock gate', at: 'zero',
+        hint: 'Halfway down the showroom. Its keypad takes the time on the flip clock over it, hours and minutes. Or short it (Electronics 3), SPLICE it (Electronics 4), or blow it.',
+        done: (v) => any(v, 'zero.clock.open', 'zero.complete'),
+      },
+      {
+        id: 'bays', text: 'Read the change orders', optional: true, at: 'zero',
+        hint: 'On the placards in front of each display in the showroom, one for each founder.',
+        done: (v) => ['garage', 'apex', 'panopticon', 'spire', 'dome', 'cathedral', 'fortress'].every((b) => v.has(`zero.bay.${b}`)),
+      },
+      {
+        id: 'vault', text: 'Power Model Zero', at: 'zero',
+        hint: 'The board is in the room off the east wall, at the far end of the showroom. It has four units and Model Zero needs two, so switch off what you can get past without.',
+        done: (v) => any(v, 'zero.zero.open', 'zero.complete'),
+      },
+      {
+        id: 'agnes', text: 'Talk to the builder', at: 'zero',
+        hint: 'In the glass booth by the well, at her drafting table.',
+        done: (v) => v.has('zero.agnes'),
+      },
+      {
+        id: 'end', text: 'Decide who Zero belongs to', at: 'zero',
+        hint: 'At the master board behind Agnes. Keep the key for Last Chance, or break it and send the well up to the forecourt (ask her about the well first).',
+        done: (v) => v.has('zero.end'),
+      },
+      {
+        id: 'loot', text: 'Take the water', at: 'zero',
+        hint: 'The cistern, the stores and Agnes\'s plan chest are in the well hall. The water comes with you even if your pack is full.',
+        done: (v) => v.has('zero.complete'),
+      },
+    ],
+    reward: { xp: 1000, items: [{ id: 'water', qty: 4 }, { id: 'ration', qty: 2 }, { id: 'medkit', qty: 2 }], rep: { compact: 2, mara: 2 } },
+    wrap: {
+      speaker: 'Mara Voss',
+      text: 'Come up the ladder and come to the fire. I want to hear it from you, not from the band.',
+    },
+  },
 
   // ------------------------------------------------------------------ Dry Creek
   {

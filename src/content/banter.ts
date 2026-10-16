@@ -142,6 +142,12 @@ export const BANTER: Banter[] = [
     text: 'That white needle on the bench is the real one. The light on top is green. Let\'s try to keep it that way.',
   },
   {
+    id: 'zero', speaker: 'Mara',
+    near: { x: -142.5, z: 125.4, r: 14 },
+    when: (v) => v.has('zero.known') && !v.has('zero.hatch.open'),
+    text: 'That\'s the manway. Hollis has had his truck on it since the day we got here. Four dials.',
+  },
+  {
     id: 'fortress', speaker: 'Mara',
     near: { x: -127, z: 324, r: 170 },
     when: (v) => v.has('act6.debriefed') && !v.has('seen:fortress'),

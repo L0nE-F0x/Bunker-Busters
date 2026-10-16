@@ -49,6 +49,13 @@ const WORLD = [
   ['combat', `(() => { const g = window.game; g.hands.root.visible = true; g.weather.storm(0, true); g.combat.difficulty = 'story'; setInterval(() => { g.state.data.health = 100; g.post.damage.value = 0; }, 16); g.state.addItem('rifle', 1, true, true); g.state.addItem('ammo3030', 30, true, true); g.state.data.arms.mags.rifle = 7; g.arms.equip('rifle'); const p = g.player.position.clone(); p.x = -60; p.z = 40; p.y = g.hf.heightAt(p.x, p.z) + 0.2; g.player.teleport(p); g.cam.snap(0.6, -0.04); g.atmo.hour = 17.45; g.envTimer = 0; setTimeout(() => g.recovery.summon(g.player.position, g.cam.yaw, 14, 4, true), 400); })()`, 3400],
 ];
 
+// Bunker Zero is under the ground: the player's own camera (interior mode needs play), Model Zero at the end
+// of the showroom with all seven founders' lamps green, the bays down both walls
+WORLD.push(['place-zero', `(() => { const g = window.game; g.hands.root.visible = false; g.arms?.equip?.(null, true); g.weather.storm(0, true); const z = g.zero;
+  for (const d of z.doormen.list) d.update = () => {};
+  for (const f of ['garage.complete', 'apex.complete', 'panopticon.complete', 'spire.complete', 'dome.complete', 'cathedral.complete', 'fortress.complete', 'zero.known', 'zero.hatch.open', 'zero.door61.open', 'zero.showroom.said']) g.state.set(f);
+  z.applyFlags(true); g.atmo.hour = 16; const o = z.b.origin; g.player.teleport(o.clone().add({ x: 0.4, y: -25.9, z: -33.0 })); setTimeout(() => g.cam.snap(0.02, 0.09), 60); })()`, 5000]);
+
 // Free camera in world space (from a running game): eye/target x, z, height above the ground at each
 const free = (eye, at, fov, hour, cover = 0.55) => `(() => {
   const g = window.game; g.arms?.equip?.(null, true); g.hands.root.visible = false; g.mode = 'cine'; g.weather.storm(0, true); g.atmo.hour = ${hour}; g.atmo.paused = true; g.atmo.cloudCover = ${cover}; g.envTimer = 0;

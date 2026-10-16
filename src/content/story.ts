@@ -59,6 +59,28 @@ export function briefingFor(a: ArchetypeDef): StoryPage[] {
  */
 export function campRadio(v: StoryView): { pages: StoryPage[]; flags: string[] } {
   const a = v.archetype;
+  // Act VIII's debrief: the well, Agnes, and who Zero belongs to. Then the end
+  if (v.has('zero.complete') && v.has('zero.end') && !v.has('act8.debriefed')) return { pages: zeroDebrief(v), flags: ['act8.debriefed'] };
+  if (v.has('act8.debriefed')) {
+    return {
+      pages: [
+        v.has('zero.end.keep')
+          ? { speaker: 'Mara Voss', text: 'A man from Dry Creek came down the ladder today and asked for a bunk. I said yes. I\'m keeping a list now. I hate that I\'m keeping a list.' }
+          : { speaker: 'Mara Voss', text: 'Pip counted the line at the standpipe this morning. Forty-one. She says it\'s the first number in three years she was glad to see go up.' },
+        { speaker: 'Mara Voss', text: 'If you want me, I\'m by the fire. I\'m always by the fire. Mara, out.' },
+      ],
+      flags: [],
+    };
+  }
+  // Act VIII: Dez places the carrier, and it's under the forecourt
+  if (v.has('zero.known')) {
+    return {
+      pages: [
+        { speaker: 'Mara Voss', text: 'The manway is east of the store, where Hollis parks. Four dials. The permit says the bore goes down two thousand one hundred feet. Mara, out.' },
+      ],
+      flags: [],
+    };
+  }
   // Act VII's debrief: the moat, the board, and where the Fortress's power goes
   if (v.has('fortress.complete') && v.has('fortress.end') && !v.has('act7.debriefed')) return { pages: fortressDebrief(v), flags: ['act7.debriefed'] };
   if (v.has('act7.debriefed')) {
@@ -67,9 +89,11 @@ export function campRadio(v: StoryView): { pages: StoryPage[]; flags: string[] }
         v.has('fortress.end.realloc')
           ? { speaker: 'Mara Voss', text: 'Doc has his fridge running again. He put the antivenom in it, then stood there with the door open, listening to it hum.' }
           : { speaker: 'Mara Voss', text: 'Hollis walked out to the Cut this morning. He says the seep is running, and he drank from it with his hands like a kid.' },
-        { speaker: 'Mara Voss', text: 'That was the last of the founders\' bunkers, Dez says. He also says there\'s something on the band he can\'t place. When he can, I\'ll call you. Mara, out.' },
+        { speaker: 'Dez Marlow', text: 'I placed it. The carrier I couldn\'t find. The needle pins when I point the aerial at the ground. It\'s under us. It\'s under the forecourt.' },
+        { speaker: 'Mara Voss', text: 'There\'s a woman on it every night at ten past two, reading out door specifications. Hinges, bolts, the depth of a bore. Last night she read one I know. County water, permit nought nought nought one, a test bore at Last Chance Gas, two thousand one hundred feet. I signed it.' },
+        { speaker: 'Mara Voss', text: 'I don\'t remember signing it. I signed a lot of things that year. Hollis says the diesel manway by the store has a padlock with four dials on it, and he\'s parked on it for three years. Open it. Be careful. Mara, out.' },
       ],
-      flags: [],
+      flags: ['zero.known', 'zero.permit', 'zero.marker'],
     };
   }
   // Act VI's debrief: the shift, how you got in, and who the Cathedral belongs to now
@@ -427,6 +451,23 @@ export function journalEntries(v: StoryView): JournalEntry[] {
   add('dome.proof', 'Fifty-eight percent', 'You played Hunter\'s last memo to the twin. The gate matched it to the forty-one visitors it turned away. It had locked its founder out and filed him as an impostor.');
   add('dome.end.plug', 'The plug', 'You pulled the Cluster\'s breaker. The twin thanked the team. The Dome is dark, the towers have stopped, and the pumps under the shelf don\'t run any more.');
   add('dome.end.job', 'A new job', 'OBJECTIVE = KEEP THE VALLEY ALIVE. The twin still runs the Dome, and a Helper brings two jugs and a battery to the camp every morning. Nobody wrote it any terms.');
+  add('zero.known', 'The carrier under the forecourt', 'Dez placed the carrier he couldn\'t find: it comes up out of the ground under Last Chance. A woman reads door specifications on it at ten past two. One of them was a permit Mara signed.');
+  add('zero.permit', 'Permit 0001', 'County water, test bore at Last Chance Gas, 2,100 feet, approved M. Voss. The manway by the store has a padlock with four dials.');
+  add('seen:zero', 'Bunker Zero', 'Sixty rungs under the forecourt: a fallout shelter from 1961, then a showroom of every bunker in the valley as it was first drawn. Deepwell Shelter Systems built all of them.');
+  add('zero.bay.garage', 'Job 0412', 'Tanner deleted the north-east fence, swapped the drone for a refurb at 12% battery, and set his own vault code. He signed for all three.');
+  add('zero.bay.apex', 'Job 0430', 'Vesper wanted one airlock code, rotating with her launch clock. Deepwell advised against it, in writing.');
+  add('zero.bay.panopticon', 'Job 0447', 'Ezra deleted his operators and put every camera on one loop through the lamp room, so he could watch it all himself.');
+  add('zero.bay.spire', 'Job 0455', 'Prudence moved the grid\'s junction box into the hall "for transparency", with a forty-page policy attached.');
+  add('zero.bay.dome', 'Job 0461', 'Hunter deleted the Dome\'s shutters and keyed the gate to his voice alone. Paid in full in advance. The keys were never collected.');
+  add('zero.bay.cathedral', 'Job 0470', 'Orrin had the returns kiosk open the building to any valid order number, and the dock open for any pallet.');
+  add('zero.bay.fortress', 'Job 0478', 'Kit wanted a moat of whatever cost the most, one power supply, and a board of three units. "People will have to choose. That\'s the product."');
+  add('zero.clock.read', 'Prototype 3', 'The clock gate in Zero\'s showroom is Vesper\'s airlock as first drawn: the code is the time on the flip clock over it, hours and minutes.');
+  add('zero.vault.powered', 'Four units', 'Zero\'s board has four units. The cameras, the grid, the Doormen and the lights take one each, and Model Zero takes two.');
+  add('zero.agnes', 'The builder', 'Agnes Price, Deepwell Shelter Systems. She built every founder\'s bunker, padded every change order by eleven percent, and spent it on a well, a cistern and two hundred bunks under Last Chance.');
+  add('zero.agnes.why', 'Two hundred bunks', 'On the day of the Pivot, Agnes came down to open Zero and couldn\'t choose who got the bunks. So she chose nobody, and waited for someone who could get through every door she ever built.');
+  add('zero.end.keep', 'The key on the string', 'You took Agnes\'s master key home. It hangs on Mara\'s string next to the permit. Zero belongs to Last Chance, and Last Chance decides who comes down the ladder.');
+  add('zero.end.open', 'Anyone\'s', 'You broke the master key in the ZERO switch and sent the well up the surface line. There\'s a standpipe on the forecourt now, and nobody can lock Zero again.');
+  add('zero.complete', 'The well hall', 'A wellhead in the middle of a round hall, a cistern of 180,000 litres, ten years of stores, and two hundred bunks running north into the dark.');
   add('seen:fortress', 'The Chip Fortress', 'A black star fort in the basin under the southern range, inside a moat of coolant that never stops steaming. A queue of empty camping chairs at the gate. Kit Szabo\'s, and Lattice\'s.');
   add('fortress.queue', 'The list price', 'A note on a chair in the allocation queue: the gate code is the list price. Nobody in the queue ever paid list. It was 1,599.');
   add('fortress.swam', 'Minus forty', 'You swam the moat. It burned. Out of it you were as cold as the walls, and for a while the thermal cameras couldn\'t see you. Steps are cut into the walls, east and west.');
@@ -645,6 +686,31 @@ export function cathedralDebrief(v: StoryView): StoryPage[] {
 }
 
 /**
+ * Act VIII's debrief at the fire, after Bunker Zero: who it belongs to, Agnes, how you got down, and
+ * the end of the story (the valley stays open: you can keep playing).
+ */
+export function zeroDebrief(v: StoryView): StoryPage[] {
+  const first = v.archetype.name.split(' ')[0];
+  const keep = v.has('zero.end.keep');
+  const pages: StoryPage[] = [
+    keep
+      ? { speaker: 'Mara Voss', text: `${first}. The key's on my string, next to the permit. Neither of them weighs anything, and I keep checking they're there.` }
+      : { speaker: 'Mara Voss', text: `${first}. There's a standpipe on the forecourt and a line of people at it. Pip tried to start a ledger, and Hollis took the pencil off her.` },
+  ];
+  if (v.has('zero.agnes.why')) pages.push({ speaker: 'Mara Voss', text: 'She was under us the whole time. Three and a half years, listening to Pip count the jugs. I want to be angry, and I am. I also think I\'d have done the same, and that\'s worse.' });
+  else pages.push({ speaker: 'Mara Voss', text: 'Agnes Price. She built every one of them, Tanner\'s garage to Kit\'s fort, and then she sat under our forecourt and listened to us ration water.' });
+  pages.push(v.has('zero.loud')
+    ? { speaker: 'Dez Marlow', text: 'We heard her bell come up the vent pipe. Hollis spilled his coffee, and he never spills his coffee.' }
+    : { speaker: 'Dez Marlow', text: 'Four dials and the depth of a well. I\'d have tried my birthday.' });
+  if (v.has('zero.caught')) pages.push({ speaker: 'Dez Marlow', text: 'Agnes says her Doormen walked you back to the ladder. She sounded proud of them.' });
+  pages.push(keep
+    ? { speaker: 'Mara Voss', text: 'Last Chance has a bunker now. Dry Creek asked on the band who decides who comes down. I said I do. I heard myself say it.' }
+    : { speaker: 'Mara Voss', text: 'Waitlist City is walking south, a few at a time. Zero has two hundred bunks, and Agnes says the well can take more than that. We\'ll find out.' });
+  pages.push({ speaker: 'Mara Voss', text: 'That\'s Act Eight. That\'s every door in the valley. Sleep, and nobody has to sit up with the water tonight.' });
+  return pages;
+}
+
+/**
  * Act VII's debrief at the fire, after the Fortress: the moat, how you got across, the technicians,
  * and where the power goes now.
  */
@@ -668,7 +734,10 @@ export function fortressDebrief(v: StoryView): StoryPage[] {
 }
 
 export function storyObjective(v: StoryView): string {
-  if (v.has('act7.debriefed')) return 'Act VII is done. Every founder\'s bunker is open. Dez is listening for something on the band.';
+  if (v.has('act8.debriefed')) return 'Every door in the valley is open. Last Chance is still here, and so are you.';
+  if (v.has('zero.complete') && v.has('zero.end')) return 'Bunker Zero is done. Radio Mara from the campfire.';
+  if (v.has('zero.known')) return 'Act VIII. Bunker Zero is under the forecourt at Last Chance: the diesel manway east of the store.';
+  if (v.has('act7.debriefed')) return 'Act VII is done. Every founder\'s bunker is open. Dez has placed the carrier: raise Mara on the radio.';
   if (v.has('fortress.complete') && v.has('fortress.end')) return 'The Fortress is done. Radio Mara from the campfire.';
   if (v.has('act6.debriefed')) return 'Act VI is done. Kit Szabo\'s Chip Fortress is under the southern range, between Photon Park and the mesa.';
   if (v.has('cathedral.complete') && v.has('cathedral.end')) return 'The Cathedral is done. Radio Mara from the campfire.';

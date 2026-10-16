@@ -55,6 +55,10 @@ export const RUMOURS: Rumour[] = [
     text: 'There\'s a queue outside a fort under the southern range. Camping chairs, a ticket machine, nobody in them. Somebody on the band says he waited there for sixty days for a graphics card. He doesn\'t say if he got one.',
   },
   {
+    id: 'zero', when: (v) => v.has('zero.known') && !v.has('zero.complete'),
+    text: 'Ten past two. She\'s on again. Tonight it was hinges: the weight each one carries, the grease, how often. She sounds like somebody reading to a kid who won\'t sleep. She\'s right under my feet.',
+  },
+  {
     id: 'cathedral', when: (v) => v.has('act5.debriefed') && !v.has('cathedral.complete'),
     text: 'A Dropt drone came over the camp last week with a parcel under it. It went round twice, like it was looking for an address, and flew back north. Pip wants to know what was in the box.',
   },
