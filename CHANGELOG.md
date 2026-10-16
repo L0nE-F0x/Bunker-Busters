@@ -3,6 +3,16 @@
 Each `## vX.Y.Z` section becomes the GitHub release notes and the "what's new" list in the in-app
 update notice (the first few bullets). `scripts/release.sh` refuses to release a version without one.
 
+## v0.10.0
+- **The Cloud Cathedral is open.** Act VI: Orrin Sayle's fulfilment centre in the north basin, built like a cathedral, with a rose window that tells the time and a bell tower that launches delivery drones. Dropt's road leaves the highway east of Recovery Point 7
+- **The swarm.** Drones circle the lot and tag anyone they see as a delivery address. The rest come, and enough of them together carry you back to the edge of the lot. Hide under the vans and the awnings, shoot them down, ground them at the tower, or carry Rider 9's open order and they'll let you be
+- **Ride in as a return.** The returns kiosk takes an order number, and you ride the line in a tote over the aisle and into the heart of the building. Or go in through the dock, where robots shuffle the shelving cell by cell and stop for anything in their way
+- **The Chip Fortress is open.** Act VII: Kit Szabo's black star fort under the southern range, inside a moat of coolant at minus forty. Lower the drawbridge, drain the moat, or swim it and come out too cold for the thermal cameras to see
+- **Three units of power.** The Fortress's board runs the chillers, a laser grid, the lights and the vault door, and there isn't enough for all of them. Choose what to switch off
+- **Two endings each.** Shut the Cathedral and let the night shift walk out, or hand it to them and get a delivery at camp every morning. Cook Kit's nine months of chips, or send the Fortress's power to the camps
+- **New people.** Orrin and the four associates still on the shift that started on Pivot Day, led by Lo; Kit, waiting for the price to peak, and Marek's technicians on one unit of heat a day. Lo comes to the camp if she walks out
+- **More voices.** 147 new lines for Orrin, Lo, the associates, the drones, Kit, Marek and the technicians, and Mara's two debriefs
+
 ## v0.9.0
 - **The Singularity Dome is open.** Act V plays to the end: past the 5G tower, Ascend's drive carries on south to Hunter Vale's glass dome on the shelf under the striped range, with two cooling towers steaming beside it. At night it glows blue from across the valley. Mara debriefs you at the fire and names the founders who are left
 - **It learns.** The founder twin that runs the Dome reads your record before you reach the fence and ships a fix for your favourite trick. Inside, every method you use gets patched: picks stop working, codes rotate, the Helpers get shielding, armour or thermal. Keep changing how you do it, or find the engineer who has to approve every fix
