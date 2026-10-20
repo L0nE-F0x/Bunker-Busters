@@ -441,6 +441,7 @@ export class UI implements UIBridge {
     who.classList.toggle('bot', speaker === 'SeedBot');
     el.querySelector('.line')!.textContent = `“${text}”`;
     el.style.opacity = '1';
+    this.hud?.classList.add('speaking');
     this.subtitleTimer = 3 + text.length * 0.05;
     const id = ++this.subtitleId;
     // keep the line up for as long as it's being said
@@ -532,7 +533,7 @@ export class UI implements UIBridge {
     // subtitle fade
     if (this.subtitleTimer > 0) {
       this.subtitleTimer -= dt;
-      if (this.subtitleTimer <= 0) this.els.subtitle.style.opacity = '0';
+      if (this.subtitleTimer <= 0) { this.els.subtitle.style.opacity = '0'; this.hud.classList.remove('speaking'); }
     }
   }
 

@@ -831,6 +831,8 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #000; color:
 .touch .detect { top: calc(var(--st) + 4px); }
 .touch .detect svg { width: 48px; height: 30px; }
 .touch .banner { top: 20vh; }
+/* (a phone has no room for a place's banner and a spoken line at once: the line wins) */
+.touch .speaking .banner { visibility: hidden; }
 .touch .banner .big { font-size: clamp(34px, 7vw, 72px); }
 .touch .banner .sub { font-size: 13px; }
 .touch .levelup .ring { width: 100px; height: 100px; font-size: 50px; }
