@@ -913,6 +913,41 @@ export class UI implements UIBridge {
     return `<div class="spk ${p.id === 'vesper' ? 'intrude' : ''}">${monogram(p.id, p.name)}<div><b>${esc(p.name)}${intrude}</b><small>${esc(p.role)} · ${esc(radio)}</small></div>${standing}</div>`;
   }
 
+  /** The end of the story: the run's numbers and every door, then back to the valley. */
+  endCard(o: { day: string; lines: string[]; stats: [string, string][]; doors: [string, string][] }): Promise<void> {
+    this.modalOpen = true;
+    this.audio.play('uiConfirm');
+    const ov = h('div', 'overlay endcard');
+    const roman = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII'];
+    ov.innerHTML = `<div class="ec interactive">
+      <div class="kicker">${esc(o.day)} · Last Chance Gas</div>
+      <div class="big">Every door<br>in the valley</div>
+      <div class="rule"></div>
+      ${o.lines.map((l) => `<p>${esc(l)}</p>`).join('')}
+      <div class="stats">${o.stats.map(([v, k]) => `<div><b>${esc(v)}</b><small>${esc(k)}</small></div>`).join('')}</div>
+      <ol class="doors">${o.doors.map(([name, who], i) => `<li style="--i:${i}"><span>${roman[i] ?? i + 1}</span><b>${esc(name)}</b><small>${esc(who)}</small></li>`).join('')}</ol>
+      <div class="foot"><span>Thank you for playing.</span><button class="btn primary next">Back to the valley</button></div>
+    </div>`;
+    this.root.appendChild(ov);
+    return new Promise((resolve) => {
+      const finish = () => {
+        window.removeEventListener('keydown', onKey, true);
+        ov.remove();
+        this.modalOpen = false;
+        resolve();
+      };
+      (ov.querySelector('.next') as HTMLButtonElement).onclick = () => { this.audio.play('ui'); finish(); };
+      const onKey = (e: KeyboardEvent) => {
+        if (e.code !== 'Enter' && e.code !== 'Space' && e.code !== 'Escape' && !binds.is(e.code, 'interact')) return;
+        e.preventDefault();
+        e.stopPropagation();
+        this.audio.play('ui');
+        finish();
+      };
+      window.addEventListener('keydown', onKey, true);
+    });
+  }
+
   /** Mara's radio, and the debrief. Skip still finishes. */
   pages(pages: { speaker: string; text: string }[], doneLabel = 'Step outside'): Promise<void> {
     if (!pages.length) return Promise.resolve();
@@ -938,7 +973,7 @@ export class UI implements UIBridge {
         panel.classList.toggle('intrude', page.speaker.startsWith('Vesper'));
         panel.innerHTML = `<div class="scan"></div>
           ${this.speakerHead(page.speaker)}
-          <p>${esc(page.text)}</p>
+          <p>${esc(page.text).replace(/\n/g, '<br>')}</p>
           <div class="brief-foot">
             <span class="dots">${pages.map((_, k) => `<i class="${k === i ? 'on' : k < i ? 'past' : ''}"></i>`).join('')}</span>
             <span class="btns"><button class="btn skip">Skip</button><button class="btn primary next">${last ? esc(doneLabel) : 'Next'}</button></span>

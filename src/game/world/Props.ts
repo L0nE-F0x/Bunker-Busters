@@ -247,9 +247,9 @@ export class Props {
     variants.forEach((geo, vi) => {
       const mesh = new THREE.InstancedMesh(geo, mat, counts[vi]);
       const all: RockInstance[] = [];
-      let n = 0;
+      let n = 0, skipped = 0;
       let guard = 0;
-      while (n < counts[vi] && guard++ < 20000) {
+      while (n + skipped < counts[vi] && guard++ < 20000) {
         const x = (rand() - 0.5) * this.hf.size * 0.82;
         const z = (rand() - 0.5) * this.hf.size * 0.82;
         // clustered: prefer rocky noise areas & slopes
@@ -267,6 +267,9 @@ export class Props {
         dummy.position.set(x, y, z);
         dummy.rotation.set((rand() - 0.5) * 0.4, rand() * Math.PI * 2, (rand() - 0.5) * 0.4);
         dummy.scale.set(s * (0.8 + rand() * 0.5), s, s * (0.8 + rand() * 0.5));
+        // not on a mesa's riser: a stone there hangs on the cliff face (skipped after the draws, so
+        // every other rock keeps its place)
+        if (this.hf.normalAt(x, z).y < 0.6) { skipped++; continue; }
         dummy.updateMatrix();
         mesh.setMatrixAt(n++, dummy.matrix);
         all.push({ m: dummy.matrix.clone(), x, z, reach: Math.max(s, 0.1) * ROCK_REACH });

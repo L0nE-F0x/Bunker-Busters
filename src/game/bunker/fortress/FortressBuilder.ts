@@ -9,7 +9,7 @@ import { rockGeometry } from '../../world/Props';
 import { LiveScreen } from '../apex/apexAtlas';
 import { fortPrint, fortPrintMaterial, paintBoard } from './fortressAtlas';
 import { coolantMaterial, frostMaterial, MoatMist } from './fortressFx';
-import { FORTRESS_MOAT } from '@/content/bunkers/fortress';
+import { FORTRESS_MOAT, FORTRESS_ROAD } from '@/content/bunkers/fortress';
 import type { BunkerShell, Door, LootSpot, SecurityCamera, Tripwire, Laser } from '../shell';
 
 /**
@@ -678,7 +678,20 @@ export class FortressBuilder implements BunkerShell {
     // the ticket post
     b.add(m.post, cyl(0.06, 0.06, 1.3, gx - 2.2, 0.65, gz - 2.2, 6));
     b.add(m.print, fortPrint('ticket', 0.4, 0.6, M(gx - 2.2, 1.45, gz - 2.25, Math.PI)));
-    // the allocation queue up the road: camping chairs in a line, tents behind them, a banner
+    // the allocation queue back up Lattice's road from the banner: camping chairs on the west
+    // shoulder facing the gate, tents behind them (a line due north climbed the mesa's riser)
+    const road = FORTRESS_ROAD.map(([x, z]) => new THREE.Vector2(x - this.origin.x, z - this.origin.z)).reverse();
+    /** `s` metres back up the road from its end: the point, and the way back up (unit). */
+    const along = (s: number) => {
+      for (let k = 0; ; k++) {
+        const a = road[k], c = road[k + 1], len = a.distanceTo(c);
+        if (s <= len || k === road.length - 2) {
+          const dx = (c.x - a.x) / len, dz = (c.y - a.y) / len;
+          return { x: a.x + dx * s, z: a.y + dz * s, dx, dz };
+        }
+        s -= len;
+      }
+    };
     const r = rng(41);
     const chairAt = (x: number, z: number, yaw: number, mat: THREE.Material) => {
       const y = this.gy(x, z);
@@ -689,31 +702,44 @@ export class FortressBuilder implements BunkerShell {
       f(0, 0.42, 0, 0.5, 0.04, 0.45, mat);
       f(0, 0.72, 0.22, 0.5, 0.5, 0.04, mat);
       for (const [lx, lz] of [[-0.22, -0.2], [0.22, -0.2], [-0.22, 0.2], [0.22, 0.2]]) f(lx, 0.2, lz, 0.03, 0.42, 0.03, m.post);
+      return y;
     };
+    const NOTE = 2;
     for (let i = 0; i < 14; i++) {
-      const z = gz - 4 - i * 1.6, x = -2.6 + (r() - 0.5) * 0.3;
-      if (r() < 0.12) continue;
-      chairAt(x, z, Math.PI + (r() - 0.5) * 0.5, r() < 0.6 ? m.chair : m.seat);
+      const q = along(2 + i * 1.6), side = 1.8 + (r() - 0.5) * 0.3;
+      // (the shoulder is to the right of the way back up: west of the road)
+      const x = q.x + q.dz * side, z = q.z - q.dx * side;
+      if (r() < 0.12 && i !== NOTE) continue;
+      const yaw = Math.atan2(q.dx, q.dz) + (r() - 0.5) * 0.5;
+      const y = chairAt(x, z, yaw, r() < 0.6 ? m.chair : m.seat);
+      if (i === NOTE) {
+        // the note, weighed down with a stone on the seat
+        b.add(m.white, box(0.2, 0.004, 0.27, x, y + 0.443, z, yaw + 0.3));
+        b.add(m.rock, place(rockGeometry(17, 0), x + 0.05, y + 0.47, z - 0.04, 0, 0, 0, 0.05));
+        this.points.queue = this.w(x, y + 0.6, z);
+      }
       if (i % 4 === 1) {
         // a ridge tent: a triangular prism on its side, the flaps tied back
-        const tx = x - 2.8, ty = this.gy(tx, z);
+        const tx = x + q.dz * 2.8, tz = z - q.dx * 2.8, ty = this.gy(tx, tz);
         const sh = new THREE.Shape();
         sh.moveTo(-0.9, 0); sh.lineTo(0.9, 0); sh.lineTo(0, 1.1); sh.lineTo(-0.9, 0);
         const tent = new THREE.ExtrudeGeometry(sh, { depth: 2.0, bevelEnabled: false });
         tent.translate(0, 0, -1.0);
-        tent.rotateY(r() * 0.6 - 0.3);
-        b.add(m.tent, place(tent, tx, ty, z));
+        tent.rotateY(Math.atan2(q.dx, q.dz) + r() * 0.6 - 0.3);
+        b.add(m.tent, place(tent, tx, ty, tz));
       }
     }
-    this.points.queue = this.w(-2.6, 1.0, gz - 7.2);
     b.add(m.print, fortPrint('queueBanner', 3.2, 0.8, M(-1.2, 2.6, gz - 3.4, Math.PI)));
     b.add(m.post, box(0.08, 3.0, 0.08, -2.8, 1.5, gz - 3.4), box(0.08, 3.0, 0.08, 0.4, 1.5, gz - 3.4));
     this.points.outside = this.w(1.5, 0, gz - 6);
-    this.points.road = this.w(-4, 0, -r1 - 26);
-    // the road sign at the queue's end
-    const sx = 3.5, sz = -r1 - 22, sg = this.gy(sx, sz);
-    b.add(m.post, box(0.1, 2.4, 0.1, sx - 0.9, sg + 1.2, sz), box(0.1, 2.4, 0.1, sx + 0.9, sg + 1.2, sz));
-    b.add(m.print, fortPrint('roadSign', 2.2, 1.375, M(sx, sg + 1.75, sz - 0.07, Math.PI)));
+    // (?at=fortress starts on the road behind the last chair)
+    const st = along(30);
+    this.points.road = this.w(st.x, 0, st.z);
+    // the road sign at the queue's end, on the east shoulder, facing whoever comes down the road
+    const sq = along(25), sx = sq.x - sq.dz * 3.2, sz = sq.z + sq.dx * 3.2, sg = this.gy(sx, sz);
+    const syaw = Math.atan2(sq.dx, sq.dz), cs = Math.cos(syaw), sn = Math.sin(syaw);
+    b.add(m.post, box(0.1, 2.4, 0.1, sx - cs * 0.9, sg + 1.2, sz + sn * 0.9, syaw), box(0.1, 2.4, 0.1, sx + cs * 0.9, sg + 1.2, sz - sn * 0.9, syaw));
+    b.add(m.print, fortPrint('roadSign', 2.2, 1.375, M(sx + sq.dx * 0.07, sg + 1.75, sz + sq.dz * 0.07, syaw)));
     // the pump house on the west bank, pipes over the lip into the moat
     const px = -r1 - 5.5, pz = 3;
     const pg = this.gy(px, pz);

@@ -20,7 +20,7 @@ const res = await p.evaluate(({ trials, sprint, FPS }) => {
   g.mode = 'probe'; // stop playFrame from driving the player while we do
   let seed = 12345;
   const rnd = () => ((seed = (seed * 1103515245 + 12345) % 2147483648) / 2147483648);
-  const fake = { isDown: (c) => c === 'KeyW' || (sprint && c === 'ShiftLeft'), pressed: () => false };
+  const fake = { isDown: (c) => c === 'KeyW' || (sprint && c === 'ShiftLeft'), pressed: () => false, act: (a) => a === 'forward' || (sprint && a === 'sprint'), actPressed: () => false, axis: () => 0, stick: () => ({ x: 0, y: 0 }) };
   const describe = (col) => {
     const t = col.translation(), s = col.shape;
     const type = ['Ball', 'Cuboid', 'Capsule', 'Segment', 'Polyline', 'Triangle', 'TriMesh', 'HeightField', 'Compound', 'ConvexPolyhedron', 'Cylinder', 'Cone', 'RoundCuboid'][col.shapeType()] ?? col.shapeType();

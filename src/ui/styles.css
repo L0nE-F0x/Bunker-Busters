@@ -625,6 +625,35 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #000; color:
   .clock { top: 166px; width: 130px; }
 }
 
+/* ---------- the end card (after the last debrief) ---------- */
+.overlay.endcard { background: radial-gradient(ellipse at 50% 40%, rgba(40, 20, 8, 0.82), rgba(4, 3, 2, 0.97) 70%); animation: fadeIn 1.6s ease; overflow-y: auto; padding: 5vh 18px; align-items: safe center; }
+.endcard .ec { width: min(980px, 100%); text-align: center; }
+.endcard .ec > * { animation: ecIn 0.9s cubic-bezier(.2,.8,.3,1) backwards; }
+.endcard .kicker { font-family: var(--mono); font-size: 12px; letter-spacing: 0.32em; text-transform: uppercase; color: var(--amber); animation-delay: 0.5s; }
+.endcard .big { margin-top: 14px; font-family: var(--display); font-size: clamp(40px, min(8vw, 11vh), 104px); line-height: 0.92; letter-spacing: 0.03em; text-transform: uppercase; background: linear-gradient(180deg, #fff2c8, #ffb347 55%, #ff6a1a); -webkit-background-clip: text; background-clip: text; color: transparent; filter: drop-shadow(0 4px 0 rgba(40,15,5,0.9)) drop-shadow(0 0 40px rgba(255,138,42,0.35)); animation-delay: 0.9s; }
+.endcard .rule { width: 50%; height: 1px; margin: min(22px, 2.6vh) auto min(18px, 2.2vh); background: linear-gradient(90deg, transparent, var(--amber), transparent); animation-delay: 1.3s; }
+.endcard p { margin: 0 auto 6px; max-width: 600px; font-size: 17px; line-height: 1.55; color: var(--ink); animation-delay: 1.6s; }
+.endcard .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px; max-width: 760px; margin: min(26px, 3vh) auto min(22px, 2.6vh); background: var(--line); border: 1px solid var(--line); animation-delay: 2.1s; }
+.endcard .stats div { padding: min(14px, 1.6vh) 8px min(12px, 1.4vh); background: rgba(14, 10, 7, 0.94); }
+.endcard .stats b { display: block; font-family: var(--display); font-size: clamp(28px, 5vh, 40px); line-height: 1; color: var(--ink); }
+.endcard .stats small { display: block; margin-top: 6px; font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-dim); }
+.endcard .doors { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(4, 1fr); gap: 2px 22px; text-align: left; animation-delay: 2.5s; }
+.endcard .doors li { display: grid; grid-template-columns: 30px 1fr; grid-template-rows: auto auto; align-items: baseline; padding: 7px 0; border-bottom: 1px solid rgba(255, 179, 71, 0.12); animation: ecIn 0.7s ease backwards; animation-delay: calc(2.6s + var(--i) * 0.14s); }
+.endcard .doors span { grid-row: span 2; font-family: var(--display); font-size: 22px; color: var(--amber-hot); }
+.endcard .doors b { font-weight: 600; font-size: 15px; color: var(--ink); }
+.endcard .doors small { font-size: 12px; color: var(--ink-faint); }
+.endcard .foot { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-top: min(28px, 3.2vh); animation-delay: 3.9s; }
+.endcard .foot span { font-size: 14px; letter-spacing: 0.08em; color: var(--ink-dim); }
+@keyframes ecIn { from { opacity: 0; transform: translateY(12px); } }
+@media (max-width: 860px) {
+  .endcard .doors { grid-template-columns: 1fr 1fr; }
+}
+@media (max-width: 620px) {
+  .endcard .stats { grid-template-columns: 1fr 1fr; }
+  .endcard .doors { grid-template-columns: 1fr; }
+  .endcard .foot { flex-direction: column; }
+}
+
 /* ---------- lowfx: Linux desktop app (WebKitGTK) ----------
    Filters, backdrop blur and blend modes over the WebGL canvas are re-rasterised on the CPU every
    frame there. Same layout, flat equivalents. (Set on <html> by src/main.ts.) */
@@ -632,7 +661,7 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #000; color:
 .lowfx .scan { display: none; }
 .lowfx .logo .l1, .lowfx .logo .l2 { filter: none; }
 .lowfx .logo .glitch { display: none; }
-.lowfx .banner .big { filter: none; }
+.lowfx .banner .big, .lowfx .endcard .big { filter: none; }
 .lowfx .detect svg { filter: none; }
 .lowfx .btn.primary:hover:not(:disabled) { filter: none; background: linear-gradient(90deg, #ff9a3a, #ff6e2a); }
 .lowfx .press { animation: none; }

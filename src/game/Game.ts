@@ -1052,10 +1052,16 @@ export class Game {
               const st = s.data.stats;
               const day = START_DAY + (s.data.days ?? 0);
               const hours = Math.max(1, Math.round(st.playTime / 3600));
-              await this.ui.pages([{
-                speaker: 'Bunker Busters',
-                text: `Day ${day.toLocaleString('en-GB')}. Eight bunkers, from a garage with a fence nobody paid for to a well under your own camp. You picked ${st.picks} lock${st.picks === 1 ? '' : 's'}, got caught ${st.caught} time${st.caught === 1 ? '' : 's'}, and spent about ${hours} hour${hours === 1 ? '' : 's'} on the road.\nThat's the end of the story. The valley is still there, and so is the road. Thank you for playing.`,
-              }], 'Back to the valley');
+              const n = (v: number) => v.toLocaleString('en-US');
+              await this.ui.endCard({
+                day: `Day ${n(day)}`,
+                lines: [
+                  'Eight bunkers, from a garage with a fence nobody paid for to a well under your own camp.',
+                  'That\'s the end of the story. The valley is still there, and so is the road.',
+                ],
+                stats: [[n(st.picks), st.picks === 1 ? 'lock picked' : 'locks picked'], [n(st.caught), st.caught === 1 ? 'time caught' : 'times caught'], [n(hours), hours === 1 ? 'hour on the road' : 'hours on the road'], [n((s.data.days ?? 0) + 1), 'days in the valley']],
+                doors: this.bunkers.map((bk) => [bk.def.name, bk.def.id === 'dome' ? 'Hunter Vale' : bk.def.owner.name] as [string, string]),
+              });
               this.audio.sting('busted');
               this.ui.banner('BUNKER MASTER', 'Every door in the valley, opened.', 'good');
               this.save(true);
@@ -1268,6 +1274,9 @@ export class Game {
       spawn = this.zero.b.points.surfaceOut.clone();
       spawn.y = this.hf.heightAt(spawn.x, spawn.z) + 0.2;
     }
+    // the outdoor ?at= starts face their bunker
+    const atB = ({ panopticon: this.panopticon, spire: this.spire, dome: this.dome, fortress: this.fortress, cathedral: this.cathedral } as Record<string, { b: { origin: THREE.Vector3 } } | undefined>)[new URLSearchParams(location.search).get('at') ?? ''];
+    if (atB) state.data.yaw = Math.atan2(spawn.x - atB.b.origin.x, spawn.z - atB.b.origin.z) - Math.PI;
     this.player = new Player(this.physics, state.data.archetype, spawn);
     this.player.yaw = state.data.yaw;
     this.player.speedMult = state.archetype.stats.speed;

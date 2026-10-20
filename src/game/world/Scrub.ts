@@ -249,7 +249,9 @@ export class Pebbles {
     const ny = this.hf.normalAt(x0, z0).y;
     // desert pavement: the stones the wind left behind, packed and dark with varnish
     const pave = groundPatchAt(x0, z0).pave * Math.min(1, Math.max(0, (ny - 0.9) / 0.06));
-    const n = Math.floor((0.35 + stony * stony * 5 + (1 - ny) * 8 + pave * 3.5) * (0.6 + r() * 0.8));
+    // scree thickens with the slope, but a riser's face is too steep to hold any (they'd hang on it)
+    const scree = Math.min(1, Math.max(0, (ny - 0.45) / 0.15));
+    const n = Math.floor((0.35 + stony * stony * 5 + (1 - ny) * 8 + pave * 3.5) * (0.6 + r() * 0.8) * scree);
     if (this.hf.roadDistanceAt(x0, z0) > 4.5 && this.hf.zoneDistance(x0, z0) > -2) {
       for (let k = 0; k < n; k++) {
         const x = x0 + r() * C, z = z0 + r() * C;
