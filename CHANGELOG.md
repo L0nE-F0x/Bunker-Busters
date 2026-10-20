@@ -3,6 +3,13 @@
 Each `## vX.Y.Z` section becomes the GitHub release notes and the "what's new" list in the in-app
 update notice (the first few bullets). `scripts/release.sh` refuses to release a version without one.
 
+## v1.0.1
+- **A proper ending.** After Mara's last debrief, the story closes on its own screen: the day, the locks you picked, the times you were caught, the hours on the road, and all eight bunkers with the people who built them
+- **The Fortress queue sits by the road.** The camping chairs in the allocation queue used to climb straight up the side of the mesa. They're on the shoulder of Lattice's road now, facing the gate, and the note with the code is on a chair where you can see it
+- **No more rocks stuck to cliffs.** Stones, boulders and gravel no longer cling halfway up the mesa faces
+- **The Longshot.** The skin panels torn off the booster lie on the sand instead of hanging in the air beside it
+- **Banners and subtitles stay apart.** Long place names (The Cloud Cathedral) no longer wrap onto two lines and run into whoever is greeting you, and on phones the place banner steps aside while someone is talking
+
 ## v1.0.0
 - **The story is finished.** Act VIII: Dez finally places the carrier he couldn't find, and it's under the camp. Bunker Zero is sixty rungs below the forecourt at Last Chance, built by the woman who built every other bunker in the valley. Raise Mara after the Fortress's debrief to start it
 - **The showroom.** Every founder's defences as they were first drawn: Tanner's tin-can tripwires, Ezra's cameras, Prudence's laser grid, Vesper's airlock (the code is the time on the clock over it), and two polite Doormen who walk you back to the ladder. At the end, a board with four units of power and a round door that wants two. Each display has a placard with the change orders the founder signed, which are the ways you got in
