@@ -469,10 +469,14 @@ export class BoosterSite extends Site {
     // the grid fin that tore off, half buried by the nose
     k.b.add(M.fin, xf(gridFin(), mat4(23.5, 0.55, 4.2, 0.2, 0.8, 1.15)));
     // skin panels peeled off in the slide
-    for (const [px, pz, ry, rz] of [[8, -6.5, 0.4, 1.4], [14, 5.5, 2.2, -1.2], [-6, -7.5, -0.6, 1.6]] as [number, number, number, number][]) {
-      const g = new THREE.CylinderGeometry(R, R, 2.2 + r(), 10, 1, true, 0, 0.9);
-      k.b.add(M.skin, xf(g, mat4(px, k.ground(px, pz) + 0.25, pz, 0.1, ry, rz)));
-      k.b.add(M.skinDark, xf(g.clone().scale(0.985, 1, 0.985), mat4(px, k.ground(px, pz) + 0.25, pz, 0.1, ry, rz)));
+    // (a slice of the tank's skin, moved from the tank's axis to its own middle and laid convex side
+    // up: about the axis, the slices hung in the air a radius away from where they were put)
+    for (const [px, pz, ry, rz] of [[8, -6.5, 0.4, 0.12], [14, 5.5, 2.2, -0.1], [-6, -7.5, -0.6, 0.16]] as [number, number, number, number][]) {
+      const g = new THREE.CylinderGeometry(R, R, 2.2 + r(), 10, 1, true, 0, 0.9)
+        .translate(-R * Math.sin(0.45), 0, -R * Math.cos(0.45)).rotateY(-0.45).rotateX(-Math.PI / 2);
+      const at = mat4(px, k.ground(px, pz) + 0.16, pz, 0.08, ry, rz);
+      k.b.add(M.skin, xf(g, at));
+      k.b.add(M.skinDark, xf(g.clone().translate(0, -0.025, 0), at));
     }
     // composite pressure vessels, flung like bowling balls
     for (const [px, pz] of [[-8, 9], [11, -8.5], [26, -3], [3, 17]] as [number, number][]) {

@@ -292,11 +292,19 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #000; color:
 .subtitle .who { color: var(--amber); font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; font-size: 13px; display: block; margin-bottom: 2px; }
 .subtitle .who.bot { color: var(--teal); }
 
-.banner { position: absolute; top: 18vh; left: 50%; transform: translateX(-50%); text-align: center; animation: bannerIn 0.6s cubic-bezier(.2,1.2,.3,1), bannerOut 0.8s ease 4.2s forwards; }
+.banner { position: absolute; top: 18vh; left: 50%; transform: translateX(-50%); width: min(92vw, 1200px); text-align: center; animation: bannerIn 0.6s cubic-bezier(.2,1.2,.3,1), bannerOut 0.8s ease 4.2s forwards; }
 .banner .big { font-family: var(--display); font-size: clamp(48px, 7vw, 96px); letter-spacing: 0.04em; line-height: 1; background: linear-gradient(180deg, #fff2c8, #ffb347 55%, #ff6a1a); -webkit-background-clip: text; background-clip: text; color: transparent; filter: drop-shadow(0 4px 0 rgba(40,15,5,0.9)) drop-shadow(0 0 30px rgba(255,138,42,0.5)); }
 .banner.bad .big { background: linear-gradient(180deg, #ffd0c8, #ff4a3a); -webkit-background-clip: text; background-clip: text; }
-.banner .sub { margin-top: 10px; font-size: 16px; color: var(--ink); letter-spacing: 0.06em; text-shadow: 0 2px 4px #000; max-width: 80vw; }
+.banner .sub { margin: 10px auto 0; font-size: 16px; color: var(--ink); letter-spacing: 0.06em; text-shadow: 0 2px 4px #000; max-width: min(80vw, 900px); }
 .banner .rule { width: 60%; height: 1px; margin: 12px auto 0; background: linear-gradient(90deg, transparent, var(--amber), transparent); }
+/* short windows (≤ 700 px): a place's banner (18vh down) ran into a subtitle (210 px up) when someone
+   spoke as you arrived. Smaller type keeps them apart; phones have their own sizes below. */
+@media (max-height: 700px) {
+  html:not(.touch) .banner .big { font-size: clamp(40px, 5.6vw, 64px); }
+  html:not(.touch) .banner .rule { margin-top: 8px; }
+  html:not(.touch) .banner .sub { margin-top: 6px; font-size: 14px; }
+  html:not(.touch) .subtitle { font-size: 17px; padding: 8px 16px; }
+}
 @keyframes bannerIn { from { transform: translate(-50%, -20px) scale(1.15); opacity: 0; filter: blur(6px); } }
 @keyframes bannerOut { to { opacity: 0; transform: translate(-50%, -10px); } }
 
