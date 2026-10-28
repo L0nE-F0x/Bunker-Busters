@@ -3,6 +3,14 @@
 Each `## vX.Y.Z` section becomes the GitHub release notes and the "what's new" list in the in-app
 update notice (the first few bullets). `scripts/release.sh` refuses to release a version without one.
 
+## v1.0.3
+- **People round the fires sit up.** Everyone at Last Chance and Dry Creek's street fire used to share one hunched, chin-on-hand pose, staring into their shirts. They sit upright and cross-legged now, neighbours crossing opposite legs, and Hollis and Wick still nod off now and then
+- **One at a time.** Round a fire one person talks while the others turn to listen, and the talker looks at them. Walk up to a group and the nearest one talks to you while the rest just look up, instead of all of them gesturing at you at once. Talking comes in short spells, and seated talk is calmer
+- **More ways to stand.** Nia, Doc, Inez, Ezra, Prudence, Benny, Orrin and Agnes no longer share a single idle: each drifts between calm loops of their own
+- **Kade on the move.** A contractor running with his gun up moves with his stride instead of gliding with a frozen upper body, and one turning on the spot steps round instead of swivelling on his feet
+- **Robots that walk.** The Dome's Helpers, Bunker Zero's Doormen and the Fortress's technicians no longer slide their feet as they walk
+- **Wolves keep their distance.** A pack closing in no longer runs through itself
+
 ## v1.0.2
 - **Bunkers in any order.** Mara now plays every debrief you're owed, oldest first. Finishing a later bunker before an earlier one used to lose the earlier debrief, and with it the next act's quest and rewards
 - **Continue puts you back where you saved.** Upstairs in the Spire, in the Dome's pod, down in Bunker Zero: you load where you were, not on the ground underneath (one spot by the Dome's stair could trap you there)
