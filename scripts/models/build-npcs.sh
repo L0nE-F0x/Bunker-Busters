@@ -82,6 +82,7 @@ on dez && build dez ${CP}Dez_Rigged.glb \
 on ezra && build ezra ${PN}Ezra_Rigged.glb \
   --clips ${DC}Sol_Animations.glb:Listening_Gesture=idle,Talk_with_Hands_Open=near \
   --clips ${PN}Ezra_Animations.glb:Scheming_Hand_Rub=idle2,Look_Around_Dumbfounded=ins_look,Stand_Talking_Angry=talk_hard \
+  --clips ${TI}:Idle_3=idle3 \
   --mirror ${DC}Sol_Animations.glb:Listening_Gesture=idle_m
 on ada && build ada ${PN}Ada_Rigged.glb \
   --clips ${PN}Ada_Animations.glb:Chair_Sit_Idle_F=idle,Sit_Hands_on_Head_Lean_Back=ins_lean,Sit_to_Stand_Transition_F=stand \
@@ -102,6 +103,7 @@ on rev2 && build rev2 ${PN}Reviewer2_Rigged.glb \
 on prudence && build prudence ${SP}Prudence_Rigged.glb \
   --clips ${DC}Sol_Animations.glb:Listening_Gesture=idle,Talk_with_Hands_Open=near \
   --clips ${SP}Prudence_Animations.glb:Headache_Relief=ins_head \
+  --clips ${TI}:Idle_3=idle2,Short_Breathe_and_Look_Around=idle3 \
   --clips ${DC}Nia_Animations.glb:Stand_and_Chat=ins_chat \
   --mirror ${DC}Sol_Animations.glb:Listening_Gesture=idle_m
 on noor && build noor ${SP}Noor_Rigged.glb \
@@ -111,6 +113,7 @@ on noor && build noor ${SP}Noor_Rigged.glb \
   --clips ${SP}Noor_Walking_Basic.glb:walking_man=walk
 on benny && build benny ${SP}Benny_Rigged.glb \
   --clips ${DC}Doc_Animations.glb:Listening_Gesture=idle,Talk_with_Right_Hand_Open=near,Shrug=ins_shrug \
+  --clips ${TI}:Idle_3=idle2,Short_Breathe_and_Look_Around=idle3 \
   --mirror ${DC}Doc_Animations.glb:Listening_Gesture=idle_m
 
 # --- the Singularity Dome: HUNTER (beta), the founder twin, as a hologram on the all-hands stage (his own
@@ -138,6 +141,7 @@ on helper && build helper ${DM}Helper_Rigged.glb \
 on orrin && build orrin ${CT}Orrin_Rigged.glb \
   --clips ${DC}Sol_Animations.glb:Listening_Gesture=idle,Talk_with_Hands_Open=near \
   --clips ${CT}Orrin_Animations.glb:Phone_Conversation=idle2 \
+  --clips ${TI}:Idle_3=idle3 \
   --clips ${DC}Inez_Animations.glb:Checkout_Gesture=ins_checkout \
   --clips ${CT}Associate_Animations.glb:Female_Bend_Over_Pick_Up_Inspect=pick \
   --mirror ${DC}Sol_Animations.glb:Listening_Gesture=idle_m
@@ -167,5 +171,6 @@ ZR=${A}Zero_
 on agnes && build agnes ${ZR}Agnes_Rigged.glb \
   --clips ${DC}Sol_Animations.glb:Listening_Gesture=idle,Talk_with_Hands_Open=near \
   --clips ${DC}Inez_Animations.glb:Checkout_Gesture=ins_checkout \
+  --clips ${TI}:Idle_3=idle2,Short_Breathe_and_Look_Around=idle3 \
   --mirror ${DC}Sol_Animations.glb:Listening_Gesture=idle_m
 true
