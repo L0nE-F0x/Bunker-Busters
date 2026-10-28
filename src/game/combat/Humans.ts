@@ -356,6 +356,12 @@ export class Human {
   pose: HumanPose = 'relaxed';
   /** 0..1: weapon raised (ready) → shouldered (aim). Smoothed. */
   private aimK = 0;
+  /**
+   * Standing, each foot stays where it was put (its spot and its toe's yaw) and steps when the body
+   * has turned away from it or left it behind, one foot at a time: turning on the spot, the feet were
+   * carried round with the body like a turret's. `t` ≥ 0 while a step is under way (0 → 1).
+   */
+  private stand = [0, 1].map(() => ({ on: false, x: 0, z: 0, yaw: 0, t: -1, fx: 0, fz: 0, fyaw: 0 }));
   private readyK = 0;
   private crouchS = 0;
   /** The crouch as shown (smoothed, 0..1). */
@@ -607,12 +613,31 @@ export class Human {
       const lift = Math.max(0, Math.cos(ph + off)) * (0.07 + run * 0.12) * walk;
       const foot = (side > 0 ? J.ftL : J.ftR).copy(this.pos).addScaledVector(left, side * (0.11 + cr * 0.06)).addScaledVector(md, s * stride * 0.22 * walk);
       if (cr > 0.3) foot.addScaledVector(f, side > 0 ? 0.18 * cr : -0.12 * cr);
-      foot.y = (this.floor ?? hf.heightAt(foot.x, foot.z)) + 0.085 + lift;
+      // standing: the foot keeps its spot and steps over when it has to (see `stand`)
+      const st = this.stand[side > 0 ? 0 : 1], other = this.stand[side > 0 ? 1 : 0];
+      let stepLift = 0;
+      if (walk < 0.05 && sp < 0.3 && dying <= 0 && this.dyingT < 0) {
+        const tyaw = Math.atan2(f.x, f.z);
+        if (!st.on) { st.on = true; st.x = foot.x; st.z = foot.z; st.yaw = tyaw; st.t = -1; }
+        if (st.t < 0 && other.t < 0 && (Math.hypot(foot.x - st.x, foot.z - st.z) > 0.14 || Math.abs(angDiff(st.yaw, tyaw)) > 0.5)) {
+          st.t = 0; st.fx = st.x; st.fz = st.z; st.fyaw = st.yaw;
+        }
+        if (st.t >= 0) {
+          st.t = Math.min(1, st.t + dt / 0.3);
+          const k = st.t * st.t * (3 - 2 * st.t);
+          st.x = st.fx + (foot.x - st.fx) * k; st.z = st.fz + (foot.z - st.fz) * k;
+          st.yaw = st.fyaw + angDiff(st.fyaw, tyaw) * k;
+          stepLift = Math.sin(st.t * Math.PI) * 0.07;
+          if (st.t >= 1) st.t = -1;
+        }
+        foot.x = st.x; foot.z = st.z;
+      } else st.on = false;
+      foot.y = (this.floor ?? hf.heightAt(foot.x, foot.z)) + 0.085 + lift + stepLift;
       const knee = ik(hip, foot, legL, shinL, _pole.copy(f).addScaledVector(left, side * 0.15), side > 0 ? J.knL : J.knR);
       frameTo(this.mats[side > 0 ? BONE.thighL : BONE.thighR], hip, _tmp.subVectors(hip, knee), f, H);
       frameTo(this.mats[side > 0 ? BONE.shinL : BONE.shinR], knee, _tmp.subVectors(knee, foot), f, H);
-      // foot: flat, toes along the body (a little toe-off mid-stride)
-      const toe = _toe.copy(f).addScaledVector(UP, -lift * 1.5).normalize();
+      // foot: flat, toes along the body (a little toe-off mid-stride); standing, along its own yaw
+      const toe = (st.on ? _toe.set(Math.sin(st.yaw), 0, Math.cos(st.yaw)) : _toe.copy(f)).addScaledVector(UP, -lift * 1.5).normalize();
       frameTo(this.mats[side > 0 ? BONE.footL : BONE.footR], foot, _tmp.copy(UP).addScaledVector(f, lift * 1.5), toe, H);
     }
 
