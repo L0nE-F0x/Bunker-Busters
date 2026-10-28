@@ -504,6 +504,7 @@ export class NpcCrowd {
         playing: () => f.nb.filter((g) => g.present).map((g) => g.actor!.playing),
         may: (src) => !f.nb.some((g) => g.present && g.lastSrc === src && this.t - g.lastT < 3),
         started: (src) => { f.lastSrc = src; f.lastT = this.t; },
+        talking: () => f.nb.some((g) => g.present && !!g.actor?.talking),
       };
       a.coord = coord;
       a.spread();
@@ -571,6 +572,14 @@ export class NpcCrowd {
     // a bang wins over the player: heads whip round toward it (faster than an idle glance)
     const pl = this.local.copy(cam).applyMatrix4(this.inv);
     const c = startled ? this.alarmAt : pl;
+    // walk up to a group and the nearest one talks to you; the rest look at you and keep still
+    // (all four round the fire used to start talking at you at once)
+    let closest: Figure | null = null, closestD = Infinity;
+    for (const f of this.figs) {
+      if (!f.present || !f.near) continue;
+      const d = Math.hypot(pl.x - f.neck.x, pl.z - f.neck.z);
+      if (d < closestD) { closestD = d; closest = f; }
+    }
     this.figs.forEach((f, i) => {
       if (!f.present) return; // elsewhere on their routine (the model was hidden by reschedule)
       // within talking range: each by its own radius, leaving a little further out than entering
@@ -600,10 +609,22 @@ export class NpcCrowd {
           }
           if (mode === 'look') { f.tYaw += f.sacY; f.tNod += f.sacN; }
         } else {
-          // idle: glance around now and then
-          const n = Math.sin(this.t * 0.21 + f.idle) * Math.sin(this.t * 0.13 + f.idle * 1.7);
-          f.tYaw = n > 0.35 ? 0.55 * Math.sign(Math.sin(this.t * 0.05 + f.idle)) : n < -0.5 ? -0.3 : 0;
-          f.tNod = 0.05 * Math.sin(this.t * 0.31 + f.idle);
+          // round a fire: listen to whoever's talking (and the talker looks at a listener), with a
+          // glance away now and then; otherwise glance around
+          const self = f.actor?.talking;
+          const others = f.nb.filter((g) => g.present && g.actor);
+          const to = self ? others[Math.floor(this.t / 4.5 + f.idle) % Math.max(1, others.length)] : others.find((g) => g.actor!.talking);
+          if (to && Math.sin(this.t * 0.17 + f.idle) > -0.7) {
+            const ddx = to.neck.x - f.neck.x, ddz = to.neck.z - f.neck.z;
+            let r2 = Math.atan2(ddx, ddz) - f.def.yaw;
+            r2 = Math.atan2(Math.sin(r2), Math.cos(r2));
+            f.tYaw = THREE.MathUtils.clamp(r2, -1.05, 1.05);
+            f.tNod = THREE.MathUtils.clamp(-Math.atan2(to.neck.y - f.neck.y, Math.max(0.5, Math.hypot(ddx, ddz))) * 0.8, -0.3, 0.25);
+          } else {
+            const n = Math.sin(this.t * 0.21 + f.idle) * Math.sin(this.t * 0.13 + f.idle * 1.7);
+            f.tYaw = n > 0.35 ? 0.55 * Math.sign(Math.sin(this.t * 0.05 + f.idle)) : n < -0.5 ? -0.3 : 0;
+            f.tNod = 0.05 * Math.sin(this.t * 0.31 + f.idle);
+          }
         }
       }
       const k = 1 - Math.exp(-(startled ? 9 : f.speed) * dt);
@@ -616,7 +637,7 @@ export class NpcCrowd {
         // a model nobody can see (nor its shadow) isn't posed; it catches up on its clips when it is
         if (viewCull.sees(_npcC.setFromMatrixPosition(a.root.matrixWorld).setY(_npcC.y + 0.9), 1.4)) {
           a.root.visible = true;
-          a.update(dt + (f.owed ?? 0), f.near, f.look, f.nod);
+          a.update(dt + (f.owed ?? 0), f.near && f === closest, f.look, f.nod);
           f.owed = 0;
         } else {
           a.root.visible = false;

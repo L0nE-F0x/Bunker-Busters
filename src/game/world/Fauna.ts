@@ -1200,6 +1200,9 @@ class Critters implements HostileProvider {
  * and backs off, and losing wolves breaks the pack's nerve (flee). Torchlight on a wolf makes it
  * hesitate; a gunshot rattles them (less at night); they won't go near a fire or a town.
  */
+/** Wolves keep this far apart, centre to centre (a body is ~1.3 m nose to tail). */
+const WOLF_GAP = 1.5;
+
 class Pack implements HostileProvider {
   /** Seconds this pack has been running off (stragglers are dropped after a while). */
   fleeT = 0;
@@ -1448,6 +1451,18 @@ class Pack implements HostileProvider {
     const far = live.every((w) => Math.hypot(w.pos.x - c.player.x, w.pos.z - c.player.z) > (this.state === 'flee' ? 130 : 200));
     const bodiesFar = this.wolves.every((w) => !w.out || w.alive || Math.hypot(w.pos.x - c.player.x, w.pos.z - c.player.z) > 160);
     if (far && bodiesFar) { this.state = 'gone'; this.wait = rnd(70, 180) * (night ? 0.6 : 1); for (const w of this.wolves) { w.out = false; w.skin?.hide(w.slot); } return; }
+
+    // spacing: two wolves never share a spot (closing on one target they ran through each other, three
+    // bodies in one). A soft push apart, a body length; one mid-lunge holds its line and the other gives
+    for (let i = 0; i < live.length; i++) for (let j = i + 1; j < live.length; j++) {
+      const a = live[i], b = live[j];
+      const dx = b.pos.x - a.pos.x, dz = b.pos.z - a.pos.z, dd = Math.hypot(dx, dz);
+      if (dd >= WOLF_GAP || dd < 1e-4) continue;
+      const push = (WOLF_GAP - dd) * Math.min(1, c.dt * 6), nx = dx / dd, nz = dz / dd;
+      const ka = a.role === 'lunge' ? 0 : b.role === 'lunge' ? 1 : 0.5;
+      a.pos.x -= nx * push * ka; a.pos.z -= nz * push * ka;
+      b.pos.x += nx * push * (1 - ka); b.pos.z += nz * push * (1 - ka);
+    }
 
     // walls: whatever the pack decided, nobody walks through a building
     for (const w of this.wolves) {

@@ -1861,3 +1861,22 @@ Owner: "a thorough debug of this game … polish it up until it is perfect". The
 **Checked, nothing wrong:** the 16-minute soak (16 laps of every landmark, squads and wolf packs, ~5½ game days): programs 227, geometries 1182, textures 119, scene objects 3864 constant, heap 761–786 MB after GC, no errors. The heap is mostly typed-array backing (~625 MB of CPU-side vertex data; JS objects ~122 MB): a possible phone memory cut, not a leak. Trade has no money loop, crafting rolls back, ammo/reload edge cases behave, fast travel is properly blocked, old saves migrate, every quest marker resolves, no flag is checked that's never set. The live site, the v1.0.1 release (6 assets) and `latest.json` are fine.
 
 **Left (owner's call or later):** a spoken subtitle can still sit over the detection label on very small phones; Dry Creek's street lamps (VirtualLights) stay on at noon (no visible difference, they hold pool slots); dropping a weapon from the Kit destroys it (no world drop); the Cathedral's swarm is hidden for the whole ride; a few site loot spots tied to a door (the solar cabinet, the drive-in drawer) still set their flag first.
+
+## 2026-10-28: how the characters move (townsfolk first, then the wolves)
+
+Owner: the characters move "unnatural … it looks like cheapy game", mostly the townsfolk, the people sitting round the fires, and the wolves. Diagnosed by filming them (scratch `motion/` scripts: `film.mjs` with a `camHook` that hides the viewmodel and frames a person from their front; prop-lab filmstrips `ids=x,x,x&dt=…`) before changing anything. Not released.
+
+**What was wrong round the fires:**
+- The shared seated idle, `Chair_Sit_Idle_M` (seven people), is a chin-on-hand "thinker" hunch for most of its 10.7 s: everyone staring into their shirt. It's the clip itself (the library preview does it too), not the retarget.
+- `CHATS` put the seated talk loop (`Sitting_Answering_Questions`, arms thrown wide, leaning back) in four people's idle pool, so several gesticulated at once with nobody talking; and walking up to the fire put all four in talk mode at once.
+- Pip's `Sit_and_Drink` (made on a grown-up) takes her mug to her forehead, then reaches out at arm's length.
+
+**Changed:**
+- **Meshy clips (18 credits, 49 left):** `Assets/Meshy_AI_Town_Idles_Animations.glb` on Gil's rig: Sit_Cross_Legged (the new seated base, mirrored for neighbours), Idle_3 and Short_Breathe_and_Look_Around (more standing idles for Nia, Doc, Inez), Sit_Hands_on_Head_Lean_Back (an occasional stretch). Sit_on_Chair_Arms_Crossed came out as an X held off the chest and Idle_9 loops every 2 s: both unused. Two of the six were already in other files (Ada's stretch, the associate's breathe-and-look): 6 credits that didn't need spending; check `build-npcs.sh` before buying.
+- `build-npcs.sh`: Sol, Ren, Wick, Mara, Pip, Hollis and Dez sit cross-legged; the thinker hunch is gone from them (Kit, Gil and the Panopticon reviewers keep it at their desks); Hollis and Wick still doze off now and then, Ren still drinks, Pip holds her mug.
+- `npcSkin.ts`: talk comes in spells of 5–10 s (calm loops 12–30 s); a chatter only starts talking if no neighbour is (`ClipCoord.talking`); seated, a talk loop plays at 55% over the calm loop under it (`SEATED_TALK`).
+- `npc.ts`: only the person nearest you talks to you (the rest look at you and keep still); round a fire, listeners look at whoever is talking and the talker looks at a listener, with a glance away now and then.
+- **Wolves** (`Fauna.ts` `WOLF_GAP`): a spacing pass keeps the pack a body length apart (closing on you, three bodies ran through each other). `paw-probe` says the feet are good: lowest paw within ±4 cm of the ground at walk/trot/run, no sinking, planted paws barely slide (p90 1.2 m/s at a full gallop).
+- Checked: typecheck, `npc-sync` camp and creek (no lockstep, no neighbour rule broken), no page errors at the camp, Dry Creek, the Till or in a wolf attack.
+
+**Next:** ask the owner what still looks off about the wolves (the leap's floaty shadow? the model? how they behave?); then the contractors (procedural skeleton fitted with IK: stiff torso, turning on the spot) and the robots (the Helpers' in-place walk at a fixed 1.3 m/s).

@@ -50,6 +50,12 @@ const CHATS = new Set(['sol', 'mara', 'hollis', 'dez']);
  * after the wrist twist is spread. Only where a close-up shows a miss (prop lab what=npc).
  */
 const HAND_FIX: Record<string, Record<string, { L?: [number, number, number, number]; R?: [number, number, number, number] }>> = {};
+/**
+ * Seated, a talk loop plays this much over the calm loop under it: the library's seated talk
+ * (Sitting_Answering_Questions) throws its arms wide and leans back, which on a log by a fire read as
+ * someone about to fall off.
+ */
+const SEATED_TALK = 0.55;
 /** Share of a hand's roll about the forearm that the forearm takes, and what the hand may keep (°). */
 const TWIST = { k: 0.55, twist: 50, swing: 70 };
 
@@ -97,6 +103,8 @@ export interface ClipCoord {
   /** May it start `src` now? (No neighbour switched to it in the last few seconds.) */
   may(src: string): boolean;
   started(src: string): void;
+  /** Is a neighbour talking (a talk loop, to the circle or to you)? Then this one listens. */
+  talking(): boolean;
 }
 
 const _q = new THREE.Quaternion(), _q2 = new THREE.Quaternion(), _pq = new THREE.Quaternion();
@@ -303,6 +311,8 @@ export class NpcActor {
   private clock: Float64Array;
   private cur: Clip;
   private prev: Clip | null = null;
+  /** The last calm loop (not a talk loop): seated, it stays under the talking (SEATED_TALK). */
+  private calm: Clip | null = null;
   /** The loop an insert interrupted (and returns to). */
   private base: Clip;
   private fade = 1;
@@ -337,7 +347,7 @@ export class NpcActor {
     this.chat = seated && CHATS.has(T.id);
     this.seated = seated;
     this.shift = seated ? null : { w: 2 * Math.PI * rand(0.06, 0.12), a: rand(1.1, 1.6) * (Math.PI / 180), ph: rand(0, 7) };
-    this.cur = this.base = this.pick(T.idle, null);
+    this.cur = this.base = this.calm = this.pick(T.idle, null);
     // hips stay where the idle clip puts them; seated people sink onto the game's seat
     this.anchor = (T.clips.get('idle') ?? T.idle[0]).hips.clone();
     // seated, the game's point is the seat (the procedural figure's hips sit straight over it, feet
@@ -356,7 +366,16 @@ export class NpcActor {
   /** The loops to drift between right now (near you, the talk loops and, now and then, the idles). */
   private pool(near: boolean) {
     const T = this.T;
-    return (near && T.near.length) || this.chat ? [...this.idle, ...T.near] : this.idle;
+    if (near && T.near.length) return [...this.idle, ...T.near];
+    // talking among themselves, one at a time: while a neighbour talks this one listens (npc.ts turns
+    // its head to them). Everyone gesturing at once was most of what looked wrong round the fire
+    if (this.chat && !this.coord?.talking()) return [...this.idle, ...T.near];
+    return this.idle;
+  }
+
+  /** Playing a talk loop (to you, or to the people round it). */
+  get talking() {
+    return this.cur.name.startsWith('near');
   }
 
   /**
@@ -396,8 +415,11 @@ export class NpcActor {
     if (clip.once) this.clock[clip.i] = 0;
     else {
       this.base = clip;
+      if (!clip.name.startsWith('near')) this.calm = clip;
       this.spread(clip);
-      this.varT = rand(12, 30); // and it holds a while, whatever started it
+      // and it holds a while, whatever started it. Talking comes in spells (to you or to the circle):
+      // nobody gestures through half a minute of nothing, and then it's someone else's turn
+      this.varT = clip.name.startsWith('near') ? rand(5, 10) : rand(12, 30);
     }
     this.fade = 0;
     this.fadeDur = rand(0.8, 1.2);
@@ -503,12 +525,17 @@ export class NpcActor {
     }
     this.fade = Math.min(1, this.fade + dt / this.fadeDur);
     const f = this.fade * this.fade * (3 - 2 * this.fade);
+    // seated and talking: the calm loop underneath, the talk loop over it at SEATED_TALK
+    const talk = (c: Clip) => c.name.startsWith('near');
+    const calm = this.seated && this.calm && (talk(this.cur) || (this.prev && f < 1 && talk(this.prev))) ? this.calm : null;
+    const w = (c: Clip) => (calm && talk(c) ? SEATED_TALK : 1);
+    if (calm) sample(this.B, this.T.bind, calm, this.clock[calm.i], 1, true);
     if (this.prev && f < 1) {
-      sample(this.B, this.T.bind, this.prev, this.clock[this.prev.i], 1, true);
-      sample(this.B, this.T.bind, this.cur, this.clock[this.cur.i], f, false);
+      sample(this.B, this.T.bind, this.prev, this.clock[this.prev.i], w(this.prev), !calm);
+      sample(this.B, this.T.bind, this.cur, this.clock[this.cur.i], f * w(this.cur), false);
     } else {
       this.prev = null;
-      sample(this.B, this.T.bind, this.cur, this.clock[this.cur.i], 1, true);
+      sample(this.B, this.T.bind, this.cur, this.clock[this.cur.i], w(this.cur), !calm);
     }
     // the wrists: the clip's forearm roll spread into the forearm (no twist bones), then any fix
     if (!this.raw) this.wrists();
