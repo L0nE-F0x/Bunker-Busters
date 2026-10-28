@@ -3,6 +3,19 @@
 Each `## vX.Y.Z` section becomes the GitHub release notes and the "what's new" list in the in-app
 update notice (the first few bullets). `scripts/release.sh` refuses to release a version without one.
 
+## v1.0.2
+- **Bunkers in any order.** Mara now plays every debrief you're owed, oldest first. Finishing a later bunker before an earlier one used to lose the earlier debrief, and with it the next act's quest and rewards
+- **Continue puts you back where you saved.** Upstairs in the Spire, in the Dome's pod, down in Bunker Zero: you load where you were, not on the ground underneath (one spot by the Dome's stair could trap you there)
+- **A pause is a pause.** The pause menu, the Kit and the map stop the clock, the animals and the bunkers. A wolf pack can't kill you while you read the map
+- **Quit to title, then a new run.** The mouse is free on the title screen (the desktop app looked frozen until you pressed Esc), an alarm or a death no longer follows you there, and a new run starts clean: places to discover again, Dry Creek's doors shut, every bunker's machines back on
+- **Getting caught walks you away from the door.** A keypad, lock or card still open after a catch could open a door from the far end of the bunker. Going down closes it too
+- **Bunker Zero's tin cans stay underground.** Its showroom tripwires were going off on the forecourt above them from the first minute of a run
+- **Story things stay in your pack.** The Kit no longer drops deeds, orders, badges and relays (dropping one ended its favour). A full pack leaves a cache where it is instead of losing it, and what doesn't fit from a recovered pack stays in the pack
+- **Keypads cool off.** A locked-out keypad takes guesses again a minute after the alarm ends. Two wrong codes at the Panopticon's tower used to shut it for good
+- **Founders wait their turn.** Orrin no longer greets you at the Garage in Act I, Kit stops taunting Photon Park, and a far bunker's banner and map marker wait until you're close or its act has started
+- **The desert.** About forty thin blades of terrain, like the striped pyramid south of Dry Creek, are gone. The mesas are still there
+- **Smaller fixes.** The Cathedral's returns ride, the Spire's core, the Dome's patches (no more fixes shipping while you're at the camp), the Doormen, the Fortress's chains, deck and moat, the Garage fuse box through the wall, Vesper's laser line on every Continue, the music going silent after a quick Quit and Continue, Pip at the fire after midnight, Apex's road (it runs north past Dry Creek), and the small-phone HUD
+
 ## v1.0.1
 - **A proper ending.** After Mara's last debrief, the story closes on its own screen: the day, the locks you picked, the times you were caught, the hours on the road, and all eight bunkers with the people who built them
 - **The Fortress queue sits by the road.** The camping chairs in the allocation queue used to climb straight up the side of the mesa. They're on the shoulder of Lattice's road now, facing the gate, and the note with the code is on a chair where you can see it

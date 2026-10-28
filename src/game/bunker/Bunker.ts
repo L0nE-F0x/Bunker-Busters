@@ -52,6 +52,8 @@ export abstract class Bunker<S extends BunkerShell = BunkerShell> {
   /** Seconds since the bunker was built (drives pulses and flicker). */
   protected t = 0;
   private wrongCodes: Record<string, number> = {};
+  /** When each keypad locked out (`t`): it takes guesses again a minute later, once the alarm is over. */
+  private lockedAt: Record<string, number> = {};
   private tauntTimer = 6;
   private tauntIdx = 0;
   private greeted = false;
@@ -184,9 +186,16 @@ export abstract class Bunker<S extends BunkerShell = BunkerShell> {
     // wiped a keypad's wrong-code count)
     if (instant) {
       this.wrongCodes = {};
+      this.lockedAt = {};
+      this.opening.clear();
       this.greeted = false;
+      this.alarm = 0;
+      this.resetRun();
     }
   }
+
+  /** A fresh run or a loaded save: drop what the last run left moving (a ride, a timer, a machine's state). */
+  protected resetRun() {}
 
   private setDoor(d: Door, on: boolean, instant: boolean) {
     d.target = on ? 1 : 0;
@@ -247,7 +256,12 @@ export abstract class Bunker<S extends BunkerShell = BunkerShell> {
       case 'charge': return this.chargeReason(m.demolition);
       case 'circuit':
       case 'splice': return this.s.skill('electronics') >= m.electronics ? true : `Requires Electronics ${m.electronics}`;
-      case 'keypad': return (this.wrongCodes[e.id] ?? 0) >= m.lockout ? m.lockedLabel : true;
+      case 'keypad': {
+        if ((this.wrongCodes[e.id] ?? 0) < m.lockout) return true;
+        // a lockout is a wait, not the end of that door (Electronics 3 at the Panopticon had no other way in)
+        if (this.t - (this.lockedAt[e.id] ?? this.t) >= 60 && this.alarm <= 0) { this.wrongCodes[e.id] = 0; return true; }
+        return m.lockedLabel;
+      }
       case 'open': return true;
     }
   }
@@ -256,8 +270,21 @@ export abstract class Bunker<S extends BunkerShell = BunkerShell> {
     return {
       label: m.kind === 'lockpick' ? `Pick lock · ${m.pins} pins` : m.label,
       available: () => this.methodReason(e, m),
-      run: () => this.runMethod(e, m),
+      run: () => (this.opening.has(e.id) ? undefined : this.runMethod(e, m)),
     };
+  }
+
+  /** Entries that will open in a moment (a voice, a badge, a door that believed you): used once, not twice. */
+  private readonly opening = new Set<string>();
+
+  /** Open an entry after a beat, once (a second use in the wait did it twice, XP and all). */
+  protected openSoon(id: string, ms: number, opts?: { line?: string | null; trauma?: number }) {
+    this.opening.add(id);
+    const run = this.ctx.state;
+    setTimeout(() => {
+      this.opening.delete(id);
+      if (this.ctx.state === run) this.openEntry(id, opts);
+    }, ms);
   }
 
   private async card(e: BunkerEntryDef, card: LockCard) {
@@ -273,7 +300,7 @@ export abstract class Bunker<S extends BunkerShell = BunkerShell> {
       ],
     });
     const m = card.methods.find((x) => (x.id ?? x.kind) === pick);
-    if (m) await this.runMethod(e, m);
+    if (m && !this.opening.has(e.id)) await this.runMethod(e, m);
   }
 
   protected async runMethod(e: BunkerEntryDef, m: LockMethod) {
@@ -321,7 +348,7 @@ export abstract class Bunker<S extends BunkerShell = BunkerShell> {
           this.openEntry(e.id);
         } else if (res === 'wrong') {
           this.wrongCodes[e.id] = (this.wrongCodes[e.id] ?? 0) + 1;
-          if (this.wrongCodes[e.id] >= m.lockout) this.triggerAlarm(at, m.lockoutReason);
+          if (this.wrongCodes[e.id] >= m.lockout) { this.lockedAt[e.id] = this.t; this.triggerAlarm(at, m.lockoutReason); }
         }
         return;
       }
@@ -417,7 +444,9 @@ export abstract class Bunker<S extends BunkerShell = BunkerShell> {
     const all = sec.containers.every((c) => this.s.has(this.flag(`loot.${c.id}`)));
     if (all && this.s.set(this.flag('complete'))) {
       this.s.data.stats.busted++;
+      const run = this.s;
       setTimeout(() => {
+        if (ctx.state !== run) return; // quit to the title in between
         this.s.addXP(table.xp, sec.busted.reason);
         ctx.audio.sting('busted');
         ctx.ui.banner('BUNKER BUSTED', sec.busted.banner, 'good');
@@ -585,9 +614,11 @@ export abstract class Bunker<S extends BunkerShell = BunkerShell> {
 
     this.updateLights(dt, night);
 
-    // the owner: a greeting, then taunts while you hang around outside
+    // the owner: a greeting, then taunts while you hang around outside. Their PA carries a long way, so
+    // before their act has started only their own grounds hear it (Orrin greeted you at the Garage in
+    // Act I, Kit taunted Photon Park)
     const v = this.sec.voice;
-    const d = this.distToPlayer();
+    const d = this.playerOnGrounds || this.s.has(`q:act${this.def.tier}`) ? this.distToPlayer() : Infinity;
     if (!this.greeted && d < v.greetRadius) {
       this.greeted = true;
       this.taunt(v.greet);

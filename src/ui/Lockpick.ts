@@ -83,6 +83,11 @@ export class LockpickGame {
     });
   }
 
+  /** Close it as Esc would (you got caught with the pick in the lock). */
+  abort() {
+    if (!this.done) this.finish('abort');
+  }
+
   private finish(r: LockResult) {
     if (this.done && r !== 'success') return;
     cancelAnimationFrame(this.raf);

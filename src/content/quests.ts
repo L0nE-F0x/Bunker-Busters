@@ -164,7 +164,7 @@ export const QUESTS: QuestDef[] = [
       },
       {
         id: 'road', text: 'Reach Apex Vault, west of the salt', at: 'apex',
-        hint: 'Her road leaves the highway at its west end and runs south past Dry Creek, along the salt. Kade has a gatehouse on it. Look for the rocket.',
+        hint: 'Her road leaves the highway at its west end and runs north past Dry Creek, along the salt. Kade has a gatehouse on it. Look for the rocket.',
         done: (v) => any(v, 'seen:apex', 'apex.hangar.open', 'apex.airlock.open', 'apex.complete'),
       },
       {
@@ -266,7 +266,7 @@ export const QUESTS: QuestDef[] = [
       {
         id: 'road', text: 'Reach the Alignment Spire, above the Tube', at: 'alignment',
         hint: 'Take the highway east until it climbs into the tablelands. A road with guardrails leaves it on the right, up to a white tower.',
-        done: (v) => any(v, 'seen:spire', 'spire.door.open', 'spire.complete'),
+        done: (v) => any(v, 'seen:alignment', 'spire.door.open', 'spire.complete'),
       },
       {
         id: 'fenn', text: 'Find out what happened to Isaac Fenn', optional: true, at: 'alignment',

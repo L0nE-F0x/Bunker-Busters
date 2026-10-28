@@ -625,8 +625,11 @@ export class WaitlistSite extends Site {
         label: 'Search #2,201\'s tent',
         available: () => true,
         run: () => {
-          if (!this.s.set(F.tent)) return;
+          if (this.s.has(F.tent)) return;
           const got = this.loot([{ id: 'water', qty: 1 }, { id: 'ration', qty: 1 }, { id: 'lockpick', qty: 1 }]);
+          // a full pack leaves it where it is, for when you've made room
+          if (!got) { this.s.events.emit('toast', { text: 'Your pack is full. You leave it where it is.', kind: 'bad' }); return; }
+          this.s.set(F.tent);
           this.ctx.audio.play('pickup');
           this.toast(`A double sleeping bag, one side never unzipped. There\'s a note pinned to it: SAVING THIS SPOT FOR MOM. ${got}`, 'good');
           this.s.addXP(XP_REWARDS.cache, '#2,201\'s tent');
@@ -640,8 +643,11 @@ export class WaitlistSite extends Site {
         label: 'Open the cooler',
         available: () => true,
         run: () => {
-          if (!this.s.set(F.cooler)) return;
+          if (this.s.has(F.cooler)) return;
           const got = this.loot([{ id: 'ration', qty: 1 }, { id: 'ammo38', qty: 6 }]);
+          // a full pack leaves it where it is, for when you've made room
+          if (!got) { this.s.events.emit('toast', { text: 'Your pack is full. You leave it where it is.', kind: 'bad' }); return; }
+          this.s.set(F.cooler);
           this.ctx.audio.play('pickup');
           this.toast(`There hasn\'t been ice in it for years. A few tins, and a box of rounds wrapped in a sock. ${got}`, 'good');
           this.s.addXP(XP_REWARDS.cache, 'Cooler');
@@ -655,8 +661,11 @@ export class WaitlistSite extends Site {
         label: 'Go through the shopping cart',
         available: () => true,
         run: () => {
-          if (!this.s.set(F.cart)) return;
+          if (this.s.has(F.cart)) return;
           const got = this.loot([{ id: 'scrap', qty: 2 }, { id: 'battery', qty: 1 }]);
+          // a full pack leaves it where it is, for when you've made room
+          if (!got) { this.s.events.emit('toast', { text: 'Your pack is full. You leave it where it is.', kind: 'bad' }); return; }
+          this.s.set(F.cart);
           this.ctx.audio.play('pickup');
           this.toast(`Someone\'s whole house in a shopping cart: a lamp, a framed diploma, a toaster, a bag of cables. ${got}`, 'good');
           this.s.addXP(10, 'Shopping cart');

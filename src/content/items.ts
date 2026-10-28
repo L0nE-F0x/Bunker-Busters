@@ -327,6 +327,8 @@ export const USE_LABEL: Record<string, string> = {
   canteen: 'Drink', water: 'Drink', kombucha: 'Drink', ration: 'Eat', soylent: 'Drink', bandage: 'Wrap', nootropics: 'Take', medkit: 'Patch up', antivenom: 'Treat',
 };
 /** Items that are never dropped with your pack on death (story, weapons, worn gear). */
+/** The Kit's Drop: never the story's things (a dropped deed or order is gone, and its favour with it). */
+export const CAN_DROP = (id: string) => { const it = ITEMS[id]; return !!it && !it.keep && it.category !== 'intel' && id !== 'sol_roll'; };
 export const KEEP_ON_DEATH = (id: string) => { const c = ITEMS[id]?.category; return c === 'intel' || c === 'weapon' || id === 'sol_roll' || id === 'deed' || id === 'binoculars' || id === 'vest' || id === 'canteen'; };
 
 // --- Gear state (overnight swarm 2). Lives in `data.marks` (absent = fresh), so saves need no migration.

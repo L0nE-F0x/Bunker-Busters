@@ -198,10 +198,16 @@ export class Music {
     this.alarm = f.alarm;
     if (f.mood !== this.pendingMood) {
       this.pendingMood = f.mood;
-      // fade out what's playing; the new mood starts on the first bar after the fade
       this.bus.gain.cancelScheduledValues(t);
-      this.bus.gain.setTargetAtTime(0, t, 0.3);
-      this.switchAt = t + 1.2;
+      if (f.mood === this.mood) {
+        // back before the switch happened (Quit to title, then straight back in): nothing to switch,
+        // so bring what's playing back up (the bar handler only restores the bus on a switch)
+        this.bus.gain.setTargetAtTime(this.mood === 'off' ? 0 : 1, t, 0.3);
+      } else {
+        // fade out what's playing; the new mood starts on the first bar after the fade
+        this.bus.gain.setTargetAtTime(0, t, 0.3);
+        this.switchAt = t + 1.2;
+      }
     }
     // the fight: in at 0.3, out under 0.12 (so a lull between volleys doesn't drop it)
     this.combat = f.mood === 'play' ? f.combat ?? 0 : 0;

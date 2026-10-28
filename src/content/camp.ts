@@ -17,6 +17,8 @@ export interface CampView {
   /** After dark (the talk changes), and how many nights you've slept here (the band's rumour). */
   night?: boolean;
   rests?: number;
+  /** The clock (who's up: Pip sleeps 23:00–06:00). */
+  hour?: number;
 }
 
 /**
@@ -295,7 +297,8 @@ export const CAMP: CampMember[] = [
     id: 'pip',
     name: 'Pip Okafor',
     role: 'Keeps the jug ledger',
-    present: () => true,
+    // asleep from 23:00 to 06:00 (routines.ts: her model isn't at the fire either)
+    present: (v) => v.hour === undefined || (v.hour >= 6 && v.hour < 23),
     node: (id, v) => {
       if (id === 'school') {
         return {

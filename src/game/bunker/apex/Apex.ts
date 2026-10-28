@@ -61,6 +61,14 @@ export class Apex extends Bunker<ApexBuilder> {
     this.ctx.ui.banner('APEX MERCH', `One hoodie in every size, and ${got.join(', ') || 'nothing you can carry'}. The tag says LIMITED EDITION · LIMITED TO YOU.`, 'good');
   }
 
+  protected override resetRun() {
+    // lasers already off in a loaded run aren't news (Vesper said her line on every first Continue)
+    this.lastLasersOff = !!this.ctx.state && !!this.lasers?.off; // (no run yet while it's being built)
+    this.rang = false;
+    this.ambushT = -1;
+    this.flight = -1;
+  }
+
   override applyFlags(instant = false) {
     super.applyFlags(instant);
     const st = this.ctx.state as GameContext['state'] | null;
@@ -300,8 +308,9 @@ export class Apex extends Bunker<ApexBuilder> {
           this.s.addXP(40, 'She told you how the code works');
           this.s.events.emit('toast', { text: 'The airlock code is the launch clock over the door: hours and minutes.', kind: 'good' });
         }
-        if (choice?.effect === 'demo' && !this.isOpen('hangar')) {
-          this.s.set(F.demo);
+        if ((choice?.effect === 'demo' || choice?.effect === 'ledger') && !this.isOpen('hangar')) {
+          // the fan tour and the ledger both open the hangar, but only one of them was a tour
+          this.s.set(choice.effect === 'demo' ? F.demo : 'apex.extort');
           this.s.addXP(50, 'Talked your way into the hangar');
           this.openEntry('hangar', { line: null });
         }

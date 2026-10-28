@@ -2210,6 +2210,16 @@
   "where": "src/content/camp.ts"
  },
  {
+  "key": "1wxdfn5",
+  "voice": "af_river",
+  "fx": "radio",
+  "speed": 1,
+  "speaker": "Dez Marlow",
+  "words": "You held the ledger up to her gate camera and she opened the hangar herself. On air she called it extortion and said she respected it. Then she said she'd sue you from orbit.",
+  "tts": "You held the ledger up to her gate camera and she opened the hangar herself. On air she called it extortion and said she respected it. Then she said she'd sue you from orbit.",
+  "where": "src/content/story.ts"
+ },
+ {
   "key": "1g849ua",
   "voice": "af_river",
   "fx": "radio",
@@ -2247,6 +2257,16 @@
   "speaker": "Dez Marlow",
   "words": "You read her launch clock and typed it into her own door. She built a lock that counts down, and you waited for it. Somewhere an engineer is laughing into a pillow.",
   "tts": "You read her launch clock and typed it into her own door. She built a lock that counts down, and you waited for it. Somewhere an engineer is laughing into a pillow.",
+  "where": "src/content/story.ts"
+ },
+ {
+  "key": "0879q8y",
+  "voice": "af_river",
+  "fx": "radio",
+  "speed": 1,
+  "speaker": "Dez Marlow",
+  "words": "You shorted his gate motor and walked through. The rails never made a sound.",
+  "tts": "You shorted his gate motor and walked through. The rails never made a sound.",
   "where": "src/content/story.ts"
  },
  {
@@ -3050,13 +3070,13 @@
   "where": "src/content/bunkers/panopticon.ts"
  },
  {
-  "key": "0av571c",
+  "key": "0ki8u7l",
   "voice": "bm_fable",
   "fx": "pa",
   "speed": 1.04,
   "speaker": "Ezra Seymour",
-  "words": "Hello again. You came up the valley at a walk. Most people run the last part. Come in out of the sun.",
-  "tts": "Hello again. You came up the valley at a walk. Most people run the last part. Come in out of the sun.",
+  "words": "Hello again. You came up the valley at a walk. Most people run the last part. Come up to the gate.",
+  "tts": "Hello again. You came up the valley at a walk. Most people run the last part. Come up to the gate.",
   "where": "src/content/bunkers/panopticon.ts"
  },
  {
@@ -8700,13 +8720,13 @@
   "where": "src/content/story.ts"
  },
  {
-  "key": "0wv62sq",
+  "key": "06j80bg",
   "voice": "af_sarah",
   "fx": "radio",
   "speed": 0.97,
   "speaker": "Mara Voss",
-  "words": "Apex Vault is on the far shore of the salt. Her road leaves the highway at the west end, south past Dry Creek, and Kade sits on it. Ask Dry Creek first: anyone there who trusts you will walk with you.",
-  "tts": "Apex Vault is on the far shore of the salt. Her road leaves the highway at the west end, south past Dry Creek, and Kade sits on it. Ask Dry Creek first: anyone there who trusts you will walk with you.",
+  "words": "Apex Vault is on the far shore of the salt. Her road leaves the highway at the west end, north past Dry Creek, and Kade sits on it. Ask Dry Creek first: anyone there who trusts you will walk with you.",
+  "tts": "Apex Vault is on the far shore of the salt. Her road leaves the highway at the west end, north past Dry Creek, and Kade sits on it. Ask Dry Creek first: anyone there who trusts you will walk with you.",
   "where": "src/content/story.ts"
  },
  {

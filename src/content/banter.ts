@@ -138,7 +138,7 @@ export const BANTER: Banter[] = [
   {
     id: 'alignment', speaker: 'Mara',
     near: { x: 378, z: 4, r: 150 },
-    when: (v) => v.has('act3.debriefed') && !v.has('seen:spire'),
+    when: (v) => v.has('act3.debriefed') && !v.has('seen:alignment'),
     text: 'That white needle on the bench is the real one. The light on top is green. Let\'s try to keep it that way.',
   },
   {
@@ -168,7 +168,7 @@ export const BANTER: Banter[] = [
   {
     id: 'spire.wrong', speaker: 'self',
     near: { lm: 'spire', r: 40 },
-    when: (v) => v.has('act3.debriefed') && !v.has('seen:spire'),
+    when: (v) => v.has('act3.debriefed') && !v.has('seen:alignment'),
     text: 'There. East, on the bench above the Tube. That\'s the right spire.',
   },
   {

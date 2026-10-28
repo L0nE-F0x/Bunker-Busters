@@ -50,6 +50,8 @@ export class Cathedral extends Bunker<CathedralBuilder> {
   private pickers: NpcActor[] = [];
   private carrier: { actor: NpcActor; root: THREE.Object3D; seg: number; dir: number; pause: number } | null = null;
   private ride: { s: number; len: number[]; total: number } | null = null;
+  /** Where the ride last put you. */
+  private readonly rideAt = new THREE.Vector3();
   private eStop = 0;
   private obstructions = 0;
   private lastObstructionLine = -99;
@@ -361,6 +363,7 @@ export class Cathedral extends Bunker<CathedralBuilder> {
     pl.frozen = true;
     pl.forceCrouch = true;
     pl.teleport(pts[0]);
+    this.rideAt.copy(pts[0]);
     this.ctx.audio.play('door', { pos: this.b.points.kiosk });
     this.s.events.emit('toast', { text: 'The tote jerks, and the line takes you in through the flap.', kind: 'info' });
   }
@@ -368,12 +371,21 @@ export class Cathedral extends Bunker<CathedralBuilder> {
   private tickRide(dt: number) {
     const r = this.ride;
     if (!r) return;
+    // something else moved you (down in the dust, walked out): the tote goes on without you.
+    // Whoever moved you lets you go again
+    if (this.s.data.health <= 0 || this.ctx.player.position.distanceTo(this.rideAt) > 2) {
+      this.ride = null;
+      this.ctx.player.forceCrouch = false;
+      this.b.doors.flap.target = 0;
+      return;
+    }
     const pts = this.b.ride;
     r.s = Math.min(r.total, r.s + dt * RIDE);
     let s = r.s, i = 0;
     while (i < r.len.length - 1 && s > r.len[i]) { s -= r.len[i]; i++; }
     const p = this.tmp.copy(pts[i]).lerp(pts[i + 1], Math.min(1, s / r.len[i]));
     this.ctx.player.teleport(p);
+    this.rideAt.copy(p);
     if (r.s >= r.total - 0.01) {
       this.ride = null;
       const pl = this.ctx.player;
@@ -390,6 +402,13 @@ export class Cathedral extends Bunker<CathedralBuilder> {
 
   get riding() {
     return !!this.ride;
+  }
+
+  protected override resetRun() {
+    this.ride = null;
+    this.asking = false;
+    // shut down, and the associates hadn't walked out when the game closed: they still go
+    this.leaveT = this.has('cathedral.end.close') && !this.has('cathedral.assoc.gone') ? 0 : -1;
   }
 
   // ------------------------------------------------------------------ conversations

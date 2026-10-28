@@ -109,7 +109,13 @@ export class Heightfield {
     return n.fbm(x * 0.0022, z * 0.0022, 4) * 14 + n.fbm(x * 0.006 + 40, z * 0.006, 3) * 3.5;
   }
 
-  private rawHeight(x: number, z: number) {
+  /** Where the mesas stand (0 open ground … 1 plateau), before `generate` opens it. */
+  private plateauAt(x: number, z: number) {
+    return smoothstep(0.5, 0.58, this.noise.ridged(x * 0.0042 + 11, z * 0.0042 - 7, 4));
+  }
+
+  /** `plateau`: the mesa mask at (x, z) if it's already known (generate's opened grid). */
+  private rawHeight(x: number, z: number, plateau = this.plateauAt(x, z)) {
     const n = this.noise, n2 = this.noise2;
     let h = this.baseHeight(x, z);
     // wind-aligned dunes with warped crests
@@ -118,8 +124,6 @@ export class Heightfield {
     const duneMask = smoothstep(-0.1, 0.5, n2.fbm(x * 0.003 + 9, z * 0.003 - 3, 3));
     h += (Math.pow(Math.abs(Math.sin(dunePhase)), 1.6) * 3.4 - 1.2) * duneMask;
     // mesas: terraced plateaus with steep sides
-    const m = n.ridged(x * 0.0042 + 11, z * 0.0042 - 7, 4);
-    const plateau = smoothstep(0.5, 0.58, m);
     const terrace = Math.floor(plateau * 3) / 3 * 0.25 + plateau * 0.75;
     h += terrace * 26 * smoothstep(0.1, 0.5, n2.fbm(x * 0.002 - 5, z * 0.002 + 5, 2) + 0.35);
     // rocky detail
@@ -158,12 +162,18 @@ export class Heightfield {
   private generate() {
     const { res, step, size } = this;
     const half = size / 2;
+    // the mesa mask, opened (eroded, then dilated, over 10 m): where the ridged noise only grazes the
+    // plateau threshold along a crest it made blades 2-4 m wide and 20 m tall (a striped pyramid south
+    // of Dry Creek, ~40 more). Anything narrower than the window goes; real mesas and their slopes stay
+    const plat = new Float32Array(res * res);
+    for (let iz = 0; iz < res; iz++) for (let ix = 0; ix < res; ix++) plat[iz * res + ix] = this.plateauAt(-half + ix * step, -half + iz * step);
+    openMask(plat, res, 2);
     for (let iz = 0; iz < res; iz++) {
       for (let ix = 0; ix < res; ix++) {
         const x = -half + ix * step;
         const z = -half + iz * step;
         const i = iz * res + ix;
-        let h = this.rawHeight(x, z);
+        let h = this.rawHeight(x, z, plat[i]);
 
         const hw = distToPolyline(x, z, HIGHWAY);
         let track = Infinity;
@@ -369,4 +379,18 @@ export class Heightfield {
     if (Math.hypot(x - sx, z - sz) < SPIRE_PAD.r + SPIRE_PAD.falloff + 24) return this.heightAt(x, z);
     return this.rawHeight(x, z);
   }
+}
+
+/** Grayscale opening of a res×res grid in place: a box min over (2r+1)² cells, then a box max (separable). */
+function openMask(g: Float32Array, res: number, r: number) {
+  const tmp = new Float32Array(g.length);
+  const pass = (src: Float32Array, dst: Float32Array, horiz: boolean, op: (a: number, b: number) => number) => {
+    for (let a = 0; a < res; a++) for (let b = 0; b < res; b++) {
+      let v = src[horiz ? a * res + b : b * res + a];
+      for (let k = Math.max(0, b - r); k <= Math.min(res - 1, b + r); k++) v = op(v, src[horiz ? a * res + k : k * res + a]);
+      dst[horiz ? a * res + b : b * res + a] = v;
+    }
+  };
+  pass(g, tmp, true, Math.min); pass(tmp, g, false, Math.min);
+  pass(g, tmp, true, Math.max); pass(tmp, g, false, Math.max);
 }

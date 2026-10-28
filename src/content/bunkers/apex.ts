@@ -241,7 +241,7 @@ export interface VesperChoice {
   next: string | null;
   when?: (v: VesperView) => boolean;
   need?: (v: VesperView) => string | undefined;
-  effect?: 'demo' | 'code';
+  effect?: 'demo' | 'ledger' | 'code';
 }
 
 export const VESPER_TALK: Record<string, { speaker: string; text: string; choices: VesperChoice[] }> = {
@@ -277,7 +277,7 @@ export const VESPER_TALK: Record<string, { speaker: string; text: string; choice
   ledger: {
     speaker: VK,
     text: 'That\'s extortion. I respect it. I\'ll be suing you from orbit. The hangar\'s open. Wipe your feet, that floor has a following.',
-    choices: [{ id: 'ok', label: 'Leave', next: null, effect: 'demo' }],
+    choices: [{ id: 'ok', label: 'Leave', next: null, effect: 'ledger' }],
   },
   spent: {
     speaker: VK,

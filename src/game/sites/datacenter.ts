@@ -357,8 +357,11 @@ export class DataCenterSite extends Site {
   }
 
   private takeCells() {
-    if (!this.s.set(F.cells)) return;
+    if (this.s.has(F.cells)) return;
     const got = this.loot([{ id: 'battery', qty: 3 }, { id: 'scrap', qty: 2 }]);
+    // a full pack leaves it where it is, for when you've made room
+    if (!got) { this.s.events.emit('toast', { text: 'Your pack is full. You leave it where it is.', kind: 'bad' }); return; }
+    this.s.set(F.cells);
     this.ctx.audio.play('pickup');
     this.toast(got ? `Off the shelf: ${got}.` : 'Your pack is full.', got ? 'good' : 'bad');
     this.s.addXP(XP_REWARDS.cache, 'Battery room');

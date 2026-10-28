@@ -90,6 +90,11 @@ export class Panopticon extends Bunker<PanopticonBuilder> {
     return this.people.find((p) => p.id === id);
   }
 
+  protected override resetRun() {
+    this.alarmCall = 0;
+    this.adaLeaving = -1;
+  }
+
   override applyFlags(instant = false) {
     super.applyFlags(instant);
     const st = this.ctx.state as GameContext['state'] | null;
@@ -270,7 +275,9 @@ export class Panopticon extends Bunker<PanopticonBuilder> {
       if (this.s.set('panopticon.denied')) this.taunt(EZRA.denied.text);
       return;
     }
-    return super.runMethod(e, m);
+    await super.runMethod(e, m);
+    // the debrief tells a shorted motor apart from blown rails
+    if (e.id === 'gate' && m.kind === 'circuit' && this.isOpen('gate')) this.s.set('panopticon.gate.short');
   }
 
   protected override methodReason(e: BunkerEntryDef, m: LockMethod): true | string {
@@ -431,7 +438,9 @@ export class Panopticon extends Bunker<PanopticonBuilder> {
     }
     if (!this.s.set(F.kofi)) return;
     this.ctx.ui.subtitle(r.seen.speaker, r.seen.text, { pos: pr.at! });
+    const run = this.s;
     setTimeout(() => {
+      if (this.ctx.state !== run) return; // quit to the title in between
       this.taunt(EZRA.kofi.text);
       this.triggerAlarm(pr.at!.clone(), 'Kofi at desk 4 told Ezra you were in the yard.');
     }, 2600);

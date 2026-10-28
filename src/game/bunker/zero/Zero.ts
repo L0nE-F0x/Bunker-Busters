@@ -121,7 +121,8 @@ export class Zero extends Bunker<ZeroBuilder> {
       thermal: () => false,
       shielded: () => false,
       armoured: () => false,
-      standDown: () => (this.ended ? 'friendly' : this.has(F.doormenOff) ? 'off' : 'no'),
+      // switched off at the board they stay sat down, ending or not (friendly first stood them back up)
+      standDown: () => (this.has(F.doormenOff) ? 'off' : this.ended ? 'friendly' : 'no'),
       sight: () => {
         const st = this.s;
         const k = st.archetype.stats.stealth * stealthMeter(st.skill('stealth'));
@@ -157,6 +158,8 @@ export class Zero extends Bunker<ZeroBuilder> {
     b.standpipe.visible = this.has('zero.end.open');
     b.campLock.visible = this.has('zero.end.keep');
     if (instant) this.handleK = this.has('zero.end.open') ? 1 : 0;
+    // a fresh run (or a save with the power on): any Doorman sat down by the last run gets up
+    if (instant && !this.has(F.doormenOff)) for (const d of this.doormen?.list ?? []) d.wake();
   }
 
   // ------------------------------------------------------------------ interactables of its own

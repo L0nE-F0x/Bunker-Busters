@@ -93,9 +93,13 @@ export class Tripwires {
 
   /** `prev` → `now`: the feet's ground-plane path this frame. */
   update(dt: number, player: Player, prev: THREE.Vector2, now: THREE.Vector2) {
+    // a teleport (a catch, a respawn, the ladder) isn't a step across anything
+    const jumped = prev.distanceTo(now) > 2;
     for (const tw of this.wires) {
       this.cooldown[tw.id] = Math.max(0, (this.cooldown[tw.id] ?? 0) - dt);
-      if (!tw.armed || this.cooldown[tw.id] > 0) continue;
+      if (!tw.armed || this.cooldown[tw.id] > 0 || jumped) continue;
+      // only on the wire's own floor (Zero's showroom is 26 m under the camp's forecourt)
+      if (Math.abs(player.position.y - tw.a.y) > 1.5) continue;
       const a = this.a2.set(tw.a.x, tw.a.z), b = this.b2.set(tw.b.x, tw.b.z);
       if (segIntersect(prev, now, a, b) && player.grounded) {
         if (player.crouching) {

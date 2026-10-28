@@ -380,6 +380,11 @@ export class HackGame {
     setTimeout(() => this.finish({ done: [...this.order], traced, aborted: false }), traced ? 1300 : 1100);
   }
 
+  /** Close it as jacking out with nothing would (you got caught at the port). */
+  abort() {
+    if (!this.done) this.finish({ done: [], traced: false, aborted: true });
+  }
+
   private finish(r: HackResult) {
     this.done = true;
     cancelAnimationFrame(this.raf);

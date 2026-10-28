@@ -57,7 +57,7 @@ import type { GameContext, Interactable, UIBridge } from './context';
 import { UI, type HudFrame } from '@/ui/UI';
 import { MapData, LANDMARK_MARKERS, type MapMarker } from '@/ui/Minimap';
 import { SPAWN, WORLD_INTEL, LANDMARKS } from '@/content/world';
-import { WORLD_CACHES, briefingFor, debriefFor, campRadio, epilogueFor, DEBRIEF_CHOICE, type DebriefChoice } from '@/content/story';
+import { WORLD_CACHES, briefingFor, debriefFor, campRadio, pendingDebrief, epilogueFor, DEBRIEF_CHOICE, type DebriefChoice } from '@/content/story';
 import { CAMP, type CampView } from '@/content/camp';
 import { Story } from './Story';
 import { FastTravel, clockText } from './travel';
@@ -232,6 +232,8 @@ export class Game {
   private titleT = 0;
   private director!: MenuDirector;
   private busy = false; // minigame/modal in progress
+  /** A catch or a death is moving you (its fades own `busy` and the freeze until it's done). */
+  private takenAway = false;
   /** Smoothed 0..1 point light (fires, floodlights) on the player: the stealth model's night term. */
   private pointLit = 0;
   /** Warm these on the next frame's render (see warmShaders), staging anything not yet in the scene. */
@@ -434,6 +436,9 @@ export class Game {
     };
     // sites can call a Kade crew too (the Longshot, once its pod is opened)
     for (const site of this.sites) site.onAmbush = (at, yaw, d, n) => this.recovery.summon(at, yaw, d, n);
+    // Rapier's scene queries only see colliders after a step: without one clearSpot sees no walls or
+    // pumps, and Lo stood inside a pump island at the camp
+    this.physics.step();
     this.buildIntel();
     // stashes and searchable wrecks (not quests: just the desert being generous)
     this.scavenge = new Scavenge({
@@ -659,8 +664,12 @@ export class Game {
     try {
       return await fn();
     } finally {
-      this.busy = false;
-      if (this.player) { this.player.frozen = false; this.player.interactPose = 0; }
+      // closed by a catch or a death: they unfreeze you when they're done with you
+      if (!this.takenAway) {
+        this.busy = false;
+        if (this.player) this.player.frozen = false;
+      }
+      if (this.player) this.player.interactPose = 0;
       this.hands?.setBase('idle');
       this.ui.setHudVisible(true);
       this.input.requestLock();
@@ -746,11 +755,13 @@ export class Game {
     const s = this.state;
     const pk = s?.data.pack;
     if (!s || !pk) return;
-    for (const it of pk.items) s.addItem(it.id, it.qty, true, true);
-    s.data.pack = null;
+    // a stack already full in your pockets: the rest stays in the pack, it isn't lost
+    const left = pk.items.map((it) => ({ id: it.id, qty: it.qty - s.addItem(it.id, it.qty, true, true) })).filter((it) => it.qty > 0);
+    s.data.pack = left.length ? { ...pk, items: left } : null;
+    s.events.emit('inventoryChanged', {});
     this.placePack();
     this.audio.play('loot');
-    this.ui.toast('Your pack. Everything\'s still in it.', 'good');
+    this.ui.toast(left.length ? 'Your pack. Your pockets are full: the rest stays in it.' : 'Your pack. Everything\'s still in it.', left.length ? 'info' : 'good');
     this.arms?.validate();
   }
 
@@ -1001,6 +1012,7 @@ export class Game {
   private openCamp() {
     const s = this.state!;
     const debrief = s.has('garage.complete') && !s.has('debriefed');
+    const radioDue = pendingDebrief({ has: (f) => s.has(f), archetype: s.archetype });
     const recipeRow = (r: Recipe) => {
       const n = s.craftYield(r);
       const detail = n === r.out.qty ? r.detail : r.detail.replace(/→ \d+/, `→ ${n}`);
@@ -1012,18 +1024,12 @@ export class Game {
     const ordered = [...RECIPES].sort((a, b) => RECIPE_GROUPS.indexOf(a.group ?? 'Tools') - RECIPE_GROUPS.indexOf(b.group ?? 'Tools'));
     const recipes = ordered.map(recipeRow);
     const refreshRecipes = () => recipes.splice(0, recipes.length, ...ordered.map(recipeRow));
-    const campView = (): CampView => ({ has: (f) => s.has(f), count: (id) => s.count(id), rep: (id) => s.rep(id), name: s.archetype.name });
+    const campView = (): CampView => ({ has: (f) => s.has(f), count: (id) => s.count(id), rep: (id) => s.rep(id), name: s.archetype.name, hour: this.atmo.hour });
     let travel = false;
     void this.withMinigame('idle', async () => {
       for (;;) {
         const why = await this.ui.camp({
-          radioLabel: debrief ? 'Radio Mara · read the names' : s.has('apex.complete') && !s.has('act2.debriefed') ? 'Radio Mara · the water came east'
-            : s.has('panopticon.complete') && !s.has('act3.debriefed') ? 'Radio Mara · the lamp went out'
-              : s.has('spire.complete') && s.has('spire.core') && !s.has('act4.debriefed') ? 'Radio Mara · the Spire'
-                : s.has('dome.complete') && s.has('dome.end') && !s.has('act5.debriefed') ? 'Radio Mara · the Dome'
-                  : s.has('cathedral.complete') && s.has('cathedral.end') && !s.has('act6.debriefed') ? 'Radio Mara · the Cathedral'
-                    : s.has('fortress.complete') && s.has('fortress.end') && !s.has('act7.debriefed') ? 'Radio Mara · the Fortress'
-                      : s.has('zero.complete') && s.has('zero.end') && !s.has('act8.debriefed') ? 'Radio Mara · Bunker Zero' : 'Raise Mara on the radio',
+          radioLabel: debrief ? 'Radio Mara · read the names' : radioDue ? `Radio Mara · ${radioDue.label}` : 'Raise Mara on the radio',
           people: CAMP.filter((m) => m.present(campView())).map((m) => ({ id: m.id, name: m.name, role: m.role })),
           onRest: () => {
             const full = s.skill('survival') >= 5;
@@ -1115,14 +1121,18 @@ export class Game {
   /** Mara reads the names, Vesper cuts in, and you decide what the ledger is for. Escape defers it. */
   private async runDebrief() {
     const s = this.state!;
-    await this.ui.pages(debriefFor(s.archetype, { has: (f) => s.has(f), archetype: s.archetype }), 'Decide');
-    const pick = (await this.ui.choose(DEBRIEF_CHOICE)) as DebriefChoice | null;
+    // already decided (the game closed during the epilogue, before `debriefed`): hear how it ended, don't choose twice
+    const made = (['broadcast', 'leverage', 'deal'] as DebriefChoice[]).find((c) => s.has(`act1.${c}`));
+    if (!made) await this.ui.pages(debriefFor(s.archetype, { has: (f) => s.has(f), archetype: s.archetype }), 'Decide');
+    const pick = made ?? ((await this.ui.choose(DEBRIEF_CHOICE)) as DebriefChoice | null);
     if (!pick) {
       this.ui.toast('Mara: "Take a minute. The ledger isn\'t going anywhere. Neither is she."', 'info');
       return;
     }
-    if (pick === 'deal') s.removeItem('seed_manifest', 1);
-    s.set(`act1.${pick}`);
+    if (!made) {
+      if (pick === 'deal') s.removeItem('seed_manifest', 1);
+      s.set(`act1.${pick}`);
+    }
     await this.ui.pages(epilogueFor(s.archetype, pick), 'Close the radio');
     if (s.set('debriefed')) {
       s.data.thirst = 100;
@@ -1159,7 +1169,7 @@ export class Game {
     const save = loadGame();
     if (new URLSearchParams(location.search).has('autostart')) {
       // debug: skip menus straight into a fresh Infiltrator run (used by automated benchmarks)
-      setTimeout(() => this.startGame(GameState.fresh('infiltrator', SPAWN)), 50);
+      setTimeout(() => this.startGame(GameState.fresh('infiltrator', [SPAWN[0], this.hf.heightAt(SPAWN[0], SPAWN[2]), SPAWN[2]])), 50);
       return;
     }
     if (save && new URLSearchParams(location.search).has('continue')) {
@@ -1220,6 +1230,7 @@ export class Game {
   private startGame(state: GameState) {
     this.state = state;
     this.mode = 'playing';
+    this.takenAway = false;
     this.cam.snapFov(); // charselect/title leave the lens elsewhere; start the run at the player's FOV
     // out of the menus' dip to black: the picture comes up as the run begins
     const f0 = this.post.fade.value as number;
@@ -1239,8 +1250,15 @@ export class Game {
     if (hourOverride) this.atmo.hour = hourOverride;
     this.lastHour = this.atmo.hour;
     this.map.deserialize(state.data.discovered);
-    const [x, , z] = state.data.position;
-    let spawn = new THREE.Vector3(x, this.hf.heightAt(x, z) + 0.1, z);
+    const [x, y, z] = state.data.position;
+    const ground = this.hf.heightAt(x, z) + 0.1;
+    let spawn = new THREE.Vector3(x, ground, z);
+    // back where you saved: upstairs in a bunker, or down in Zero. Under the ground only inside a bunker
+    // (a save from outside on older terrain could be a little under it, and would fall forever)
+    if (Number.isFinite(y) && y < ground + 60) {
+      const saved = new THREE.Vector3(x, y + 0.05, z);
+      if (y > ground - 0.3 || this.bunkers.some((b) => b.b.contains?.(saved))) spawn = saved;
+    }
     // debug: ?at=garage starts the run inside the Garage (benching interior mode)
     if (new URLSearchParams(location.search).get('at') === 'garage') spawn = this.garage.b.points.interior.clone().setY(this.garage.b.points.interior.y - 0.9);
     // ?at=panopticon starts down the valley from it, facing the lamp (Act III without the walk)
@@ -1334,6 +1352,7 @@ export class Game {
     // hands, everything they can hold, and the shadow body compile on the first frame, under the fade
     this.warmNext = { roots: [this.camera, this.player.model.root], stage: () => this.hands?.stageItems() };
     for (const b of this.bunkers) b.applyFlags(true);
+    this.landmarkSeen.clear(); // a new run after Quit to title discovers everything again
     for (const it of WORLD_INTEL) {
       const m = this.intelMeshes.get(it.id);
       if (m) m.visible = !state.has(`intel:${it.id}`);
@@ -1478,9 +1497,12 @@ export class Game {
     this.cam.aimK = 0;
     if (this.player) {
       this.scene.remove(this.player.model.root);
-      this.physics.world.removeCollider(this.player.collider, false);
+      this.player.dispose(this.physics.world);
       this.player = null;
     }
+    // an alarm doesn't follow you to the title (or into the next run)
+    for (const b of this.bunkers) b.alarm = 0;
+    this.audio.setAlarm(false);
     this.state = null;
   }
 
@@ -1496,6 +1518,8 @@ export class Game {
 
   save(silent = false) {
     if (!this.state || !this.player) return;
+    // down in the dust: the pack isn't dropped yet. die() saves once you wake at the camp
+    if (this.state.data.health <= 0) { if (!silent) this.ui.toast('Not now.', 'bad'); return; }
     const d = this.state.data;
     d.position = [this.player.position.x, this.player.position.y, this.player.position.z];
     d.yaw = this.player.yaw;
@@ -1524,8 +1548,8 @@ export class Game {
   }
 
   private caught(reason: string, opts: { to?: THREE.Vector3; yaw?: number; gentle?: boolean; keepY?: boolean } = {}) {
+    if (!this.state || !this.player || this.takenAway) return;
     this.audio.sting('caught');
-    if (!this.state || !this.player) return;
     const s = this.state;
     s.data.stats.caught++;
     // Exit Plan (Stealth capstone): you planned for this. Nothing lost but the walk back.
@@ -1536,10 +1560,16 @@ export class Game {
       s.data.hunger = Math.max(0, s.data.hunger - 6);
     }
     this.hands?.jolt(1);
+    // walked away from whatever you were working on: a keypad left open would still open the gate from the ladder
+    this.takenAway = true;
+    this.ui.dismissInteraction();
     this.busy = true;
     this.player.frozen = true;
-    setTimeout(() => this.ui.fade(true, reason), 350);
+    // the timers belong to this run (Quit to title in between ends it)
+    const here = () => this.state === s && !!this.player;
+    setTimeout(() => { if (here()) this.ui.fade(true, reason); }, 350);
     setTimeout(() => {
+      if (!here()) return;
       if (!exit) {
         s.removeItem('lockpick', 1);
         if (s.data.health > 25) s.damage(20);
@@ -1556,9 +1586,11 @@ export class Game {
       this.audio.setAlarm(false);
     }, 1500);
     setTimeout(() => {
+      if (!here()) return;
       this.ui.fade(false);
       this.player!.frozen = false;
       this.busy = false;
+      this.takenAway = false;
       if (opts.gentle) { /* the Dome says its own piece */ } else if (exit) this.ui.toast('Exit Plan: you got tased, but you kept the pick.', 'good');
       else if (s.set('tut.caught')) this.ui.subtitle('Mara Voss', 'SeedBot graduates people. Crouch, or don\'t let it look at you. The pick was the expensive part.');
     }, 3600);
@@ -1637,6 +1669,8 @@ export class Game {
   /** Down in the dust: the view drops, the pack stays behind, you wake at the camp. */
   private die() {
     const s = this.state!, player = this.player!;
+    this.takenAway = true;
+    this.ui.dismissInteraction(); // a lock you were picking when you went down stays at the door
     this.busy = true;
     player.frozen = true;
     this.dying = 0.0001;
@@ -1655,8 +1689,10 @@ export class Game {
     s.data.pack = drop.length ? { position: [player.position.x, player.position.y, player.position.z], items: drop, day: Math.floor(s.data.stats.playTime / 1560) } : null;
     this.arms?.validate();
     this.audio.combat?.hurt('melee', 1.2);
-    setTimeout(() => this.ui.fade(true, 'You go down in the dust.'), 900);
+    const here = () => this.state === s && this.player === player;
+    setTimeout(() => { if (here()) this.ui.fade(true, 'You go down in the dust.'); }, 900);
     setTimeout(() => {
+      if (!here()) return;
       s.heal(45);
       s.data.hunger = Math.max(20, s.data.hunger - 20);
       s.data.thirst = Math.max(20, s.data.thirst - 25);
@@ -1671,9 +1707,11 @@ export class Game {
       this.placePack();
     }, 3000);
     setTimeout(() => {
+      if (!here()) return;
       this.ui.fade(false);
       player.frozen = false;
       this.busy = false;
+      this.takenAway = false;
       this.input.requestLock();
       if (lost) this.ui.toast('Your old pack is gone. Kade got to it first.', 'bad');
       if (s.data.pack) this.ui.toast('Your pack is still where you fell. Orange beacon, marked on the map.', 'info');
@@ -2121,9 +2159,12 @@ export class Game {
     this.frames++;
 
     const focusPos = this.player ? this.player.position : this.camera.position;
+    // a menu or a card open in a run holds the world still: the clock, the animals, the bunkers
+    // (Kade's squads and the machines already wait), so a pause is a pause
+    const held = this.mode === 'playing' && this.ui.modalOpen;
     this.weather.update(dt, this.mode === 'playing' && !this.ui.modalOpen);
     this.atmo.cover = damp(this.atmo.cover, this.mode === 'playing' && this.zero?.underground ? 1 : 0, 4, dt);
-    this.atmo.update(dt, focusPos);
+    this.atmo.update(held ? 0 : dt, focusPos);
     updateRim(this.atmo.sunColor, 0.35 + (1 - Math.min(1, Math.max(0, this.atmo.sunElevation * 3))) * 0.5);
     (this.post.godrayColor.value as THREE.Color).copy(this.atmo.sunColor).multiplyScalar(this.atmo.isNight ? 0.25 : 1);
     // eye adaptation follows the sun; a storm's murk opens the eye a little and adds grit
@@ -2177,7 +2218,7 @@ export class Game {
     this.shrubs.update(focusPos);
     this.pebbles.update(focusPos);
     this.camera.getWorldDirection(this.fauna.camFwd!);
-    this.fauna.update(dt, focusPos, this.atmo.hour, this.mode === 'playing' ? this.audio : undefined, !!this.player?.sprinting);
+    if (!held) this.fauna.update(dt, focusPos, this.atmo.hour, this.mode === 'playing' ? this.audio : undefined, !!this.player?.sprinting);
     this.dust.update(dt);
     this.haze.update(dt);
     this.puffs.update(dt);
@@ -2330,7 +2371,7 @@ export class Game {
       this.audio.play('click');
     }
     player.update(dt, input, this.cam.yaw, true);
-    for (const b of this.bunkers) b.update(dt);
+    if (!this.ui.modalOpen) for (const b of this.bunkers) b.update(dt);
     // what hostiles can perceive of you this frame
     const tg = this.combat.target;
     tg.feet.copy(player.position);
@@ -2459,32 +2500,35 @@ export class Game {
         s.set('apex.marker');
         this.ui.banner('APEX VAULT', 'The valley\'s water, a rocket that has never left, and a woman live-streaming both. Tier 2.', 'info');
       }
+      // a bunker you can see from far off is found from far off once its act is on; before that, up close
+      // (the Cathedral's banner and marker came up at the Garage in Act I)
+      const reach = (tier: number, r: number) => (s.has(`q:act${tier}`) ? r : 75);
       const [px, , pz] = PANOPTICON.location.position;
-      if (!s.has('seen:panopticon') && Math.hypot(player.position.x - px, player.position.z - pz) < 130) {
+      if (!s.has('seen:panopticon') && Math.hypot(player.position.x - px, player.position.z - pz) < reach(3, 130)) {
         s.set('seen:panopticon');
         s.set('panopticon.marker');
         this.ui.banner('THE PANOPTICON', 'An old lighthouse at the head of the valley, a ring of desks round it, and a man who has watched every camp for three years. Tier 3.', 'info');
       }
       const [spx, , spz] = SPIRE.location.position;
-      if (!s.has('seen:spire') && Math.hypot(player.position.x - spx, player.position.z - spz) < 125) {
-        s.set('seen:spire');
+      if (!s.has('seen:alignment') && Math.hypot(player.position.x - spx, player.position.z - spz) < reach(4, 125)) {
+        s.set('seen:alignment');
         s.set('spire.marker');
         this.ui.banner('THE ALIGNMENT SPIRE', 'A white tower with a light on top that tells you how worried it is. Prudence Ashby has thought very carefully about you. Tier 4.', 'info');
       }
       const [dmx, , dmz] = DOME.location.position;
-      if (!s.has('seen:dome') && Math.hypot(player.position.x - dmx, player.position.z - dmz) < 130) {
+      if (!s.has('seen:dome') && Math.hypot(player.position.x - dmx, player.position.z - dmz) < reach(5, 130)) {
         s.set('seen:dome');
         s.set('dome.marker');
         this.ui.banner('THE SINGULARITY DOME', 'A glass dome full of servers, two towers steaming beside it, and something inside still running Hunter Vale\'s company. Tier 5.', 'info');
       }
       const [ctx2, , ctz] = CATHEDRAL.location.position;
-      if (!s.has('seen:cathedral') && Math.hypot(player.position.x - ctx2, player.position.z - ctz) < 140) {
+      if (!s.has('seen:cathedral') && Math.hypot(player.position.x - ctx2, player.position.z - ctz) < reach(6, 140)) {
         s.set('seen:cathedral');
         s.set('cathedral.marker');
         this.ui.banner('THE CLOUD CATHEDRAL', 'A warehouse built like a church, a rose window that tells the time, and a swarm of delivery drones circling the bell tower. Orrin Sayle is still taking orders. Tier 6.', 'info');
       }
       const [ftx, , ftz] = FORTRESS.location.position;
-      if (!s.has('seen:fortress') && Math.hypot(player.position.x - ftx, player.position.z - ftz) < 130) {
+      if (!s.has('seen:fortress') && Math.hypot(player.position.x - ftx, player.position.z - ftz) < reach(7, 130)) {
         s.set('seen:fortress');
         s.set('fortress.marker');
         this.ui.banner('THE CHIP FORTRESS', 'A black star fort in a moat that never stops steaming, and a queue of empty chairs at the gate. Kit Szabo is still waiting for the price to peak. Tier 7.', 'info');
@@ -2516,7 +2560,8 @@ export class Game {
     this.post.aberration.value = 0.0007 + supp * 0.0014;
 
     // death is a debt, not a nap: you wake at the fire hours later, and your pack is where you fell
-    if (s.data.health <= 0 && !this.busy) this.die();
+    // (a lockpick or a keypad doesn't hold it off: die() closes them. A menu does: the world is held while it's up)
+    if (s.data.health <= 0 && !this.takenAway && !this.ui.modalOpen) this.die();
 
     // quests (on flag changes) and the occasional line of banter (throttled inside)
     this.story?.update(dt, {
@@ -2532,7 +2577,8 @@ export class Game {
     // autosave
     s.data.stats.playTime += dt;
     this.autosaveTimer -= dt;
-    if (this.autosaveTimer <= 0 && !this.bunkerAlarm) {
+    // not while you're down (health 0, the pack not dropped yet: die() saves once you wake at the camp)
+    if (this.autosaveTimer <= 0 && !this.bunkerAlarm && s.data.health > 0) {
       this.autosaveTimer = 60;
       this.save(true);
     }

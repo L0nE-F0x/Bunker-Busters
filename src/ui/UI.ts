@@ -1,7 +1,7 @@
 import './styles.css';
 import { ICONS, EYE_ICON } from './icons';
 import type { Vector3 } from 'three/webgpu';
-import { ITEMS, HOTBAR_ITEMS } from '@/content/items';
+import { ITEMS, HOTBAR_ITEMS, CAN_DROP } from '@/content/items';
 import { itemStatus, USE_LABEL, hotbarItem } from '@/content/items';
 import { openTill, type TillOpts } from './Trader';
 import { offlineLabel } from '@/engine/offline';
@@ -82,6 +82,8 @@ export class UI implements UIBridge {
   private minimap: Minimap | null = null;
   modalOpen = false;
   minigameOpen = false;
+  /** Closes the card or minigame that's up, as Esc would (getting caught walks you away from it). */
+  private dismiss: (() => void) | null = null;
   private subtitleTimer = 0;
   private subtitleId = 0;
   private lastClock = '';
@@ -719,7 +721,7 @@ export class UI implements UIBridge {
                   <div class="cat">${sel.category}</div><h4>${esc(sel.name)}</h4>
                   <p>${esc(proseKeys(sel.description))}</p>${itemStatus(sel.id, s) ? `<p class="gear-status">${esc(itemStatus(sel.id, s))}</p>` : ''}${sel.flavor ? `<p class="flavor">${esc(sel.flavor)}</p>` : ''}
                   <div class="stats"><span>WT ${sel.weight}kg</span><span>VALUE ${sel.value}</span><span>×${s.count(sel.id)}</span></div>
-                  <div class="rowbtns">${sel.usable ? `<button class="btn use">${USE_LABEL[sel.id] ?? 'Use'}</button>` : sel.category === 'weapon' ? '<button class="btn use">Equip</button>' : ''}${sel.keep ? '' : '<button class="btn drop">Drop 1</button><button class="btn drop-all">Drop stack</button>'}</div>` : '<p>Nothing in your pockets yet.</p>'}
+                  <div class="rowbtns">${sel.usable ? `<button class="btn use">${USE_LABEL[sel.id] ?? 'Use'}</button>` : sel.category === 'weapon' ? '<button class="btn use">Equip</button>' : ''}${!CAN_DROP(sel.id) ? '' : '<button class="btn drop">Drop 1</button><button class="btn drop-all">Drop stack</button>'}</div>` : '<p>Nothing in your pockets yet.</p>'}
                 </div>
                 <div class="kit-build">
                   <div class="label">Build · ${d.skillPoints} point${d.skillPoints === 1 ? '' : 's'} to spend</div>
@@ -734,8 +736,8 @@ export class UI implements UIBridge {
           if (use && selected) use.onclick = () => { onUse(selected!); if (!s.count(selected!)) selected = null; this.refreshHotbar(); render(); };
           const drop = m.querySelector('.drop') as HTMLElement | null;
           const dropAll = m.querySelector('.drop-all') as HTMLElement | null;
-          if (drop && selected) drop.onclick = () => { s.removeItem(selected!, 1); if (!s.count(selected!)) selected = null; this.audio.play('ui'); this.refreshHotbar(); render(); };
-          if (dropAll && selected) dropAll.onclick = () => { s.removeItem(selected!, s.count(selected!)); selected = null; this.audio.play('ui'); this.refreshHotbar(); render(); };
+          if (drop && selected && CAN_DROP(selected)) drop.onclick = () => { s.removeItem(selected!, 1); if (!s.count(selected!)) selected = null; this.audio.play('ui'); this.refreshHotbar(); render(); };
+          if (dropAll && selected && CAN_DROP(selected)) dropAll.onclick = () => { s.removeItem(selected!, s.count(selected!)); selected = null; this.audio.play('ui'); this.refreshHotbar(); render(); };
         }
         m.querySelectorAll('[data-tab]').forEach((b) => (b as HTMLElement).onclick = () => { tab = (b as HTMLElement).dataset.tab as typeof tab; this.audio.play('ui'); render(); });
       };
@@ -786,6 +788,8 @@ export class UI implements UIBridge {
   openPause(opts: { onResume: () => void; onSave: () => void; onSettings: () => void; onQuit: () => void }) {
     this.audio.play('ui');
     let closeFn = () => {};
+    // Quit closes the menu without resuming (resuming grabs the mouse, and the title would keep it)
+    let quitting = false;
     closeFn = this.openModal((close) => {
       const m = h('div', 'panel pause interactive', `<div class="scan"></div><h3>PAUSED</h3>`);
       const add = (label: string, fn: () => void, primary = false) => {
@@ -799,9 +803,9 @@ export class UI implements UIBridge {
       add('Settings', () => { opts.onSettings(); });
       add('Controls', () => this.showControls());
       if (isTouch && canFullscreen() && !isFullscreen()) add('Full screen', () => enterFullscreen());
-      add('Quit to title', () => { close(); opts.onQuit(); });
+      add('Quit to title', () => { quitting = true; close(); opts.onQuit(); });
       return m;
-    }, opts.onResume);
+    }, () => { if (!quitting) opts.onResume(); });
     return closeFn;
   }
 
@@ -1044,11 +1048,18 @@ export class UI implements UIBridge {
     this.modalOpen = true;
     this.audio.play('ui');
     return new Promise((resolve) => {
-      this.choicePanel(opts.speaker, opts.text, opts.choices, (id) => {
+      const close = this.choicePanel(opts.speaker, opts.text, opts.choices, (id) => {
         this.modalOpen = false;
+        this.dismiss = null;
         resolve(id);
       });
+      this.dismiss = () => close(null);
     });
+  }
+
+  /** Close whatever card or minigame is open, as Esc would. */
+  dismissInteraction() {
+    this.dismiss?.();
   }
 
   converse(opts: {
@@ -1061,15 +1072,16 @@ export class UI implements UIBridge {
     return new Promise((resolve) => {
       const step = (id: string) => {
         const node = opts.node(id);
-        if (!node) { this.modalOpen = false; resolve(); return; }
-        this.choicePanel(node.speaker, node.text, node.choices, (pick) => {
-          if (!pick) { this.modalOpen = false; resolve(); return; }
+        if (!node) { this.modalOpen = false; this.dismiss = null; resolve(); return; }
+        const close = this.choicePanel(node.speaker, node.text, node.choices, (pick) => {
+          if (!pick) { this.modalOpen = false; this.dismiss = null; resolve(); return; }
           const choice = node.choices.find((c) => c.id === pick);
           if (!choice || choice.disabled) { step(id); return; }
           opts.onChoice(id, pick);
-          if (!choice.next) { this.modalOpen = false; resolve(); return; }
+          if (!choice.next) { this.modalOpen = false; this.dismiss = null; resolve(); return; }
           step(choice.next);
         });
+        this.dismiss = () => close(null);
       };
       step(opts.start);
     });
@@ -1180,31 +1192,42 @@ export class UI implements UIBridge {
       skill: this.state?.lockSkill() ?? 0,
       picks: () => this.state?.count('lockpick') ?? 0,
     });
+    this.dismiss = () => g.abort();
     const r = await g.run();
     this.minigameOpen = false;
+    this.dismiss = null;
     return r;
   }
 
   async keypad(opts: { title: string; code: string; hint: string }) {
     this.minigameOpen = true;
-    const r = await new KeypadGame(this.root, this.audio, opts).run();
+    const g = new KeypadGame(this.root, this.audio, opts);
+    this.dismiss = () => g.abort();
+    const r = await g.run();
     this.minigameOpen = false;
+    this.dismiss = null;
     return r;
   }
 
   async circuit(opts: { title: string; difficulty: number }) {
     this.minigameOpen = true;
-    const r = await new CircuitGame(this.root, this.audio, { ...opts, skill: this.state?.boardSkill() ?? 0 }).run();
+    const g = new CircuitGame(this.root, this.audio, { ...opts, skill: this.state?.boardSkill() ?? 0 });
+    this.dismiss = () => g.abort();
+    const r = await g.run();
     this.minigameOpen = false;
+    this.dismiss = null;
     return r;
   }
 
   async hack(opts: Omit<HackOpts, 'skill'> & { skill?: number }): Promise<HackResult> {
     this.minigameOpen = true;
+    const g = new HackGame(this.root, this.audio, { ...opts, skill: opts.skill ?? this.state?.boardSkill() ?? 0 });
+    this.dismiss = () => g.abort();
     try {
-      return await new HackGame(this.root, this.audio, { ...opts, skill: opts.skill ?? this.state?.boardSkill() ?? 0 }).run();
+      return await g.run();
     } finally {
       this.minigameOpen = false;
+      this.dismiss = null;
     }
   }
 }

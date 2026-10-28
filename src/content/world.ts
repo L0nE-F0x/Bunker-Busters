@@ -427,7 +427,7 @@ export const WORLD_INTEL: IntelItem[] = [
     body:
       'KADE HOLDINGS · PRIVATE ROAD WEST · WAYBILL<br>' +
       'Consignee: APEX VAULT (V. Kade). Cargo: 40 jugs, "community contribution".<br>' +
-      'Route: leave the highway at the west end, south past Dry Creek, then along the salt. Do NOT cross the salt in daylight. The glare is bad.<br>' +
+      'Route: leave the highway at the west end, north past Dry Creek, then along the salt. Do NOT cross the salt in daylight. The glare is bad.<br>' +
       'Dispatch remarks: <i>Driver walked. Truck stayed. Jugs stayed. V. posted about it.</i>',
     position: [-318, 0, -150],
     reveals: ['apex.marker'],

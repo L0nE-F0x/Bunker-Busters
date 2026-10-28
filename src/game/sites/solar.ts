@@ -422,8 +422,11 @@ export class SolarSite extends Site {
         label: 'Strip SHINE-5',
         available: () => true,
         run: () => {
-          if (!this.s.set(F.bot)) return;
+          if (this.s.has(F.bot)) return;
           const got = this.loot([{ id: 'battery', qty: 1 }, { id: 'scrap', qty: 2 }]);
+          // a full pack leaves it where it is, for when you've made room
+          if (!got) { this.s.events.emit('toast', { text: 'Your pack is full. You leave it where it is.', kind: 'bad' }); return; }
+          this.s.set(F.bot);
           this.ctx.audio.play('pickup');
           this.toast(`Its last status is still on the little screen: "Row 6 obstructed. Awaiting technician." Day 212. ${got}`, 'good');
           this.s.addXP(15, 'SHINE-5');

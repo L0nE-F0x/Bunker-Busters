@@ -582,7 +582,8 @@ export class PanopticonBuilder implements BunkerShell {
     caddy.add(d, box(0.2, 0.06, 0.03, rk.x + Math.sin(rt) * 0.42, 1.25, rk.z + Math.cos(rt) * 0.42, rt));
     this.points.archive = this.w(rk.x + Math.sin(rt) * 0.9, 1.2, rk.z + Math.cos(rt) * 0.9);
     const shelf = new THREE.Group();
-    this.lootSpots.push({ id: 'shelf', pos: this.w(rk.x + Math.sin(rt) * 0.9, 1.0, rk.z + Math.cos(rt) * 0.9), mesh: shelf });
+    // along the rack from the drive, lower down: on the drive's own spot, aiming at the archive found the shelf
+    this.lootSpots.push({ id: 'shelf', pos: this.w(rk.x + Math.sin(rt) * 0.9 + Math.cos(rt) * 0.7, 0.7, rk.z + Math.cos(rt) * 0.9 - Math.sin(rt) * 0.7), mesh: shelf });
     // the supply locker (SW of the door)
     const lk = P(R - 0.4, THREE.MathUtils.degToRad(318)), lt = THREE.MathUtils.degToRad(318) + Math.PI;
     d.add(m.steel, box(0.9, 1.9, 0.5, lk.x, 0.95, lk.z, lt));

@@ -427,7 +427,7 @@ export class FortressBuilder implements BunkerShell {
     }
     this.points.bridgeDeck = this.w(0, 0.4, -(r0 + r1) / 2);
     // (the deck's collider while it's down: the runtime adds it)
-    this.points.bridgeCentre = this.w(0, 0.24, -r0 - span / 2 + 0.2);
+    this.points.bridgeCentre = this.w(0, 0.35, -r0 - span / 2 + 0.2); // the deck collider's middle: its top meets the planks (0.24 sank you 10 cm)
   }
 
   /** Where the chain hangs from on the deck (local), for the deck turned by `open` (1 down … 0 up). */

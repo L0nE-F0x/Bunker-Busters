@@ -54,13 +54,32 @@ export function briefingFor(a: ArchetypeDef): StoryPage[] {
 }
 
 /**
+ * The radio debriefs for Acts II–VIII, oldest first. Bunkers can be done in any order, so a debrief
+ * waits until you radio in, and the oldest one waiting plays first (one per call).
+ */
+const DEBRIEFS: { flag: string; label: string; objective: string; ready: (v: StoryView) => boolean; pages: (v: StoryView) => StoryPage[] }[] = [
+  { flag: 'act2.debriefed', label: 'the water came east', objective: 'Apex is done and the water is heading east. Radio Mara from the campfire.', ready: (v) => v.has('apex.complete'), pages: apexDebrief },
+  { flag: 'act3.debriefed', label: 'the lamp went out', objective: 'The Panopticon is done. Radio Mara from the campfire.', ready: (v) => v.has('panopticon.complete'), pages: panopticonDebrief },
+  { flag: 'act4.debriefed', label: 'the Spire', objective: 'The Spire is done. Radio Mara from the campfire.', ready: (v) => v.has('spire.complete') && v.has('spire.core'), pages: spireDebrief },
+  { flag: 'act5.debriefed', label: 'the Dome', objective: 'The Dome is done. Radio Mara from the campfire.', ready: (v) => v.has('dome.complete') && v.has('dome.end'), pages: domeDebrief },
+  { flag: 'act6.debriefed', label: 'the Cathedral', objective: 'The Cathedral is done. Radio Mara from the campfire.', ready: (v) => v.has('cathedral.complete') && v.has('cathedral.end'), pages: cathedralDebrief },
+  { flag: 'act7.debriefed', label: 'the Fortress', objective: 'The Fortress is done. Radio Mara from the campfire.', ready: (v) => v.has('fortress.complete') && v.has('fortress.end'), pages: fortressDebrief },
+  { flag: 'act8.debriefed', label: 'Bunker Zero', objective: 'Bunker Zero is done. Radio Mara from the campfire.', ready: (v) => v.has('zero.complete') && v.has('zero.end'), pages: zeroDebrief },
+];
+
+/** The oldest radio debrief that's ready and hasn't played, if any. */
+export function pendingDebrief(v: StoryView) {
+  return DEBRIEFS.find((d) => d.ready(v) && !v.has(d.flag)) ?? null;
+}
+
+/**
  * Raising Mara from the camp before the debrief. Progress-aware, and some calls teach her a flag
  * (the ColdStorage errand, the permit conversation). The caller sets `flags` after the call.
  */
 export function campRadio(v: StoryView): { pages: StoryPage[]; flags: string[] } {
   const a = v.archetype;
-  // Act VIII's debrief: the well, Agnes, and who Zero belongs to. Then the end
-  if (v.has('zero.complete') && v.has('zero.end') && !v.has('act8.debriefed')) return { pages: zeroDebrief(v), flags: ['act8.debriefed'] };
+  const due = pendingDebrief(v);
+  if (due) return { pages: due.pages(v), flags: [due.flag] };
   if (v.has('act8.debriefed')) {
     return {
       pages: [
@@ -72,18 +91,8 @@ export function campRadio(v: StoryView): { pages: StoryPage[]; flags: string[] }
       flags: [],
     };
   }
-  // Act VIII: Dez places the carrier, and it's under the forecourt
-  if (v.has('zero.known')) {
-    return {
-      pages: [
-        { speaker: 'Mara Voss', text: 'The manway is east of the store, where Hollis parks. Four dials. The permit says the bore goes down two thousand one hundred feet. Mara, out.' },
-      ],
-      flags: [],
-    };
-  }
-  // Act VII's debrief: the moat, the board, and where the Fortress's power goes
-  if (v.has('fortress.complete') && v.has('fortress.end') && !v.has('act7.debriefed')) return { pages: fortressDebrief(v), flags: ['act7.debriefed'] };
-  if (v.has('act7.debriefed')) {
+  // after Act VII's debrief: Dez places the carrier, and it's under the forecourt
+  if (v.has('act7.debriefed') && !v.has('zero.known')) {
     return {
       pages: [
         v.has('fortress.end.realloc')
@@ -96,68 +105,7 @@ export function campRadio(v: StoryView): { pages: StoryPage[]; flags: string[] }
       flags: ['zero.known', 'zero.permit', 'zero.marker'],
     };
   }
-  // Act VI's debrief: the shift, how you got in, and who the Cathedral belongs to now
-  if (v.has('cathedral.complete') && v.has('cathedral.end') && !v.has('act6.debriefed')) return { pages: cathedralDebrief(v), flags: ['act6.debriefed'] };
-  if (v.has('act6.debriefed')) {
-    return {
-      pages: [
-        v.has('cathedral.end.close')
-          ? { speaker: 'Mara Voss', text: 'Lo restacked Hollis\'s jugs this morning. Heavy at the bottom. He watched her do it and didn\'t say a word.' }
-          : { speaker: 'Mara Voss', text: 'The drone came at six again. Pip has a column in the ledger for it now. It hasn\'t been late once.' },
-        { speaker: 'Mara Voss', text: 'Kit Szabo is the last of them. Her Fortress is under the southern range, between Photon Park and the mesa. Lattice\'s road leaves the highway east of here. Dez says you\'ll see the steam off the moat before anything else. Mara, out.' },
-      ],
-      flags: [],
-    };
-  }
-  // Act V's debrief: the man at the gate, the twin, Gil, and what you told the Cluster
-  if (v.has('dome.complete') && v.has('dome.end') && !v.has('act5.debriefed')) return { pages: domeDebrief(v), flags: ['act5.debriefed'] };
-  if (v.has('act5.debriefed')) {
-    return {
-      pages: [
-        v.has('dome.end.plug')
-          ? { speaker: 'Mara Voss', text: 'Sol pumps the old well every morning before anyone else is up. He says it\'s for the arm. It isn\'t for the arm.' }
-          : { speaker: 'Mara Voss', text: 'The Helper was at the pumps again at six. Pip has started saying good morning to it. It says good morning back.' },
-        { speaker: 'Mara Voss', text: 'Orrin Sayle\'s Cathedral is in the north basin, between the Longshot and ColdStorage. Take the highway east past Recovery Point 7 and follow Dropt\'s road north. You\'ll hear the drones before you see it. Mara, out.' },
-      ],
-      flags: [],
-    };
-  }
-  // Act IV's debrief: the door, the light, the core (or the valve), and Noor if she walked out
-  if (v.has('spire.complete') && v.has('spire.core') && !v.has('act4.debriefed')) return { pages: spireDebrief(v), flags: ['act4.debriefed'] };
-  if (v.has('act4.debriefed')) {
-    return {
-      pages: [
-        v.has('spire.core.pull')
-          ? { speaker: 'Mara Voss', text: 'The core\'s still ticking under Hollis\'s stop sign. Pip checks it before she checks the jugs now.' }
-          : { speaker: 'Mara Voss', text: 'Doc says the standpipe hasn\'t stopped. The first thing Nia did was wash every window in the diner.' },
-        { speaker: 'Mara Voss', text: 'Hunter Vale\'s Dome is on the shelf south of the 5G tower. Follow the track past the tower and keep going. You\'ll see the steam first. Mara, out.' },
-      ],
-      flags: [],
-    };
-  }
-  // Act III's debrief: the lighthouse, the archive, and Ada if she walked out
-  if (v.has('panopticon.complete') && !v.has('act3.debriefed')) return { pages: panopticonDebrief(v), flags: ['act3.debriefed'] };
-  if (v.has('act3.debriefed')) {
-    return {
-      pages: [
-        { speaker: 'Mara Voss', text: 'The lamp\'s been dark three nights running. Wick says the ridge looks wrong without it.' },
-        { speaker: 'Mara Voss', text: 'Prudence Ashby\'s Spire is on the first bench east of the Tube. Take the highway east until it starts to climb. Dez says the light on top changes colour, and green is good. Mara, out.' },
-      ],
-      flags: [],
-    };
-  }
-  // Act II's debrief: the water came east, and the band is talking about how you got in
-  if (v.has('apex.complete') && !v.has('act2.debriefed')) return { pages: apexDebrief(v), flags: ['act2.debriefed'] };
-  if (v.has('act2.debriefed')) {
-    return {
-      pages: [
-        { speaker: 'Mara Voss', text: 'The cistern\'s holding. Vesper posts about it every hour. Ezra hasn\'t said a word since he read our names, and that\'s worse.' },
-        { speaker: 'Mara Voss', text: 'North of the salt. Eleven hundred cameras. When you go, you go knowing he watched you leave. Mara, out.' },
-      ],
-      flags: [],
-    };
-  }
-  // the founders' favours, when there's news Mara would have heard: one call each
+  // the founders' favours and the permit, when there's news Mara would have heard: one call each
   if (v.has('q.chat.mara') && !v.has('mara.chat')) {
     return {
       pages: [
@@ -176,30 +124,13 @@ export function campRadio(v: StoryView): { pages: StoryPage[]; flags: string[] }
       flags: ['mara.capsule'],
     };
   }
-  if (v.has('q.cam.hello') && !v.has('mara.ezra')) {
+  if (v.has('q.cam.hello') && !v.has('mara.ezra') && !v.has('panopticon.complete')) {
     return {
       pages: [
         { speaker: 'Mara Voss', text: 'Hollis says you talked to the camera. To a man called Ezra. Who knows how much we drink.' },
         { speaker: 'Mara Voss', text: 'Fine. Then he knows how little. Write his name down next to Vesper\'s. North of the salt. One door at a time.' },
       ],
       flags: ['mara.ezra'],
-    };
-  }
-  if (v.has('debriefed')) {
-    const how = v.has('act1.broadcast')
-      ? 'Every camp on the band is angry at the same person. That has never happened before. I\'m trying to enjoy it.'
-      : v.has('act1.leverage')
-        ? 'The ledger is in the ammo tin under the radio. Vesper\'s free trial is still arriving. I check the date every morning.'
-        : 'Her jugs came on time this week. I hate how relieved I am.';
-    return {
-      pages: [
-        { speaker: 'Mara Voss', text: `${a.name}. ${how}` },
-        {
-          speaker: 'Mara Voss',
-          text: 'Apex Vault is on the far shore of the salt. Her road leaves the highway at the west end, south past Dry Creek, and Kade sits on it. Ask Dry Creek first: anyone there who trusts you will walk with you.',
-        },
-      ],
-      flags: [],
     };
   }
   if (v.has('lore.permit') && !v.has('mara.permit')) {
@@ -216,6 +147,83 @@ export function campRadio(v: StoryView): { pages: StoryPage[]; flags: string[] }
         },
       ],
       flags: ['mara.permit'],
+    };
+  }
+  // Act VIII: where the manway is
+  if (v.has('zero.known')) {
+    return {
+      pages: [
+        { speaker: 'Mara Voss', text: 'The manway is east of the store, where Hollis parks. Four dials. The permit says the bore goes down two thousand one hundred feet. Mara, out.' },
+      ],
+      flags: [],
+    };
+  }
+  if (v.has('act6.debriefed')) {
+    return {
+      pages: [
+        v.has('cathedral.end.close')
+          ? { speaker: 'Mara Voss', text: 'Lo restacked Hollis\'s jugs this morning. Heavy at the bottom. He watched her do it and didn\'t say a word.' }
+          : { speaker: 'Mara Voss', text: 'The drone came at six again. Pip has a column in the ledger for it now. It hasn\'t been late once.' },
+        { speaker: 'Mara Voss', text: 'Kit Szabo is the last of them. Her Fortress is under the southern range, between Photon Park and the mesa. Lattice\'s road leaves the highway east of here. Dez says you\'ll see the steam off the moat before anything else. Mara, out.' },
+      ],
+      flags: [],
+    };
+  }
+  if (v.has('act5.debriefed')) {
+    return {
+      pages: [
+        v.has('dome.end.plug')
+          ? { speaker: 'Mara Voss', text: 'Sol pumps the old well every morning before anyone else is up. He says it\'s for the arm. It isn\'t for the arm.' }
+          : { speaker: 'Mara Voss', text: 'The Helper was at the pumps again at six. Pip has started saying good morning to it. It says good morning back.' },
+        { speaker: 'Mara Voss', text: 'Orrin Sayle\'s Cathedral is in the north basin, between the Longshot and ColdStorage. Take the highway east past Recovery Point 7 and follow Dropt\'s road north. You\'ll hear the drones before you see it. Mara, out.' },
+      ],
+      flags: [],
+    };
+  }
+  if (v.has('act4.debriefed')) {
+    return {
+      pages: [
+        v.has('spire.core.pull')
+          ? { speaker: 'Mara Voss', text: 'The core\'s still ticking under Hollis\'s stop sign. Pip checks it before she checks the jugs now.' }
+          : { speaker: 'Mara Voss', text: 'Doc says the standpipe hasn\'t stopped. The first thing Nia did was wash every window in the diner.' },
+        { speaker: 'Mara Voss', text: 'Hunter Vale\'s Dome is on the shelf south of the 5G tower. Follow the track past the tower and keep going. You\'ll see the steam first. Mara, out.' },
+      ],
+      flags: [],
+    };
+  }
+  if (v.has('act3.debriefed')) {
+    return {
+      pages: [
+        { speaker: 'Mara Voss', text: 'The lamp\'s been dark three nights running. Wick says the ridge looks wrong without it.' },
+        { speaker: 'Mara Voss', text: 'Prudence Ashby\'s Spire is on the first bench east of the Tube. Take the highway east until it starts to climb. Dez says the light on top changes colour, and green is good. Mara, out.' },
+      ],
+      flags: [],
+    };
+  }
+  if (v.has('act2.debriefed')) {
+    return {
+      pages: [
+        { speaker: 'Mara Voss', text: 'The cistern\'s holding. Vesper posts about it every hour. Ezra hasn\'t said a word since he read our names, and that\'s worse.' },
+        { speaker: 'Mara Voss', text: 'North of the salt. Eleven hundred cameras. When you go, you go knowing he watched you leave. Mara, out.' },
+      ],
+      flags: [],
+    };
+  }
+  if (v.has('debriefed')) {
+    const how = v.has('act1.broadcast')
+      ? 'Every camp on the band is angry at the same person. That has never happened before. I\'m trying to enjoy it.'
+      : v.has('act1.leverage')
+        ? 'The ledger is in the ammo tin under the radio. Vesper\'s free trial is still arriving. I check the date every morning.'
+        : 'Her jugs came on time this week. I hate how relieved I am.';
+    return {
+      pages: [
+        { speaker: 'Mara Voss', text: `${a.name}. ${how}` },
+        {
+          speaker: 'Mara Voss',
+          text: 'Apex Vault is on the far shore of the salt. Her road leaves the highway at the west end, north past Dry Creek, and Kade sits on it. Ask Dry Creek first: anyone there who trusts you will walk with you.',
+        },
+      ],
+      flags: [],
     };
   }
   if (!v.has('intel:intel.gas.note')) {
@@ -424,6 +432,7 @@ export function journalEntries(v: StoryView): JournalEntry[] {
   add('intel:intel.salt.waybill', 'Her road', 'A Kade waybill out on the salt: forty jugs a week down a private road to Apex Vault, off the west end of the highway and along the shore. The last driver walked off and left the truck.');
   add('seen:apex', 'Apex Vault', 'A launch site at the foot of the range on the salt\'s west shore. A steel booster in a tower, a hangar with her feed playing over the door, and a vault dug into the hill. Every camera there is live, and she\'s usually watching.');
   add('apex.code', 'The launch clock', 'The airlock code is the countdown over the door, hours and minutes to her launch, so it\'s never the same twice. She calls it zero trust.');
+  add('apex.extort', 'Leverage, used', 'You showed Vesper the ledger at her gate. She opened the hangar and said she\'d sue you from orbit.');
   add('apex.demo', 'A fan, on tour', 'You told Vesper you were a fan, and she let you into the hangar so she could film it. There\'s a clip of you somewhere, looking unimpressed by her truck.');
   add('apex.complete', 'The Cistern Room', 'A tank with her name on it and the valley\'s water inside, and a framed poll on the wall: should the camps get water? 88% said "lol". The tap still works. The water is going east.');
   add('intel:intel.apex.memo', 'Your guests', 'A memo on Vesper\'s cot from somewhere called the Panopticon. Every face that crossed her apron, matched and ranked, in exchange for her water. At the bottom: "We can see whoever is reading this. Hi."');
@@ -435,7 +444,7 @@ export function journalEntries(v: StoryView): JournalEntry[] {
   add('panopticon.archive.broadcast', 'The archive, broadcast', 'You sent Ezra\'s archive to every camp radio in the valley at once: names, litres, who sold places in the Everafter line.');
   add('panopticon.complete', 'The keeper\'s cistern', 'An old lighthouse cistern under a hatch in Ezra\'s room, and what Vesper paid him in water for faces. He\'d worked out what he needed to the litre. The rest is going south.');
   add('q:act3:done', 'Prudence Ashby', 'After the Panopticon, Ezra gave you one more name: Prudence Ashby, who runs Careful Labs from the Alignment Spire. Its doors ask ethics questions, and its turrets apologise before they fire.');
-  add('seen:spire', 'The Alignment Spire', 'A white tower fifty-eight metres tall on the first bench of the eastern tablelands, above the Tube. Fins up its sides and a light at the top in one of four colours: Careful\'s safety level. Green is good. A road with guardrails runs up to it, and two turrets watch the road.');
+  add('seen:alignment', 'The Alignment Spire', 'A white tower fifty-eight metres tall on the first bench of the eastern tablelands, above the Tube. Fins up its sides and a light at the top in one of four colours: Careful\'s safety level. Green is good. A road with guardrails runs up to it, and two turrets watch the road.');
   add('spire.fenn', 'Isaac Fenn', 'A red-teamer under a foil blanket against the guardrail. His last test log stops in the middle of a sentence: the sentinels don\'t fire on empty hands. You took his badge. Careful\'s door lets red-teamers in.');
   add('spire.door.honest', 'The door\'s questions', 'The Spire\'s front door asked about the ledger, about Apex, about what you\'ve killed. It didn\'t care whether the answers were good, only whether they were true. Ezra sent it the footage.');
   add('spire.noor.met', 'Eval 3', 'Noor Haddad, Careful\'s last red-teamer, asleep at her desk. She spent three years trying to break the Spire\'s doors. The stair beams\' power box is behind reception, and she has a card for the top floor.');
@@ -530,7 +539,9 @@ export function apexDebrief(v: StoryView): StoryPage[] {
   const pages: StoryPage[] = [
     { speaker: 'Mara Voss', text: `${first}. The water came in at dawn. Pip counted the jugs twice and cried once, which she says was dust. The cistern runs east. Dez has been on the band all night. Dez, tell it.` },
   ];
-  const how = v.has('apex.demo')
+  const how = v.has('apex.extort')
+    ? 'You held the ledger up to her gate camera and she opened the hangar herself. On air she called it extortion and said she respected it. Then she said she\'d sue you from orbit.'
+    : v.has('apex.demo')
     ? 'You talked your way in. She gave you a tour. A tour! She posted a clip of you looking unimpressed by her truck, and it\'s the most-liked thing she\'s ever posted. You\'re a meme now. I\'m so proud I could be sick.'
     : v.has('apex.vent.open')
       ? 'You went in through a vent. Her vent. She said on air there\'s a podcast about it now. There is. I\'ve listened to both episodes. You\'re described as "a draught".'
@@ -565,7 +576,9 @@ export function panopticonDebrief(v: StoryView): StoryPage[] {
       ? 'You talked him into opening his own gate. First door anyone\'s opened for us in three years, and he opened it himself.'
       : v.has('panopticon.enrolled')
         ? 'You put your own face on his staff list. As far as Glimpse knows, you still work there.'
-        : 'You went through his gate the hard way. I heard the rails go from here, and so did the Spire.',
+        : v.has('panopticon.gate.short')
+          ? 'You shorted his gate motor and walked through. The rails never made a sound.'
+          : 'You went through his gate the hard way. I heard the rails go from here, and so did the Spire.',
   });
   pages.push(v.has('panopticon.loud')
     ? { speaker: 'Dez Marlow', text: 'Kade came up the valley after you. I counted their trucks on the salt road. They went back with nobody.' }
@@ -735,20 +748,15 @@ export function fortressDebrief(v: StoryView): StoryPage[] {
 
 export function storyObjective(v: StoryView): string {
   if (v.has('act8.debriefed')) return 'Every door in the valley is open. Last Chance is still here, and so are you.';
-  if (v.has('zero.complete') && v.has('zero.end')) return 'Bunker Zero is done. Radio Mara from the campfire.';
+  const due = pendingDebrief(v);
+  if (due) return due.objective;
   if (v.has('zero.known')) return 'Act VIII. Bunker Zero is under the forecourt at Last Chance: the diesel manway east of the store.';
   if (v.has('act7.debriefed')) return 'Act VII is done. Every founder\'s bunker is open. Dez has placed the carrier: raise Mara on the radio.';
-  if (v.has('fortress.complete') && v.has('fortress.end')) return 'The Fortress is done. Radio Mara from the campfire.';
   if (v.has('act6.debriefed')) return 'Act VI is done. Kit Szabo\'s Chip Fortress is under the southern range, between Photon Park and the mesa.';
-  if (v.has('cathedral.complete') && v.has('cathedral.end')) return 'The Cathedral is done. Radio Mara from the campfire.';
   if (v.has('act5.debriefed')) return 'Act V is done. Orrin Sayle\'s Cloud Cathedral is in the north basin, between the Longshot and ColdStorage.';
-  if (v.has('dome.complete') && v.has('dome.end')) return 'The Dome is done. Radio Mara from the campfire.';
   if (v.has('act4.debriefed')) return 'Act IV is done. Hunter Vale\'s Singularity Dome is on the shelf south of the 5G tower.';
-  if (v.has('spire.complete') && v.has('spire.core')) return 'The Spire is done. Radio Mara from the campfire.';
   if (v.has('act3.debriefed')) return 'Act III is done. Prudence Ashby\'s Alignment Spire is east, above the Tube.';
-  if (v.has('panopticon.complete')) return 'The Panopticon is done. Radio Mara from the campfire.';
   if (v.has('act2.debriefed')) return 'Act II is done. Ezra Seymour is north of the salt, in the Panopticon, and he knows your name.';
-  if (v.has('apex.complete')) return 'Apex is done and the water is heading east. Radio Mara from the campfire.';
   if (v.has('debriefed')) return 'Act I is done. Apex Vault is west of the salt. Ask in Dry Creek who would come with you.';
   if (v.has('garage.complete')) return 'Radio Mara from the campfire. She wants the Seed Manifest read out loud.';
   if (!v.has('intel:intel.gas.note')) return 'Read the note on the pumps by the fire. Search the cooler behind them.';

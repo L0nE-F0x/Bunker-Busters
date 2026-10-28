@@ -217,6 +217,11 @@ export class Helper implements Hostile {
   /** The alarm: go and look at `p`. */
   investigate(p: THREE.Vector3) {
     if (this.state !== 'patrol' && this.state !== 'pause' && this.state !== 'back') return;
+    // it walks there in a straight line, so only where nothing solid is in the way (a Doorman walked
+    // through Zero's shut clock gate; the yard's technicians through the curtain wall to the pump house).
+    // Stops short of the spot itself: an alarm on a wall (a camera) would block its own line
+    const to = _c.set(p.x, this.center.y, p.z), len = this.center.distanceTo(to);
+    if (len > 1 && !this.host.combat.clearLine(this.center, _d.subVectors(to, this.center).multiplyScalar((len - 0.8) / len).add(this.center))) return;
     this.lastSeen.copy(p);
     this.state = 'chase';
     this.t = 0;

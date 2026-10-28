@@ -60,6 +60,11 @@ export class CircuitGame {
     });
   }
 
+  /** Close it as Esc would (you got caught at the panel). */
+  abort() {
+    if (!this.done) this.finish(false);
+  }
+
   private finish(ok: boolean) {
     cancelAnimationFrame(this.raf);
     window.removeEventListener('keydown', this.onKey);
@@ -200,6 +205,11 @@ export class KeypadGame {
     this.host.appendChild(this.root);
     window.addEventListener('keydown', this.onKey);
     return new Promise((res) => (this.resolve = res));
+  }
+
+  /** Close it as Esc would (you got caught at the keypad). */
+  abort() {
+    this.finish('abort');
   }
 
   private finish(r: 'ok' | 'wrong' | 'abort') {

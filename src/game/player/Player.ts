@@ -39,6 +39,11 @@ export class Player {
   /** '' | 'still' | 'lowlight', set each frame from the Stealth focus. */
   stealthFocus = '';
   private body: ReturnType<Physics['world']['createRigidBody']>;
+  /** Out of the world (Quit to title): its body, collider and controller. */
+  dispose(world: Physics['world']) {
+    world.removeCharacterController(this.controller);
+    world.removeRigidBody(this.body); // takes its collider with it
+  }
   collider: ReturnType<Physics['world']['createCollider']>;
   private controller: ReturnType<Physics['world']['createCharacterController']>;
   private halfHeight = STAND_HALF;

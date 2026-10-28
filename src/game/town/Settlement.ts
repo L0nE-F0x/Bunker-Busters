@@ -7,6 +7,7 @@ import type { Heightfield } from '@/game/world/Heightfield';
 import type { Physics } from '@/engine/physics';
 import type { Landmarks } from '@/game/world/Landmarks';
 import type { GameContext, Interactable, Action } from '@/game/context';
+import type { GameState } from '@/game/State';
 import { LANDMARKS } from '@/content/world';
 import { ITEMS } from '@/content/items';
 import { XP_REWARDS } from '@/content/progression';
@@ -66,7 +67,8 @@ export class Settlement {
 
   private doors: Swing[] = [];
   private blockers: { id: string; obj: THREE.Object3D; collider: Col }[] = [];
-  private synced = false;
+  /** The run the doors and blockers were last set from (a new run after Quit to title sets them again). */
+  private synced: GameState | null = null;
   /** Detail up close, a one-draw silhouette from the highway. */
   private lods: DistanceLod[] = [];
   private readonly world = new Map<string, THREE.Vector3>();
@@ -687,10 +689,13 @@ export class Settlement {
   }
 
   private take(flag: string, items: { id: string; qty: number }[]) {
-    if (!this.s.set(flag)) return;
+    if (this.s.has(flag)) return;
     const got = this.loot(items);
+    // a full pack leaves it where it is, for when you've made room
+    if (!got) { this.ctx.audio.play('deny'); this.toast('Your pack is full. You leave it where it is.', 'bad'); return; }
+    this.s.set(flag);
     this.ctx.audio.play('pickup');
-    this.toast(got || 'Nothing you can carry.', got ? 'good' : 'bad');
+    this.toast(got, 'good');
     this.s.addXP(XP_REWARDS.cache, 'Cache');
   }
 
@@ -1525,10 +1530,25 @@ export class Settlement {
   }
 
   private clearBlocker(id: string) {
+    this.setBlocker(id, false);
+  }
+
+  /** Snap a door to open or shut (loading a run). */
+  private setDoor(id: string, open: boolean) {
+    if (open) { this.openDoor(id, true); return; }
+    const d = this.doors.find((x) => x.id === id);
+    if (!d) return;
+    d.target = d.open = 0;
+    d.pivot.rotation.y = 0;
+    d.solid = true;
+    d.collider.setEnabled(true);
+  }
+
+  private setBlocker(id: string, there: boolean) {
     const b = this.blockers.find((x) => x.id === id);
     if (!b) return;
-    b.obj.visible = false;
-    b.collider.setEnabled(false);
+    b.obj.visible = there;
+    b.collider.setEnabled(there);
   }
 
   update(dt: number, cam?: THREE.Vector3) {
@@ -1537,12 +1557,12 @@ export class Settlement {
     if (cam) this.barks.update(dt, cam);
     this.followRoutines(dt);
     const s = this.ctx.state;
-    if (s && !this.synced) {
-      this.synced = true;
-      if (s.has('creek.stair')) this.openDoor('closet', true);
-      if (s.has('creek.motel.b')) this.openDoor('motelB', true);
-      if (s.has('creek.motel.c')) this.clearBlocker('boards');
-      if (s.has('cave.pocket')) this.clearBlocker('rockfall');
+    if (s && s !== this.synced) {
+      this.synced = s;
+      this.setDoor('closet', s.has('creek.stair'));
+      this.setDoor('motelB', s.has('creek.motel.b'));
+      this.setBlocker('boards', !s.has('creek.motel.c'));
+      this.setBlocker('rockfall', !s.has('cave.pocket'));
     }
     for (const d of this.doors) {
       d.open += (d.target - d.open) * Math.min(1, dt * 7);

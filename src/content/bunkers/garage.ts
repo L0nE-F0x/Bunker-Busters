@@ -163,9 +163,10 @@ export const GARAGE: Bunker = {
       alarm: ['INTRUDER! SeedBot, disrupt them!', 'Security breach! This is going in the investor update!', 'Alarm! Somebody tell my lawyer! ...Oh right.'],
     },
     alarmTime: 7,
+    // (no `until: 'debriefed'`: his after-the-radio talk, "reseller" and the hurt reply, was written for then)
     intercoms: [
-      { id: 'intercom-out', point: 'gate', offset: [0, 4.2], y: 1.1, radius: 2.1, label: 'Hail Tanner on the intercom', until: 'debriefed' },
-      { id: 'intercom-in', point: 'gate', offset: [2.4, -3.2], y: 1.1, radius: 2.1, label: 'Hail Tanner on the intercom', until: 'debriefed' },
+      { id: 'intercom-out', point: 'gate', offset: [0, 4.2], y: 1.1, radius: 2.1, label: 'Hail Tanner on the intercom' },
+      { id: 'intercom-in', point: 'gate', offset: [2.4, -3.2], y: 1.1, radius: 2.1, label: 'Hail Tanner on the intercom' },
     ],
     tripwires: {
       disarm: { label: 'Disarm tripwire', electronics: 1, lacking: 'Requires Electronics 1 — or {crouch} to step over' },
@@ -182,7 +183,7 @@ export const GARAGE: Bunker = {
       tripped: { laser_low: 'Laser tripped! (Jump over low beams.)', default: 'Laser tripped! (Crouch under high beams.)' },
       alarmPoint: 'sideDoor',
       power: {
-        id: 'fuse', point: 'fuseBox', radius: 1.8, label: 'Cut power to the lasers',
+        id: 'fuse', point: 'fuseBox', radius: 1.1, label: 'Cut power to the lasers', // (1.8 reached it through the front wall)
         circuit: { title: 'FUSE BOX', difficulty: 0 },
         expert: 5, expertToast: 'You know this kind of fuse box. The lasers cut out.',
         xp: 20, reason: 'Lasers disabled',

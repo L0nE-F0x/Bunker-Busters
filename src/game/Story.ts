@@ -269,6 +269,13 @@ export class Story {
 
   private placeOf(at: string): [number, number] | null {
     if (at === 'garage') return [GARAGE.location.position[0], GARAGE.location.position[2]];
+    // (as computeTarget: the map showed no marker for these unless the quest was tracked)
+    if (at === 'lifeboat') {
+      const next = LIFEBOAT_PAGES.map((id) => WORLD_INTEL.find((i) => i.id === id)).find((i) => i && !this.state.has(`intel:${i.id}`));
+      return next ? [next.position[0], next.position[2]] : null;
+    }
+    const spot = STORY_SPOTS[at];
+    if (spot) return [spot[0], spot[1]];
     const bk = BUNKER_AT[at];
     if (bk) return [bk[0], bk[2]];
     const lm = LANDMARKS.find((l) => l.id === at);

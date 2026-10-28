@@ -137,6 +137,9 @@ export class Dome extends Bunker<DomeBuilder> {
   }
 
   private tickPatches(dt: number) {
+    // the pipeline waits while you're away: a fix to a method you used here ships while you're here
+    // (one shipped with a toast at the camp, 350 m off)
+    if (this.distToPlayer() > 200) return;
     if (this.nextT > 0) {
       this.nextT -= dt;
       if (this.nextT <= 0 && !this.pending) this.queueFix();
@@ -294,6 +297,8 @@ export class Dome extends Bunker<DomeBuilder> {
     if (instant) {
       this.shipped = PATCHES.filter((p) => this.patched(p.id)).map((p) => p.id);
       this.pending = null;
+      // a fresh run: Helpers the last run's plug switched off are back on
+      if (!this.has('dome.end.plug')) for (const h of this.helpers?.list ?? []) h.wake();
     }
   }
 
@@ -481,7 +486,7 @@ export class Dome extends Bunker<DomeBuilder> {
         ui.subtitle(GATE, GATE_LINES.reel.text, { pos: at });
         s.set(F.gateVoice);
         s.addXP(70, 'The gate heard Hunter');
-        setTimeout(() => this.openEntry('gate'), 2400);
+        this.openSoon('gate', 2400);
       }
     } finally {
       this.asking = false;
@@ -495,7 +500,7 @@ export class Dome extends Bunker<DomeBuilder> {
       s.set(F.gatePass);
       this.ctx.ui.subtitle(GATE, GATE_LINES.pass.text, { pos: this.b.points.gate });
       s.addXP(m.xp, m.reason);
-      setTimeout(() => this.openEntry('gate'), 2600);
+      this.openSoon('gate', 2600);
       return;
     }
     if ((e.id === 'pod' || e.id === 'farm') && m.kind === 'open' && m.id === 'badge') {

@@ -1153,8 +1153,11 @@ export class JetSite extends Site {
         label: 'Cut open the life-raft pack',
         available: () => (this.s.skill('survival') >= 2 ? true : 'Requires Survival 2. There\'s something packed in with the raft.'),
         run: () => {
-          if (!this.s.set('site.jet.raft')) return;
+          if (this.s.has('site.jet.raft')) return;
           const got = this.loot([{ id: 'water', qty: 1 }, { id: 'ration', qty: 1 }, { id: 'medkit', qty: 1 }]);
+          // a full pack leaves it where it is, for when you've made room
+          if (!got) { this.s.events.emit('toast', { text: 'Your pack is full. You leave it where it is.', kind: 'bad' }); return; }
+          this.s.set('site.jet.raft');
           this.ctx.audio.play('pickup');
           this.toast(`A survival kit was taped inside the raft pack. ${got}`, 'good');
           this.s.addXP(XP_REWARDS.cache + 15, 'Survival kit');
@@ -1168,8 +1171,11 @@ export class JetSite extends Site {
         label: 'Search the galley',
         available: () => true,
         run: () => {
-          if (!this.s.set('site.jet.galley')) return;
+          if (this.s.has('site.jet.galley')) return;
           const got = this.loot([{ id: 'water', qty: 1 }, { id: 'scrap', qty: 2 }]);
+          // a full pack leaves it where it is, for when you've made room
+          if (!got) { this.s.events.emit('toast', { text: 'Your pack is full. You leave it where it is.', kind: 'bad' }); return; }
+          this.s.set('site.jet.galley');
           this.ctx.audio.play('pickup');
           this.toast(`The fridge is bare, but there\'s a bottle of glacier water wedged behind the espresso machine. ${got}`, 'good');
           this.s.addXP(XP_REWARDS.cache, 'Galley');

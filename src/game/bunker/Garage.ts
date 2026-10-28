@@ -130,7 +130,7 @@ export class Garage extends Bunker<GarageBuilder> {
     }
     if (effect === 'openSide' && !s.has(F.side)) {
       s.set('social.side');
-      this.openEntry('side');
+      this.openEntry('side', { line: null }); // he unlatched it himself: no "load-bearing" complaint
       s.addXP(35, 'Talked the side door open');
     }
   }

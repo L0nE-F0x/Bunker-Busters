@@ -52,6 +52,9 @@ async function run(ending) {
     window.act = (id) => { const it = find(id); if (!it) throw new Error('no interactable ' + id); return it.primary.run(); };
     window.__pick = [];
     window.__talk = [];
+    // headless Chrome never gives the pointer lock back after a minigame, so the game opens its pause
+    // menu, and a pause holds the world (the bunkers, the clock): keep it shut for the run
+    game.openPause = () => {};
     game.ui.choose = async (o) => {
       const i = window.__pick.findIndex((id) => o.choices.some((x) => x.id === id));
       const want = i >= 0 ? window.__pick.splice(i, 1)[0] : null;

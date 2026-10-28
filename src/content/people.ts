@@ -269,7 +269,7 @@ export const PEOPLE: PersonDef[] = [
   {
     id: 'prudence', accent: '#c4613f', name: 'Prudence Ashby', role: 'Head of Safety, Careful Labs', place: 'The Alignment Spire, above the Tube',
     bio: 'Her team modelled the grid\'s collapse to the week and published it. Nobody read it. She built the Spire to go on thinking carefully after everyone else had stopped, and it has: three hundred litres of water a day, and a policy for each of them.',
-    known: (v) => v.has('lore.spire') || v.has('seen:spire') || v.has('q:act3:done'),
+    known: (v) => v.has('lore.spire') || v.has('seen:alignment') || v.has('q:act3:done'),
     about: [
       { who: 'ezra', line: 'Ezra sent us his feeds for a year. I asked him to stop. He said our doors were learning. They were.' },
       { who: 'vesper', line: 'Vesper\'s model of the future has one customer in it.' },

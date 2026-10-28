@@ -25,7 +25,7 @@ export const JUN = 'Jun Ishida';
 
 /** His lines over the building's PA (voiced: the extractor finds `{ speaker, text }`). */
 export const EZRA = {
-  greet: { speaker: EZ, text: 'Hello again. You came up the valley at a walk. Most people run the last part. Come in out of the sun.' },
+  greet: { speaker: EZ, text: 'Hello again. You came up the valley at a walk. Most people run the last part. Come up to the gate.' },
   gate: { speaker: EZ, text: 'There. Mind the threshold, it sticks.' },
   gateLoud: { speaker: EZ, text: 'That gate was the only thing in here that wasn\'t watching anyone.' },
   denied: { speaker: EZ, text: 'I know that face. The gate only opens for staff, and you aren\'t staff.' },

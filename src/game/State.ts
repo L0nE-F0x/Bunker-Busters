@@ -486,6 +486,8 @@ function migrateSave(raw: unknown): SaveData | null {
   if (flags.includes('intro') && !flags.includes('briefed')) flags.push('briefed');
   // a v2 run that already heard the debrief ended Act I before the choice existed: Mara read the names
   if (flags.includes('debriefed') && !ACT1_ENDINGS.some((f) => flags.includes(f))) flags.push('act1.broadcast');
+  // before 1.0.2 the Alignment Spire shared `seen:spire` with the 5G tower; only its own discovery set the marker
+  if (flags.includes('spire.marker') && !flags.includes('seen:alignment')) flags.push('seen:alignment');
   const inventory = [...d.inventory];
   if (version !== 3) {
     // Things v2 looted before they carried a story: hand over the quest item, or count the choice as made.

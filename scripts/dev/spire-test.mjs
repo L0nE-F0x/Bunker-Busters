@@ -42,6 +42,9 @@ async function run(ending) {
     window.__pick = [];
     window.__talk = [];
     // (answers are matched by id wherever they are in the queue: the door asks its questions in a random order)
+    // headless Chrome never gives the pointer lock back after a minigame, so the game opens its pause
+    // menu, and a pause holds the world (the bunkers, the clock): keep it shut for the run
+    game.openPause = () => {};
     game.ui.choose = async (o) => {
       const i = window.__pick.findIndex((id) => o.choices.some((x) => x.id === id));
       const want = i >= 0 ? window.__pick.splice(i, 1)[0] : null;
@@ -65,13 +68,15 @@ async function run(ending) {
   // the road: the marker, a beam, the level
   await ev(`go(${'O.x - 30'}, O.z - 70)`);
   await wait(800);
-  await check('seen the Spire', `game.state.has('seen:spire') && game.state.has('spire.marker')`);
+  await check('seen the Spire', `game.state.has('seen:alignment') && game.state.has('spire.marker')`);
   await check('quest act4 started', `!!game.story && JSON.stringify(game.story).length > 0`);
   // cross beam 1 standing up (the beams are between the guardrails)
-  await ev(`(() => { const w = game.spire.tripwires.wires[0]; const m = w.a.clone().lerp(w.b, 0.5); const t = w.b.clone().sub(w.a).normalize(); const n = new V(t.z, 0, -t.x); go(m.x - n.x * 2, m.z - n.z * 2); })()`);
-  await wait(400);
-  await ev(`(() => { const w = game.spire.tripwires.wires[0]; const m = w.a.clone().lerp(w.b, 0.5); const t = w.b.clone().sub(w.a).normalize(); const n = new V(t.z, 0, -t.x); go(m.x + n.x * 2, m.z + n.z * 2); })()`);
-  await wait(600);
+  // (in steps: a jump of more than 2 m in a frame counts as a teleport, not a step across the beam)
+  for (const k of [-2, -1.4, -0.8, -0.2, 0.4, 1, 1.6, 2]) {
+    await ev(`(() => { const w = game.spire.tripwires.wires[0]; const m = w.a.clone().lerp(w.b, 0.5); const t = w.b.clone().sub(w.a).normalize(); const n = new V(t.z, 0, -t.x); go(m.x + n.x * ${k}, m.z + n.z * ${k}); })()`);
+    await wait(k === -2 ? 400 : 150);
+  }
+  await wait(450);
   await check('a beam raises the level to 2', `game.spire.level === 2`);
   // (teleporting about would cross the other beams: switch them off for the rest of the run)
   await ev(`for (const w of game.spire.tripwires.wires) game.state.set('spire.' + w.id + '.disarmed'); game.spire.applyFlags()`);

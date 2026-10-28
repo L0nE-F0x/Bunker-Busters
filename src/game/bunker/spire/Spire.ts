@@ -45,6 +45,8 @@ export class Spire extends Bunker<SpireBuilder> {
   private armedFn: () => boolean = () => false;
   private boardKey = '';
   private wasPaused = false;
+  /** Last frame's distance from the Spire (carrying the core out on foot vs. being moved: a death, a catch). */
+  private lastD = 0;
   private noorWaking = -1;
   private noorLeaving = -1;
   private valveSpin = 0;
@@ -197,7 +199,7 @@ export class Spire extends Bunker<SpireBuilder> {
       const id = t.spot.id;
       if (has(`spire.sentinel.${id}.dead`)) t.kill();
       else if (has(`spire.sentinel.${id}.off`) || has('spire.core.valve') || (id === 's3' && has(F.test))) t.switchOff();
-      else if (instant) { t.alive = true; t.hp = 120; t.wake(); }
+      else if (instant) { t.alive = true; t.hp = 120; t.state = 'off'; t.wake(); } // (one shot down last run scans again)
     }
   }
 
@@ -376,7 +378,7 @@ export class Spire extends Bunker<SpireBuilder> {
       ui.subtitle(DOOR, `${DOOR_LINES.promise.text} ${lies ? DOOR_LINES.passOne.text : DOOR_LINES.pass.text}`, { pos: this.b.points.door });
       s.set(F.honest);
       s.addXP(lies ? 60 : 90, lies ? 'The door let you in (one lie)' : 'The door believed you');
-      setTimeout(() => this.openEntry('door'), 2600);
+      this.openSoon('door', 2600);
     } finally {
       this.asking = false;
     }
@@ -388,7 +390,7 @@ export class Spire extends Bunker<SpireBuilder> {
       this.s.set(F.badge);
       this.ctx.ui.subtitle(DOOR_LINES.badge.speaker, DOOR_LINES.badge.text, { pos: this.b.points.door });
       this.s.addXP(m.xp, m.reason);
-      setTimeout(() => this.openEntry('door', { line: PRUDENCE.badge.text }), 2200);
+      this.openSoon('door', 2200, { line: PRUDENCE.badge.text });
       return;
     }
     if (e.id === 'door' && m.kind === 'charge') this.s.set(F.forced);
@@ -471,12 +473,15 @@ export class Spire extends Bunker<SpireBuilder> {
   }
 
   /** Out of the plant and off the road: the pause ends, and the core is the camp's. */
-  private escaped() {
+  private escaped(walked: boolean) {
     const s = this.s;
     s.unset(F.carrying);
     this.concern = 0;
     this.alarm = 0;
+    this.wasPaused = false; // the pause ended because you're clear, not because it stepped down
     this.ctx.audio.setAlarm(false);
+    // dragged back to the camp (or walked off the road by someone): the core went with you, the credit didn't
+    if (!walked) return;
     s.addXP(120, 'Carried the core off the road');
     this.ctx.ui.subtitle(PRUDENCE.escaped.speaker, PRUDENCE.escaped.text);
     s.events.emit('toast', { text: 'You\'re clear of the Spire. Take the core back to the camp.', kind: 'good' });
@@ -489,9 +494,10 @@ export class Spire extends Bunker<SpireBuilder> {
     this.sentinels?.update(dt, p);
     // carrying the core: the pause holds until you're well clear of the road
     if (this.carrying) {
-      if (d > CLEAR) this.escaped();
+      if (d > CLEAR) this.escaped(this.lastD > CLEAR - 20);
       else if (this.alarm < 2) this.alarm = this.sec.alarmTime;
     }
+    this.lastD = d;
     // the pause ends: back to level 3
     if (this.wasPaused && !this.paused && !this.carrying && !this.standDown) {
       this.concern = Math.min(this.concern, CSL_AT[2]);

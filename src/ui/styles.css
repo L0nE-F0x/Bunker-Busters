@@ -830,6 +830,13 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #000; color:
 .touch.armed .subtitle { left: var(--sl); right: calc(var(--sr) + 236px); transform: none; max-width: none; bottom: calc(var(--sb) + 196px); }
 .touch .detect { top: calc(var(--st) + 4px); }
 .touch .detect svg { width: 48px; height: 30px; }
+/* small phones: the top buttons reach past the middle, so the eye and its meter go under them (667×375),
+   and the action buttons reach the clock, so the minimap shrinks and lifts it (640×320) */
+@media (max-width: 720px) { .touch .detect { top: calc(var(--st) + 52px); } }
+@media (max-height: 340px) {
+  .touch .minimap { width: 80px; height: 80px; }
+  .touch .clock { top: calc(var(--st) + 94px); }
+}
 .touch .banner { top: 20vh; }
 /* (a phone has no room for a place's banner and a spoken line at once: the line wins) */
 .touch .speaking .banner { visibility: hidden; }

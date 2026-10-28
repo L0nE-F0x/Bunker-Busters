@@ -250,8 +250,11 @@ export class TubeSite extends Site {
   }
 
   private bin() {
-    if (!this.s.set(F.bag)) return;
+    if (this.s.has(F.bag)) return;
     const got = this.loot([{ id: 'ration', qty: 1 }, { id: 'water', qty: 1 }, { id: 'boarding_pass', qty: 1 }]);
+    // a full pack leaves it where it is, for when you've made room
+    if (!got) { this.s.events.emit('toast', { text: 'Your pack is full. You leave it where it is.', kind: 'bad' }); return; }
+    this.s.set(F.bag);
     this.ctx.audio.play('pickup');
     this.toast(got ? `An inaugural gift bag: ${got}. The tag says "for our first rider".` : 'Your pack is full.', got ? 'good' : 'bad');
     this.s.addXP(XP_REWARDS.cache, 'Gift bag');

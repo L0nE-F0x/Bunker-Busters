@@ -795,8 +795,11 @@ export class DriveInSite extends Site {
         label: 'Search the manager\'s wagon',
         available: () => (this.s.skill('survival') >= 1 ? true : 'Requires Survival 1. You don\'t know where people hide things in a car.'),
         run: () => {
-          if (!this.s.set('site.drivein.key')) return;
+          if (this.s.has('site.drivein.key')) return;
           const got = this.loot([{ id: 'scrap', qty: 2 }]);
+          // a full pack leaves it where it is, for when you've made room
+          if (!got) { this.s.events.emit('toast', { text: 'Your pack is full. You leave it where it is.', kind: 'bad' }); return; }
+          this.s.set('site.drivein.key');
           this.ctx.audio.play('pickup');
           this.toast(`Under the sun visor: a STARLITE STAFF lanyard, and a key with PROJ written on masking tape. ${got}`, 'good');
           this.s.addXP(XP_REWARDS.cache, 'Staff key');
@@ -846,8 +849,11 @@ export class DriveInSite extends Site {
         label: 'Raid the snack bar',
         available: () => true,
         run: () => {
-          if (!this.s.set('site.drivein.snacks')) return;
+          if (this.s.has('site.drivein.snacks')) return;
           const got = this.loot([{ id: 'ration', qty: 2 }]);
+          // a full pack leaves it where it is, for when you've made room
+          if (!got) { this.s.events.emit('toast', { text: 'Your pack is full. You leave it where it is.', kind: 'bad' }); return; }
+          this.s.set('site.drivein.snacks');
           this.ctx.audio.play('pickup');
           this.toast(`Two sealed tins under the register, labelled INTERMISSION. Popcorn, mostly. ${got}`, 'good');
           this.s.addXP(XP_REWARDS.cache, 'Snack bar');

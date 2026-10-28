@@ -600,8 +600,11 @@ export class BoosterSite extends Site {
         label: 'Strip the cable tray',
         available: () => true,
         run: () => {
-          if (!this.s.set(F.cables)) return;
+          if (this.s.has(F.cables)) return;
           const got = this.loot([{ id: 'scrap', qty: 3 }, { id: 'battery', qty: 1 }]);
+          // a full pack leaves it where it is, for when you've made room
+          if (!got) { this.s.events.emit('toast', { text: 'Your pack is full. You leave it where it is.', kind: 'bad' }); return; }
+          this.s.set(F.cables);
           this.ctx.audio.play('pickup');
           this.toast(`Good copper, and a backup cell zip-tied inside the tray. ${got}`, 'good');
           this.s.addXP(XP_REWARDS.cache, 'Cable tray');
@@ -615,8 +618,11 @@ export class BoosterSite extends Site {
         label: 'Check the pressure sphere',
         available: () => true,
         run: () => {
-          if (!this.s.set(F.copv)) return;
+          if (this.s.has(F.copv)) return;
           const got = this.loot([{ id: 'scrap', qty: 2 }]);
+          // a full pack leaves it where it is, for when you've made room
+          if (!got) { this.s.events.emit('toast', { text: 'Your pack is full. You leave it where it is.', kind: 'bad' }); return; }
+          this.s.set(F.copv);
           this.ctx.audio.play('pickup');
           this.toast(`A carbon-wrapped tank stencilled 6,000 PSI. The valve and fittings come off by hand. ${got}`, 'good');
           this.s.addXP(10, 'Pressure sphere');

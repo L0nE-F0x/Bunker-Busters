@@ -46,6 +46,12 @@ export class Fortress extends Bunker<FortressBuilder> {
   private coldT = 0;
   private inMoat = false;
   private drainK = 0;
+  /** Aim the chains for a moment after a run starts (`t` also runs on the title, so `t < 0.5` missed it). */
+  private chainsT = 0.5;
+
+  protected override resetRun() {
+    this.chainsT = 0.5;
+  }
   /** The cold's damage, banked until it's a whole point (State.damage rounds). */
   private freezeAcc = 0;
   private boardKey = '';
@@ -476,7 +482,7 @@ export class Fortress extends Bunker<FortressBuilder> {
     const inRing = d > r0 && d < r1;
     const wet = inRing && p.y < surf - 0.05 && this.drainK < 0.9;
     if (wet) {
-      this.freezeAcc += FREEZE * dt;
+      this.freezeAcc += FREEZE * dt * (this.combat?.diff.taken ?? 1); // the difficulty's damage, as for a gun
       if (this.freezeAcc >= 1) { const n = Math.floor(this.freezeAcc); this.freezeAcc -= n; this.s.damage(n); }
       this.ctx.post.damage.value = Math.max(this.ctx.post.damage.value, 0.25);
       this.coldT = COLD;
@@ -498,7 +504,8 @@ export class Fortress extends Bunker<FortressBuilder> {
     // the drawbridge turns on its hinge with its door's `open`; the chains follow
     const br = this.b.doors.bridge;
     this.b.bridge.rotation.x = (1 - br.open) * Math.PI / 2;
-    if (Math.abs(br.open - br.target) > 0.001 || this.t < 0.5) this.aimChains(br.open);
+    this.chainsT -= dt;
+    if (Math.abs(br.open - br.target) > 0.001 || this.chainsT > 0) this.aimChains(br.open);
     // the technicians and the people
     const chest = this.eye.set(p.x, p.y + (player.crouching ? 0.7 : 1.3), p.z);
     this.techs.update(dt, p, chest, player.crouching, false, d < 70);

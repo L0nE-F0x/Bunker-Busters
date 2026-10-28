@@ -270,7 +270,8 @@ export const SPIRE_RAMP: [number, number][] = [[344, -86], [352, -56], [360, -30
 /** Flags the Spire's own code reads (the runtime derives the rest from the ids above). */
 export const SPIRE_FLAGS = {
   marker: 'spire.marker',
-  seen: 'seen:spire',
+  /** Not `seen:spire`: that's the 5G tower's landmark (an Act I place). */
+  seen: 'seen:alignment',
   door: 'spire.door.open',
   office: 'spire.office.open',
   complete: 'spire.complete',
