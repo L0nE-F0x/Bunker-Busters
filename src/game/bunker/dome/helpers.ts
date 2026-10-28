@@ -31,6 +31,8 @@ export interface HelperHost {
 }
 
 const WALK = 1.3, CHASE = 2.2, CATCH = 1.25, CONE = Math.cos(THREE.MathUtils.degToRad(55));
+/** The walk clip's own ground speed at 1× (measured: a planted foot stays put at this; at 1× on the 1.3 m/s patrol the feet slid 0.4 m/s). */
+const WALK_CLIP = 1.6;
 const _a = new THREE.Vector3(), _b = new THREE.Vector3(), _c = new THREE.Vector3(), _d = new THREE.Vector3();
 
 /**
@@ -93,6 +95,7 @@ export class Helper implements Hostile {
     this.pos.z += (dz / d) * s;
     this.pos.y = this.host.floor(this.pos.x, this.pos.z, this.pos.y + 1);
     this.moving = true;
+    this.actor?.matchSpeed(speed, WALK_CLIP);
     return false;
   }
 
@@ -203,7 +206,11 @@ export class Helper implements Hostile {
       }
     }
     // the walk clip while it moves, the idle while it stands
-    if (this.moving !== this.animMoving) { this.animMoving = this.moving; this.actor?.setIdle([this.moving ? 'walk' : 'idle']); }
+    if (this.moving !== this.animMoving) {
+      this.animMoving = this.moving;
+      this.actor?.setIdle([this.moving ? 'walk' : 'idle']);
+      if (!this.moving && this.actor) this.actor.pace = 1;
+    }
     this.place();
   }
 

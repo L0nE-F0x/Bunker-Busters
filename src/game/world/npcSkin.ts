@@ -307,6 +307,13 @@ export class NpcActor {
   private skinned: THREE.SkinnedMesh[] = [];
   /** This person's tempo. */
   private rate = rand(0.9, 1.1);
+  /** A walker's playback against its ground speed (`matchSpeed`), × the tempo; 1 standing. */
+  pace = 1;
+
+  /** Walking (an in-place walk clip) at `speed` m/s: play it so a planted foot stays planted. `natural`: the clip's own ground speed at 1×. */
+  matchSpeed(speed: number, natural: number) {
+    this.pace = speed / (natural * this.rate);
+  }
   /** One running clock per clip (s), from a random start. */
   private clock: Float64Array;
   private cur: Clip;
@@ -515,7 +522,7 @@ export class NpcActor {
     this.time += dt;
     if (this.scripted === 'once' && this.clock[this.cur.i] >= this.cur.dur - 0.05 && this.fade >= 1) { this.scripted = null; this.queue(this.base, 0); }
     if (!this.pinned && !this.scripted) this.decide(dt, near);
-    const step = this.pinned ? 0 : dt * this.rate;
+    const step = this.pinned ? 0 : dt * this.rate * this.pace;
     for (const c of this.T.list) {
       const k = c.i;
       // loops run all the time (a switch picks one up wherever it is); a gesture only while it shows
