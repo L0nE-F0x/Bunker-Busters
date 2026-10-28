@@ -1885,4 +1885,8 @@ Owner: the characters move "unnatural … it looks like cheapy game", mostly the
 
 - **The other standing people** (Ezra, Prudence, Benny, Orrin, Agnes) stood in one shared loop (Listening_Gesture): they get Idle_3 and/or Short_Breathe_and_Look_Around too (owned clips, no credits).
 
+- **Contractors turning on the spot:** standing, the procedural ankles sat a fixed 11 cm either side of the body along its facing, so a turn carried both feet round like a turret (the model's legs follow those ankles; the planted-foot hold in humanSkin only works while walking). `Humans.ts` `stand`: each standing foot keeps its spot and toe yaw and steps (0.3 s, 7 cm arc) once the body has turned 30° from it or left it 14 cm behind, one foot at a time.
+- **Wolves, looked at again:** the lunge (`LEAP` 0.42 s, a 0.45 m arc) is quick, not floaty; the shadow far from the feet in the film was a low sun on a real gallop's airborne phase (paws measure 1.5 cm off the ground at the median). Nothing changed beyond the spacing.
+- **Open:** the Cathedral's tote carrier (in-place `carry!` at 1.15 m/s): a pace sweep didn't change its measured foot slide (~0.85 m/s at every pace), so either its clip moves the feet some other way or the probe misreads it; not chased (one background figure).
+
 **Next:** ask the owner what still looks off about the wolves (the leap's floaty shadow? the model? how they behave?); then the contractors (procedural skeleton fitted with IK: stiff torso, turning on the spot) and the robots (the Helpers' in-place walk at a fixed 1.3 m/s).
