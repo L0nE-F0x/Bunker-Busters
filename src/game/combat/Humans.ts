@@ -558,13 +558,17 @@ export class Human {
     pelvis.addScaledVector(left, Math.sin(this.idleT * 0.55) * Math.sin(this.idleT * 0.23 + 1) * 0.022 * still * (1 - 0.6 * this.aimK));
     // knocked back a step; a leg hit drops that hip
     pelvis.addScaledVector(hd, hr * (hz === 'leg' ? 0.04 : 0.11)).addScaledVector(left, hs * hr * (hz === 'leg' ? 0.07 : 0));
+    // at a run nobody holds a shouldered gun still: the steadying that suits a man standing to shoot
+    // fades out with speed (running with the aim up, the gun and chest rode the stride on rails)
+    const mv = THREE.MathUtils.smoothstep(this.speedS, 1.4, 3.6);
+    const steady = this.aimK * (1 - 0.7 * mv);
     // torso: leans into a run, a crouch and an aim; twists toward the aim
     // an arm hit wrenches that shoulder back (round from the front) or forward (from behind)
     const front = -(hd.x * f.x + hd.z * f.z) > 0 ? 1 : -1;
     const twist = THREE.MathUtils.clamp(angDiff(this.yaw, this.aimYaw), -0.9, 0.9) * (0.4 + this.readyK * 0.5)
       + hr * hs * front * (hz === 'arm' ? 0.5 : hz === 'body' ? 0.12 : 0) - cw * 0.25
       // walking, the chest turns against the pelvis (less with the gun shouldered)
-      - hipYaw * (0.55 - 0.3 * this.aimK);
+      - hipYaw * (0.55 - 0.3 * steady);
     const chestYaw = this.yaw + twist;
     const cf = _cf.set(Math.sin(chestYaw), 0, Math.cos(chestYaw));
     const cl = _cl.set(cf.z, 0, -cf.x);
@@ -636,9 +640,9 @@ export class Human {
     }
     // walking: the arms take up some of the body's bob and sway (most with the gun shouldered), and
     // a gun held ready nods with the footfalls and drifts with the stride
-    wPos.addScaledVector(dev, -(0.55 * this.aimK + 0.3 * this.readyK * (1 - this.aimK)));
+    wPos.addScaledVector(dev, -(0.55 * steady + 0.3 * this.readyK * (1 - this.aimK)));
     if (gw > 0) {
-      const free = 1 - this.aimK;
+      const free = 1 - steady;
       wDir.addScaledVector(UP, Math.sin(TAU * (cyc * 2 - 0.1)) * 0.025 * gw * free).addScaledVector(cl, Math.sin(TAU * cyc) * 0.03 * gw * free).normalize();
     }
     // standing, the muzzle drifts a little with the breath and the weight shift (held still on the aim)
