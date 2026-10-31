@@ -1890,3 +1890,92 @@ Owner: the characters move "unnatural … it looks like cheapy game", mostly the
 - **Open:** the Cathedral's tote carrier (in-place `carry!` at 1.15 m/s): a pace sweep didn't change its measured foot slide (~0.85 m/s at every pace), so either its clip moves the feet some other way or the probe misreads it; not chased (one background figure).
 
 **Next:** ask the owner what still looks off about the wolves (the leap's floaty shadow? the model? how they behave?); then the contractors (procedural skeleton fitted with IK: stiff torso, turning on the spot) and the robots (the Helpers' in-place walk at a fixed 1.3 m/s).
+
+## 2026-10-31/11-01: the production pass before the marketing push (coordinator)
+
+Owner: "make this game 100% production ready so I can start to aggressively market this". Nine agents in worktrees, one area each (site, first load, the first hour, settings/accessibility, stability, desktop/distribution, performance, proofreading, the launch kit), merged into the `production-pass` branch; `main` stays v1.0.3 until "ship". Their sections follow.
+
+- **Harness:** every `scripts/dev/*` test reaches the dev server through `BB_PORT`/`DEV_ORIGIN` (the bunker tests hardcoded 5173, so a worktree tested the main checkout). The main dev server no longer watches `.claude/`, `Assets/` or `src-tauri/target` (a worktree's tsconfig forced full reloads that killed a running playthrough).
+- **Running nine at once:** memory ran out (six headless games at ~2.5 GB each) and systemd-oomd started killing processes in the owner's app slice; agents then waited for 7 GB free before each browser or build. Two agents' servers and a cargo build were reaped. Keep a swarm to ~5 concurrent browsers on this machine.
+- **Baseline before any change (load ~25):** all bunker playthroughs, controls, assist pass; flaky under load: the Spire's "sentinel apologises", Zero's clock-gate code, pad "hold Y holsters" (all three fixed as test or game timing bugs below).
+- **Voices:** 28 clips rendered (11 proofreading changes + the hot mic + the briefing's last page + Rue's coda, and the act lines): `forTts` now says act/tier numbers as words ("That's Act IV" went to Kokoro as "Act Iv"; a lone "V" was "vee"). Clip keys are voice + subtitle words, so a change to `forTts` alone needs the old mp3s deleted before `generate.py`. Every new clip transcribed with whisper (`whisper-cli`, `~/.local/share/voxtype/models/ggml-base.en.bin`) and matched.
+- **Apex's "dark shards"** (seen by the launch-kit capture): the corridor's floor chevrons stood on edge, half sunk in the floor, since v0.6.0. `M()` composes an XYZ Euler, so a print given yaw and the −90° tilt is turned before it's laid down; the yaw moves to `rz`. Same bug: the hangar's chevron and the forecast on Prudence's desk. Found by bisecting the scene graph by visibility (hide one child, measure the pixels): a three Raycaster missed it (a thin alpha-tested quad seen edge-on).
+- **Desktop downloads** left out the website's files (`scripts/desktop-dist.mjs` → `dist-desktop/`, Tauri's frontendDist): the gzipped model copies and the site's images were ~33 MB the app never read (118 → 86 MB).
+- **A new run starts standing:** toggled crouch/sprint/aim (keyboard or pad) carried into the next run (`Input.resetLatches` at `startGame`).
+- `scripts/dev/first-hour/walkthrough.mjs`: agent C's real-input walkthrough of the opening kept as a test (28 checks).
+- **Not checked:** the desktop app (never launched: owner's machine), WebGPU (every test runs `?webgl`; Chrome/Edge pick WebGPU first), Firefox/Safari, real Windows hardware (the new Smoke workflow covers installs), a real phone.
+
+## 2026-10-31: the website before the marketing push (production pass)
+- **Claims checked against the code:** 6 characters (character select shows all six), 4 guns and a crowbar, "1,300+" voiced lines (1,373 clips; survives a re-voice), 12 places (`LANDMARKS`), 8 bunkers. The footer no longer falls back to "Early access".
+- **Images:** `.shot` holds `<img srcset sizes loading=lazy>` with alt text. `public/media/800|1280/` come from `scripts/dev/site-media.mjs`; rerun it after `marketing-shots.mjs`. The hero loop starts after `load`.
+- **Without scripts:** `.reveal` hides only under `html.js` (inline head script with a 4 s failsafe) and no-preference motion. Download hrefs are static `releases/latest/download/<name>`; the API only adds version and sizes (cached for 1 h, `bb.site.release`).
+- **Devices:** Mac, ChromeOS and phones get the browser card. Windows gets a SmartScreen tip under the hero button and in its card.
+- **Pages:** `/press/`, `/privacy/`, `404.html` (inputs `site-*`, kept out of the offline cache; `src/site/site-pages.*`, `site-common.ts`). Owner settings go in `.env` (`%VITE_*%` in the HTML): developer name, press email, trailer link.
+- **SEO:** JSON-LD VideoGame + WebSite (site.ts adds softwareVersion), robots.txt, sitemap.xml, canonical/og/twitter tags per page. The og.jpg tagline is now on two lines, clear of the fire.
+- **netlify.toml `/*`:** nosniff, Referrer-Policy, Permissions-Policy (no `bluetooth`: Chrome warns it's unknown); no CSP or X-Frame-Options.
+- **Measured:** first view 8.0 → 0.45 MB desktop, 7.4 → 0.32 MB phone (load event 38.5 → 2.4 s).
+- **Not done:** the reshoot with the new seated poses; a lighter hero video for phones.
+
+## 2026-10-31: the first load and when it fails (production pass)
+- **Where the time went (v1.0.3):** all 29.4 MB of models were fetched before the title. The shader warm-up was mostly three building the same graphs over and over: 600 node builds for 216 programs.
+- **Models:** `x.glb.gz` on the web (Netlify doesn't compress GLB), unpacked with DecompressionStream; 3 retries, then a `ModelError`. The desktop app reads the plain `.glb`.
+- **Late cast:** 15 models (9.1 MB) download during the compile, unpack one per frame on the title, and are placed in a dip to black by `Game.placeLateCast`, then warmed. `beginRun` gates the run start. The desktop app and `?latecast=boot` place them at boot.
+- **Materials:** `sharedGraph` plus `BBParam`, which reads the caster's material in the shadow pass. 582 → 486 builds, frame-identical. `?nosharedmat` to A/B.
+- **Loading screen:** `ui/loading.ts`, in the page before the script, with the boot timeline kept in localStorage.
+- **Failures:** `ui/bootFail.ts` (no WebGL, software renderer, memory, a lost context, a blocked download). `?bootfail=software|memory` shows those two screens for testing.
+- **Offline:** `reg.update()` once the game is up; the footer only says "new version" when another deploy's worker takes over.
+- **Measured** (median of 3, load ~25): desktop 20 Mbit cold to title 50.0 → 41.6 s; phone profile cold to title 105.0 → 58.2 s. Boot waits on 29.4 → 10.8 MB.
+- **Next:** a WebGPU smoke test on real Chrome; `glow()`/`neon()` shared graphs; Rapier's wasm out of the JS.
+
+## 2026-10-31: the first hour for a new player (production pass)
+Played the opening headless with real input, as a stranger: title, cards, radio, note, walk to the Garage by the marker (68 s, no stalls), gate picked by feel, debrief, Act II, Dry Creek; then a phone, a pad, a rebind, Continue and the failure states.
+- **Keys in prose:** `src/ui/keyWords.ts` (`keyWord`, `keyed`, `proseKeys`, `moveCap`) names the bound key, the pad button or the touch button. The briefing's spoken key list is now `TUT.menus` (`src/game/tutorial.ts`). Re-voiced: the briefing's last page and Rue's coda.
+- **HUD news under cards:** `#hud.dim` hid toasts, banners and level-ups raised behind cards. `UI` holds them until `setHudVisible(true)`. `Story.whenFree` holds quest wrap lines; Act I's used to cut off the epilogue.
+- **Layout:** toasts start under the objective (`placeToasts`); banner subtitles wrap clear of them; the camp's discovery banner is gone; the clock follows the sun and `isNight`.
+- **Phones:** the Kit's ✕ is re-added on every render; the takedown prompt shows as a FIRE button.
+- **Left:** banner titles still overlap toasts at 1280 px; sites' "Need a lockpick" gives no source.
+- **Test:** `scripts/dev/first-hour/walkthrough.mjs`, 28 checks.
+
+## 2026-10-31: settings, accessibility and credits (production pass)
+- **Settings on five tabs** (`src/ui/SettingsView.ts`): Gameplay · Video (+**brightness**) · Audio (+**voice volume**) · Controls (+**crouch/sprint/aim: hold or toggle**, keyboard+mouse) · Accessibility (**subtitle size**, **subtitle background**, live sample, **Reduce flashing**, **camera shake**, head bob). Reset resets the page on screen; LB/RB flip tabs. New fields in `ACCESS_DEFAULTS`, sanitised in loadSettings; `voiceVol` starts from an old file's Effects level. Applied live by `src/game/access.ts`.
+- **Brightness**: one `uniform()` (`displayGamma`, finish pass). Pipelines 217 → 217.
+- **Reduce flashing** (`src/engine/comfort.ts`): lightning is one 0.3 glow; EMP static, muzzle and blast lights ×0.3; the red damage edge capped at 0.3. Flickers over 3 Hz hold steady (tubes, neon, projector, jet cabin, SeedBot). Alarms (≤1.6 Hz) unchanged.
+- **Camera shake** scales `addTrauma` and `punch`. **Hold/toggle**: `Input.setToggles`.
+- **Photosensitivity notice** once over the first title. Skipped under navigator.webdriver; `?notice` forces it.
+- **Credits** (`src/ui/Credits.ts`) and **Report a bug** (`src/ui/links.ts`, no imports): fills `bug_report.yml` (version, platform, system, gpu). Browser: window.open; desktop: `open_external`; on failure the link plus a Copy button.
+- **Keyboard menus**: arrows and Enter drive the controller focus ring in every menu (`html.keynav`).
+- **Colour blindness**: the minimap uses the world map's shapes; the lockpick marks set pins and the current pin; headshot marker bigger; "· LOW" on food/water; the Till says OVERBURDENED.
+- **Open**: card-reader LEDs (Fortress/Cathedral/Dome/Spire builders), the Cathedral E-stop and sentry eyes are still red/green only. Not checked in WebKitGTK, WebView2 or on a real phone.
+
+## 2026-10-31: the desktop app and distribution (production pass)
+- Licences: scripts/licenses.mjs → public/licenses.txt (JS deps, 272 Rust crates via cargo metadata per target, WebView2 SDK loader, AppImage LGPL + source offer, Kokoro). Deterministic; --check; release.sh regenerates it; bundled next to the exe/in the .deb/AppImage/tarball.
+- `open_external` (repo + site only, parsed URL, no shell; the browser gets the pre-select_gpu env, AppImage paths stripped). A plugin hook cancels navigations to outside pages.
+- Updater: 30 s check / 60 s stall limits, one-line errors (update.rs `plain`), `requireSignedVersion` (the tarball .bin is now signed with `--app-version`; v1.0.3's wasn't, the bundler's were), quit waits for an install in progress.
+- `BB_SMOKE=<file>`: reports title-screen-and-drawing, quits 0/1. `.github/workflows/smoke.yml` installs every download on Windows + Ubuntu 22.04/24.04 after each Release, or by hand (Actions → Smoke; `source=build` tests a branch).
+- Packaging: descriptions, homepage, copyright, ActionGame, installer icons, preventOverflow, .deb section/desktop template/AppStream metainfo; publisher left unset (NSIS install-folder key).
+- Release caches: shared-key, saved on main only (tag caches are never shared).
+- Not checked on real Windows hardware yet: the first Smoke run will tell.
+
+## 2026-10-31: ordinary laptops and phones (production pass)
+- Intel iGPU 1080p High, Dry Creek: GPU ~80-114 ms (8-14 fps); scene pass ~59 ms of which terrain ~32, fog 17, haze/dust 15, scrub 11, shadows 8. Low ~37-53 ms.
+- Atmosphere: storm wall, storm haze, night cloud shadows in uniform If (`?nozeroskip`): High 1080p iGPU −5..−22% GPU; pixels within noise.
+- `engine/release.ts`: static geometry (MeshBatch, kit.merge, mergeStatic, proxies, terrain, trees) drops its arrays after upload (`?keepgeo`): heap after GC 726 → 318 MB at the title, 774 → 365 MB in play. Writes to released attributes log errors. A lost context needs a reload. (No three Raycaster runs on meshes; the two trimesh colliders are built before upload.)
+- `engine/autoQuality.ts`: AUTO (browser, first visit, no settings or save) picks a preset from the GPU name and scales the render 1-0.5 with the GPU timer; learns per GPU (`bunker-busters.autoq.v1`). Off in the desktop app and with `?q=`; `?autoq=1`. Settings → Video → AUTO.
+- Next: cheaper Low terrain/haze (Terrain.ts ~36 atlas taps per pixel); matrix dirty check (kit.ts updateShownMatrices); bench AUTO in the app.
+
+## 2026-10-31: proofreading and continuity (production pass)
+- Read every content file and every player-facing string in src/game and src/ui. The convention is British; American spellings on signs (AUTHORIZED, EQUALIZE) fixed, voiced ones left (same audio).
+- Directions checked against coordinates (north is −z): the Wellhead is north of Dry Creek; Waitlist City is due south of the Tube and walks west to Zero; the jet is west of the Cut; the 5G tower is east of camp; Dry Creek is north of the highway.
+- Counts and spans: LIFEBOAT is six founders and Tanner; Ren and Wick: three years; Doc's pilot "the year before the Pivot"; Rider 9's log moved four weeks back; Model Zero has seven rim cylinders; road signs' distances; the WANTED poster says T. PIVOTSON.
+- Who knows what when: the People entries for the twin, Orrin and Agnes, and the map's Zero note, wait until you've reached the bunker.
+- Runtime strings: Dome patch names keep their capitals mid-sentence; tripwire hints name the bound crouch key; the rifle says "Hold aim".
+- Left (owner): Pip's age (12 vs "I was 11"), the jet's heading (north-west in the voiced lines, the wreck is south-south-west), Kit's "nine thousand litres" (the moat holds ~3 million), fixed "Day 1,284" stamps.
+
+## 2026-10-31: the v1.0 launch kit (production pass)
+`~/Videos/BunkerBusters-v1.0-launch-kit/` (outside the repo): an 84 s trailer (1440p60 master, 1080p60 upload, 30 fps for X), 15/30 s teasers in 16:9 and 9:16, 12 loops, 4 GIFs, 16 stills, itch and Steam-format art, and the copy (start at `copy/posting-plan.md`). Tools: `scripts/promo/`.
+- **Rig:** evaluating director.js returned `window.D` (the whole game) and overflowed Playwright's 512 MB pipe; `openPause` stubbed (menus hold the world); `run({keepT})`, `SIZE`; the take encoder's memory capped.
+- **`D.squad()`** had been broken since v0.6 (scripted squads live in `recovery.extra`); fixed.
+- **`shots-v1.mjs` + `shots-v1-list.mjs`:** shots as data; `--scout` gives start/middle/end stills and a sheet.
+- **`vo.py`:** lines from `public/voice`, cut at loudness dips, every cut checked with `whisper-cli`. `cuts-v1.py --check` lists captions that collide.
+- **`overlays.mjs`:** any size; 9:16 captions inside the Reels/TikTok safe areas. `beats.py` finds downbeats in the generative score.
+- **Found:** night storms render flat grey and no lightning showed in capture (not investigated; storms at night were tuned dark on purpose in v0.5.6).
