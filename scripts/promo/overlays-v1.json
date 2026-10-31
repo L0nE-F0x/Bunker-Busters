@@ -1,0 +1,19 @@
+[
+  { "name": "card-built", "kind": "card", "kicker": "They built", "text": "BUNKERS." },
+  { "name": "card-water", "kind": "card", "kicker": "And took", "text": "THE WATER." },
+  { "name": "card-lockpicks", "kind": "card", "kicker": "You brought", "text": "LOCKPICKS." },
+  { "name": "card-eight", "kind": "card", "kicker": "Eight founders", "text": "EIGHT BUNKERS." },
+  { "name": "card-rifle", "kind": "card", "kicker": "And a", "text": "LEVER RIFLE." },
+  { "name": "label-camp", "kind": "label", "kicker": "Your camp", "text": "LAST CHANCE" },
+  { "name": "label-creek", "kind": "label", "kicker": "The last town on the highway", "text": "DRY CREEK" },
+  { "name": "label-garage", "kind": "label", "kicker": "Tier 1 · Tanner Pivotson", "text": "THE GARAGE" },
+  { "name": "label-apex", "kind": "label", "kicker": "Tier 2 · Vesper Kade", "text": "APEX VAULT" },
+  { "name": "label-panopticon", "kind": "label", "kicker": "Tier 3 · Ezra Seymour", "text": "THE PANOPTICON" },
+  { "name": "label-spire", "kind": "label", "kicker": "Tier 4 · Prudence Ashby", "text": "THE ALIGNMENT SPIRE" },
+  { "name": "label-dome", "kind": "label", "kicker": "Tier 5 · HUNTER (beta)", "text": "THE SINGULARITY DOME" },
+  { "name": "label-cathedral", "kind": "label", "kicker": "Tier 6 · Orrin Sayle", "text": "THE CLOUD CATHEDRAL" },
+  { "name": "label-fortress", "kind": "label", "kicker": "Tier 7 · Kit Szabo", "text": "THE CHIP FORTRESS" },
+  { "name": "label-zero", "kind": "label", "kicker": "Tier 8 · sixty rungs down", "text": "BUNKER ZERO" },
+  { "name": "end", "kind": "logo", "y": -30, "tag": "They built bunkers. <b>You brought lockpicks.</b>", "plat": "Free<i>·</i>Linux<i>·</i>Windows<i>·</i>Browser<i>·</i>Phone", "url": "bunker-busters.netlify.app" },
+  { "name": "logo", "kind": "logo" }
+]

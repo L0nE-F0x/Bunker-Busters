@@ -127,6 +127,10 @@ Object.assign(window.D, (() => {
     camp: (p) => rel(g.landmarks.campPoint(p[0], p[1], p[2])),
     town: (p) => { const v = g.scene.getObjectByName('dry-creek').localToWorld(new D.V(p[0], 0, p[2])); return [v.x, p[1], v.z]; },
     garage: (p) => { const o = g.garage.b.origin; return [o.x + p[0], p[1], o.z + p[2]]; },
+    /** A point relative to a bunker's origin: [dx, heightAboveGround, dz] → world [x, h, z]. */
+    rel: (id, p) => { const o = g[id].b.origin; return [o.x + p[0], p[1], o.z + p[2]]; },
+    /** A world point at an absolute height y (not above the ground): [x, y, z] → [x, h, z]. */
+    abs: (p) => [p[0], p[1] - D.ground(p[0], p[2]), p[2]],
     /** A move: eye and target from → to over `dur` seconds, with an easing name. */
     move(t, dur, e0, e1, a0, a1, fov0 = 50, fov1 = fov0, easing = 'lin', roll = 0) {
       const k = D[easing](t / dur);
