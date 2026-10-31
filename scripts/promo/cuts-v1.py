@@ -27,6 +27,7 @@ FIGHT_DOWN = MUSIC.get('fight', 0.0)
 TENSION_DOWN = MUSIC.get('tension', 0.0)
 CAMP_DOWN = MUSIC.get('camp', 0.0)
 WOLF = 'eq=gamma=1.3:contrast=1.05:saturation=1.1'  # the dusk wolf shots run dark
+DUSK = 'eq=gamma=1.18:saturation=1.06'  # the Fortress under the range at dusk, a little lift
 FMT = {
     '1080': ((1920, 1080), 'overlays', ['footage']),
     '1440': ((2560, 1440), 'overlays-1440', ['footage']),
@@ -41,11 +42,28 @@ def new(name, fmt='1080'):
     return c
 
 
+# Takes whose game audio has someone talking (the free camera's stand-in body sets off the owners'
+# greetings, and whisper found them): their sound would talk over the cut's own subtitled lines, so
+# they run silent on a bed of wind from a take with nobody in it.
+SPEECH = {'pan-sweep', 'garage-night', 'dome-night', 'dome-inside', 'cath-tower2', 'fort-bridge-down',
+          'h-lockpick', 'h-splice', 'h-sentinel', 'p-ezra'}  # (h-swarm talks only in its first 2.6 s: cut after)
+NIGHT_BED, DAY_BED = 'pan-valley', 'apex-crane'
+NIGHT_TAKES = {'pan-sweep', 'garage-night', 'dome-night', 'dome-inside', 'h-lockpick', 'h-splice', 'p-ezra'}
+
+
 def S(c, clip, dur, src=0.0, cx=0.5, zoom=None, zv=None, **kw):
     """A shot; `cx` places the 9:16 window (ignored at 16:9), `zv` is the zoom for 9:16 cuts."""
+    quiet = clip in SPEECH
+    if quiet:
+        kw['audio'] = False
     if c.fmt == 'v':
-        return c.shot(clip, dur, src=src, cx=cx, zoom=zv, **kw)
-    return c.shot(clip, dur, src=src, zoom=zoom, **kw)
+        at = c.shot(clip, dur, src=src, cx=cx, zoom=zv, **kw)
+    else:
+        at = c.shot(clip, dur, src=src, zoom=zoom, **kw)
+    if quiet:
+        bed = NIGHT_BED if clip in NIGHT_TAKES else DAY_BED
+        c.sound(str(WORK / 'footage' / f'{bed}.wav'), at, src=0.5, dur=dur, gain=kw.get('gain', -6), fade_in=0.05, fade_out=0.05)
+    return at
 
 
 def card(c, png, dur, hit='impact', gain=-3.0):
@@ -61,7 +79,7 @@ def label(c, name, at, dur=2.4):
     c.overlay(f'label-{name}', at + 0.2, dur, fade_in=0.25, fade_out=0.4)
 
 
-def endcard(c, clip='nightsky', src=0.6, dur=6.5):
+def endcard(c, clip='nightsky', src=0.4, dur=6.5):
     t = S(c, clip, dur, src=src, gain=-8, fade_in=0.4, fade_out=0.5, cx=0.5)
     c.overlay('end', t + 0.3, dur - 0.3, fade_in=0.35, fade_out=0.01, push=0.04)
     c.sound('sfx/braam', t + 0.25, gain=-3)
@@ -89,10 +107,10 @@ def trailer(fmt='1080'):
     t = card(c, 'card-lockpicks', 1.6, hit='impact-metal')
     # ---- the bunkers, under the tension pulse; each owner on the PA
     c.sound('music-tension', c.t, src=TENSION_DOWN, dur=36.0, gain=-3, fade_in=0.6, fade_out=0.8, bus='music')
-    t = S(c, 'garage-night', 3.0, src=1.5, gain=-6)
+    t = S(c, 'garage-night', 3.0, src=2.0, gain=-6)
     label(c, 'garage', t, 2.6)
     c.vo('tanner-runway', t + 0.1, sub='sub-tanner-runway')
-    S(c, 'h-lockpick', 2.4, src=2.6, gain=-3, zoom=(1.45, 1.52))
+    S(c, 'h-lockpick', 2.4, src=2.6, gain=-3, zoom=(1.72, 1.8))
     t = S(c, 'apex-crane', 2.8, src=2.6, gain=-6, cx=0.62)
     label(c, 'apex', t, 2.5)
     c.vo('vesper-live', t + 0.1, sub='sub-vesper-live')
@@ -101,21 +119,21 @@ def trailer(fmt='1080'):
     S(c, 'p-ezra', 2.2, src=2.0, gain=-6, cx=0.5)
     t = S(c, 'spire-court', 2.8, src=2.0, gain=-6)
     label(c, 'spire', t, 2.5)
-    t = S(c, 'h-sentinel', 2.8, src=1.6, gain=-2, cx=0.55)
+    t = S(c, 'h-sentinel', 2.8, src=1.6, gain=-2, cx=0.52, look=DUSK)
     c.vo('sentinel-apology', t, sub='sub-sentinel-apology')
     t = S(c, 'dome-night', 2.8, src=2.4, gain=-6)
     label(c, 'dome', t, 2.5)
-    t = S(c, 'dome-inside', 2.6, src=2.4, gain=-5)
+    t = S(c, 'dome-inside', 2.6, src=3.0, gain=-5)
     c.vo('beta-fix', t + 0.1, sub='sub-beta-fix')
-    S(c, 'h-splice', 2.2, src=3.2, gain=-3, zoom=(1.45, 1.5))
-    t = S(c, 'cath-tower2', 2.8, src=2.0, gain=-6, cx=0.4)
+    S(c, 'h-splice', 2.3, src=2.0, gain=-3, zoom=(1.58, 1.66))
+    t = S(c, 'cath-tower2', 2.8, src=2.5, gain=-6, cx=0.45)
     label(c, 'cathedral', t, 2.5)
-    t = S(c, 'h-swarm', 3.2, src=3.0, gain=-2)
+    t = S(c, 'h-swarm', 3.2, src=3.6, gain=-2)
     c.vo('drone-hold', t, sub='sub-drone-hold')
     t = S(c, 'fort-crane', 2.6, src=2.0, gain=-6)
     label(c, 'fortress', t, 2.4)
     c.vo('kit-queue', t + 0.1, sub='sub-kit-queue')
-    S(c, 'fort-bridge-down', 2.6, src=0.6, gain=-4, cx=0.5)
+    S(c, 'fort-bridge-down', 2.6, src=0.0, gain=-4, cx=0.6, look=DUSK)
     c.sound('sfx/riser-2.5', c.t - 2.5, gain=-6)
     # ---- the fight, on the fight stem's beat
     T = c.t
@@ -149,12 +167,12 @@ def teaser15(fmt='1080'):
     c = new('teaser-15s-16x9' if fmt != 'v' else 'teaser-15s-9x16', fmt)
     c.sound('sfx/drone', 0, gain=-12, fade_in=0.8, dur=15, fade_out=1.5)
     c.sound('music-tension', 0.2, src=TENSION_DOWN, dur=10.4, gain=-3, fade_in=0.6, fade_out=0.4, bus='music')
-    t = S(c, 'h-lockpick', 2.7, src=1.8, gain=-3, zoom=(1.42, 1.5), zv=None)
+    t = S(c, 'h-lockpick', 2.7, src=1.8, gain=-3, zoom=(1.72, 1.8), zv=None)
     c.vo('tanner-hold', t + 0.1, sub='sub-tanner-hold')
     t = S(c, 'apex-rocket', 2.6, src=1.0, gain=-6, cx=0.55)
     c.vo('vesper-live', t + 0.05, sub='sub-vesper-live')
     S(c, 'h-swarm', 1.6, src=4.2, gain=-2, cx=0.5)
-    S(c, 'dome-inside', 1.4, src=3.0, gain=-5, cx=0.5)
+    S(c, 'dome-inside', 1.4, src=3.6, gain=-5, cx=0.5)
     S(c, 'pan-valley', 1.3, src=3.4, gain=-6, cx=0.52)
     t = S(c, 'blast-tp', 1.4, src=0.9, gain=0, cx=0.55)
     c.sound('sfx/riser-1.5', t - 0.1, gain=-7)
@@ -175,14 +193,14 @@ def teaser30(fmt='1080'):
     c.sound('music-tension', c.t, src=TENSION_DOWN, dur=17.2, gain=-3, fade_in=0.4, fade_out=0.6, bus='music')
     t = S(c, 'apex-rocket', 2.7, src=1.0, gain=-6, cx=0.55)
     c.vo('vesper-live', t + 0.05, sub='sub-vesper-live')
-    S(c, 'h-lockpick', 2.0, src=3.0, gain=-3, zoom=(1.45, 1.5))
+    S(c, 'h-lockpick', 2.0, src=3.0, gain=-3, zoom=(1.72, 1.8))
     t = S(c, 'spire-court', 2.2, src=2.0, gain=-6, cx=0.5)
-    t = S(c, 'h-sentinel', 2.8, src=1.6, gain=-2, cx=0.55)
+    t = S(c, 'h-sentinel', 2.8, src=1.6, gain=-2, cx=0.52, look=DUSK)
     c.vo('sentinel-apology', t - 0.2, sub='sub-sentinel-apology')
-    S(c, 'dome-inside', 1.8, src=2.6, gain=-5, cx=0.5)
+    S(c, 'dome-inside', 1.8, src=3.2, gain=-5, cx=0.5)
     t = S(c, 'h-swarm', 2.6, src=3.4, gain=-2, cx=0.5)
     c.vo('drone-hold', t, sub='sub-drone-hold')
-    S(c, 'fort-bridge-down', 1.8, src=1.2, gain=-4, cx=0.5)
+    S(c, 'fort-bridge-down', 1.8, src=0.0, gain=-4, cx=0.6, look=DUSK)
     t = S(c, 'rifle-c', 1.7, src=1.4, gain=0, cx=0.5)
     S(c, 'blast-tp', 1.5, src=0.9, gain=0, cx=0.55)
     c.sound('sfx/riser-1.5', c.t - 1.5, gain=-7)
@@ -199,19 +217,17 @@ def teaser30(fmt='1080'):
 # the loops: single moments for replies (≤ 10 s; loops.py squeezes them under 8 MB afterwards)
 # name: (clip, src, dur, zoom, voice line, voice at, look)
 LOOPS = {
-    'loop-lockpick': ('h-lockpick', 0.5, 7.5, (1.38, 1.44), None, 0, None),
-    'loop-splice': ('h-splice', 1.0, 7.0, (1.40, 1.45), None, 0, None),
-    'loop-lasers': ('h-corridor2', 0.4, 6.0, None, None, 0, None),
-    'loop-swarm': ('h-swarm', 0.8, 7.0, None, 'drone-hold', 1.6, None),
+    'loop-lockpick': ('h-lockpick', 0.5, 7.5, (1.66, 1.74), None, 0, None),
+    'loop-splice': ('h-splice', 1.0, 6.8, (1.52, 1.56), None, 0, None),
+    'loop-swarm': ('h-swarm', 2.7, 5.2, None, 'drone-hold', 0.4, None),
     'loop-wolves-dusk': ('wolves-charge', 1.6, 6.0, None, None, 0, WOLF),
-    'loop-storm': ('storm-city', 0.4, 6.0, None, None, 0, None),
-    'loop-camp-night': ('camp-close', 0.3, 6.5, None, None, 0, None),
-    'loop-garage-night': ('garage-night', 2.0, 5.0, None, 'tanner-runway', 0.6, None),
+    'loop-camp': ('camp-gold', 0.3, 6.5, None, None, 0, None),
+    'loop-garage-night': ('garage-night', 2.0, 4.9, None, 'tanner-runway', 0.5, None),
     'loop-apex-rocket': ('apex-rocket', 0.8, 5.0, None, 'vesper-live', 0.8, None),
     'loop-panopticon-lamp': ('pan-sweep', 0.6, 6.2, None, 'ezra-cameras', 0.6, None),
-    'loop-dome-hologram': ('dome-inside', 1.2, 5.5, None, 'beta-ship', 0.8, None),
-    'loop-sentinel': ('h-sentinel', 0.6, 5.5, None, 'sentinel-apology', 0.9, None),
-    'loop-fortress-bridge': ('fort-bridge-down', 0.1, 6.6, None, 'kit-moat', 1.0, None),
+    'loop-dome-hologram': ('dome-inside', 1.3, 5.5, None, 'beta-ship', 0.8, None),
+    'loop-sentinel': ('h-sentinel', 0.6, 5.5, None, 'sentinel-apology', 0.9, DUSK),
+    'loop-fortress-bridge': ('fort-bridge-down', 0.0, 6.6, None, 'kit-bridge', 0.5, DUSK),
     'loop-zero-door': ('zero-door', 0.8, 6.0, None, 'agnes-heavy', 0.6, None),
 }
 

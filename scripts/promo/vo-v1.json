@@ -24,6 +24,7 @@
   { "name": "drone-returned", "speaker": "Dropt drone", "text": "Returned to sender. Thank you for choosing Dropt.", "who": "Dropt drone", "bot": true },
   { "name": "kit-queue", "speaker": "Kit Szabo", "text": "You're in the queue. Everyone is in the queue.", "who": "Kit Szabo · PA" },
   { "name": "kit-moat", "speaker": "Kit Szabo", "text": "The moat is minus forty degrees. Please don't test that. People test that.", "who": "Kit Szabo · PA" },
+  { "name": "kit-bridge", "speaker": "Kit Szabo", "text": "Somebody lowered my bridge. That's an unauthorised allocation of bridge.", "who": "Kit Szabo · PA" },
   { "name": "agnes-heavy", "speaker": "Agnes Price", "text": "It isn't locked. It never was. It's just heavy.", "who": "Agnes Price · PA" },
   { "name": "agnes-weak", "speaker": "Agnes Price", "text": "Every door has a weak point. The job is getting the client to sign for it.", "who": "Agnes Price · PA" },
   { "name": "seedbot-firmware", "speaker": "SeedBot", "text": "FIRMWARE REVIEW IN PROGRESS. PLEASE DO NOT STEAL ANYTHING DURING THIS TIME.", "who": "SeedBot", "bot": true },

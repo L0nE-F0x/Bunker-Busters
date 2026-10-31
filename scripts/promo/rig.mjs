@@ -224,7 +224,8 @@ export async function openRig({ url, size = (process.env.SIZE || '1920x1080').sp
       await setHooks(pre, post);
       const n = Math.round(seconds * fps);
       const ff = spawn('ffmpeg', ['-y', '-loglevel', 'error', '-f', 'image2pipe', '-framerate', String(fps), '-c:v', 'mjpeg', '-i', '-',
-        '-c:v', 'libx264', '-preset', 'medium', '-crf', '10', '-pix_fmt', 'yuv420p', '-movflags', '+faststart', out], { stdio: ['pipe', 'inherit', 'inherit'] });
+        // (threads and lookahead capped: x264's defaults held 1.3 GB at 1440p, on a shared machine)
+        '-c:v', 'libx264', '-preset', 'medium', '-crf', '10', '-threads', '6', '-rc-lookahead', '20', '-pix_fmt', 'yuv420p', '-movflags', '+faststart', out], { stdio: ['pipe', 'inherit', 'inherit'] });
       const done = new Promise((r) => ff.on('close', r));
       const t0 = Date.now();
       let a0 = null;

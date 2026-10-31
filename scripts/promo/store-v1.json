@@ -1,0 +1,13 @@
+[
+  { "name": "itch-cover-630x500", "kind": "art", "w": 630, "h": 500, "bg": "camp-gold.png", "bgPos": "76% 50%", "ls": 82, "pos": "left:6%;top:8%",
+    "shade": "linear-gradient(155deg, rgba(8,5,3,0.82) 0%, rgba(8,5,3,0.35) 42%, rgba(8,5,3,0) 62%)" },
+  { "name": "steam-header-capsule-920x430", "kind": "art", "w": 920, "h": 430, "bg": "camp-gold.png", "bgPos": "64% 58%", "ls": 108, "pos": "left:5%;top:50%;transform:translateY(-50%)" },
+  { "name": "steam-small-capsule-462x174", "kind": "art", "w": 462, "h": 174, "bg": "camp-gold.png", "bgPos": "66% 62%", "ls": 68, "pos": "left:50%;top:50%;transform:translate(-50%,-50%)",
+    "shade": "linear-gradient(90deg, rgba(8,5,3,0.6), rgba(8,5,3,0.35))" },
+  { "name": "steam-main-capsule-1232x706", "kind": "art", "w": 1232, "h": 706, "bg": "camp-gold.png", "bgPos": "64% 50%", "ls": 146, "pos": "left:5%;top:50%;transform:translateY(-50%)" },
+  { "name": "steam-vertical-capsule-748x896", "kind": "art", "w": 748, "h": 896, "bg": "apex-rocket.png", "bgPos": "64% 50%", "ls": 120, "pos": "left:50%;bottom:6%;transform:translateX(-50%)",
+    "shade": "linear-gradient(0deg, rgba(8,5,3,0.85) 0%, rgba(8,5,3,0.4) 28%, rgba(8,5,3,0) 50%)" },
+  { "name": "steam-library-capsule-600x900", "kind": "art", "w": 600, "h": 900, "bg": "apex-rocket.png", "bgPos": "64% 50%", "ls": 100, "pos": "left:50%;bottom:6%;transform:translateX(-50%)",
+    "shade": "linear-gradient(0deg, rgba(8,5,3,0.85) 0%, rgba(8,5,3,0.4) 26%, rgba(8,5,3,0) 48%)" },
+  { "name": "steam-library-logo-1280x720", "kind": "art", "w": 1280, "h": 720, "ls": 290, "pos": "left:50%;top:50%;transform:translate(-50%,-50%)", "shade": "none" }
+]

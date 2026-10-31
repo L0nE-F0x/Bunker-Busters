@@ -15,7 +15,11 @@ const specs = SPECS.flatMap((f) => JSON.parse(fs.readFileSync(f, 'utf8')));
 const [PW, PH] = (process.env.SIZE || '1920x1080').split('x').map(Number);
 // fonts inlined (a setContent page can't load file:// URLs)
 const fsrc = (pkg, file) => 'data:font/woff2;base64,' + fs.readFileSync(fileURLToPath(new URL(`../../node_modules/@fontsource/${pkg}/files/${file}`, import.meta.url))).toString('base64');
-const img = (p) => `data:image/${path.extname(p).slice(1).replace('jpg', 'jpeg')};base64,${fs.readFileSync(p).toString('base64')}`;
+// a still for `art` specs: an absolute path, or relative to BG_DIR (the exported stills)
+const img = (p) => {
+  const f = path.isAbsolute(p) ? p : path.join(process.env.BG_DIR || '.', p);
+  return `data:image/${path.extname(f).slice(1).replace('jpg', 'jpeg')};base64,${fs.readFileSync(f).toString('base64')}`;
+};
 
 const CSS = (W, H) => `
 @font-face { font-family: 'BSS'; font-weight: 700; src: url('${fsrc('big-shoulders-stencil-display', 'big-shoulders-stencil-display-latin-700-normal.woff2')}'); }
