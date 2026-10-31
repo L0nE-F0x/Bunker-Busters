@@ -10,6 +10,7 @@ import { modelProgress } from '@/engine/models';
 import { Input } from '@/engine/input';
 import { pad } from '@/engine/gamepad';
 import { binds, actionWord, type Action } from '@/engine/bindings';
+import { TUT } from './tutorial';
 import { PadNav } from '@/ui/PadNav';
 import { AudioEngine, type LoopHandle } from '@/engine/audio';
 import { Acoustics, isSoft } from '@/engine/surface';
@@ -1378,7 +1379,9 @@ export class Game {
       void this.ui.pages(briefingFor(state.archetype)).then(() => {
         state.set('briefed');
         state.set('intro');
-        if (state.set('tut.arms')) setTimeout(() => this.ui.toast(isTouch ? 'Armed: FIRE, AIM, RELOAD and SWAP sit over the jump button.' : armsHelp(), 'info'), 4000);
+        // where the menus are, then the gun in your hand: one after the other, not over each other
+        if (state.set('tut.menus')) setTimeout(() => { if (this.state === state) this.ui.toast(TUT.menus(), 'info'); }, 1500);
+        if (state.set('tut.arms')) setTimeout(() => { if (this.state === state) this.ui.toast(isTouch ? 'Armed: FIRE, AIM, RELOAD and SWAP sit over the jump button.' : armsHelp(), 'info'); }, 6500);
         if (this.player) this.player.frozen = false;
         this.busy = false;
         this.input.requestLock();
@@ -2348,10 +2351,11 @@ export class Game {
     player.stealthRank = s.skill('stealth');
     player.stealthFocus = s.focus('stealth');
     if (!blocked) {
-      if (s.data.thirst < 55 && s.set('tut.thirst')) this.ui.toast('You\'re getting thirsty (the blue bar). Food won\'t help. Drink.', 'info');
-      if (s.data.thirst < 28 && s.set('tut.dry')) this.ui.toast('You\'re dehydrated and losing health. Drink something.', 'bad');
-      if (s.data.hunger < 28 && s.set('tut.hungry')) this.ui.toast('You\'re getting hungry. Eat a ration from the hotbar.', 'bad');
-      if (s.weight > s.carryLimit + 0.05 && s.set('tut.heavy')) this.ui.toast('You\'re overloaded and down to seventy percent speed. Drop something from your kit.', 'bad');
+      if (s.data.thirst < 55 && s.set('tut.thirst')) this.ui.toast(TUT.thirst(), 'info');
+      if (s.data.thirst < 28 && s.set('tut.dry')) this.ui.toast(TUT.dry(), 'bad');
+      if (s.data.hunger < 28 && s.set('tut.hungry')) this.ui.toast(TUT.hungry(), 'bad');
+      if (s.weight > s.carryLimit + 0.05 && s.set('tut.heavy')) this.ui.toast(TUT.heavy(), 'bad');
+      if (this.atmo.isNight && !this.hands?.flashlightOn && !this.bunkerInside && s.set('tut.torch')) this.ui.toast(TUT.torch(), 'info');
     }
 
     // UI hotkeys
@@ -2463,7 +2467,8 @@ export class Game {
       }
     }
 
-    if (this.arms?.takedownTarget && !this.focus && !isTouch) prompt.push({ key: 'LMB', label: 'Takedown' });
+    // (on touch the prompt is a FIRE button of its own: tap it, or FIRE)
+    if (this.arms?.takedownTarget && !this.focus) prompt.push({ key: 'LMB', label: 'Takedown' });
     if (this.touch) {
       const f = this.focus;
       this.touch.update({
@@ -2487,7 +2492,8 @@ export class Game {
           this.landmarkSeen.add(lm.id);
           s.set(`seen:${lm.id}`);
           if (lm.id === 'cave') s.set('cave.known');
-          this.ui.banner(lm.name.toUpperCase(), lm.blurb, 'info');
+          // (the camp is where every run starts: its LAST CHANCE banner already said so)
+          if (!lm.camp) this.ui.banner(lm.name.toUpperCase(), lm.blurb, 'info');
           s.addXP(XP_REWARDS.landmarkDiscovered, `Discovered ${lm.name}`);
         }
       }

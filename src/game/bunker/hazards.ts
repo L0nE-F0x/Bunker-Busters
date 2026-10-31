@@ -4,7 +4,7 @@ import type { BunkerSecurity } from '@/content/types';
 import type { GameContext, Interactable } from '../context';
 import type { Bunker } from './Bunker';
 import type { Laser, SecurityCamera, Tripwire } from './shell';
-import { actionWord } from '@/engine/bindings';
+import { keyed } from '@/ui/keyWords';
 
 /**
  * The bunker runtime's hazards. Each one is driven by `Bunker` (flags, interactables, per-frame)
@@ -12,11 +12,11 @@ import { actionWord } from '@/engine/bindings';
  */
 
 type Player = GameContext['player'];
-/** "{crouch}" in a hint: the crouch control as bound now (a rebind or a pad shows its own key; touch has none). */
-const crouchText = (t: string) => {
-  const k = actionWord('crouch');
-  return t.replace('{crouch}', k ? `crouch [${k}]` : 'crouch');
-};
+/** `{crouch}` in a hint → "crouch (C)", with whatever crouch is bound to on the device in use ("Crouch" opening a sentence). */
+const crouchText = (t: string) => t.replace(/(^|[.!?] )?\{crouch\}/, (_, lead: string | undefined) => {
+  const w = keyed('crouch', 'crouch');
+  return lead !== undefined ? `${lead}${w[0].toUpperCase()}${w.slice(1)}` : w;
+});
 
 function segIntersect(p1: THREE.Vector2, p2: THREE.Vector2, q1: THREE.Vector2, q2: THREE.Vector2) {
   const d = (p2.x - p1.x) * (q2.y - q1.y) - (p2.y - p1.y) * (q2.x - q1.x);

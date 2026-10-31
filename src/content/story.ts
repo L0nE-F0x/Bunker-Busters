@@ -48,7 +48,8 @@ export function briefingFor(a: ArchetypeDef): StoryPage[] {
     {
       speaker: 'Mara Voss',
       text:
-        'The rule of the Compact, on the back of a receipt: take what the living need. Leave him alive if you can. Don\'t become the person on the other side of the lock. Somebody pinned a note on the pumps by this fire. Read it. Dry Creek is west of the highway, diner light still on. Tab is your kit, K your skills, J your journal. Mara, out.',
+        // (the menus' keys used to be read out here; the game shows them in the controls in use, TUT.menus)
+        'The rule of the Compact, on the back of a receipt: take what the living need. Leave him alive if you can. Don\'t become the person on the other side of the lock. Somebody pinned a note on the pumps by this fire. Read it. Dry Creek is north-west, across the highway, diner light still on. Mara, out.',
     },
   ];
 }
@@ -784,7 +785,7 @@ export const WORLD_CACHES: WorldCache[] = [
     x: -142,
     z: 122,
     label: 'Search the cooler',
-    approach: 'A cooler by the pumps. Mara said it still had water.',
+    approach: 'A cooler behind the pumps. There might still be water in it.',
     xp: 20,
     items: [
       { id: 'water', qty: 2 },

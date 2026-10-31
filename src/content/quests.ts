@@ -154,7 +154,7 @@ export const QUESTS: QuestDef[] = [
     steps: [
       {
         id: 'crew', text: 'Ask Dry Creek who would come west', at: 'creek',
-        hint: 'Anyone at standing 2 or better will say yes. Doing their favours is the quickest way there.',
+        hint: 'Talk to people there and do their favours. Anyone who trusts you (standing 2, on the journal\'s People tab) will say yes.',
         done: (v) => CREW.some((f) => v.has(f)) || v.has('apex.complete'),
       },
       {
