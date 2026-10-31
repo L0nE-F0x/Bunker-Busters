@@ -88,6 +88,7 @@ body.v .plat { font-size: 30px; letter-spacing: 0.12em; line-height: 1.6; paddin
 body.v .url { font-size: 44px; letter-spacing: 0.02em; }
 body.v .pill { font-size: 28px; }
 body.v .sub { left: 120px; transform: none; bottom: 672px; width: 660px; max-width: 660px; box-sizing: border-box; text-align: left; padding: 14px 22px 18px; }
+body.v .sub.top { top: 300px; bottom: auto; } /* over a shot whose middle is busy (a minigame) */
 body.v .sub .who { font-size: 22px; letter-spacing: 0.14em; }
 body.v .sub .line { font-size: 40px; line-height: 1.2; }
 body.v .label { left: 120px; top: 290px; }
@@ -109,7 +110,7 @@ const html = (s) => {
         ${s.url ? `<div class="url">${esc(s.url)}</div>` : ''}
         ${s.meta ? `<div class="meta">${esc(s.meta)}</div>` : ''}</div>`;
     case 'sub':
-      return `<div class="sub"><span class="who ${s.bot ? 'bot' : ''}">${esc(s.who)}</span><span class="line">${esc(s.text)}</span></div>`;
+      return `<div class="sub ${s.top ? 'top' : ''}"><span class="who ${s.bot ? 'bot' : ''}">${esc(s.who)}</span><span class="line">${esc(s.text)}</span></div>`;
     case 'keyart':
       return `<div class="keyart"><div class="blk">${logo()}
         <div class="tag">${s.tag}</div>${s.pill ? `<div class="pill">${s.pill}</div>` : ''}${s.url ? `<div class="url" style="text-align:left">${esc(s.url)}</div>` : ''}</div></div>`;

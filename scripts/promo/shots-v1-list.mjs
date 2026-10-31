@@ -138,7 +138,7 @@ export const SHOTS = [
 
   // ---------------------------------------------------------------- stills only (store art)
   // the library hero (3840×1240, no text; the key content inside the central 860×380): the camp at golden hour, wide
-  { name: 's-libhero', hour: 17.75, dur: 2, scoutAt: [0.5], cam: { space: 'camp', e: [-24, 2.0, -8.5], a: [-6.4, 1.3, 3.2], fov: 22 } },
+  { name: 's-libhero', hour: 17.75, dur: 2, scoutAt: [0.5], cam: { space: 'camp', e: [-24, 2.0, -8.5], a: [-7.3, 0.45, 4.9], fov: 22 } },
   // portrait capsules: the tall ones
   { name: 's-portrait-apex', hour: 17.55, dur: 2, scoutAt: [0.5], cam: { space: 'rel:apex', e: [34, 1.3, 26], a: [14, 24, 2], fov: 62 } },
   { name: 's-portrait-pan', hour: 19.4, expo: 1.3, dur: 8, scoutAt: [0, 0.5, 1], cam: { space: 'rel:panopticon', e: [12, 1.4, 34], a: [0, 22, 0], fov: 60 } },

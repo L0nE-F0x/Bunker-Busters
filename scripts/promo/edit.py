@@ -198,7 +198,7 @@ class Cut:
                 fc.append(f'color=c=black:s={W}x{H}:r={FPS}:d={s["dur"]:.4f},format=yuv420p,setsar=1[s{i}]')
             else:
                 need = s['dur'] * s['speed']
-                args += ['-ss', f'{s["src"]:.4f}', '-t', f'{need + 0.1:.4f}', '-i', s['clip']]
+                args += ['-threads', '2', '-ss', f'{s["src"]:.4f}', '-t', f'{need + 0.1:.4f}', '-i', s['clip']]  # (every clip is open at once: few decoder threads each)
                 chain = f'[{n_in}:v]setpts=PTS-STARTPTS'
                 if s['speed'] != 1.0:
                     chain += f',setpts=PTS/{s["speed"]}'

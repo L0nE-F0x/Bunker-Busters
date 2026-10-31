@@ -15,5 +15,6 @@
   { "name": "label-fortress", "kind": "label", "kicker": "Tier 7 · Kit Szabo", "text": "THE CHIP FORTRESS" },
   { "name": "label-zero", "kind": "label", "kicker": "Tier 8 · sixty rungs down", "text": "BUNKER ZERO" },
   { "name": "end", "kind": "logo", "y": -30, "tag": "They built bunkers. <b>You brought lockpicks.</b>", "plat": "Free<i>·</i>Linux<i>·</i>Windows<i>·</i>Browser<i>·</i>Phone", "url": "bunker-busters.netlify.app" },
-  { "name": "logo", "kind": "logo" }
+  { "name": "logo", "kind": "logo" },
+  { "name": "sub-tanner-hold-top", "kind": "sub", "top": true, "who": "Tanner Pivotson · megaphone", "text": "Please hold. Your break-in is important to us." }
 ]

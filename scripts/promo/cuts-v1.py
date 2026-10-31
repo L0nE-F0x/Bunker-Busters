@@ -46,7 +46,8 @@ def new(name, fmt='1080'):
 # greetings, and whisper found them): their sound would talk over the cut's own subtitled lines, so
 # they run silent on a bed of wind from a take with nobody in it.
 SPEECH = {'pan-sweep', 'garage-night', 'dome-night', 'dome-inside', 'cath-tower2', 'fort-bridge-down',
-          'h-lockpick', 'h-splice', 'h-sentinel', 'p-ezra'}  # (h-swarm talks only in its first 2.6 s: cut after)
+          'h-lockpick', 'h-splice', 'h-sentinel', 'p-ezra', 'blast-tp', 'shotgun'}  # (h-swarm, rifle-c and
+# contractor-close only talk early on: their windows start after)
 NIGHT_BED, DAY_BED = 'pan-valley', 'apex-crane'
 NIGHT_TAKES = {'pan-sweep', 'garage-night', 'dome-night', 'dome-inside', 'h-lockpick', 'h-splice', 'p-ezra'}
 
@@ -139,15 +140,17 @@ def trailer(fmt='1080'):
     T = c.t
     card(c, 'card-rifle', 2 * BEAT, hit='braam', gain=-1)
     c.sound('sfx/subdrop', T, gain=-6)
-    c.sound('music-fight', T, src=FIGHT_DOWN, dur=17 * BEAT + 0.05, gain=0, fade_out=0.05, bus='music')
-    t = S(c, 'contractor-close', 4 * BEAT, src=1.0, gain=-2)
-    c.vo('kade-asset', t + 0.25, sub='sub-kade-asset')
-    t = S(c, 'rifle-c', 4 * BEAT, src=1.0, gain=0)
-    c.vo('kade-waiver', t + 1.2, sub='sub-kade-waiver')
-    S(c, 'wolves-charge', 3 * BEAT, src=2.6, gain=0, look=WOLF)
-    t = S(c, 'shotgun', 2 * BEAT, src=0.0, gain=0)
-    c.vo('kade-fire', t + 0.05, sub='sub-kade-fire')  # ends just after the charge goes off
-    S(c, 'blast-tp', 2 * BEAT, src=0.9, gain=0)
+    c.sound('music-fight', T, src=FIGHT_DOWN, dur=14 * BEAT + 0.05, gain=0, fade_out=0.05, bus='music')
+    # (each window starts after the take's own bark: whisper's word timings)
+    t = S(c, 'contractor-close', 2 * BEAT, src=5.05, gain=-2)
+    c.vo('kade-asset', t + 0.1, sub='sub-kade-asset')
+    t = S(c, 'rifle-c', 4 * BEAT, src=3.0, gain=0)
+    c.vo('kade-waiver', t + 1.0, sub='sub-kade-waiver')
+    S(c, 'wolves-charge', 3 * BEAT, src=1.1, gain=0, look=WOLF, cx=0.62)
+    t = S(c, 'blast-tp', 3 * BEAT, src=0.0, gain=-4)  # (its bark covers the blast: silent, a boom instead)
+    c.vo('kade-fire', t + 0.0, sub='sub-kade-fire')
+    c.sound('sfx/impact', t + 0.95, gain=-2)
+    c.sound('sfx/subdrop', t + 0.95, gain=-6)
     # ---- the cut to black, then Bunker Zero: the tease
     # Agnes starts over the black ("It isn't locked."); the showroom comes up under "It never was.";
     # "It's just heavy." lands as Model Zero starts to swing (4.3 s into the take), and we cut
@@ -172,14 +175,15 @@ def teaser15(fmt='1080'):
     c.sound('sfx/drone', 0, gain=-12, fade_in=0.8, dur=15, fade_out=1.5)
     c.sound('music-tension', 0.2, src=TENSION_DOWN, dur=10.4, gain=-3, fade_in=0.6, fade_out=0.4, bus='music')
     t = S(c, 'h-lockpick', 2.7, src=1.8, gain=-3, zoom=(1.72, 1.8), zv=None)
-    c.vo('tanner-hold', t + 0.1, sub='sub-tanner-hold')
+    c.vo('tanner-hold', t + 0.1, sub='sub-tanner-hold-top' if fmt == 'v' else 'sub-tanner-hold')  # (9:16: the lock fills the middle)
     t = S(c, 'apex-rocket', 2.6, src=1.0, gain=-6, cx=0.55)
     c.vo('vesper-live', t + 0.05, sub='sub-vesper-live')
     S(c, 'h-swarm', 1.6, src=4.2, gain=-2, cx=0.5)
     S(c, 'dome-inside', 1.4, src=3.6, gain=-5, cx=0.5)
     S(c, 'pan-valley', 1.3, src=3.4, gain=-6, cx=0.52)
-    t = S(c, 'blast-tp', 1.4, src=0.9, gain=0, cx=0.55)
+    t = S(c, 'blast-tp', 1.4, src=0.5, gain=-4, cx=0.3)
     c.sound('sfx/riser-1.5', t - 0.1, gain=-7)
+    c.sound('sfx/impact-soft', t + 0.45, gain=-4)  # the charge (the take's own sound has a bark over it)
     t = c.black(4.0)
     c.sound('sfx/impact', t, gain=-1)
     c.sound('sfx/subdrop', t, gain=-6)
@@ -205,8 +209,9 @@ def teaser30(fmt='1080'):
     t = S(c, 'h-swarm', 2.6, src=3.4, gain=-2, cx=0.5)
     c.vo('drone-hold', t, sub='sub-drone-hold')
     S(c, 'fort-bridge-down', 1.8, src=0.0, gain=-4, cx=0.6, look=DUSK)
-    t = S(c, 'rifle-c', 1.7, src=1.4, gain=0, cx=0.5)
-    S(c, 'blast-tp', 1.5, src=0.9, gain=0, cx=0.55)
+    t = S(c, 'rifle-c', 1.7, src=3.0, gain=0, cx=0.5)
+    t = S(c, 'blast-tp', 1.5, src=0.5, gain=-4, cx=0.3)
+    c.sound('sfx/impact-soft', t + 0.45, gain=-4)  # the charge
     c.sound('sfx/riser-1.5', c.t - 1.5, gain=-7)
     t = c.black(0.6)
     c.sound('sfx/impact', t, gain=-2)
@@ -224,7 +229,7 @@ LOOPS = {
     'loop-lockpick': ('h-lockpick', 0.5, 7.5, (1.66, 1.74), None, 0, None),
     'loop-splice': ('h-splice', 1.0, 6.8, (1.52, 1.56), None, 0, None),
     'loop-swarm': ('h-swarm', 2.7, 5.2, None, 'drone-hold', 0.4, None),
-    'loop-wolves-dusk': ('wolves-charge', 1.6, 6.0, None, None, 0, WOLF),
+    'loop-wolves-dusk': ('wolves-charge', 0.5, 5.0, None, None, 0, WOLF),
     'loop-camp': ('camp-gold', 0.3, 6.5, None, None, 0, None),
     'loop-garage-night': ('garage-night', 2.0, 4.9, None, 'tanner-runway', 0.5, None),
     'loop-apex-rocket': ('apex-rocket', 0.8, 5.0, None, 'vesper-live', 0.8, None),
