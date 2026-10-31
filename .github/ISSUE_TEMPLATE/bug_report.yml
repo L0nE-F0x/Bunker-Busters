@@ -1,0 +1,75 @@
+# Field ids double as URL parameters, so the game can open this form filled in:
+#   https://github.com/L0nE-F0x/Bunker-Busters/issues/new?template=bug_report.yml&version=1.0.4&platform=Windows%20app&system=…&gpu=…
+# `platform` must be one of the option strings below, exactly.
+name: Bug report
+description: Something in the game or the app went wrong.
+title: "[Bug] "
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting it. One problem per report, please. If the game crashed or froze, say what you were doing just before.
+  - type: input
+    id: version
+    attributes:
+      label: Game version
+      description: Bottom left of the title screen, for example 1.0.4.
+      placeholder: "1.0.4"
+    validations:
+      required: true
+  - type: dropdown
+    id: platform
+    attributes:
+      label: Where do you play?
+      options:
+        - Browser on a computer
+        - Browser on a phone or tablet
+        - Phone app (installed from the browser)
+        - Windows app
+        - Linux app (tarball and install.sh)
+        - Linux app (AppImage)
+        - Linux app (.deb)
+    validations:
+      required: true
+  - type: input
+    id: system
+    attributes:
+      label: System
+      description: Your operating system, and the browser if you play in one.
+      placeholder: "Windows 11 / Arch Linux with Hyprland / Chrome on Android 15"
+    validations:
+      required: true
+  - type: input
+    id: gpu
+    attributes:
+      label: Graphics
+      description: Your graphics card if you know it, and the renderer named at the bottom of the title screen (WEBGPU or WEBGL2).
+      placeholder: "NVIDIA RTX 3060, WEBGPU"
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: And what you expected to happen instead.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: How do we make it happen?
+      description: The steps that lead to it, as far as you know. Where you were, which bunker or act, what you pressed.
+      placeholder: |
+        1. Continue the save at the Garage
+        2. Pick the side door
+        3. …
+  - type: textarea
+    id: media
+    attributes:
+      label: Screenshot or video
+      description: Drag an image or a short clip into this box. It helps a lot.
+  - type: textarea
+    id: log
+    attributes:
+      label: Log (optional)
+      description: The Linux app prints a log when started from a terminal (bunker-busters). Paste the last lines here.
+      render: text
