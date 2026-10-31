@@ -8,6 +8,11 @@
     <link rel="canonical" href="https://bunker-busters.netlify.app/" />
     <meta name="theme-color" content="#0b0806" />
     <meta name="color-scheme" content="dark" />
+    <!-- sections fade in as they scroll into view (site.ts); without scripts everything just shows.
+         If site.ts never runs, the class comes off again after 4 s. -->
+    <script>document.documentElement.classList.add('js'); setTimeout(function () { if (!window.__bbSite) document.documentElement.classList.remove('js'); }, 4000);</script>
+    <!-- without scripts the loop never starts, and browsers then draw its controls: the poster behind it is enough -->
+    <noscript><style>.hero-video { display: none; }</style></noscript>
 
     <!-- Open Graph (Facebook, Discord, Slack, WhatsApp, LinkedIn, iMessage…) -->
     <meta property="og:type" content="website" />
@@ -20,7 +25,7 @@
     <meta property="og:image:type" content="image/jpeg" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
-    <meta property="og:image:alt" content="Bunker Busters logo over a fenced doomsday bunker at sunset in the wasteland" />
+    <meta property="og:image:alt" content="The Bunker Busters logo beside four people round a campfire under a gas station canopy at dusk" />
     <meta property="og:locale" content="en_US" />
 
     <!-- X / Twitter -->
@@ -28,19 +33,63 @@
     <meta name="twitter:title" content="Bunker Busters: a free post-apocalyptic heist game" />
     <meta name="twitter:description" content="They built bunkers. You brought lockpicks. A free first-person heist game for Linux, Windows, the browser and your phone." />
     <meta name="twitter:image" content="https://bunker-busters.netlify.app/og.jpg" />
-    <meta name="twitter:image:alt" content="Bunker Busters logo over a fenced doomsday bunker at sunset in the wasteland" />
+    <meta name="twitter:image:alt" content="The Bunker Busters logo beside four people round a campfire under a gas station canopy at dusk" />
+
+    <!-- search engines: what the game is (schema.org). site.ts adds the running softwareVersion.
+         The developer's name comes from .env (VITE_DEVELOPER). -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "VideoGame",
+          "@id": "https://bunker-busters.netlify.app/#game",
+          "name": "Bunker Busters",
+          "url": "https://bunker-busters.netlify.app/",
+          "description": "A free first-person heist game. The founders sealed themselves into doomsday bunkers with the region's water. Scout eight bunkers, get past their half-broken security and Kade's contractors, and bring the water back to camp.",
+          "image": "https://bunker-busters.netlify.app/og.jpg",
+          "screenshot": [
+            "https://bunker-busters.netlify.app/media/hero.jpg",
+            "https://bunker-busters.netlify.app/media/night.jpg",
+            "https://bunker-busters.netlify.app/media/place-apex.jpg",
+            "https://bunker-busters.netlify.app/media/lockpick.jpg",
+            "https://bunker-busters.netlify.app/media/combat.jpg"
+          ],
+          "genre": ["Heist", "Stealth", "First-person shooter", "Survival", "Post-apocalyptic"],
+          "gamePlatform": ["PC", "Linux", "Windows", "Web browser", "Android", "iOS"],
+          "operatingSystem": "Windows 10, Windows 11, Linux, or any system with a WebGL2 browser (macOS, Android, iOS)",
+          "applicationCategory": "GameApplication",
+          "playMode": "SinglePlayer",
+          "inLanguage": "en",
+          "author": { "@type": "Person", "name": "%VITE_DEVELOPER%", "url": "%VITE_DEVELOPER_URL%" },
+          "datePublished": "2026-10-16",
+          "isAccessibleForFree": true,
+          "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD", "availability": "https://schema.org/InStock", "url": "https://bunker-busters.netlify.app/#get" },
+          "downloadUrl": "https://github.com/L0nE-F0x/Bunker-Busters/releases/latest",
+          "sameAs": ["https://github.com/L0nE-F0x/Bunker-Busters"]
+        },
+        {
+          "@type": "WebSite",
+          "@id": "https://bunker-busters.netlify.app/#site",
+          "name": "Bunker Busters",
+          "url": "https://bunker-busters.netlify.app/"
+        }
+      ]
+    }
+    </script>
 
     <link rel="icon" href="/favicon.ico" sizes="any" />
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <!-- the game's manifest: installing from here installs the game (/play/), the same app as on the game page -->
     <link rel="manifest" href="/play.webmanifest" />
-    <link rel="preload" as="image" href="/media/hero-loop.jpg" />
+    <link rel="preload" as="image" href="/media/hero-loop.jpg" fetchpriority="high" />
   </head>
   <body>
+    <a class="skip" href="#main">Skip to content</a>
     <div class="grain"></div>
 
-    <nav class="nav">
+    <nav class="nav" aria-label="Main">
       <a class="brand" href="#top"><span class="mark"></span>BUNKER BUSTERS</a>
       <div class="links">
         <a href="#game">The game</a>
@@ -54,7 +103,8 @@
     <!-- ===================== hero ===================== -->
     <header class="hero" id="top">
       <div class="hero-media">
-        <video class="hero-video" src="/media/hero-loop.mp4" poster="/media/hero-loop.jpg" autoplay muted loop playsinline preload="auto" aria-hidden="true"></video>
+        <!-- site.ts starts the loop once the page has loaded (poster only with reduced motion or Save-Data) -->
+        <video class="hero-video" src="/media/hero-loop.mp4" poster="/media/hero-loop.jpg" muted loop playsinline preload="none" aria-hidden="true"></video>
       </div>
       <div class="hero-shade"></div>
       <div class="hero-inner">
@@ -64,11 +114,12 @@
         <p class="lede">The founders saw the end coming and sealed themselves in with the region's water. You live outside, at a camp by a dead gas station. Scout their doors, get past their half-broken security, and carry what you can back to the fire.</p>
         <div class="cta-row">
           <a class="btn primary" id="dl-primary" href="#get">
-            <span class="os-icon" id="dl-primary-icon"></span>
+            <span class="os-icon desktop" id="dl-primary-icon"></span>
             <span class="btn-text"><b id="dl-primary-label">Download</b><small id="dl-primary-sub">Free</small></span>
           </a>
           <a class="btn ghost" id="cta-second" href="/play/">Play in your browser</a>
         </div>
+        <p class="cta-note" id="cta-note">Unsigned installer: if Windows says it protected your PC, choose <b>More info</b>, then <b>Run anyway</b>.</p>
         <ul class="platforms" aria-label="Platforms">
           <li><span class="os-icon linux"></span>Linux</li>
           <li><span class="os-icon windows"></span>Windows</li>
@@ -79,12 +130,13 @@
       <a class="scroll-hint" href="#game" aria-label="Scroll down"><span></span></a>
     </header>
 
+    <main id="main">
     <!-- ===================== numbers ===================== -->
     <section class="stats" aria-label="At a glance">
       <div><b>8</b><span>bunkers to rob,<br />start to finish</span></div>
       <div><b>12</b><span>places off<br />the highway</span></div>
-      <div><b>1,371</b><span>voiced lines<br />of dialogue</span></div>
-      <div><b>4</b><span>characters,<br />four ways in</span></div>
+      <div><b>1,300<small>+</small></b><span>voiced lines<br />of dialogue</span></div>
+      <div><b>6</b><span>characters,<br />six ways in</span></div>
       <div><b>$0</b><span>free, no ads,<br />no account</span></div>
     </section>
 
@@ -92,11 +144,11 @@
     <section class="job" id="game">
       <div class="section-head">
         <div class="kicker">How a job goes</div>
-        <h2>Scout. Get in. Get out.</h2>
+        <h2>Scout. Get&nbsp;in. Get&nbsp;out.</h2>
       </div>
       <ol class="steps">
         <li class="step reveal">
-          <div class="shot" style="background-image: url('/media/place-apex.jpg')"></div>
+          <div class="shot"><img src="/media/1280/place-apex.jpg" srcset="/media/800/place-apex.jpg 800w, /media/1280/place-apex.jpg 1280w, /media/place-apex.jpg 1920w" sizes="(max-width: 860px) 92vw, (max-width: 1440px) 31vw, 450px" width="1920" height="1080" alt="A rocket on its gantry outside Apex Vault's hangar, under a striped cliff at dusk" loading="lazy" decoding="async" /></div>
           <div class="step-copy">
             <span class="num">01</span>
             <h3>Scout</h3>
@@ -104,7 +156,7 @@
           </div>
         </li>
         <li class="step reveal">
-          <div class="shot" style="background-image: url('/media/lockpick.jpg')"></div>
+          <div class="shot"><img src="/media/1280/lockpick.jpg" srcset="/media/800/lockpick.jpg 800w, /media/1280/lockpick.jpg 1280w, /media/lockpick.jpg 1920w" sizes="(max-width: 860px) 92vw, (max-width: 1440px) 31vw, 450px" width="1920" height="1080" alt="The lockpicking minigame: five pins in a brass vault lock" loading="lazy" decoding="async" /></div>
           <div class="step-copy">
             <span class="num">02</span>
             <h3>Get in</h3>
@@ -112,7 +164,7 @@
           </div>
         </li>
         <li class="step reveal">
-          <div class="shot" style="background-image: url('/media/f-shotgun.jpg')"></div>
+          <div class="shot"><img src="/media/1280/f-shotgun.jpg" srcset="/media/800/f-shotgun.jpg 800w, /media/1280/f-shotgun.jpg 1280w, /media/f-shotgun.jpg 1600w" sizes="(max-width: 860px) 92vw, (max-width: 1440px) 31vw, 450px" width="1600" height="819" alt="Looking down a pump shotgun at two Kade contractors running through the scrub" loading="lazy" decoding="async" /></div>
           <div class="step-copy">
             <span class="num">03</span>
             <h3>Get out</h3>
@@ -123,9 +175,10 @@
     </section>
 
     <!-- ===================== features (bento) ===================== -->
-    <section class="bento" aria-label="Features">
+    <section class="bento">
+      <h2 class="sr-only">Features</h2>
       <article class="tile t-a reveal">
-        <div class="shot" style="background-image: url('/media/f-seedbot.jpg')"></div>
+        <div class="shot"><img src="/media/1280/f-seedbot.jpg" srcset="/media/800/f-seedbot.jpg 800w, /media/1280/f-seedbot.jpg 1280w, /media/f-seedbot.jpg 1600w" sizes="(max-width: 600px) 700px, (max-width: 1100px) 92vw, 1050px" width="1600" height="819" alt="SeedBot, the Garage's security drone, sweeping its spotlight over the yard at night" loading="lazy" decoding="async" /></div>
         <div class="tile-copy">
           <div class="kicker">Security</div>
           <h3>Security on a budget</h3>
@@ -133,7 +186,7 @@
         </div>
       </article>
       <article class="tile t-b reveal">
-        <div class="shot" style="background-image: url('/media/f-splice.jpg')"></div>
+        <div class="shot"><img src="/media/1280/f-splice.jpg" srcset="/media/800/f-splice.jpg 800w, /media/1280/f-splice.jpg 1280w, /media/f-splice.jpg 1600w" sizes="(max-width: 600px) 700px, (max-width: 1100px) 60vw, 510px" width="1600" height="819" alt="The SPLICE terminal: a grid of hex codes beside the Runway Room vault's daemons" loading="lazy" decoding="async" /></div>
         <div class="tile-copy">
           <div class="kicker">Hacking</div>
           <h3>SPLICE</h3>
@@ -141,7 +194,7 @@
         </div>
       </article>
       <article class="tile t-c reveal">
-        <div class="shot" style="background-image: url('/media/f-kade.jpg')"></div>
+        <div class="shot"><img src="/media/1280/f-kade.jpg" srcset="/media/800/f-kade.jpg 800w, /media/1280/f-kade.jpg 1280w, /media/f-kade.jpg 1600w" sizes="(max-width: 600px) 700px, (max-width: 1100px) 60vw, 1050px" width="1600" height="819" alt="A Kade Recovery contractor in a hard hat and respirator aiming a rifle across the desert" loading="lazy" decoding="async" /></div>
         <div class="tile-copy">
           <div class="kicker">Enemies</div>
           <h3>Kade Recovery</h3>
@@ -149,7 +202,7 @@
         </div>
       </article>
       <article class="tile t-d reveal">
-        <div class="shot" style="background-image: url('/media/f-wolf.jpg')"></div>
+        <div class="shot"><img src="/media/1280/f-wolf.jpg" srcset="/media/800/f-wolf.jpg 800w, /media/1280/f-wolf.jpg 1280w, /media/f-wolf.jpg 1600w" sizes="(max-width: 600px) 700px, (max-width: 1100px) 60vw, 510px" width="1600" height="819" alt="Two wolves on the road at dusk, power lines behind them" loading="lazy" decoding="async" /></div>
         <div class="tile-copy">
           <div class="kicker">Wildlife</div>
           <h3>The desert bites</h3>
@@ -157,15 +210,15 @@
         </div>
       </article>
       <article class="tile t-e reveal">
-        <div class="shot" style="background-image: url('/media/f-camp.jpg')"></div>
+        <div class="shot"><img src="/media/1280/f-camp.jpg" srcset="/media/800/f-camp.jpg 800w, /media/1280/f-camp.jpg 1280w, /media/f-camp.jpg 1600w" sizes="(max-width: 600px) 700px, (max-width: 1100px) 92vw, (max-width: 1460px) 58vw, 840px" width="1600" height="819" alt="Four people talking round the fire under the gas station canopy at dusk" loading="lazy" decoding="async" /></div>
         <div class="tile-copy">
           <div class="kicker">Story</div>
           <h3>Every line is spoken</h3>
-          <p>Eight acts, and 1,371 voiced lines: Mara's briefings at the fire, Dez's rumours on the radio, Dry Creek's diner gossip, and bunker owners who narrate your break-in as it happens.</p>
+          <p>Eight acts and more than 1,300 voiced lines: Mara's briefings at the fire, Dez's rumours on the radio, Dry Creek's diner gossip, and bunker owners who narrate your break-in as it happens.</p>
         </div>
       </article>
       <article class="tile t-f reveal">
-        <div class="shot" style="background-image: url('/media/f-storm.jpg')"></div>
+        <div class="shot"><img src="/media/1280/f-storm.jpg" srcset="/media/800/f-storm.jpg 800w, /media/1280/f-storm.jpg 1280w, /media/f-storm.jpg 1600w" sizes="(max-width: 600px) 700px, (max-width: 1100px) 60vw, 510px" width="1600" height="819" alt="A dust storm closing over the desert and the dead city on the skyline" loading="lazy" decoding="async" /></div>
         <div class="tile-copy">
           <div class="kicker">World</div>
           <h3>A desert that keeps time</h3>
@@ -175,13 +228,15 @@
       <article class="tile t-g reveal">
         <div class="tile-copy">
           <div class="kicker">Your kit</div>
-          <h3>Four characters, five guns</h3>
-          <p>An Infiltrator, an Engineer, a Brute or a Fixer, each with their own skills. A crowbar, the Six-Shooter, the Pump Twelve, a Lever .30-30 and the suppressed Hush .22, with a scope, a choke and a speedloader made at the fire. Molotovs, binoculars, plates and bandages.</p>
+          <h3>Six characters, four guns</h3>
+          <p>An Infiltrator, an Engineer, a Brute, a Fixer, a Scout or a Defector, each with their own skills and starting kit. A crowbar, the Six-Shooter, the Pump Twelve, a Lever .30-30 and the suppressed Hush .22, with a scope, a choke and a speedloader made at the fire. Molotovs, binoculars, plates and bandages.</p>
           <ul class="kit-list">
             <li><b>Rue Calder</b>Infiltrator</li>
             <li><b>Nash Okonkwo</b>Engineer</li>
             <li><b>Paz Duarte</b>Brute</li>
             <li><b>Len Cho</b>Fixer</li>
+            <li><b>Juno Reyes</b>Scout</li>
+            <li><b>Theo Vance</b>Defector</li>
           </ul>
         </div>
       </article>
@@ -194,17 +249,17 @@
         <h2>Places worth the walk</h2>
         <p class="lede">Every place has a way in, something to read and something to take. Some of them still have people.</p>
       </div>
-      <div class="rail" tabindex="0" aria-label="Places">
-        <figure class="place reveal"><div class="shot" style="background-image: url('/media/place-creek.jpg')"></div><figcaption><b>Dry Creek</b>The last town on the highway. A diner, a clinic, Inez's shop with stock that changes daily, and people who keep their own hours.</figcaption></figure>
-        <figure class="place reveal"><div class="shot" style="background-image: url('/media/place-jet.jpg')"></div><figcaption><b>The Exit Strategy</b>A founder's private jet that tried to leave early. The flight recorder knows the code to the hold.</figcaption></figure>
-        <figure class="place reveal"><div class="shot" style="background-image: url('/media/place-longshot.jpg')"></div><figcaption><b>The Longshot</b>A Kade booster on its side in the north basin. It was supposed to land on a pad west of the salt.</figcaption></figure>
-        <figure class="place reveal"><div class="shot" style="background-image: url('/media/place-drivein.jpg')"></div><figcaption><b>Starlite Drive-In</b>Restart the projector and the last keynote plays again after dark.</figcaption></figure>
-        <figure class="place reveal"><div class="shot" style="background-image: url('/media/place-waitlist.jpg')"></div><figcaption><b>Waitlist City</b>Four thousand people queued here for a bunker called Everafter. The board over the door still says NOW SERVING 0001.</figcaption></figure>
-        <figure class="place reveal"><div class="shot" style="background-image: url('/media/place-coldstorage.jpg')"></div><figcaption><b>ColdStorage</b>A data centre, still cold inside. The assistant in the core room still answers.</figcaption></figure>
-        <figure class="place reveal"><div class="shot" style="background-image: url('/media/place-solar.jpg')"></div><figcaption><b>Photon Park</b>Seven rows of panels and four cleaning robots, still working for a customer who hasn't paid in three years.</figcaption></figure>
-        <figure class="place reveal"><div class="shot" style="background-image: url('/media/place-tube.jpg')"></div><figcaption><b>The Tube</b>A hyperloop test track. Power the station and the lights run down the line.</figcaption></figure>
+      <div class="rail" tabindex="0" role="region" aria-label="Places">
+        <figure class="place reveal"><div class="shot"><img src="/media/1280/place-creek.jpg" srcset="/media/800/place-creek.jpg 800w, /media/1280/place-creek.jpg 1280w, /media/place-creek.jpg 1920w" sizes="(max-width: 600px) 92vw, (max-width: 1300px) 38vw, 490px" width="1920" height="1080" alt="Two people by a fire in Dry Creek's street at night, string lights over the diner" loading="lazy" decoding="async" /></div><figcaption><b>Dry Creek</b>The last town on the highway. A diner, a clinic, Inez's shop with stock that changes daily, and people who keep their own hours.</figcaption></figure>
+        <figure class="place reveal"><div class="shot"><img src="/media/1280/place-jet.jpg" srcset="/media/800/place-jet.jpg 800w, /media/1280/place-jet.jpg 1280w, /media/place-jet.jpg 1920w" sizes="(max-width: 600px) 92vw, (max-width: 1300px) 38vw, 490px" width="1920" height="1080" alt="A private jet in pieces on the desert floor below a striped mesa" loading="lazy" decoding="async" /></div><figcaption><b>The Exit Strategy</b>A founder's private jet that tried to leave early. The flight recorder knows the code to the hold.</figcaption></figure>
+        <figure class="place reveal"><div class="shot"><img src="/media/1280/place-longshot.jpg" srcset="/media/800/place-longshot.jpg 800w, /media/1280/place-longshot.jpg 1280w, /media/place-longshot.jpg 1600w" sizes="(max-width: 600px) 92vw, (max-width: 1300px) 38vw, 490px" width="1600" height="900" alt="A Kade booster lying on its side in the sand, pylons behind it" loading="lazy" decoding="async" /></div><figcaption><b>The Longshot</b>A Kade booster on its side in the north basin. It was supposed to land on a pad west of the salt.</figcaption></figure>
+        <figure class="place reveal"><div class="shot"><img src="/media/1280/place-drivein.jpg" srcset="/media/800/place-drivein.jpg 800w, /media/1280/place-drivein.jpg 1280w, /media/place-drivein.jpg 1920w" sizes="(max-width: 600px) 92vw, (max-width: 1300px) 38vw, 490px" width="1920" height="1080" alt="The Starlite Drive-In's screen at night, cars still parked facing it" loading="lazy" decoding="async" /></div><figcaption><b>Starlite Drive-In</b>Restart the projector and the last keynote plays again after dark.</figcaption></figure>
+        <figure class="place reveal"><div class="shot"><img src="/media/1280/place-waitlist.jpg" srcset="/media/800/place-waitlist.jpg 800w, /media/1280/place-waitlist.jpg 1280w, /media/place-waitlist.jpg 1600w" sizes="(max-width: 600px) 92vw, (max-width: 1300px) 38vw, 490px" width="1600" height="900" alt="Booths and dome tents scattered across the desert floor between the cliffs at sunset" loading="lazy" decoding="async" /></div><figcaption><b>Waitlist City</b>Four thousand people queued here for a bunker called Everafter. The board over the door still says NOW SERVING 0001.</figcaption></figure>
+        <figure class="place reveal"><div class="shot"><img src="/media/1280/place-coldstorage.jpg" srcset="/media/800/place-coldstorage.jpg 800w, /media/1280/place-coldstorage.jpg 1280w, /media/place-coldstorage.jpg 1920w" sizes="(max-width: 600px) 92vw, (max-width: 1300px) 38vw, 490px" width="1920" height="1080" alt="A cold aisle between rows of server racks inside ColdStorage" loading="lazy" decoding="async" /></div><figcaption><b>ColdStorage</b>A data centre, still cold inside. The assistant in the core room still answers.</figcaption></figure>
+        <figure class="place reveal"><div class="shot"><img src="/media/1280/place-solar.jpg" srcset="/media/800/place-solar.jpg 800w, /media/1280/place-solar.jpg 1280w, /media/place-solar.jpg 1600w" sizes="(max-width: 600px) 92vw, (max-width: 1300px) 38vw, 490px" width="1600" height="900" alt="Rows of solar panels at Photon Park under the cliffs at dusk" loading="lazy" decoding="async" /></div><figcaption><b>Photon Park</b>Seven rows of panels and four cleaning robots, still working for a customer who hasn't paid in three years.</figcaption></figure>
+        <figure class="place reveal"><div class="shot"><img src="/media/1280/place-tube.jpg" srcset="/media/800/place-tube.jpg 800w, /media/1280/place-tube.jpg 1280w, /media/place-tube.jpg 1920w" sizes="(max-width: 600px) 92vw, (max-width: 1300px) 38vw, 490px" width="1920" height="1080" alt="The Tube's test track at night, a line of lights running along it" loading="lazy" decoding="async" /></div><figcaption><b>The Tube</b>A hyperloop test track. Power the station and the lights run down the line.</figcaption></figure>
       </div>
-      <div class="rail-nav"><button class="rail-prev" aria-label="Previous places">←</button><button class="rail-next" aria-label="Next places">→</button></div>
+      <div class="rail-nav"><button class="rail-prev" type="button" aria-label="Previous places">←</button><button class="rail-next" type="button" aria-label="Next places">→</button></div>
     </section>
 
     <!-- ===================== bunkers ===================== -->
@@ -215,7 +270,7 @@
       </div>
       <div class="bunker-cards">
         <article class="bunker reveal">
-          <div class="shot" style="background-image: url('/media/night.jpg')"></div>
+          <div class="shot"><img src="/media/1280/night.jpg" srcset="/media/800/night.jpg 800w, /media/1280/night.jpg 1280w, /media/night.jpg 1920w" sizes="(max-width: 860px) 92vw, (max-width: 1440px) 44vw, 630px" width="1920" height="1080" alt="The Garage at night behind a chain-link fence, its neon sign lit" loading="lazy" decoding="async" /></div>
           <div class="bunker-copy">
             <div class="tier">Tier 1 · Act I · <em>Playable</em></div>
             <h3>The Garage</h3>
@@ -225,7 +280,7 @@
           </div>
         </article>
         <article class="bunker reveal">
-          <div class="shot" style="background-image: url('/media/place-apex.jpg')"></div>
+          <div class="shot"><img src="/media/1280/place-apex.jpg" srcset="/media/800/place-apex.jpg 800w, /media/1280/place-apex.jpg 1280w, /media/place-apex.jpg 1920w" sizes="(max-width: 860px) 92vw, (max-width: 1440px) 44vw, 630px" width="1920" height="1080" alt="Apex Vault: a rocket on its gantry in front of a hangar door cut into the cliff" loading="lazy" decoding="async" /></div>
           <div class="bunker-copy">
             <div class="tier">Tier 2 · Act II · <em>Playable</em></div>
             <h3>Apex Vault</h3>
@@ -235,7 +290,7 @@
           </div>
         </article>
         <article class="bunker reveal">
-          <div class="shot" style="background-image: url('/media/place-panopticon.jpg')"></div>
+          <div class="shot"><img src="/media/1280/place-panopticon.jpg" srcset="/media/800/place-panopticon.jpg 800w, /media/1280/place-panopticon.jpg 1280w, /media/place-panopticon.jpg 1600w" sizes="(max-width: 860px) 92vw, (max-width: 1440px) 44vw, 630px" width="1600" height="900" alt="The Panopticon: a white lighthouse on a round building, its lamp sweeping the valley at night" loading="lazy" decoding="async" /></div>
           <div class="bunker-copy">
             <div class="tier">Tier 3 · Act III · <em>Playable</em></div>
             <h3>The Panopticon</h3>
@@ -245,7 +300,7 @@
           </div>
         </article>
         <article class="bunker reveal">
-          <div class="shot" style="background-image: url('/media/place-spire.jpg')"></div>
+          <div class="shot"><img src="/media/1280/place-spire.jpg" srcset="/media/800/place-spire.jpg 800w, /media/1280/place-spire.jpg 1280w, /media/place-spire.jpg 1920w" sizes="(max-width: 860px) 92vw, (max-width: 1440px) 44vw, 630px" width="1920" height="1080" alt="The Alignment Spire: a white tower rising over a ridge at dusk" loading="lazy" decoding="async" /></div>
           <div class="bunker-copy">
             <div class="tier">Tier 4 · Act IV · <em>Playable</em></div>
             <h3>The Alignment Spire</h3>
@@ -255,7 +310,7 @@
           </div>
         </article>
         <article class="bunker reveal">
-          <div class="shot" style="background-image: url('/media/place-dome.jpg')"></div>
+          <div class="shot"><img src="/media/1280/place-dome.jpg" srcset="/media/800/place-dome.jpg 800w, /media/1280/place-dome.jpg 1280w, /media/place-dome.jpg 1920w" sizes="(max-width: 860px) 92vw, (max-width: 1440px) 44vw, 630px" width="1920" height="1080" alt="The Singularity Dome: a glass dome lit blue from inside at night" loading="lazy" decoding="async" /></div>
           <div class="bunker-copy">
             <div class="tier">Tier 5 · Act V · <em>Playable</em></div>
             <h3>The Singularity Dome</h3>
@@ -265,7 +320,7 @@
           </div>
         </article>
         <article class="bunker reveal">
-          <div class="shot" style="background-image: url('/media/place-cathedral.jpg')"></div>
+          <div class="shot"><img src="/media/1280/place-cathedral.jpg" srcset="/media/800/place-cathedral.jpg 800w, /media/1280/place-cathedral.jpg 1280w, /media/place-cathedral.jpg 1920w" sizes="(max-width: 860px) 92vw, (max-width: 1440px) 44vw, 630px" width="1920" height="1080" alt="The Cloud Cathedral: twin towers and a rose window with a clock face, lit at dusk" loading="lazy" decoding="async" /></div>
           <div class="bunker-copy">
             <div class="tier">Tier 6 · Act VI · <em>Playable</em></div>
             <h3>The Cloud Cathedral</h3>
@@ -275,7 +330,7 @@
           </div>
         </article>
         <article class="bunker reveal">
-          <div class="shot" style="background-image: url('/media/place-fortress.jpg')"></div>
+          <div class="shot"><img src="/media/1280/place-fortress.jpg" srcset="/media/800/place-fortress.jpg 800w, /media/1280/place-fortress.jpg 1280w, /media/place-fortress.jpg 1920w" sizes="(max-width: 860px) 92vw, (max-width: 1440px) 44vw, 630px" width="1920" height="1080" alt="The Chip Fortress from above: a black star fort inside a ring of frozen coolant" loading="lazy" decoding="async" /></div>
           <div class="bunker-copy">
             <div class="tier">Tier 7 · Act VII · <em>Playable</em></div>
             <h3>The Chip Fortress</h3>
@@ -285,7 +340,7 @@
           </div>
         </article>
         <article class="bunker reveal">
-          <div class="shot" style="background-image: url('/media/place-zero.jpg')"></div>
+          <div class="shot"><img src="/media/1280/place-zero.jpg" srcset="/media/800/place-zero.jpg 800w, /media/1280/place-zero.jpg 1280w, /media/place-zero.jpg 1920w" sizes="(max-width: 860px) 92vw, (max-width: 1440px) 44vw, 630px" width="1920" height="1080" alt="A round vault door with green lamps at the end of a lit room underground" loading="lazy" decoding="async" /></div>
           <div class="bunker-copy">
             <div class="tier">Tier 8 · Act VIII · <em>Playable</em></div>
             <h3>Bunker Zero</h3>
@@ -313,7 +368,7 @@
         <div class="way reveal">
           <span class="os-icon web"></span>
           <h3>In your browser</h3>
-          <p>Nothing to install. WebGPU where your browser has it, WebGL2 everywhere else. Best in Chrome or Edge.</p>
+          <p>Nothing to install, on any computer, Macs included. WebGPU where your browser has it, WebGL2 everywhere else. Best in Chrome or Edge.</p>
           <a class="btn ghost" href="/play/">Play now</a>
         </div>
         <div class="way reveal">
@@ -332,7 +387,8 @@
         <div class="kicker">Updated often</div>
         <h2>What's new</h2>
       </div>
-      <div class="news-list" id="news-list"></div>
+      <!-- site.ts fills this from CHANGELOG.md -->
+      <div class="news-list" id="news-list"><p class="news-fallback">The notes for every version are on GitHub.</p></div>
       <a class="news-more" href="https://github.com/L0nE-F0x/Bunker-Busters/releases" target="_blank" rel="noopener">Every release on GitHub →</a>
     </section>
 
@@ -341,15 +397,16 @@
       <div class="section-head">
         <div class="kicker">Free download</div>
         <h2>Get Bunker Busters</h2>
-        <p class="rel" id="release-info">Checking for the latest release…</p>
+        <p class="rel" id="release-info">Downloads come from GitHub Releases.</p>
       </div>
+      <!-- the links work as they are; site.ts asks GitHub which files the latest release has and adds sizes -->
       <div class="dl-cards">
         <div class="dl-card reveal" data-os="linux">
           <div class="os"><span class="os-icon linux"></span>Linux<span class="yours-tag">Your system</span></div>
           <p>Omarchy, Arch and most distros. On laptops with an NVIDIA GPU it renders on the NVIDIA card automatically.</p>
-          <a class="btn primary" data-asset="BunkerBusters-linux-x86_64.tar.gz">Omarchy / Arch <small>.tar.gz · system WebKitGTK</small></a>
-          <a class="btn ghost" data-asset="BunkerBusters-linux-x86_64.AppImage">AppImage <small>any distro</small></a>
-          <a class="btn ghost" data-asset="BunkerBusters-linux-amd64.deb">.deb <small>Debian / Ubuntu</small></a>
+          <a class="btn primary" data-asset="BunkerBusters-linux-x86_64.tar.gz" href="https://github.com/L0nE-F0x/Bunker-Busters/releases/latest/download/BunkerBusters-linux-x86_64.tar.gz">Omarchy / Arch <small>.tar.gz · system WebKitGTK</small></a>
+          <a class="btn ghost" data-asset="BunkerBusters-linux-x86_64.AppImage" href="https://github.com/L0nE-F0x/Bunker-Busters/releases/latest/download/BunkerBusters-linux-x86_64.AppImage">AppImage <small>any distro</small></a>
+          <a class="btn ghost" data-asset="BunkerBusters-linux-amd64.deb" href="https://github.com/L0nE-F0x/Bunker-Busters/releases/latest/download/BunkerBusters-linux-amd64.deb">.deb <small>Debian / Ubuntu</small></a>
           <details>
             <summary>Install on Omarchy / Arch</summary>
             <pre>sudo pacman -S --needed webkit2gtk-4.1
@@ -360,12 +417,16 @@ tar xzf BunkerBusters-linux-x86_64.tar.gz
         </div>
         <div class="dl-card reveal" data-os="windows">
           <div class="os"><span class="os-icon windows"></span>Windows<span class="yours-tag">Your system</span></div>
-          <p>Windows 10 and 11, 64-bit. The installer isn't code-signed yet, so SmartScreen may stop it: choose <i>More info → Run anyway</i>.</p>
-          <a class="btn primary" data-asset="BunkerBusters-windows-x64-setup.exe">Installer <small>.exe · x64</small></a>
+          <p>Windows 10 and 11, 64-bit.</p>
+          <a class="btn primary" data-asset="BunkerBusters-windows-x64-setup.exe" href="https://github.com/L0nE-F0x/Bunker-Busters/releases/latest/download/BunkerBusters-windows-x64-setup.exe">Installer <small>.exe · x64</small></a>
+          <div class="smartscreen">
+            <b>“Windows protected your PC”</b>
+            <p>The installer isn't code-signed yet, so the first time you run it Windows SmartScreen may stop it. Choose <i>More info</i>, then <i>Run anyway</i>. After that it installs and updates like any other app.</p>
+          </div>
         </div>
-        <div class="dl-card reveal" data-os="mobile">
+        <div class="dl-card reveal" data-os="browser">
           <div class="os"><span class="os-icon phone"></span>Browser &amp; phone<span class="yours-tag">Your system</span></div>
-          <p>Play straight away in the browser, or install it on your phone's home screen to play full screen and offline.</p>
+          <p>Play straight away in the browser on any computer, Macs included, or install it on your phone's home screen to play full screen and offline.</p>
           <a class="btn primary" href="/play/" data-play>Play in the browser</a>
           <button class="btn ghost install-open" type="button">Install on a phone</button>
         </div>
@@ -376,11 +437,17 @@ tar xzf BunkerBusters-linux-x86_64.tar.gz
         <div><b>Graphics</b>A dedicated GPU runs it best. Integrated graphics are fine on the Low or Medium preset.</div>
       </div>
     </section>
+    </main>
 
     <footer class="foot">
       <div class="brand"><span class="mark"></span>BUNKER BUSTERS</div>
-      <div class="foot-mid"><span id="site-version">Early access</span> · made with Three.js, TSL and Rapier · the desert is generated in code</div>
-      <a href="https://github.com/L0nE-F0x/Bunker-Busters" target="_blank" rel="noopener">GitHub →</a>
+      <div class="foot-mid"><span id="site-version">Free</span> · made with Three.js, TSL and Rapier · the desert is generated in code</div>
+      <nav class="foot-links" aria-label="More">
+        <a href="/press/">Press kit</a>
+        <a href="/privacy/">Privacy</a>
+        <a href="/licenses.txt">Open-source licences</a>
+        <a href="https://github.com/L0nE-F0x/Bunker-Busters" target="_blank" rel="noopener">GitHub</a>
+      </nav>
     </footer>
 
     <script type="module" src="/src/site/site.ts"></script>
