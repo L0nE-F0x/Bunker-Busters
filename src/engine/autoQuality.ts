@@ -239,15 +239,17 @@ export class RenderScale {
       }
       this.probeWait = 8;
     }
-    // a step down that bought nothing (the CPU was the limit after all): undo it and stay there a while
+    // no timer: a step down that bought nothing (the CPU was the limit after all) is undone, and the
+    // scale stays there a while. (With a timer the GPU's own time says whether a step is needed.)
     if (this.lastDown) {
       const { i, before } = this.lastDown;
       this.lastDown = null;
-      if (i === this.i && slow && iv > before * 0.93) { this.noHelpAt = this.i - 1; this.noHelpFor = 60; return this.set(this.i - 1); }
+      if (gpu <= 0 && i === this.i && slow && iv > before * 0.93) { this.noHelpAt = this.i - 1; this.noHelpFor = 60; return this.set(this.i - 1); }
     }
     if (this.noHelpFor > 0 && (this.noHelpFor -= span) <= 0) this.noHelpAt = -1;
-    // is the GPU what's holding the frame back? (with no timer: our JS is well under the interval)
-    const gpuBound = gpu > 0 ? gpu > B * 1.05 : js < iv * 0.6;
+    // is the GPU what's holding the frame back? With a timer: its time is over the budget and over our
+    // JS (a CPU-bound frame gains nothing from fewer pixels). Without: our JS is well under the interval.
+    const gpuBound = gpu > 0 ? gpu > B * 1.05 && gpu > js * 1.1 : js < iv * 0.6;
     if (slow && gpuBound && this.i < floor && this.i !== this.noHelpAt) {
       this.goodFor = 0;
       if (++this.slowWindows < 2 && this.i === 0) return false;
@@ -264,7 +266,8 @@ export class RenderScale {
     // room to grow?
     if (gpu > 0) {
       const next = RenderScale.STEPS[this.i - 1] / RenderScale.STEPS[this.i];
-      if (!slow && gpu * next * next < B * 0.72) { this.goodFor += span; if (this.goodFor >= 3) { this.goodFor = 0; return this.set(this.i - 1); } } else this.goodFor = 0;
+      // (slow or not: a frame held back by the CPU loses nothing to a bigger buffer the GPU has room for)
+      if (gpu * next * next < B * 0.72) { this.goodFor += span; if (this.goodFor >= 3) { this.goodFor = 0; return this.set(this.i - 1); } } else this.goodFor = 0;
       return false;
     }
     if (iv <= B * 1.05) {
