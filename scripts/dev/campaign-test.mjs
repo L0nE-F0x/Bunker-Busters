@@ -1,7 +1,7 @@
 // The whole story in one run: a fresh game from the title (New Game, the character card, the briefing)
 // through all eight bunkers to the end card, carrying the real state the whole way. Needs `npm run dev`.
 //
-//   node scripts/dev/campaign-test.mjs            (about 25-40 minutes headless; one browser)
+//   node scripts/dev/campaign-test.mjs            (about 15 minutes headless; one browser)
 //
 // Unlike the per-bunker tests (each starts at ?at=<bunker> with the earlier acts' flags set by hand),
 // every flag here comes from play: doors opened, cards and conversations answered (stubbed UI, as in
