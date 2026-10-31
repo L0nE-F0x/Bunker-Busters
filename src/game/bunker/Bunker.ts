@@ -252,7 +252,7 @@ export abstract class Bunker<S extends BunkerShell = BunkerShell> {
   /** Can this method be used right now? true, or the reason it can't. */
   protected methodReason(e: BunkerEntryDef, m: LockMethod): true | string {
     switch (m.kind) {
-      case 'lockpick': return this.s.count('lockpick') > 0 ? true : 'Need a lockpick';
+      case 'lockpick': return this.s.count('lockpick') > 0 ? true : 'Need a lockpick (the camp bends them from scrap)';
       case 'charge': return this.chargeReason(m.demolition);
       case 'circuit':
       case 'splice': return this.s.skill('electronics') >= m.electronics ? true : `Requires Electronics ${m.electronics}`;
@@ -314,7 +314,7 @@ export abstract class Bunker<S extends BunkerShell = BunkerShell> {
           title: m.title,
           onBreak: () => {
             this.s.removeItem('lockpick', 1);
-            this.s.events.emit('toast', { text: `Lockpick snapped (${picks()} left)`, kind: 'bad' });
+            this.s.events.emit('toast', { text: picks() > 0 ? `Lockpick snapped (${picks()} left)` : 'Your last lockpick snapped. The camp can bend more from scrap.', kind: 'bad' });
             return picks() > 0;
           },
         });
@@ -431,7 +431,8 @@ export abstract class Bunker<S extends BunkerShell = BunkerShell> {
         const n = this.s.addItem(g.item, g.qty, false, true);
         if (n) got.push(`${n}× ${ITEMS[g.item].name}`);
       }
-      if (this.s.weight > this.s.carryLimit + 0.05) this.s.events.emit('toast', { text: sec.overburdened, kind: 'info' });
+      // (the first time, the game's own overload toast says it, with the kit's key: not both at once)
+      if (this.s.weight > this.s.carryLimit + 0.05 && this.s.has('tut.heavy')) this.s.events.emit('toast', { text: sec.overburdened, kind: 'info' });
     } else {
       for (const r of table.rolls.slice(take[0], take[1])) {
         if (Math.random() > r.chance) continue;
