@@ -2,6 +2,7 @@ import { defineConfig, type Plugin } from 'vite';
 import { fileURLToPath, URL } from 'node:url';
 import { readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
+import { gzipSync } from 'node:zlib';
 
 // package.json is the single source of truth for the version shown in the game and on the site
 const pkg = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf8')) as { version: string };
@@ -10,10 +11,22 @@ const pkg = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 
 // site can let browsers keep them for a year (netlify.toml) and a changed file still arrives fresh.
 const pub = (dir: string) => fileURLToPath(new URL(`./public/${dir}/`, import.meta.url));
 const hash = (b: Buffer | string) => createHash('sha1').update(b).digest('hex').slice(0, 10);
-const MODEL_REV: Record<string, { v: string; size: number }> = {};
+const MODEL_REV: Record<string, { v: string; size: number; gz?: number }> = {};
+// The website build also ships each model gzipped (`x.glb.gz`, a third smaller: the meshes and clips
+// pack well, the JPEG maps don't), which the browser unpacks as it downloads (engine/models.ts).
+// Netlify doesn't compress model/gltf-binary on its own. Not in dev, and not for the desktop app
+// (Tauri sets TAURI_ENV_PLATFORM for its build command): its files are local and already packed.
+const GZIP_MODELS = process.argv.includes('build') && !process.env.TAURI_ENV_PLATFORM && process.env.BB_GZIP_MODELS !== '0';
+const MODEL_GZ = new Map<string, Buffer>();
 for (const f of readdirSync(pub('models')).filter((f) => f.endsWith('.glb')).sort()) {
   const b = readFileSync(pub('models') + f);
-  MODEL_REV[f.slice(0, -4)] = { v: hash(b), size: b.length };
+  const name = f.slice(0, -4);
+  MODEL_REV[name] = { v: hash(b), size: b.length };
+  if (GZIP_MODELS) {
+    const z = gzipSync(b, { level: 9 });
+    MODEL_GZ.set(name, z);
+    MODEL_REV[name].gz = z.length;
+  }
 }
 const voice = createHash('sha1');
 for (const f of readdirSync(pub('voice')).sort()) voice.update(f).update(readFileSync(pub('voice') + f));
@@ -37,7 +50,13 @@ function offlinePlugin(): Plugin {
       };
       // the site's own bundle stays out; browsers that run service workers all take woff2
       for (const f of readdirSync(`${outDir}/assets`).sort()) if (!f.startsWith('site-') && !f.endsWith('.woff')) add(`/assets/${f}`, `assets/${f}`);
-      for (const f of readdirSync(`${outDir}/models`).sort()) if (f.endsWith('.glb')) add(`/models/${f}?v=${MODEL_REV[f.slice(0, -4)]?.v}`, `models/${f}`);
+      // (the web build's game asks for the gzipped copies: those are what it saves)
+      for (const [name, z] of MODEL_GZ) writeFileSync(`${outDir}/models/${name}.glb.gz`, z);
+      for (const f of readdirSync(`${outDir}/models`).sort()) {
+        if (!f.endsWith('.glb')) continue;
+        const name = f.slice(0, -4), gz = MODEL_GZ.has(name);
+        add(`/models/${f}${gz ? '.gz' : ''}?v=${MODEL_REV[name]?.v}`, `models/${f}${gz ? '.gz' : ''}`);
+      }
       for (const f of readdirSync(`${outDir}/voice`).sort()) add(`/voice/${f}?v=${VOICE_REV}`, `voice/${f}`);
       for (const f of ['play.webmanifest', 'apple-touch-icon.png', 'icon-192.png', 'icon-512.png', 'icon-maskable-512.png', 'favicon.ico', 'favicon-32.png']) add(`/${f}`, f);
       // the page carries the deploy's id; it registers sw.js?v=<id>, so a new deploy installs on its first online launch
