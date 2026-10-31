@@ -250,9 +250,14 @@ async function lap(i) {
       `game.ctx.ui.hack({ title: 'Soak box', host: 'SOAK', difficulty: 1, daemons: [{ id: 'a', name: 'A', blurb: 'a' }, { id: 'b', name: 'B', blurb: 'b' }] })`,
     ];
     for (const o of opens) {
+      const hp0 = await ev(`game.state.data.health`);
       await ev(`(() => { window.__mg = ${o}; })()`);
       await wait(1300);
-      if (!(await ev(`game.ui.minigameOpen`))) throw new Error('minigame did not open: ' + o.slice(12, 30));
+      if (!(await ev(`game.ui.minigameOpen`))) {
+        // SPLICE drops you the moment you're hit (by design): a squad still shooting from the fight step
+        if ((await ev(`game.state.data.health`)) < hp0) { log(`   ${o.slice(12, 30)} closed: hit while splicing (by design)`); continue; }
+        throw new Error('minigame did not open: ' + o.slice(12, 30));
+      }
       await p.keyboard.press('Escape');
       await wait(700);
       if (await ev(`game.ui.minigameOpen`)) { await ev(`game.ui.dismissInteraction()`); await wait(300); throw new Error('minigame ignored Escape: ' + o.slice(12, 30)); }
