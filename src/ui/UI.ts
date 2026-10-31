@@ -27,6 +27,7 @@ import type { ArmsHud } from '@/game/combat/PlayerArms';
 import { DIFFICULTY } from '@/content/weapons';
 import { binds, actionGlyph, actionKey, actionWord, kbdGlyph, keyLabel, padName, type Action } from '@/engine/bindings';
 import { openControls } from './ControlsView';
+import { LoadingScreen, WorldWait } from './loading';
 
 /** Which device's glyphs to show (html.pad is set by Input when a controller was used last). */
 const device = () => (isTouch ? 'touch' : document.documentElement.classList.contains('pad') ? 'pad' : 'kbm');
@@ -92,7 +93,8 @@ export class UI implements UIBridge {
   private minimapT = 0;
   private lastObjective = '';
   private objectiveTimer = 0;
-  private loadingEl: HTMLElement;
+  /** The loading screen (its markup comes with play/index.html; ui/loading.ts runs it). */
+  readonly loading: LoadingScreen;
   private armsKey = '';
   private xhairKey = '';
   private hitT = 0;
@@ -100,13 +102,7 @@ export class UI implements UIBridge {
 
   constructor(private audio: AudioEngine) {
     this.root = document.getElementById('ui')!;
-    this.loadingEl = h('div', '', `
-      <div class="logo-sm">BUNKER BUSTERS</div>
-      <div class="bar"><i></i></div>
-      <div class="msg">BOOTING</div>
-      <div class="tip">Tip: crouch to step over tripwires. SeedBot is running on 12% battery, so it powers down more often than you'd think.</div>`);
-    this.loadingEl.id = 'loading';
-    document.body.appendChild(this.loadingEl);
+    this.loading = new LoadingScreen();
     // a controller picked up (or put down): the hotbar and badges change their glyphs
     document.addEventListener('bb-device', () => { this.refreshHotbar(); this.refreshVitals(); });
     const fader = h('div', '', '<div class="msg"></div>');
@@ -116,12 +112,14 @@ export class UI implements UIBridge {
 
   // ------------------------------------------------------------------ loading
   progress(p: number, msg: string) {
-    (this.loadingEl.querySelector('.bar i') as HTMLElement).style.width = `${Math.round(p * 100)}%`;
-    this.loadingEl.querySelector('.msg')!.textContent = msg.toUpperCase();
+    this.loading.progress(p, msg);
   }
   hideLoading() {
-    this.loadingEl.style.opacity = '0';
-    setTimeout(() => this.loadingEl.remove(), 1300);
+    this.loading.hide();
+  }
+  /** A run waiting on the late cast: the readout over the picture (Game.beginRun). */
+  worldWait() {
+    return new WorldWait();
   }
 
   fade(on: boolean, msg = '') {
