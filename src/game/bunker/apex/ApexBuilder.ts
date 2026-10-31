@@ -586,7 +586,7 @@ export class ApexBuilder implements BunkerShell {
     b.add(m.print, apexPrint('pLaunch', 1.4, 2.1, M(x1 - 0.02, 2.2, 7.5, -Math.PI / 2)));
     b.add(m.print, apexPrint('pHR', 1.4, 2.1, M(x1 - 0.02, 2.2, 4.5, -Math.PI / 2)));
     b.add(m.print, apexPrint('tag', 4.2, 1.3, M(x1 + 0.22, 2.0, 6, Math.PI / 2)));
-    b.add(m.print, apexPrint('chevron', 2, 1, M(-10, 0.15, -3.5, Math.PI / 2, -Math.PI / 2)));
+    b.add(m.print, apexPrint('chevron', 2, 1, M(-10, 0.15, -3.5, 0, -Math.PI / 2, Math.PI / 2)));
     b.add(m.print, apexPrint('stripes', 2.4, 0.35, M(-10, 2.78, z0 + 0.03)));
     // the camps' water, stacked like inventory: pallets of blue jugs with the camps' names stencilled
     // on the wrap ("community contribution"), and a spare nose cone on a cradle she calls the backup
@@ -733,7 +733,7 @@ export class ApexBuilder implements BunkerShell {
     // the corridor: chevrons, T-minus stencils, pipe runs, cable trays, strip lights
     const hallStrip = this.pal.slot('#d8ecff', 4);
     this.slots.hallStrip = hallStrip.intensity;
-    for (let z = innerZ - 1.5; z > vaultZ + 0.5; z -= 3.4) d.add(m.print, apexPrint('chevron', 2.2, 1.1, M(-10, 0.11, z, -Math.PI / 2, -Math.PI / 2)));
+    for (let z = innerZ - 1.5; z > vaultZ + 0.5; z -= 3.4) d.add(m.print, apexPrint('chevron', 2.2, 1.1, M(-10, 0.11, z, 0, -Math.PI / 2, -Math.PI / 2)));
     d.add(m.print, apexPrint('tminus', 3.6, 1.2, M(-10, 0.115, -21.6, Math.PI, -Math.PI / 2)));
     for (const x of [cx0 + 0.18, cx1 - 0.18]) {
       d.add(m.brushed, beam(V(x, 3.4, innerZ - 0.2), V(x, 3.4, vaultZ + 0.2), 0.09, 8));

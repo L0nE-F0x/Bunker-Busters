@@ -650,7 +650,7 @@ export class SpireBuilder implements BunkerShell {
     d.add(m.oak, box(1.8, 0.05, 0.85, dx, y + 0.75, dz, Math.PI / 2));
     d.add(m.brushed, box(0.04, 0.73, 0.04, dx - 0.38, y + 0.37, dz - 0.85), box(0.04, 0.73, 0.04, dx + 0.38, y + 0.37, dz - 0.85), box(0.04, 0.73, 0.04, dx - 0.38, y + 0.37, dz + 0.85), box(0.04, 0.73, 0.04, dx + 0.38, y + 0.37, dz + 0.85));
     this.col(dx, y + 0.4, dz, 0.45, 0.4, 0.92);
-    d.add(m.print, spirePrint('forecast', 0.42, 0.32, M(dx, y + 0.78, dz - 0.3, Math.PI / 2, -Math.PI / 2)));
+    d.add(m.print, spirePrint('forecast', 0.42, 0.32, M(dx, y + 0.78, dz - 0.3, 0, -Math.PI / 2, Math.PI / 2)));
     for (let i = 0; i < 3; i++) d.add(m.paper, box(0.22, 0.012, 0.3, dx + 0.1, y + 0.785 + i * 0.012, dz + 0.4));
     d.add(m.paper, cyl(0.04, 0.035, 0.09, dx - 0.2, y + 0.82, dz + 0.65, 8));
     // the pause button: red, under a hinged clear cover
