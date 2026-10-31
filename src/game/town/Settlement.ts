@@ -631,7 +631,7 @@ export class Settlement {
       label: `Pick lock · ${pins} pins`,
       available: () => {
         if (this.s.skill('lockpicking') < need) return `Requires Lockpicking ${need}`;
-        if (this.s.count('lockpick') < 1) return 'Need a lockpick';
+        if (this.s.count('lockpick') < 1) return 'Need a lockpick (the camp bends them from scrap)';
         return true;
       },
       run: async () => {
@@ -639,8 +639,9 @@ export class Settlement {
           pins, title,
           onBreak: () => {
             this.s.removeItem('lockpick', 1);
-            this.s.events.emit('toast', { text: `Lockpick snapped (${this.s.count('lockpick')} left)`, kind: 'bad' });
-            return this.s.count('lockpick') > 0;
+            const left = this.s.count('lockpick');
+            this.s.events.emit('toast', { text: left > 0 ? `Lockpick snapped (${left} left)` : 'Your last lockpick snapped. The camp can bend more from scrap.', kind: 'bad' });
+            return left > 0;
           },
         });
         if (res === 'success') {

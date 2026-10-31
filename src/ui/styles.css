@@ -343,6 +343,8 @@ noscript .boot-note { position: fixed; left: 50%; top: 62%; transform: translate
 .banner.bad .big { background: linear-gradient(180deg, #ffd0c8, #ff4a3a); -webkit-background-clip: text; background-clip: text; }
 .banner .sub { margin: 10px auto 0; font-size: 16px; color: var(--ink); letter-spacing: 0.06em; text-shadow: 0 2px 4px #000; max-width: min(80vw, 900px); }
 .banner .rule { width: 60%; height: 1px; margin: 12px auto 0; background: linear-gradient(90deg, transparent, var(--amber), transparent); }
+/* a long line under a banner (LOOTED and five items) wraps before it reaches the toasts down the left */
+html:not(.touch) .banner .sub { max-width: clamp(380px, calc(100vw - 872px), 900px); }
 /* short windows (≤ 700 px): a place's banner (18vh down) ran into a subtitle (210 px up) when someone
    spoke as you arrived. Smaller type keeps them apart; phones have their own sizes below. */
 @media (max-height: 700px) {

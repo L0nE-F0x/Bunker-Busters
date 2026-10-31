@@ -2,7 +2,8 @@ import * as THREE from 'three/webgpu';
 import { Fn, vec4, vec3, uv, length, smoothstep, time, sin, float, color } from 'three/tsl';
 import type { QualitySettings } from '@/engine/renderer';
 import { makeQuality, fitCanvas, compileInParallel, canCompileInParallel } from '@/engine/renderer';
-import { isTouch, isWebKit } from '@/engine/device';
+import { isTouch, isWebKit, isMobile } from '@/engine/device';
+import { AUTOQ_OVERRIDE, GpuTimer, RenderScale, gpuName, isDesktopApp, learn, startPreset } from '@/engine/autoQuality';
 import { TouchControls } from '@/ui/TouchControls';
 import { PostFX } from '@/engine/postfx';
 import { Physics } from '@/engine/physics';
@@ -13,6 +14,7 @@ import { downloadFailed, bootDone } from '@/ui/bootFail';
 import { Input } from '@/engine/input';
 import { pad } from '@/engine/gamepad';
 import { binds, actionWord, type Action } from '@/engine/bindings';
+import { TUT } from './tutorial';
 import { PadNav } from '@/ui/PadNav';
 import { AudioEngine, type LoopHandle } from '@/engine/audio';
 import { Acoustics, isSoft } from '@/engine/surface';
@@ -32,7 +34,8 @@ import { updateRim, glow, desertRock } from './world/materials';
 import { buildIntelProp, type IntelProp } from './world/intelProps';
 import { Scavenge } from './world/Scavenge';
 import { NpcModels } from './world/npcSkin';
-import { updateShownMatrices, viewCull, mergeStatic, shadowProxy } from './world/kit';
+import { updateShownMatrices, viewCull, mergeStatic, shadowProxy, releaseBatchParts } from './world/kit';
+import { releaseStatic } from '@/engine/release';
 import { NpcCrowd } from './world/npc';
 import { routineOpen } from '@/content/routines';
 import { HumanSkins } from './combat/humanSkin';
@@ -142,6 +145,11 @@ export class Game {
   private padNav: PadNav;
   settings: Settings = loadSettings();
   quality: QualitySettings;
+  /** Graphics AUTO (browser only): the render scale held to the frame rate, the GPU's own frame time. */
+  renderScale: RenderScale | null = null;
+  private gpuTimer: GpuTimer | null = null;
+  private gpuLabel = '';
+  private learnT = 0;
   post!: PostFX;
   atmo!: Atmosphere;
   hf!: Heightfield;
@@ -288,6 +296,16 @@ export class Game {
     };
     if (isTouch) this.touch = new TouchControls(this.input);
     const qOverride = new URLSearchParams(location.search).get('q') as Settings['quality'] | null;
+    // Graphics AUTO: the starting preset from the GPU (and what the last session here learned), then
+    // the render scale (engine/autoQuality.ts). Never in the desktop app, nor with ?q= (benches)
+    if (AUTOQ_OVERRIDE ?? (!qOverride && !!this.settings.autoQuality && !isDesktopApp)) {
+      this.gpuLabel = gpuName(renderer);
+      const s = startPreset(this.gpuLabel, isMobile);
+      this.settings.quality = s.level;
+      this.renderScale = new RenderScale(isMobile, s.scale);
+      this.gpuTimer = new GpuTimer(renderer);
+      console.info(`[BunkerBusters] auto quality: ${s.tier} GPU "${this.gpuLabel}" → ${qOverride ?? s.level}, render scale ${this.renderScale.scale}`);
+    }
     this.quality = makeQuality(qOverride ?? this.settings.quality);
     // WebGL: skip the GTAO pre-pass — it renders the whole scene a second time and draw calls are
     // the bottleneck there (especially in WebKitGTK). WebGPU keeps it.
@@ -553,6 +571,11 @@ export class Game {
     console.log(`[BunkerBusters] shader warm-up: ${drawn.length} objects in ${batches} frames, ${warmMs.toFixed(0)} ms (${(performance.now() - tWarm).toFixed(0)} ms wall${parallel ? ', parallel links' : ''})`);
     unstageMenuHands();
     menuHands.dispose();
+    // everything static is on the GPU now: drop the CPU copies of its vertex data (the rest goes at its
+    // first upload) and the batches' source parts (engine/release.ts: ~half the page's memory)
+    releaseBatchParts();
+    const freed = releaseStatic(this.renderer, this.scene);
+    console.log(`[BunkerBusters] released ${(freed / 1048576).toFixed(0)} MB of static vertex data`);
     await step(0.95, 'Polishing neon');
     this.renderer.setAnimationLoop(() => this.frame());
     window.addEventListener('resize', () => this.resize());
@@ -561,6 +584,7 @@ export class Game {
       if (this.mode === 'playing' && this.state && this.state.data.health > 0 && !this.bunkerAlarm) this.save(true);
     };
     window.addEventListener('pagehide', saveOnLeave);
+    window.addEventListener('pagehide', () => { if (this.renderScale) learn(this.gpuLabel, this.quality.level, this.renderScale); });
     // the desktop shell calls this before it ends the web process on quit (main.rs `quit`)
     (window as unknown as { __bbQuit?: () => void }).__bbQuit = saveOnLeave;
     document.addEventListener('bb-lockchange', () => this.onLockChange());
@@ -1463,7 +1487,9 @@ export class Game {
       void this.ui.pages(briefingFor(state.archetype)).then(() => {
         state.set('briefed');
         state.set('intro');
-        if (state.set('tut.arms')) setTimeout(() => this.ui.toast(isTouch ? 'Armed: FIRE, AIM, RELOAD and SWAP sit over the jump button.' : armsHelp(), 'info'), 4000);
+        // where the menus are, then the gun in your hand: one after the other, not over each other
+        if (state.set('tut.menus')) setTimeout(() => { if (this.state === state) this.ui.toast(TUT.menus(), 'info'); }, 1500);
+        if (state.set('tut.arms')) setTimeout(() => { if (this.state === state) this.ui.toast(isTouch ? 'Armed: FIRE, AIM, RELOAD and SWAP sit over the jump button.' : armsHelp(), 'info'); }, 6500);
         if (this.player) this.player.frozen = false;
         this.busy = false;
         this.input.requestLock();
@@ -1719,6 +1745,16 @@ export class Game {
     this.applyView();
     this.input.sensitivity = s.sensitivity;
     if (this.combat) this.combat.difficulty = s.difficulty ?? 'normal';
+    // Graphics AUTO on or off: the render scale starts from full, or goes back to it
+    if (s.autoQuality && !this.renderScale && !isDesktopApp) {
+      this.gpuLabel ||= gpuName(this.renderer);
+      this.renderScale = new RenderScale(isMobile, 1);
+      this.gpuTimer ??= new GpuTimer(this.renderer);
+    } else if (!s.autoQuality && this.renderScale && AUTOQ_OVERRIDE !== true) {
+      this.renderScale = null;
+      this.gpuTimer = null;
+      this.resize();
+    }
     if (s.quality !== this.quality.level && this.post) {
       this.quality = makeQuality(s.quality);
       if (!this.isWebGPU) this.quality.ao = false;
@@ -1753,7 +1789,7 @@ export class Game {
   private resize() {
     this.fitW = innerWidth;
     this.fitH = innerHeight;
-    const { aspect } = fitCanvas(this.renderer, this.canvas, this.quality.pixelRatio, this.isWebGPU);
+    const { aspect } = fitCanvas(this.renderer, this.canvas, this.quality.pixelRatio * (this.renderScale?.scale ?? 1), this.isWebGPU);
     this.camera.aspect = aspect;
     this.camera.updateProjectionMatrix();
   }
@@ -2236,6 +2272,20 @@ export class Game {
     }
   }
 
+  /** Graphics AUTO: feed the frame to the render scale (a resize when it steps); keep what it learned. */
+  private autoScale(now: number) {
+    const rs = this.renderScale!;
+    const rows = innerHeight * this.quality.pixelRatio;
+    if (rs.frame(this.frameGap, performance.now() - now, this.gpuTimer?.last ?? -1, rows)) {
+      this.resize();
+      console.info(`[BunkerBusters] render scale ${rs.scale} (${this.renderer.domElement.width}×${this.renderer.domElement.height}, ${this.quality.level})`);
+    }
+    if (now - this.learnT > 30000) {
+      if (this.learnT) learn(this.gpuLabel, this.quality.level, rs);
+      this.learnT = now;
+    }
+  }
+
   // ------------------------------------------------------------------ frame
   private fitW = 0;
   private fitH = 0;
@@ -2391,10 +2441,13 @@ export class Game {
       updateShownMatrices(this.scene); // once a frame (scene.matrixWorldAutoUpdate is off: see build)
       const inner = this.activeInterior();
       const hidden = inner ? hideExcept(this.exteriorRoots(), inner.keep, this._hidden) : null;
+      this.gpuTimer?.begin();
       if (SKIP.has('post')) this.renderer.render(this.scene, this.camera); else this.post.render();
+      this.gpuTimer?.end();
       if (hidden) { for (const o of hidden) o.visible = true; hidden.length = 0; }
       if (inner) this.interiorFrames++;
       this.interiorName = inner?.name ?? '';
+      if (this.renderScale) this.autoScale(now);
     }
     if (BENCH) { this.benchUpd += tPhys - now; this.benchPhys += tRender - tPhys; this.benchRen += performance.now() - tRender; }
     this.input.endFrame();
@@ -2434,10 +2487,11 @@ export class Game {
     player.stealthRank = s.skill('stealth');
     player.stealthFocus = s.focus('stealth');
     if (!blocked) {
-      if (s.data.thirst < 55 && s.set('tut.thirst')) this.ui.toast('You\'re getting thirsty (the blue bar). Food won\'t help. Drink.', 'info');
-      if (s.data.thirst < 28 && s.set('tut.dry')) this.ui.toast('You\'re dehydrated and losing health. Drink something.', 'bad');
-      if (s.data.hunger < 28 && s.set('tut.hungry')) this.ui.toast('You\'re getting hungry. Eat a ration from the hotbar.', 'bad');
-      if (s.weight > s.carryLimit + 0.05 && s.set('tut.heavy')) this.ui.toast('You\'re overloaded and down to seventy percent speed. Drop something from your kit.', 'bad');
+      if (s.data.thirst < 55 && s.set('tut.thirst')) this.ui.toast(TUT.thirst(), 'info');
+      if (s.data.thirst < 28 && s.set('tut.dry')) this.ui.toast(TUT.dry(), 'bad');
+      if (s.data.hunger < 28 && s.set('tut.hungry')) this.ui.toast(TUT.hungry(), 'bad');
+      if (s.weight > s.carryLimit + 0.05 && s.set('tut.heavy')) this.ui.toast(TUT.heavy(), 'bad');
+      if (this.atmo.isNight && !this.hands?.flashlightOn && !this.bunkerInside && s.set('tut.torch')) this.ui.toast(TUT.torch(), 'info');
     }
 
     // UI hotkeys
@@ -2549,7 +2603,8 @@ export class Game {
       }
     }
 
-    if (this.arms?.takedownTarget && !this.focus && !isTouch) prompt.push({ key: 'LMB', label: 'Takedown' });
+    // (on touch the prompt is a FIRE button of its own: tap it, or FIRE)
+    if (this.arms?.takedownTarget && !this.focus) prompt.push({ key: 'LMB', label: 'Takedown' });
     if (this.touch) {
       const f = this.focus;
       this.touch.update({
@@ -2573,7 +2628,8 @@ export class Game {
           this.landmarkSeen.add(lm.id);
           s.set(`seen:${lm.id}`);
           if (lm.id === 'cave') s.set('cave.known');
-          this.ui.banner(lm.name.toUpperCase(), lm.blurb, 'info');
+          // (the camp is where every run starts: its LAST CHANCE banner already said so)
+          if (!lm.camp) this.ui.banner(lm.name.toUpperCase(), lm.blurb, 'info');
           s.addXP(XP_REWARDS.landmarkDiscovered, `Discovered ${lm.name}`);
         }
       }

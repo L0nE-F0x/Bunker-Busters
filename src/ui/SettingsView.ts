@@ -3,6 +3,7 @@ import type { AudioEngine } from '@/engine/audio';
 import { DEFAULT_SETTINGS, type Settings } from '@/game/State';
 import { DIFFICULTY } from '@/content/weapons';
 import { isTouch } from '@/engine/device';
+import { isDesktopApp } from '@/engine/autoQuality';
 
 /**
  * Settings: five pages (Gameplay, Video, Audio, Controls, Accessibility) on tabs, so each fits a 720p
@@ -43,7 +44,8 @@ function rows(page: Page): Row[] {
       ];
     case 'video':
       return [
-        { kind: 'select', k: 'quality', label: 'Graphics', options: ['low', 'medium', 'high', 'ultra'].map((q) => [q, q.toUpperCase()]) },
+        // AUTO (engine/autoQuality.ts: browser only) picks the preset from the GPU and holds the frame rate
+        { kind: 'select', k: 'quality', label: 'Graphics', options: [...(isDesktopApp ? [] : [['auto', 'AUTO'] as [string, string]]), ...['low', 'medium', 'high', 'ultra'].map((q): [string, string] => [q, q.toUpperCase()])] },
         { kind: 'range', k: 'brightness', label: 'Brightness', min: 0.7, max: 1.4, step: 0.05, fmt: pct, hint: 'Raise it until you can make out the ground on a moonless night.' },
         { kind: 'select', k: 'showFps', label: 'FPS counter', options: onOff },
       ];
@@ -81,6 +83,9 @@ function rows(page: Page): Row[] {
 
 const esc = (s: string) => s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]!));
 
+/** A select's value: booleans as 1/0, Graphics as 'auto' while AUTO runs it. */
+const selValue = (k: Key, s: Settings) => (BOOL.has(k) ? (s[k] ? '1' : '0') : k === 'quality' && s.autoQuality ? 'auto' : String(s[k]));
+
 function rowHTML(r: Row, s: Settings): string {
   if (r.kind === 'head') return `<div class="st-head">${esc(r.text)}</div>`;
   if (r.kind === 'sample') return `<div class="st-sample" aria-hidden="true"><div class="subtitle"><span class="who">Mara Voss</span><span class="line">“Crouch, or don't let it look at you.”</span></div></div>`;
@@ -90,7 +95,7 @@ function rowHTML(r: Row, s: Settings): string {
     const v = s[r.k] as number;
     return `<span>${esc(r.label)} <b class="val" data-v="${r.k}">${esc(r.fmt(v))}</b></span><input type="range" min="${r.min}" max="${r.max}" step="${r.step}" data-k="${r.k}" value="${v}" aria-label="${esc(r.label)}">${hint}`;
   }
-  const cur = BOOL.has(r.k) ? (s[r.k] ? '1' : '0') : String(s[r.k]);
+  const cur = selValue(r.k, s);
   return `<span>${esc(r.label)}</span><select data-k="${r.k}" aria-label="${esc(r.label)}">${r.options.map(([v, t]) => `<option value="${v}" ${v === cur ? 'selected' : ''}>${esc(t)}</option>`).join('')}</select>${hint}`;
 }
 
@@ -133,9 +138,12 @@ export function openSettingsPanel(root: HTMLElement, audio: AudioEngine, setting
     ov.querySelectorAll('.pad-default').forEach((el) => el.classList.remove('pad-default'));
     ov.querySelector(`[data-page="${p}"]`)?.querySelector('select, input, button')?.classList.add('pad-default');
   };
+  let prevQuality = settings.quality;
   const write = (k: Key, raw: string) => {
     const next = settings as unknown as Record<string, unknown>;
     next[k] = BOOL.has(k) ? raw === '1' : k === 'quality' || k === 'difficulty' || k === 'subSize' || k === 'subBg' ? raw : Number(raw);
+    // AUTO keeps the preset it runs on; picking a preset turns it off
+    if (k === 'quality') { settings.autoQuality = raw === 'auto'; if (raw === 'auto') next.quality = prevQuality; else prevQuality = raw as Settings['quality']; }
     onChange(settings);
     refresh();
   };
@@ -150,12 +158,13 @@ export function openSettingsPanel(root: HTMLElement, audio: AudioEngine, setting
     audio.play('uiConfirm');
     const next = settings as unknown as Record<string, unknown>;
     const dflt = DEFAULT_SETTINGS as unknown as Record<string, unknown>;
-    for (const r of rows(page)) if (r.kind === 'select' || r.kind === 'range') next[r.k] = dflt[r.k];
+    for (const r of rows(page)) if ((r.kind === 'select' || r.kind === 'range') && !(r.k === 'quality' && DEFAULT_SETTINGS.autoQuality)) next[r.k] = dflt[r.k];
+    if (page === 'video') settings.autoQuality = DEFAULT_SETTINGS.autoQuality;
     onChange(settings);
     for (const r of rows(page)) {
       if (r.kind !== 'select' && r.kind !== 'range') continue;
       const el = ov.querySelector(`[data-k="${r.k}"]`) as HTMLInputElement | HTMLSelectElement | null;
-      if (el) el.value = BOOL.has(r.k) ? (settings[r.k] ? '1' : '0') : String(settings[r.k]);
+      if (el) el.value = selValue(r.k, settings);
     }
     refresh();
   };
