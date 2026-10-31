@@ -147,7 +147,9 @@ export class UI implements UIBridge {
       const b = h('button', `btn${primary ? ' primary' : ''}`, label) as HTMLButtonElement;
       b.disabled = disabled;
       b.onmouseenter = () => this.audio.play('uiHover');
-      b.onclick = () => { this.audio.start(); this.audio.play('uiConfirm'); fn(); };
+      // (the first-click listener goes too: left on window it kept this whole title alive, every time
+      // the title was left by keyboard or controller, which never sends a pointerdown)
+      b.onclick = () => { this.audio.start(); this.audio.play('uiConfirm'); window.removeEventListener('pointerdown', kick); fn(); };
       menu.appendChild(b);
     };
     if (opts.canContinue) add('Continue', () => { el.remove(); opts.onContinue(); }, true);
