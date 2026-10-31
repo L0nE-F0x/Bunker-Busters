@@ -7,7 +7,10 @@ import { AUTOQ_OVERRIDE, GpuTimer, RenderScale, gpuName, isDesktopApp, learn, st
 import { TouchControls } from '@/ui/TouchControls';
 import { PostFX } from '@/engine/postfx';
 import { Physics } from '@/engine/physics';
-import { modelProgress } from '@/engine/models';
+import { modelProgress, modelFailures } from '@/engine/models';
+import { bootModelNames, BOOT_NPCS } from './bootModels';
+import { LateCast } from './lateCast';
+import { downloadFailed, bootDone } from '@/ui/bootFail';
 import { Input } from '@/engine/input';
 import { pad } from '@/engine/gamepad';
 import { binds, actionWord, type Action } from '@/engine/bindings';
@@ -265,7 +268,13 @@ export class Game {
   /** Smoothed 0..1 point light (fires, floodlights) on the player: the stealth model's night term. */
   private pointLit = 0;
   /** Warm these on the next frame's render (see warmShaders), staging anything not yet in the scene. */
-  private warmNext: { roots: THREE.Object3D[]; stage?: () => (() => void) | undefined } | null = null;
+  private warmNext: { roots: THREE.Object3D[]; stage?: () => (() => void) | undefined; done?: () => void } | null = null;
+  /** Tiers 2–8's people (game/lateCast.ts): placed at boot in the desktop app, during the title in the browser. */
+  private late!: LateCast;
+  /** Resolves when the late cast is in (main.ts starts saving for offline play then). */
+  worldReady: Promise<void> = Promise.resolve();
+  /** A run waiting on the late cast (the readout is up). */
+  private waitingRun = false;
   private cubeRT: THREE.CubeRenderTarget | null = null;
   private cubeCam: THREE.CubeCamera | null = null;
   private envScene = new THREE.Scene();
@@ -333,14 +342,17 @@ export class Game {
       await new Promise((r) => setTimeout(r, 16));
     };
     // waiting on model downloads (prefetched since boot, see bootModels): the bar runs p0 → p1 with the bytes
-    const models = async <T>(task: Promise<T>, p0: number, p1: number, msg: string, names?: readonly string[]) => {
+    // (the boot's own files: the late cast downloads behind them and isn't waited for here)
+    const bootFiles = bootModelNames();
+    const models = async <T>(task: Promise<T>, p0: number, p1: number, msg: string, names: readonly string[] = bootFiles) => {
       const tick = () => {
-        const m = modelProgress(names), all = modelProgress();
-        if (m.fraction < 1) this.ui.progress(p0 + (p1 - p0) * m.fraction, `${msg} · ${(all.loaded / 1e6).toFixed(1)} / ${(all.total / 1e6).toFixed(1)} MB`);
+        const m = modelProgress(names), all = modelProgress(bootFiles);
+        if (m.fraction < 1) this.ui.progress(p0 + (p1 - p0) * m.fraction, msg);
+        this.ui.loading.setBytes(all.loaded, all.total);
       };
       tick();
       const id = setInterval(tick, 100);
-      try { return await task; } finally { clearInterval(id); }
+      try { return await task; } finally { clearInterval(id); this.ui.loading.setBytes(0, 0); }
     };
     await step(0.05, 'Warming up the apocalypse');
     await Promise.race([document.fonts.ready, new Promise((r) => setTimeout(r, 2500))]);
@@ -444,19 +456,8 @@ export class Game {
     for (const lm of LANDMARKS) if (lm.kind === 'town') this.fauna.safe.push({ p: new THREE.Vector3(lm.position[0], 0, lm.position[2]), r: 75 });
     // the Meshy townsfolk (before the warm-up; ?procnpc keeps the procedural figures)
     const bunkerMsg = 'Building a doomsday bunker (pre-revenue)';
-    NpcCrowd.models = await models(NpcModels.load(), 0.7, 0.78, bunkerMsg);
-    // Ezra, Ada and the reviewers sit (and stand) in the Panopticon from boot (before the warm-up)
-    this.panopticon.addPeople(NpcCrowd.models);
-    // Prudence, Noor and Benny in the Spire, likewise
-    this.spire.addPeople(NpcCrowd.models);
-    // the Dome: the hologram, Gil, Hunter in the hut, the Helpers
-    this.dome.addPeople(NpcCrowd.models);
-    // the Cathedral: Orrin in his office, Lo and the associates on the floor
-    this.cathedral.addPeople(NpcCrowd.models);
-    // the Fortress: Kit at her desk, Marek in the locker room, the technicians
-    this.fortress.addPeople(NpcCrowd.models);
-    // Zero: Agnes at her drafting table, the Doormen
-    this.zero.addPeople(NpcCrowd.models);
+    // (the camp's four, Dry Creek's six, Noor and Ada: the bunkers' people are the late cast, below)
+    NpcCrowd.models = await models(NpcModels.load(BOOT_NPCS), 0.7, 0.78, bunkerMsg);
     // routines (content/routines.ts): who is in which seat or spot, by the hour and the story
     NpcCrowd.schedule = (st) => routineOpen(st, { playing: this.mode === 'playing', hour: this.atmo.hour, has: (f) => !!this.state?.has(f) });
     this.landmarks.addCampPeople();
@@ -464,6 +465,8 @@ export class Game {
     if (!SKIP.has('sites')) this.sites = buildSites(this.ctx, this.landmarks);
     // the Meshy contractors (before the warm-up; ?prochuman keeps the procedural bodies)
     this.humanSkins = new URLSearchParams(location.search).has('prochuman') ? null : await models(HumanSkins.load(CREW_SLOTS, [0]), 0.7, 0.78, bunkerMsg);
+    // a boot file that never arrived (after its retries): say so, rather than carry on with stand-ins
+    await this.bootDownloads(bootFiles);
     this.buildRecovery();
     // Vesper's alarm calls Kade's gatehouse crew on her road to the apron
     this.apex.onAlarm = (at) => this.recovery.alertOutpost('apexgate', at);
@@ -495,12 +498,20 @@ export class Game {
     this.interactables.push(...this.stories.interactables);
     this.spireTaps = new SpireTaps(this.ctx, this.landmarks, (x, z) => this.clearSpot(x, z));
     this.interactables.push(...this.spireTaps.interactables);
-    this.domeAfter = new DomeAfter(this.ctx, this.landmarks, NpcCrowd.models, (x, z) => this.clearSpot(x, z));
-    this.interactables.push(...this.domeAfter.interactables);
-    this.cathedralAfter = new CathedralAfter(this.ctx, this.landmarks, NpcCrowd.models, (x, z) => this.clearSpot(x, z));
-    this.interactables.push(...this.cathedralAfter.interactables);
     this.fortressAfter = new FortressAfter(this.ctx, this.landmarks, (x, z) => this.clearSpot(x, z));
     this.interactables.push(...this.fortressAfter.interactables);
+    // the bunkers' people (lateCast.ts): in the desktop app (local files) and with ?latecast=boot they
+    // join now, before the warm-up, as they always did; in the browser, during the title
+    this.late = new LateCast({
+      models: NpcCrowd.models,
+      place: (m) => this.placeLateCast(m),
+      warm: (roots) => new Promise<void>((done) => { this.warmNext = { roots, done }; }),
+      // (the title's cuts and character select's stand-up dip to black; a hitch there shows nothing)
+      quiet: () => this.mode === 'playing' || this.director.fade > 0.85,
+      scene: this.scene,
+    });
+    const lateAtBoot = !!(window as { __TAURI_INTERNALS__?: unknown }).__TAURI_INTERNALS__ || new URLSearchParams(location.search).get('latecast') === 'boot';
+    if (lateAtBoot || !NpcCrowd.models) await this.late.now();
     if (!SKIP.has('env')) this.buildEnvironment();
     if (SKIP.has('garage')) this.scene.remove(this.garage.b.group, this.garage.drone.group);
     if (SKIP.has('apex')) this.scene.remove(this.apex.b.group);
@@ -561,6 +572,7 @@ export class Game {
       for (let i = 0; i < batches; i++) {
         linking.push(compileInParallel(this.renderer, () => { warmMs += this.warmShaders(...drawn.slice(i * per, (i + 1) * per)); }));
         this.ui.progress(0.8 + (0.1 * (i + 1)) / batches, 'Compiling shaders');
+        this.ui.loading.setShaders(i + 1, batches * 2);
         for (let f = 0; f < 2; f++) await new Promise((r) => requestAnimationFrame(r)); // a fresh frame for the scene pass
       }
       await Promise.all(linking);
@@ -571,6 +583,7 @@ export class Game {
     for (let i = 0; i < batches; i++) {
       warmMs += this.warmShaders(...drawn.slice(i * per, (i + 1) * per));
       this.ui.progress(p0 + ((0.95 - p0) * (i + 1)) / batches, 'Compiling shaders');
+      this.ui.loading.setShaders((parallel ? batches : 0) + i + 1, parallel ? batches * 2 : batches);
       for (let f = 0; f < 2; f++) await new Promise((r) => requestAnimationFrame(r)); // a fresh frame for the scene pass
     }
     console.log(`[BunkerBusters] shader warm-up: ${drawn.length} objects in ${batches} frames, ${warmMs.toFixed(0)} ms (${(performance.now() - tWarm).toFixed(0)} ms wall${parallel ? ', parallel links' : ''})`);
@@ -619,7 +632,79 @@ export class Game {
     });
     await new Promise((r) => setTimeout(r, 400));
     this.ui.hideLoading();
+    bootDone();
+    if (!this.late.isReady) this.worldReady = this.late.start() ?? Promise.resolve();
     this.toTitle();
+  }
+
+  /**
+   * The bunkers' people (the late cast): Ezra, Ada and the reviewers in the Panopticon, Prudence,
+   * Noor and Benny in the Spire, the Dome's hologram, Gil, Hunter and the Helpers, Orrin and the
+   * associates, Kit, Marek and the technicians, Agnes and the Doormen, and the Dome's and the
+   * Cathedral's afterwards at the camp and in Dry Creek. Called once (lateCast.ts).
+   */
+  private placeLateCast(models: NpcModels | null) {
+    this.panopticon.addPeople(models);
+    this.spire.addPeople(models);
+    this.dome.addPeople(models);
+    this.cathedral.addPeople(models);
+    this.fortress.addPeople(models);
+    this.zero.addPeople(models);
+    this.domeAfter = new DomeAfter(this.ctx, this.landmarks, models, (x, z) => this.clearSpot(x, z));
+    this.interactables.push(...this.domeAfter.interactables);
+    this.cathedralAfter = new CathedralAfter(this.ctx, this.landmarks, models, (x, z) => this.clearSpot(x, z));
+    this.interactables.push(...this.cathedralAfter.interactables);
+  }
+
+  /** Boot files that gave up after their retries: Try again reloads, Play without them carries on. */
+  private async bootDownloads(names: readonly string[]) {
+    const failed = modelFailures(names);
+    if (!failed.length) return;
+    await new Promise<void>((go) => downloadFailed({
+      files: failed.map((f) => f.model), why: failed[0].why, status: failed[0].status, error: failed[0],
+      retry: () => location.reload(),
+      play: go,
+    }));
+  }
+
+  /**
+   * Start a run once the late cast is in (it usually is by now; a fresh visit on a slow line may
+   * still be downloading it): a short readout over the scene until then.
+   */
+  private beginRun(state: GameState) {
+    if (this.late.isReady) { this.startGame(state); return; }
+    if (this.waitingRun) return;
+    this.waitingRun = true;
+    const readout = this.ui.worldWait();
+    let asked = false;
+    const tick = () => {
+      const p = this.late.progress();
+      readout.set(this.late.stage, p.loaded, p.total);
+      if (this.late.stage === 'failed' && !asked) {
+        asked = true;
+        const f = this.late.failures;
+        downloadFailed({
+          files: f.map((x) => x.model), why: f[0]?.why ?? 'network', status: f[0]?.status, error: f[0],
+          retry: () => { asked = false; this.late.resolveFailure('retry'); },
+          play: () => this.late.resolveFailure('skip'),
+        });
+      }
+    };
+    tick();
+    const id = setInterval(tick, 150);
+    void this.late.ready().then(() => {
+      clearInterval(id);
+      readout.close();
+      this.waitingRun = false;
+      this.startGame(state);
+    });
+  }
+
+  /** The graphics context is gone for good (main.ts): keep the run if it can be kept. */
+  saveForLoss(): 'saved' | 'unsaved' | 'menu' {
+    if (this.mode !== 'playing' || !this.state || !this.player) return 'menu';
+    if (this.state.data.health <= 0 || this.bunkerAlarm) return 'unsaved';
+    try { this.save(true); return 'saved'; } catch { return 'unsaved'; }
   }
 
   private makeContext(): GameContext {
@@ -1231,12 +1316,12 @@ export class Game {
     const { save, problem } = readSave();
     if (new URLSearchParams(location.search).has('autostart')) {
       // debug: skip menus straight into a fresh Infiltrator run (used by automated benchmarks)
-      setTimeout(() => this.startGame(GameState.fresh('infiltrator', [SPAWN[0], this.hf.heightAt(SPAWN[0], SPAWN[2]), SPAWN[2]])), 50);
+      setTimeout(() => this.beginRun(GameState.fresh('infiltrator', [SPAWN[0], this.hf.heightAt(SPAWN[0], SPAWN[2]), SPAWN[2]])), 50);
       return;
     }
     if (save && new URLSearchParams(location.search).has('continue')) {
       // debug: skip the title into the saved run (desktop tests can't aim a click at Continue)
-      setTimeout(() => this.startGame(new GameState(save)), 50);
+      setTimeout(() => this.beginRun(new GameState(save)), 50);
       return;
     }
     // debug: ?open=controls|settings opens a menu over the title (desktop perf testing)
@@ -1250,7 +1335,7 @@ export class Game {
       backend: this.backendLabel,
       notice,
       // read again on the click: another tab may have saved since this title came up
-      onContinue: () => this.startGame(new GameState(loadGame() ?? save!)),
+      onContinue: () => this.beginRun(new GameState(loadGame() ?? save!)),
       onNew: () => this.toCharSelect(),
       onSettings: () => this.ui.openSettings(this.settings, (s) => this.applySettings(s)),
       settings: this.settings,
@@ -1287,7 +1372,7 @@ export class Game {
           state.data.position = [at.x, at.y, at.z];
           state.data.yaw = Math.atan2(at.x - fire.x, at.z - fire.z) - Math.PI;
           state.data.hour = this.atmo.hour;
-          this.startGame(state);
+          this.beginRun(state);
         }, MenuDirector.STAND * 1000 + 60);
       },
       show,
@@ -2414,12 +2499,13 @@ export class Game {
     lightPool.update(this.camera.position, dt);
     const tRender = performance.now();
     if (this.warmNext) {
-      const { roots, stage } = this.warmNext;
+      const { roots, stage, done } = this.warmNext;
       this.warmNext = null;
       const unstage = stage?.();
       const ms = this.warmShaders(...roots);
       unstage?.();
-      console.log(`[BunkerBusters] shader warm-up (run start): ${ms.toFixed(0)} ms`);
+      console.log(`[BunkerBusters] shader warm-up (${done ? 'late cast' : 'run start'}): ${ms.toFixed(0)} ms`);
+      done?.();
     } else {
       // interior mode: inside a sealed building that can't see out, the exterior isn't drawn (nor cast
       // into the shadow map). Hidden only around the render, so no system's own visibility is touched.

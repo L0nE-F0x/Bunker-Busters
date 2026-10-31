@@ -230,13 +230,13 @@
   "where": "src/content/bunkers/zero.ts"
  },
  {
-  "key": "0dwtojr",
+  "key": "1qxt5s6",
   "voice": "af_nicole*0.75+am_santa*0.25",
   "fx": "room",
   "speed": 0.9,
   "speaker": "Agnes",
-  "words": "More than you'd think. The pump runs on a timer into the cistern. Throw the red handle behind the board and it goes up the surface line instead, to a standpipe on the forecourt, every day for as long as the bore holds. That's years.",
-  "tts": "More than you'd think. The pump runs on a timer into the cistern. Throw the red handle behind the board and it goes up the surface line instead, to a standpipe on the forecourt, every day for as long as the bore holds. That's years.",
+  "words": "More than you'd think. The pump runs on a timer into the cistern. Throw the red handle on the wellhead and it goes up the surface line instead, to a standpipe on the forecourt, every day for as long as the bore holds. That's years.",
+  "tts": "More than you'd think. The pump runs on a timer into the cistern. Throw the red handle on the wellhead and it goes up the surface line instead, to a standpipe on the forecourt, every day for as long as the bore holds. That's years.",
   "where": "src/content/bunkers/zero.ts"
  },
  {
@@ -1890,13 +1890,13 @@
   "where": "src/content/camp.ts"
  },
  {
-  "key": "0znjoek",
+  "key": "1yeq5r9",
   "voice": "af_river",
   "fx": "radio",
   "speed": 1,
   "speaker": "Dez Marlow",
-  "words": "Something syncs on our band at three every morning. A group chat, called LIFEBOAT. Founders. Seven of them, and Tanner, who keeps rejoining. It comes in pieces: every phone and watch and tablet that died out here still holds its last page, and they all try to sync at once. Find me the pieces. I'll ping you where the next one is. I have never wanted anything more. Including the karaoke machine.",
-  "tts": "Something syncs on our band at three every morning. A group chat, called Lifeboat. Founders. Seven of them, and Tanner, who keeps rejoining. It comes in pieces: every phone and watch and tablet that died out here still holds its last page, and they all try to sync at once. Find me the pieces. I'll ping you where the next one is. I have never wanted anything more. Including the karaoke machine.",
+  "words": "Something syncs on our band at three every morning. A group chat, called LIFEBOAT. Founders. Six of them, and Tanner, who keeps rejoining. It comes in pieces: every phone and watch and tablet that died out here still holds its last page, and they all try to sync at once. Find me the pieces. I'll ping you where the next one is. I have never wanted anything more. Including the karaoke machine.",
+  "tts": "Something syncs on our band at three every morning. A group chat, called Lifeboat. Founders. Six of them, and Tanner, who keeps rejoining. It comes in pieces: every phone and watch and tablet that died out here still holds its last page, and they all try to sync at once. Find me the pieces. I'll ping you where the next one is. I have never wanted anything more. Including the karaoke machine.",
   "where": "src/content/camp.ts"
  },
  {
@@ -1950,13 +1950,13 @@
   "where": "src/content/camp.ts"
  },
  {
-  "key": "1hp6y52",
+  "key": "1t30vf8",
   "voice": "af_river",
   "fx": "radio",
   "speed": 1,
   "speaker": "Dez Marlow",
-  "words": "The Wellhead crew changes shift at dawn, south-west of Dry Creek. For about twenty minutes the tank's only got one sentry on it, and it apologises before it shoots. Twenty minutes is a lot of water.",
-  "tts": "The Wellhead crew changes shift at dawn, south-west of Dry Creek. For about twenty minutes the tank's only got one sentry on it, and it apologises before it shoots. Twenty minutes is a lot of water.",
+  "words": "The Wellhead crew changes shift at dawn, north of Dry Creek. For about twenty minutes the tank's only got one sentry on it, and it apologises before it shoots. Twenty minutes is a lot of water.",
+  "tts": "The Wellhead crew changes shift at dawn, north of Dry Creek. For about twenty minutes the tank's only got one sentry on it, and it apologises before it shoots. Twenty minutes is a lot of water.",
   "where": "src/content/camp.ts"
  },
  {
@@ -2010,13 +2010,13 @@
   "where": "src/content/camp.ts"
  },
  {
-  "key": "09xqxws",
+  "key": "1toh1do",
   "voice": "af_river",
   "fx": "radio",
   "speed": 1,
   "speaker": "Dez Marlow",
-  "words": "There's a place in the basin south-east of the Tube they call Waitlist City. Four thousand people queued for a bunker called Everafter. The board over the door still says now serving number one. Somebody up there still keeps a fire going.",
-  "tts": "There's a place in the basin south-east of the Tube they call Waitlist City. Four thousand people queued for a bunker called Everafter. The board over the door still says now serving number one. Somebody up there still keeps a fire going.",
+  "words": "There's a place in the basin south of the Tube they call Waitlist City. Four thousand people queued for a bunker called Everafter. The board over the door still says now serving number one. Somebody up there still keeps a fire going.",
+  "tts": "There's a place in the basin south of the Tube they call Waitlist City. Four thousand people queued for a bunker called Everafter. The board over the door still says now serving number one. Somebody up there still keeps a fire going.",
   "where": "src/content/camp.ts"
  },
  {
@@ -2670,13 +2670,13 @@
   "where": "src/game/town/Settlement.ts"
  },
  {
-  "key": "1mgnods",
+  "key": "05d9e44",
   "voice": "am_adam",
   "fx": "room",
   "speed": 0.96,
   "speaker": "Doc Ivers",
-  "words": "The summer before the Pivot, the county let Kade Holdings run a pilot on our aquifer. We got a school with a rocket on the sign. Eight months later the creek stopped. They called it a drought. Droughts don't come with a pump station.",
-  "tts": "The summer before the Pivot, the county let Kade Holdings run a pilot on our aquifer. We got a school with a rocket on the sign. Eight months later the creek stopped. They called it a drought. Droughts don't come with a pump station.",
+  "words": "The year before the Pivot, the county let Kade Holdings run a pilot on our aquifer. We got a school with a rocket on the sign. Eight months later the creek stopped. They called it a drought. Droughts don't come with a pump station.",
+  "tts": "The year before the Pivot, the county let Kade Holdings run a pilot on our aquifer. We got a school with a rocket on the sign. Eight months later the creek stopped. They called it a drought. Droughts don't come with a pump station.",
   "where": "src/game/town/Settlement.ts"
  },
  {
@@ -4367,6 +4367,16 @@
   "speaker": "HUNTER VALE",
   "words": "Introducing EXIT. Evacuation, as a service. Leave before the planet leaves you.",
   "tts": "Introducing Exit. Evacuation, as a service. Leave before the planet leaves you.",
+  "where": "src/game/sites/driveinArt.ts"
+ },
+ {
+  "key": "1jrvj4f",
+  "voice": "am_liam",
+  "fx": "pa",
+  "speed": 1,
+  "speaker": "HUNTER VALE",
+  "words": "Is the jet fuelled?",
+  "tts": "Is the jet fuelled?",
   "where": "src/game/sites/driveinArt.ts"
  },
  {
@@ -8500,13 +8510,13 @@
   "where": "src/content/banter.ts"
  },
  {
-  "key": "1790gsm",
+  "key": "1pkabec",
   "voice": "af_sarah",
   "fx": "radio",
   "speed": 0.97,
   "speaker": "Mara",
-  "words": "That light west of the highway is Dry Creek. Nia's diner. They're not the job, but they've been out here longer than we have.",
-  "tts": "That light west of the highway is Dry Creek. Nia's diner. They're not the job, but they've been out here longer than we have.",
+  "words": "That light north of the highway is Dry Creek. Nia's diner. They're not the job, but they've been out here longer than we have.",
+  "tts": "That light north of the highway is Dry Creek. Nia's diner. They're not the job, but they've been out here longer than we have.",
   "where": "src/content/banter.ts"
  },
  {
@@ -8736,7 +8746,7 @@
   "speed": 0.97,
   "speaker": "Mara Voss",
   "words": "Apex Vault is west of the salt, and that road isn't open tonight. The camp drinks. You sleep. Act I ends here.",
-  "tts": "Apex Vault is west of the salt, and that road isn't open tonight. The camp drinks. You sleep. Act I ends here.",
+  "tts": "Apex Vault is west of the salt, and that road isn't open tonight. The camp drinks. You sleep. Act One ends here.",
   "where": "src/content/story.ts"
  },
  {
@@ -8946,7 +8956,7 @@
   "speed": 0.97,
   "speaker": "Mara Voss",
   "words": "Ezra Seymour. The man in the camera. Vesper sold him faces, and he sold her quiet. North of the salt, eleven hundred cameras, and he calls it the Panopticon. I don't know what the next part is. I don't like that he does. That's Act II. Sleep.",
-  "tts": "Ezra Seymour. The man in the camera. Vesper sold him faces, and he sold her quiet. North of the salt, eleven hundred cameras, and he calls it the Panopticon. I don't know what the next part is. I don't like that he does. That's Act II. Sleep.",
+  "tts": "Ezra Seymour. The man in the camera. Vesper sold him faces, and he sold her quiet. North of the salt, eleven hundred cameras, and he calls it the Panopticon. I don't know what the next part is. I don't like that he does. That's Act Two. Sleep.",
   "where": "src/content/story.ts"
  },
  {
@@ -8996,7 +9006,7 @@
   "speed": 0.97,
   "speaker": "Mara Voss",
   "words": "He signed off as Ezra. Ezra Seymour, the neighbourhood app, Glimpse. North of the salt, in a place he calls the Panopticon. I don't know what the next part is. I don't like that he does. That's Act II. Sleep.",
-  "tts": "He signed off as Ezra. Ezra Seymour, the neighbourhood app, Glimpse. North of the salt, in a place he calls the Panopticon. I don't know what the next part is. I don't like that he does. That's Act II. Sleep.",
+  "tts": "He signed off as Ezra. Ezra Seymour, the neighbourhood app, Glimpse. North of the salt, in a place he calls the Panopticon. I don't know what the next part is. I don't like that he does. That's Act Two. Sleep.",
   "where": "src/content/story.ts"
  },
  {
@@ -9420,13 +9430,13 @@
   "where": "src/content/archetypes.ts"
  },
  {
-  "key": "04swk9h",
+  "key": "13e16u2",
   "voice": "af_sarah",
   "fx": "radio",
   "speed": 0.97,
   "speaker": "Mara Voss",
-  "words": "Rue, you finished the delivery. Two years late, and you still beat the postal service.",
-  "tts": "Rue, you finished the delivery. Two years late, and you still beat the postal service.",
+  "words": "Rue, you finished the delivery. Three and a half years late, and you still beat the postal service.",
+  "tts": "Rue, you finished the delivery. Three and a half years late, and you still beat the postal service.",
   "where": "src/content/archetypes.ts"
  },
  {
@@ -9536,7 +9546,7 @@
   "speed": 0.97,
   "speaker": "Mara Voss",
   "words": "That's Act I. The camp drinks tonight. Tomorrow we start walking west.",
-  "tts": "That's Act I. The camp drinks tonight. Tomorrow we start walking west.",
+  "tts": "That's Act One. The camp drinks tonight. Tomorrow we start walking west.",
   "where": "src/content/quests.ts"
  },
  {
@@ -9546,7 +9556,7 @@
   "speed": 0.97,
   "speaker": "Mara Voss",
   "words": "That's Act III. When you left, Ezra said one more name. Prudence Ashby, the Alignment Spire. He said she'd be expecting you. Sleep.",
-  "tts": "That's Act III. When you left, Ezra said one more name. Prudence Ashby, the Alignment Spire. He said she'd be expecting you. Sleep.",
+  "tts": "That's Act Three. When you left, Ezra said one more name. Prudence Ashby, the Alignment Spire. He said she'd be expecting you. Sleep.",
   "where": "src/content/story.ts"
  },
  {
@@ -9556,7 +9566,7 @@
   "speed": 0.97,
   "speaker": "Mara Voss",
   "words": "That's Act IV. Prudence called on the band after you left. She said there's one place she's run the numbers on and can't make them come out: Hunter Vale's Singularity Dome. He never got there. Something else did. Sleep.",
-  "tts": "That's Act Iv. Prudence called on the band after you left. She said there's one place she's run the numbers on and can't make them come out: Hunter Vale's Singularity Dome. He never got there. Something else did. Sleep.",
+  "tts": "That's Act Four. Prudence called on the band after you left. She said there's one place she's run the numbers on and can't make them come out: Hunter Vale's Singularity Dome. He never got there. Something else did. Sleep.",
   "where": "src/content/story.ts"
  },
  {
@@ -9566,7 +9576,7 @@
   "speed": 0.97,
   "speaker": "Mara Voss",
   "words": "That's Act V. Two founders left with bunkers, Dez says: Orrin and his Cloud Cathedral, Kit and the Chip Fortress. They'll have heard about tonight. Sleep.",
-  "tts": "That's Act V. Two founders left with bunkers, Dez says: Orrin and his Cloud Cathedral, Kit and the Chip Fortress. They'll have heard about tonight. Sleep.",
+  "tts": "That's Act Five. Two founders left with bunkers, Dez says: Orrin and his Cloud Cathedral, Kit and the Chip Fortress. They'll have heard about tonight. Sleep.",
   "where": "src/content/story.ts"
  },
  {
@@ -9576,7 +9586,7 @@
   "speed": 0.97,
   "speaker": "Mara Voss",
   "words": "That's Act VI. One founder left with a bunker, Dez says: Kit Szabo and the Chip Fortress. Sleep.",
-  "tts": "That's Act Vi. One founder left with a bunker, Dez says: Kit Szabo and the Chip Fortress. Sleep.",
+  "tts": "That's Act Six. One founder left with a bunker, Dez says: Kit Szabo and the Chip Fortress. Sleep.",
   "where": "src/content/story.ts"
  },
  {
@@ -9586,7 +9596,7 @@
   "speed": 0.97,
   "speaker": "Mara Voss",
   "words": "That's Act VII. Every founder who built a bunker has had a visit from you now. Sleep. You've earned it.",
-  "tts": "That's Act Vii. Every founder who built a bunker has had a visit from you now. Sleep. You've earned it.",
+  "tts": "That's Act Seven. Every founder who built a bunker has had a visit from you now. Sleep. You've earned it.",
   "where": "src/content/story.ts"
  },
  {
@@ -9750,13 +9760,13 @@
   "where": "src/content/story.ts"
  },
  {
-  "key": "0ke02f8",
+  "key": "14lgja2",
   "voice": "af_sarah",
   "fx": "radio",
   "speed": 0.97,
   "speaker": "Mara Voss",
-  "words": "The rule of the Compact, on the back of a receipt: take what the living need. Leave him alive if you can. Don't become the person on the other side of the lock. Somebody pinned a note on the pumps by this fire. Read it. Dry Creek is west of the highway, diner light still on. Tab is your kit, K your skills, J your journal. Mara, out.",
-  "tts": "The rule of the Compact, on the back of a receipt: take what the living need. Leave him alive if you can. Don't become the person on the other side of the lock. Somebody pinned a note on the pumps by this fire. Read it. Dry Creek is west of the highway, diner light still on. Tab is your kit, K your skills, J your journal. Mara, out.",
+  "words": "The rule of the Compact, on the back of a receipt: take what the living need. Leave him alive if you can. Don't become the person on the other side of the lock. Somebody pinned a note on the pumps by this fire. Read it. Dry Creek is north-west, across the highway, diner light still on. Mara, out.",
+  "tts": "The rule of the Compact, on the back of a receipt: take what the living need. Leave him alive if you can. Don't become the person on the other side of the lock. Somebody pinned a note on the pumps by this fire. Read it. Dry Creek is north-west, across the highway, diner light still on. Mara, out.",
   "where": "src/content/story.ts"
  },
  {
@@ -9920,13 +9930,13 @@
   "where": "src/content/story.ts"
  },
  {
-  "key": "1dlhiaz",
+  "key": "11dikp7",
   "voice": "af_sarah",
   "fx": "radio",
   "speed": 0.97,
   "speaker": "Mara Voss",
-  "words": "Waitlist City is walking south, a few at a time. Zero has two hundred bunks, and Agnes says the well can take more than that. We'll find out.",
-  "tts": "Waitlist City is walking south, a few at a time. Zero has two hundred bunks, and Agnes says the well can take more than that. We'll find out.",
+  "words": "Waitlist City is walking west, a few at a time. Zero has two hundred bunks, and Agnes says the well can take more than that. We'll find out.",
+  "tts": "Waitlist City is walking west, a few at a time. Zero has two hundred bunks, and Agnes says the well can take more than that. We'll find out.",
   "where": "src/content/story.ts"
  },
  {
@@ -12140,13 +12150,13 @@
   "where": "src/game/town/Settlement.ts"
  },
  {
-  "key": "10m506f",
+  "key": "099m7p5",
   "voice": "am_eric",
   "fx": "room",
   "speed": 0.97,
   "speaker": "Ren Oka",
-  "words": "Tell me. Or don't. I've been fine not knowing for two years. Mostly fine.",
-  "tts": "Tell me. Or don't. I've been fine not knowing for two years. Mostly fine.",
+  "words": "Tell me. Or don't. I've been fine not knowing for three years. Mostly fine.",
+  "tts": "Tell me. Or don't. I've been fine not knowing for three years. Mostly fine.",
   "where": "src/game/town/Settlement.ts"
  },
  {
@@ -13400,13 +13410,13 @@
   "where": "src/content/townBarks.ts"
  },
  {
-  "key": "0ct3ax2",
+  "key": "0btlvej",
   "voice": "bm_lewis",
   "fx": "room",
   "speed": 0.92,
   "speaker": "Wick",
-  "words": "From the town. Sure. Tell Doc thank you. Don't tell him I said it. Here, water from the seep. And look southwest off the edge sometime. There's a jet out there.",
-  "tts": "From the town. Sure. Tell Doc thank you. Don't tell him I said it. Here, water from the seep. And look southwest off the edge sometime. There's a jet out there.",
+  "words": "From the town. Sure. Tell Doc thank you. Don't tell him I said it. Here, water from the seep. And look west off the edge sometime. There's a jet out there.",
+  "tts": "From the town. Sure. Tell Doc thank you. Don't tell him I said it. Here, water from the seep. And look west off the edge sometime. There's a jet out there.",
   "where": "src/game/town/Settlement.ts"
  },
  {
@@ -13460,13 +13470,13 @@
   "where": "src/game/town/Settlement.ts"
  },
  {
-  "key": "05mdlqk",
+  "key": "035orfa",
   "voice": "bm_lewis",
   "fx": "room",
   "speed": 0.92,
   "speaker": "Wick",
-  "words": "I've been looking at the salt from up here for two years. Might as well walk on it. Yes.",
-  "tts": "I've been looking at the salt from up here for two years. Might as well walk on it. Yes.",
+  "words": "I've been looking at the salt from up here for three years. Might as well walk on it. Yes.",
+  "tts": "I've been looking at the salt from up here for three years. Might as well walk on it. Yes.",
   "where": "src/game/town/Settlement.ts"
  },
  {
@@ -13620,13 +13630,13 @@
   "where": "src/content/townBarks.ts"
  },
  {
-  "key": "1qq7bw9",
+  "key": "0b3vcfm",
   "voice": "bm_lewis",
   "fx": "room",
   "speed": 0.92,
   "speaker": "Wick",
-  "words": "The highway. The Garage's neon, when he remembers to pay for it. And southwest, out in the dunes, a tail fin. A private jet tried to leave the week of the Pivot. The desert said no.",
-  "tts": "The highway. The Garage's neon, when he remembers to pay for it. And southwest, out in the dunes, a tail fin. A private jet tried to leave the week of the Pivot. The desert said no.",
+  "words": "The highway. The Garage's neon, when he remembers to pay for it. And west, out in the dunes, a tail fin. A private jet tried to leave the week of the Pivot. The desert said no.",
+  "tts": "The highway. The Garage's neon, when he remembers to pay for it. And west, out in the dunes, a tail fin. A private jet tried to leave the week of the Pivot. The desert said no.",
   "where": "src/game/town/Settlement.ts"
  },
  {

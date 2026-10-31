@@ -25,7 +25,7 @@
     <meta property="og:image:type" content="image/jpeg" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
-    <meta property="og:image:alt" content="Bunker Busters logo over a fenced doomsday bunker at sunset in the wasteland" />
+    <meta property="og:image:alt" content="The Bunker Busters logo beside four people round a campfire under a gas station canopy at dusk" />
     <meta property="og:locale" content="en_US" />
 
     <!-- X / Twitter -->
@@ -33,7 +33,7 @@
     <meta name="twitter:title" content="Play Bunker Busters in your browser" />
     <meta name="twitter:description" content="Play Bunker Busters free in your browser: no install. They built bunkers. You brought lockpicks." />
     <meta name="twitter:image" content="https://bunker-busters.netlify.app/og.jpg" />
-    <meta name="twitter:image:alt" content="Bunker Busters logo over a fenced doomsday bunker at sunset in the wasteland" />
+    <meta name="twitter:image:alt" content="The Bunker Busters logo beside four people round a campfire under a gas station canopy at dusk" />
 
     <link rel="icon" href="/favicon.ico" sizes="any" />
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
@@ -43,6 +43,39 @@
   <body>
     <canvas id="game"></canvas>
     <div id="ui"></div>
+    <!-- the loading screen, up before the game's script arrives (ui/loading.ts takes it over) -->
+    <div id="loading">
+      <div class="logo-sm">BUNKER BUSTERS</div>
+      <div class="bar"><i style="width: 2%"></i></div>
+      <div class="msg">LOADING THE GAME</div>
+      <div class="detail"></div>
+      <div class="tip">Tip: SeedBot is running on 12% battery, so it powers down more often than you'd think.</div>
+    </div>
+    <noscript><p class="boot-note">Bunker Busters needs JavaScript. Turn it on for this site and reload the page.</p></noscript>
+    <script nomodule>
+      document.getElementById('loading').innerHTML = '<p class="boot-note">This browser is too old to run Bunker Busters. Update it, or try a recent Chrome, Edge, Firefox or Safari.</p>';
+    </script>
+    <script>
+      // the game's script never arriving (offline, blocked, a bad deploy) or failing to parse: say so
+      // instead of leaving the bar sitting still. Once main.ts runs it handles its own errors.
+      (function () {
+        var shown = false;
+        function fail(why) {
+          if (shown || window.__bbBooted) return;
+          shown = true;
+          var el = document.getElementById('loading');
+          if (!el) return;
+          el.innerHTML = '<div class="logo-sm">BUNKER BUSTERS</div><p class="boot-note">' + why +
+            '</p><p class="boot-note"><a href="" onclick="location.reload(); return false">Try again</a></p>';
+        }
+        window.addEventListener('error', function (e) {
+          var t = e.target;
+          if (t && t.tagName === 'SCRIPT') fail("The game's files didn't download. Check your connection and try again.");
+          else if (!window.__bbBooted && e.error instanceof SyntaxError) fail('This browser is too old to run Bunker Busters. Update it, or try a recent Chrome, Edge, Firefox or Safari.');
+          else if (!window.__bbBooted && e.filename && e.filename.indexOf(location.origin) === 0) fail('Bunker Busters hit an error while starting: ' + String(e.message).replace(/[<>&]/g, '') + '. Updating the browser usually fixes this.');
+        }, true);
+      })();
+    </script>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>

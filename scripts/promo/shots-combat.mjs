@@ -38,7 +38,9 @@ const FIGHT = `
 
 const takes = [];
 const take = (name, dur, setup, pre, opts = {}) => takes.push({ name, dur, setup, pre, ...opts });
+// (each take summons a fresh squad; the last take's survivors are sent home first, or they walk in)
 const stage = (x, z, yaw, pitch, hour, extra = '') => `() => {
+  { const rc = D.g.recovery; for (const sq of rc.extra ?? []) rc.despawnSquad(sq); if (rc.extra) rc.extra.length = 0; }
   D.releaseAll(); D.g.weather.storm(0, true); D.place(${x}, ${z}, ${yaw}, ${pitch});
   D.g.atmo.hour = ${hour}; D.g.atmo.paused = true; D.g.envTimer = 0; D.expo = 1;
   D.g.hands.flashlightOn = false; D.g.player.flashlight = false; ${extra} }`;
@@ -129,6 +131,6 @@ for (const t of list) {
   await rig.eval(`(${t.setup})(); F.reset(); D.g.state.data.health = 100;`);
   await rig.run(t.settle ?? 1.5, { pre: t.pre, post: t.post });
   await rig.record(`${OUT}/${t.name}.mp4`, t.dur, { pre: t.pre, post: t.post });
-  console.log('   squad', JSON.stringify(await rig.eval(() => (D.g.recovery.patrol?.members ?? []).map((m) => m.state[0]).join(''))));
+  console.log('   squad', JSON.stringify(await rig.eval(() => D.g.recovery.census().map((m) => m.state[0]).join(''))));
 }
 await rig.close();

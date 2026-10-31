@@ -122,7 +122,7 @@ async function reload(why) {
   log(`reload (${why}): ${saved.flags} flags, ${saved.kb} KB, at ${saved.pos.join(', ')}`);
   await p.goto(`${ORIGIN}/play/?webgl&continue`);
   await waitForGame(p, 240000);
-  await until(`game.mode === 'playing' && !!game.player`, 30000);
+  await until(`game.mode === 'playing' && !!game.player`, 120000);
   await wait(3000);
   await stubs();
   await check(`after the reload (${why}): back where it was saved`, `(() => { const q = game.player.position; return Math.hypot(q.x - ${saved.pos[0]}, q.z - ${saved.pos[2]}) < 2 && Math.abs(q.y - ${saved.pos[1]}) < 1.5; })()`);

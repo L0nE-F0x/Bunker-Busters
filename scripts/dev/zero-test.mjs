@@ -78,9 +78,8 @@ async function run(ending) {
       }
     };
     window.__code = null;
-    // (the clock as the keypad opens: the game minute turns every ~1.1 s, so comparing with the clock
-    // after the door's swing failed whenever it turned over in between)
-    game.ui.keypad = async (o) => { window.__code = o.code; window.__clockAt = Z.clockDigits(); window.__hint = o.hint; return 'ok'; };
+    // (the clock as the keypad opened: a game minute is ~1.1 s at 26-minute days, so it may have turned by the check)
+    game.ui.keypad = async (o) => { window.__code = o.code; window.__hint = o.hint; window.__clockAt = Z.clockDigits(); return 'ok'; };
     game.ui.lockpick = async () => 'success';
     game.ui.circuit = async () => true;
     game.ui.hack = async (o) => ({ aborted: false, traced: false, done: o.daemons.map((d) => d.id) });
