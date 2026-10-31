@@ -264,10 +264,22 @@ async function hidden() {
   const p = await t.page(`${PLAY}&autostart&hour=15`);
   await p.evaluate(HOOKS);
   const cdp = await t.ctx.newCDPSession(p);
+  // hidden like a real background tab: another tab in front (no more animation frames, timers throttled),
+  // then frozen (no tasks at all), then back. If headless won't hide it, stop the frames by hand.
+  const other = await t.ctx.newPage();
+  await other.goto('about:blank');
   const freeze = async (ms) => {
-    await cdp.send('Page.setWebLifecycleState', { state: 'frozen' });
+    await p.evaluate(`window.__f0 = game.frames`);
+    await other.bringToFront();
+    await p.waitForTimeout(300);
+    const vis = await p.evaluate(`document.visibilityState`);
+    if (vis !== 'hidden') await p.evaluate(`game.renderer.setAnimationLoop(null)`);
+    await cdp.send('Page.setWebLifecycleState', { state: 'frozen' }).catch(() => {});
     await p.waitForTimeout(ms);
-    await cdp.send('Page.setWebLifecycleState', { state: 'active' });
+    await cdp.send('Page.setWebLifecycleState', { state: 'active' }).catch(() => {});
+    if (vis !== 'hidden') await p.evaluate(`game.renderer.setAnimationLoop(() => game.frame())`);
+    await p.bringToFront();
+    console.log(`    hidden ${ms / 1000} s (visibility '${vis}'${vis !== 'hidden' ? ', frames stopped by hand' : ''}): ${await p.evaluate(`game.frames - __f0`)} frames ran meanwhile`);
   };
   const snap = `(() => ({ pos: game.player.position.clone(), hp: game.state.data.health, hour: game.atmo.hour, alive: game.combat.providers.reduce((n, pr) => n + pr.hostiles().filter((h) => h.alive).length, 0) }))()`;
   // mid-fight: a squad on you, hidden for two minutes

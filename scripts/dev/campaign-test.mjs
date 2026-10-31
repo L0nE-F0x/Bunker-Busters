@@ -62,7 +62,8 @@ const STUBS = `(async () => {
   const record = () => ({ has: (f) => game.state.has(f), kills: game.state.data.stats.kills ?? 0 });
   game.ui.choose = async (o) => {
     const i = window.__pick.findIndex((id) => o.choices.some((x) => x.id === id && !x.disabled));
-    let c = i >= 0 ? o.choices.find((x) => x.id === window.__pick.splice(i, 1)[0]) : null;
+    const want = i >= 0 ? window.__pick.splice(i, 1)[0] : null;
+    let c = want ? o.choices.find((x) => x.id === want) : null;
     if (!c) {
       const q = spire.DOOR_QUESTIONS.find((d) => o.text?.includes(d.q.text));
       if (q) { const a = q.answers.find((x) => x.true(record())); c = a ? o.choices.find((x) => x.id === a.id) : null; window.__doorQs = (window.__doorQs ?? 0) + 1; }
@@ -177,7 +178,7 @@ const doorsOpen = (bunker, ids) => `${JSON.stringify(ids)}.every((d) => game.${b
 async function revisit(bunker, owner) {
   await ev(`(() => { bind('${bunker}'); window.__subs = []; const pt = B.b.points[B.sec.voice.point] ?? O; const a = Math.atan2(game.player.position.x - pt.x, game.player.position.z - pt.z); go(pt.x + Math.sin(a) * 20, pt.z + Math.cos(a) * 20); })()`);
   await wait(2500);
-  await check(`back at the busted ${bunker}: ${owner} doesn't greet you again`, `!__subs.some((s) => s.startsWith(${JSON.stringify(owner)}))`);
+  await check(`back at the busted ${bunker}: ${owner} doesn't greet you again`, `(() => { const said = __subs.filter((s) => s.startsWith(${JSON.stringify(owner)})); return said.length === 0 || said; })()`);
 }
 
 const BUNKER_AT = await (async () => {
@@ -354,13 +355,21 @@ log('Dome patches before arrival:', await ev(`['pick','splice','circuit','charge
 await ev(`go(P.hut.x, P.hut.z)`); await wait(400);
 await ev(`window.__pick = ['take', 'ok']; act('dome-hunter')`); await wait(600);
 await check('Hunter\'s lanyard', `game.state.has('dome.hunter') && game.state.count('vale_badge') === 1`);
-await ev(`need('electronics', 3); go(P.gate.x, P.gate.z)`); await wait(400);
-await ev(`window.__pick = ['splice']; act2('gate')`);
-await wait(3200);
-await check('the gate spliced open', `game.state.has('dome.gate.open')`);
+// the Dome read the record and patched the method used most: in through whatever it didn't patch
+if (!(await ev(`game.state.has('dome.patch.splice')`))) {
+  await ev(`need('electronics', 3); go(P.gate.x, P.gate.z)`); await wait(400);
+  await ev(`window.__pick = ['splice']; act2('gate')`);
+  await wait(3200);
+  await check('the gate spliced open', `game.state.has('dome.gate.open')`);
+} else {
+  await check('SPLICE patched: the gate refuses it', `typeof find('gate').secondary?.available?.() === 'string' || !game.state.has('dome.gate.open')`);
+  await ev(`(() => { const c = find('culvert'); go(c.pos.x, c.pos.z); act('culvert'); })()`);
+  await wait(2500);
+  await check('up the outfall culvert instead (picked)', `game.state.has('dome.culvert.open')`);
+}
 await reload('Act V, mid-heist');
 await ev(`bind('dome')`);
-await check('mid-heist: the gate still open', `game.state.has('dome.gate.open')`);
+await check('mid-heist: the way in still open', `game.state.has('dome.gate.open') || game.state.has('dome.culvert.open')`);
 await ev(`go(P.door.x, P.door.z)`); await wait(500);
 await ev(`act('door')`); await wait(800);
 await check('the airlock by code', `game.state.has('dome.door.open')`);
