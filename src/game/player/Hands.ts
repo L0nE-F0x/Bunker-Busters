@@ -972,7 +972,28 @@ export class Hands {
   dispose() {
     this.root.removeFromParent();
     this.flashlight.intensity = 0; // the light itself stays on the camera (see torchLight)
+    // every run (and every character-select card) builds new hands, items and guns: free this set, or
+    // each Quit to title + Continue left ~40 geometries, ~260 GL buffers and ~20 MB behind for good
+    releaseTree(this.root, ...Object.values(this.items));
   }
+}
+
+/**
+ * Let the renderer forget meshes that are gone for good: each object's render objects (their uniform
+ * buffers, and their hold on the geometry's arrays) are only dropped on the object's own 'dispose'
+ * event, and its GPU buffers on the geometry's. Materials are left alone: they're shared (mergedMaterial,
+ * the factories), and disposing one recompiles it for everything else.
+ */
+export function releaseTree(...roots: THREE.Object3D[]) {
+  const geos = new Set<THREE.BufferGeometry>();
+  for (const root of roots) {
+    root.traverse((o) => {
+      const g = (o as THREE.Mesh).geometry;
+      if (g) geos.add(g);
+      o.dispatchEvent({ type: 'dispose' } as never);
+    });
+  }
+  for (const g of geos) g.dispose();
 }
 
 let torch: THREE.SpotLight | null = null;
