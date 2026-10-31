@@ -117,38 +117,51 @@ const rand = (a: number, b: number) => a + Math.random() * (b - a);
 export class NpcModels {
   private t = new Map<string, Template>();
 
-  /** `ids`: only these (the prop lab); default every townsperson. */
+  /** `ids`: only these (the prop lab, the boot's first batch); default every townsperson. */
   static async load(ids: readonly string[] = NPC_MODELS): Promise<NpcModels | null> {
     if (new URLSearchParams(location.search).has('procnpc')) return null;
     const out = new NpcModels();
-    await Promise.all(ids.map(async (id) => {
-      try {
-        const g = await loadGLB(id);
-        const T = template(id, g.scene, g.animations);
-        const P = NPC_PROPS[id];
-        if (P) {
-          const pg = await loadGLB(P.file);
-          let mat: THREE.MeshStandardNodeMaterial | null = null;
-          pg.scene.traverse((o) => {
-            const m = o as THREE.Mesh;
-            if (!m.isMesh) return;
-            mat ??= new THREE.MeshStandardNodeMaterial({ map: (m.material as THREE.MeshStandardMaterial).map, roughness: 0.7, metalness: 0 });
-            m.material = mat;
-            m.castShadow = false;
-            m.frustumCulled = true; // rigid on the Head bone: its own bounds follow it
-          });
-          const d = Math.PI / 180;
-          pg.scene.position.set(...P.pos);
-          pg.scene.rotation.set(P.rot[0] * d, P.rot[1] * d, P.rot[2] * d);
-          pg.scene.scale.setScalar(P.scale);
-          T.prop = pg.scene;
-        }
-        out.t.set(id, T);
-      } catch (e) {
-        console.warn(`[npc] ${id} model failed to load; keeping the procedural figure`, e);
-      }
-    }));
+    await Promise.all(ids.map((id) => out.one(id)));
     return out.t.size ? out : null;
+  }
+
+  /**
+   * More people into this set, one at a time with `between` awaited after each (a frame, so the
+   * title keeps moving while the late cast unpacks): the owners and staff of Tiers 2–8 (game/lateCast.ts).
+   */
+  async add(ids: readonly string[], between?: () => Promise<unknown>) {
+    for (const id of ids) {
+      await this.one(id);
+      await between?.();
+    }
+  }
+
+  private async one(id: string) {
+    try {
+      const g = await loadGLB(id);
+      const T = template(id, g.scene, g.animations);
+      const P = NPC_PROPS[id];
+      if (P) {
+        const pg = await loadGLB(P.file);
+        let mat: THREE.MeshStandardNodeMaterial | null = null;
+        pg.scene.traverse((o) => {
+          const m = o as THREE.Mesh;
+          if (!m.isMesh) return;
+          mat ??= new THREE.MeshStandardNodeMaterial({ map: (m.material as THREE.MeshStandardMaterial).map, roughness: 0.7, metalness: 0 });
+          m.material = mat;
+          m.castShadow = false;
+          m.frustumCulled = true; // rigid on the Head bone: its own bounds follow it
+        });
+        const d = Math.PI / 180;
+        pg.scene.position.set(...P.pos);
+        pg.scene.rotation.set(P.rot[0] * d, P.rot[1] * d, P.rot[2] * d);
+        pg.scene.scale.setScalar(P.scale);
+        T.prop = pg.scene;
+      }
+      this.t.set(id, T);
+    } catch (e) {
+      console.warn(`[npc] ${id} model failed to load; keeping the procedural figure`, e);
+    }
   }
 
   has(id: string) {
