@@ -3,6 +3,7 @@
 // user's everyday browser.
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+mod external;
 #[cfg(target_os = "linux")]
 mod rawmouse;
 mod update;
@@ -89,6 +90,8 @@ fn select_gpu() {
 fn main() {
     #[cfg(target_os = "linux")]
     {
+        // before select_gpu(): a browser opened from the game gets the player's environment back
+        external::linux_env::remember();
         select_gpu();
         // mouse-look source on X11/XWayland (see rawmouse.rs)
         let x11 = std::env::var("GDK_BACKEND").map(|b| b == "x11").unwrap_or(false) || std::env::var_os("WAYLAND_DISPLAY").is_none();
@@ -100,8 +103,10 @@ fn main() {
 
     tauri::Builder::default()
         .plugin(tauri_plugin_updater::Builder::new().build())
+        .plugin(external::guard())
         .manage(update::UpdateState::default())
         .invoke_handler(tauri::generate_handler![
+            external::open_external,
             update::update_check,
             update::update_install,
             update::update_progress,
