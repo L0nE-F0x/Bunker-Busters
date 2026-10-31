@@ -747,7 +747,7 @@ export class UI implements UIBridge {
                 <div class="kit-build">
                   <div class="label">Build · ${d.skillPoints} point${d.skillPoints === 1 ? '' : 's'} to spend</div>
                   ${build}
-                  <button class="btn to-skills" data-tab="skills">Open skills · K</button>
+                  <button class="btn to-skills" data-tab="skills">Open skills${device() === 'kbm' && actionKey('skills') !== '—' ? ` · ${actionKey('skills')}` : ''}</button>
                 </div>
               </div>
             </div>
