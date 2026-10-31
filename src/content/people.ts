@@ -91,7 +91,7 @@ export const PEOPLE: PersonDef[] = [
     bio: 'Built the camp radio out of a karaoke machine. Doesn\'t trust founders, satellites, or anyone who says "ecosystem". Swears Vesper Kade listens in on the band, and he\'s right.',
     known: (v) => v.has('briefed'),
     about: [
-      { who: 'vesper', line: 'Since I read the chat on air she doesn\'t breathe between songs anymore. She holds it.', when: (v) => v.has('q.chat.air') },
+      { who: 'vesper', line: 'Since I read the chat on air she doesn\'t breathe between songs any more. She holds it.', when: (v) => v.has('q.chat.air') },
       { who: 'ezra', line: 'Ezra named the Pivot. Ezra. Named. The Pivot. I need to go and sit in the car.', when: (v) => v.has('lore.pivotname') },
       { who: 'vesper', line: 'She\'s on our band. I can hear her breathing between songs.' },
       { who: 'tanner', line: 'His drone\'s firmware reads like a cry for help.' },
@@ -349,7 +349,8 @@ export const PEOPLE: PersonDef[] = [
   {
     id: 'agnes', accent: '#c9a24a', name: 'Agnes Price', role: 'Owner, Deepwell Shelter Systems', place: 'Bunker Zero, under Last Chance',
     bio: 'Built every founder\'s bunker in the valley and wrote down every corner they cut. Paid for her own out of their change orders: a well, a cistern and two hundred bunks under a gas station, for whoever was left. Then she couldn\'t choose who that was.',
-    known: (v) => v.has('zero.agnes') || v.has('zero.known'),
+    // (not at zero.known: until you've been down, she's only a voice on the band with no name)
+    known: (v) => v.has('zero.agnes') || v.has('seen:zero'),
     about: [
       { who: 'tanner', line: 'Tanner wanted a guard drone. He could afford about a third of one, so that\'s what he got.' },
       { who: 'kit', line: 'Kit paid every invoice the day it came. She never paid for one thing she didn\'t need.' },

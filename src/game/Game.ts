@@ -2091,7 +2091,8 @@ export class Game {
     if (s.has('zero.known') || s.has('zero.complete')) {
       const [zx, , zz] = ZERO.location.position;
       out.push({ id: 'zero', x: zx, z: zz, label: s.has('zero.complete') ? 'Bunker Zero (busted)' : 'Bunker Zero · Tier 8', color: s.has('zero.complete') ? '#7d725f' : '#ff3a6e', kind: 'bunker',
-        note: s.has('zero.complete') ? 'Agnes Price\'s well, under the forecourt. You decided who it belongs to.' : 'Under the forecourt at Last Chance: the diesel manway east of the store, and sixty rungs down. Agnes Price built every bunker in the valley, and this one is hers.' });
+        // (her name only once you've been down: until then she's a voice on the band)
+        note: s.has('zero.complete') ? 'Agnes Price\'s well, under the forecourt. You decided who it belongs to.' : `Under the forecourt at Last Chance: the diesel manway east of the store, and sixty rungs down.${s.has('seen:zero') ? ' Agnes Price built every bunker in the valley, and this one is hers.' : ''}` });
     }
     for (const it of WORLD_INTEL) {
       if (s.has(`intel:${it.id}`)) continue;
