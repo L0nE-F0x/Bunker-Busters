@@ -658,7 +658,7 @@ export class UI implements UIBridge {
     setTimeout(() => window.addEventListener('keydown', keyClose, true), 50);
     const panel = build(close);
     const header = panel.querySelector('header');
-    if (header) {
+    if (header && !header.querySelector('.close-x')) {
       const x = h('button', 'btn close-x', '✕');
       x.setAttribute('aria-label', 'Close');
       x.onclick = () => { this.audio.play('ui'); close(); };
@@ -682,7 +682,7 @@ export class UI implements UIBridge {
       const acts = binds.actionsOf(code);
       return acts.includes('kit') ? 'kit' : acts.includes('skills') ? 'skills' : acts.includes('journal') ? 'journal' : null;
     };
-    this.openModal(() => {
+    this.openModal((close) => {
       const m = h('div', 'panel modal interactive');
       let selected: string | null = s.data.inventory[0]?.id ?? null;
       let skill: SkillId = defaultSkill(s);
@@ -761,6 +761,15 @@ export class UI implements UIBridge {
           if (dropAll && selected && CAN_DROP(selected)) dropAll.onclick = () => { s.removeItem(selected!, s.count(selected!)); selected = null; this.audio.play('ui'); this.refreshHotbar(); render(); };
         }
         m.querySelectorAll('[data-tab]').forEach((b) => (b as HTMLElement).onclick = () => { tab = (b as HTMLElement).dataset.tab as typeof tab; this.audio.play('ui'); render(); });
+        // every render rebuilds the header, and openModal's ✕ went with it: after a tab switch, a drop or
+        // a use, a phone had nothing left to close the Kit with
+        const hd = m.querySelector('header');
+        if (hd) {
+          const x = h('button', 'btn close-x', '✕');
+          x.setAttribute('aria-label', 'Close');
+          x.onclick = () => { this.audio.play('ui'); close(); };
+          hd.appendChild(x);
+        }
       };
       render();
       return m;
