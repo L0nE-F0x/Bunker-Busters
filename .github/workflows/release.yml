@@ -65,9 +65,13 @@ jobs:
           node-version: 22
           cache: npm
       - uses: dtolnay/rust-toolchain@stable
+      # Caches made on a tag are only visible to that tag, so a release can only reuse one saved on
+      # main: the Smoke workflow's `build` runs on main save under the same key.
       - uses: swatinem/rust-cache@v2
         with:
           workspaces: src-tauri
+          shared-key: release-linux
+          save-if: ${{ github.ref == 'refs/heads/main' }}
       - name: System dependencies
         run: |
           sudo apt-get update
@@ -137,6 +141,8 @@ jobs:
       - uses: swatinem/rust-cache@v2
         with:
           workspaces: src-tauri
+          shared-key: release-windows
+          save-if: ${{ github.ref == 'refs/heads/main' }}
       - run: npm ci
       - name: Build (NSIS installer, signed for the updater)
         env:

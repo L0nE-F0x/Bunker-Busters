@@ -1,0 +1,396 @@
+# Install test for the desktop downloads. Each job installs one package the way a player would,
+# launches the installed game with BB_SMOKE (src-tauri/src/smoke.rs: it reports whether the game
+# reached its title screen and kept drawing, then quits), takes a screenshot, uninstalls, and checks
+# what was left behind (the saves must stay). Separate from Release on purpose: it can't hold up or
+# break a release.
+#
+#   After every successful Release run it tests that release's published downloads.
+#   By hand: Actions → Smoke → Run workflow
+#     source = release   the published downloads of `tag` (empty = the latest release)
+#     source = build     builds the chosen branch first (unsigned, no updater files): test main before
+#                        you ship. On main this also leaves Rust/npm caches the Release builds can use.
+#
+# The runners have no GPU, so the game renders in software (WARP on Windows, llvmpipe on Linux) and
+# boots slowly: timings here say nothing about performance. Releases before v1.0.4 don't have the
+# BB_SMOKE hook and fail with "never reported". Screenshots, reports and logs are in each run's
+# artifacts (smoke-*).
+name: Smoke
+
+on:
+  workflow_run:
+    workflows: [Release]
+    types: [completed]
+  workflow_dispatch:
+    inputs:
+      source:
+        description: 'release = test published downloads; build = build this branch first'
+        type: choice
+        options: [release, build]
+        default: release
+      tag:
+        description: 'Release to test when source = release, e.g. v1.0.4 (empty = latest)'
+        required: false
+        default: ''
+
+permissions:
+  contents: read
+
+env:
+  # what to test: the release the Release run just published, or what was asked for
+  SOURCE: ${{ github.event_name == 'workflow_dispatch' && inputs.source || 'release' }}
+  TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || (startsWith(github.event.workflow_run.head_branch, 'v') && github.event.workflow_run.head_branch || '') }}
+  GH_TOKEN: ${{ github.token }}
+
+jobs:
+  # ---- builds (source = build only) -------------------------------------------------------------
+  build-linux:
+    if: github.event_name == 'workflow_dispatch' && inputs.source == 'build'
+    runs-on: ubuntu-22.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+          shared-key: release-linux
+      - name: System dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libgtk-3-dev libayatana-appindicator3-dev librsvg2-dev patchelf file
+      - run: npm ci
+      - name: Build (AppImage + deb, unsigned)
+        run: |
+          echo '{"bundle":{"createUpdaterArtifacts":false}}' > "$RUNNER_TEMP/unsigned.json"
+          npx tauri build --bundles appimage,deb --config "$RUNNER_TEMP/unsigned.json"
+      - name: Package like release.yml
+        run: |
+          set -euo pipefail
+          B=src-tauri/target/release
+          mkdir -p out/bunker-busters
+          cp $B/bundle/appimage/*.AppImage out/BunkerBusters-linux-x86_64.AppImage
+          cp $B/bundle/deb/*.deb out/BunkerBusters-linux-amd64.deb
+          cp $B/bunker-busters out/bunker-busters/bunker-busters-bin
+          cp src-tauri/icons/128x128@2x.png out/bunker-busters/icon.png
+          cp scripts/install-linux.sh out/bunker-busters/install.sh
+          cp public/licenses.txt out/bunker-busters/licenses.txt
+          chmod +x out/bunker-busters/install.sh out/bunker-busters/bunker-busters-bin
+          tar -C out -czf out/BunkerBusters-linux-x86_64.tar.gz bunker-busters
+          rm -r out/bunker-busters
+          ls -la out
+      - uses: actions/upload-artifact@v4
+        with:
+          name: build-linux
+          path: out/
+          retention-days: 7
+
+  build-windows:
+    if: github.event_name == 'workflow_dispatch' && inputs.source == 'build'
+    runs-on: windows-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+          shared-key: release-windows
+      - run: npm ci
+      - name: Build (NSIS installer, unsigned)
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo '{"bundle":{"createUpdaterArtifacts":false}}' > "$RUNNER_TEMP/unsigned.json"
+          npx tauri build --bundles nsis --config "$RUNNER_TEMP/unsigned.json"
+          mkdir -p out
+          cp src-tauri/target/release/bundle/nsis/*-setup.exe out/BunkerBusters-windows-x64-setup.exe
+          ls -la out
+      - uses: actions/upload-artifact@v4
+        with:
+          name: build-windows
+          path: out/
+          retention-days: 7
+
+  # ---- install tests ----------------------------------------------------------------------------
+  windows:
+    needs: build-windows
+    if: ${{ !cancelled() && needs.build-windows.result != 'failure' && (github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success') }}
+    runs-on: windows-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: scripts
+      - uses: actions/download-artifact@v4
+        if: env.SOURCE == 'build'
+        with:
+          name: build-windows
+          path: dl
+      - name: Get the installer
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p dl
+          if [ "$SOURCE" = build ]; then
+            echo "EXPECT_VERSION=$(node -p "require('./package.json').version")" >> "$GITHUB_ENV"
+          else
+            gh release download ${TAG:+"$TAG"} --repo "$GITHUB_REPOSITORY" --pattern 'BunkerBusters-windows-x64-setup.exe' --dir dl
+            echo "EXPECT_VERSION=${TAG#v}" >> "$GITHUB_ENV"
+          fi
+          ls -la dl
+      - name: Install, launch, quit, uninstall
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $art = New-Item -ItemType Directory -Force "$env:RUNNER_TEMP\smoke"
+          function Shot($name) {
+            try {
+              Add-Type -AssemblyName System.Windows.Forms, System.Drawing
+              $b = [System.Windows.Forms.SystemInformation]::VirtualScreen
+              $bmp = New-Object System.Drawing.Bitmap $b.Width, $b.Height
+              $g = [System.Drawing.Graphics]::FromImage($bmp)
+              $g.CopyFromScreen($b.Left, $b.Top, 0, 0, $bmp.Size)
+              $bmp.Save("$art\$name.png", [System.Drawing.Imaging.ImageFormat]::Png)
+              $g.Dispose(); $bmp.Dispose()
+            } catch { Write-Host "::warning::screenshot failed: $_" }
+          }
+          $setup = (Resolve-Path dl\BunkerBusters-windows-x64-setup.exe).Path
+          $vi = (Get-Item $setup).VersionInfo
+          Write-Host "Installer: $($vi.ProductName) $($vi.ProductVersion), '$($vi.LegalCopyright)', $([math]::Round((Get-Item $setup).Length / 1MB, 1)) MB, signature: $((Get-AuthenticodeSignature $setup).Status)"
+          $wv = Get-ItemProperty 'HKLM:\SOFTWARE\WOW6432Node\Microsoft\EdgeUpdate\Clients\{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}' -ErrorAction SilentlyContinue
+          Write-Host "WebView2 before install: $(if ($wv) { $wv.pv } else { 'not installed (the installer fetches it)' })"
+
+          # 1. silent install, per user, as the downloaded setup.exe does it
+          $p = Start-Process $setup -ArgumentList '/S' -Wait -PassThru
+          if ($p.ExitCode -ne 0) { throw "installer exited with $($p.ExitCode)" }
+          $key = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\Bunker Busters'
+          $reg = Get-ItemProperty $key
+          $dir = $reg.InstallLocation.Trim('"')
+          $exe = Join-Path $dir $reg.MainBinaryName
+          Write-Host "Installed $($reg.DisplayName) $($reg.DisplayVersion) by '$($reg.Publisher)' to $dir"
+          Get-ChildItem $dir | Format-Table Name, Length | Out-String | Write-Host
+          if (-not (Test-Path $exe)) { throw "no game exe at $exe" }
+          if (-not (Test-Path (Join-Path $dir 'licenses.txt'))) { throw 'licenses.txt was not installed next to the game' }
+          if ($env:EXPECT_VERSION -and $reg.DisplayVersion -ne $env:EXPECT_VERSION) { throw "installed $($reg.DisplayVersion), expected $env:EXPECT_VERSION" }
+          $startLnk = Join-Path ([Environment]::GetFolderPath('Programs')) 'Bunker Busters.lnk'
+          $deskLnk = Join-Path ([Environment]::GetFolderPath('Desktop')) 'Bunker Busters.lnk'
+          if (-not (Test-Path $startLnk)) { throw "no Start menu shortcut at $startLnk" }
+          if (-not (Test-Path $deskLnk)) { throw "no desktop shortcut at $deskLnk" }
+          $evi = (Get-Item $exe).VersionInfo
+          Write-Host "Game exe: '$($evi.FileDescription)' $($evi.ProductVersion), company '$($evi.CompanyName)', '$($evi.LegalCopyright)'"
+
+          # 2. launch: the game reports once its title screen is up and drawing, then quits by itself
+          $report = "$art\report.json"
+          $env:BB_SMOKE = $report
+          $env:BB_SMOKE_TIMEOUT = '600'
+          $env:BB_SMOKE_HOLD = '8'
+          $app = Start-Process $exe -PassThru -RedirectStandardOutput "$art\stdout.txt" -RedirectStandardError "$art\stderr.txt"
+          $null = $app.Handle # keep the handle, or the exit code is lost
+          $deadline = (Get-Date).AddMinutes(12)
+          $shot = $false
+          while (-not $app.HasExited -and (Get-Date) -lt $deadline) {
+            if (-not $shot -and (Test-Path $report)) { Start-Sleep 2; Shot 'title'; $shot = $true }
+            Start-Sleep 2
+          }
+          if (-not $app.HasExited) {
+            Shot 'stuck'
+            Stop-Process -Id $app.Id -Force
+            throw 'the game was still running after 12 minutes and never reported (a build without the BB_SMOKE hook, before v1.0.4?)'
+          }
+          $app.WaitForExit()
+          Write-Host "Game exit code: $($app.ExitCode)"
+          if (-not (Test-Path $report)) { throw 'the game quit without a report' }
+          $r = Get-Content $report -Raw | ConvertFrom-Json
+          $r | ConvertTo-Json -Depth 5 | Write-Host
+          if (-not $r.ok) { throw "the game didn't come up: $($r.result)" }
+          if ($app.ExitCode -ne 0) { throw "the game exited with $($app.ExitCode)" }
+          if ($r.installer -ne 'nsis') { throw "the installed exe reports install type '$($r.installer)', expected 'nsis' (the updater picks its download by this)" }
+          $data = Join-Path $env:LOCALAPPDATA 'dev.bunkerbusters.game'
+          if (-not (Test-Path $data)) { throw "no game data folder at $data after a run" }
+
+          # 3. silent uninstall: the program, its shortcuts and its Apps entry go; the saves stay
+          Start-Process (Join-Path $dir 'uninstall.exe') -ArgumentList '/S' -Wait
+          $deadline = (Get-Date).AddMinutes(2)
+          while ((Test-Path $exe) -and (Get-Date) -lt $deadline) { Start-Sleep 1 } # it reruns itself from %TEMP%
+          Start-Sleep 3
+          if (Test-Path $exe) { throw 'the uninstaller left the game exe' }
+          if (Test-Path $key) { throw 'the uninstaller left the Apps & features entry' }
+          if (Test-Path $startLnk) { throw 'the uninstaller left the Start menu shortcut' }
+          if (Test-Path $deskLnk) { throw 'the uninstaller left the desktop shortcut' }
+          if (Test-Path $dir) { Write-Host "::warning::install folder still there: $((Get-ChildItem $dir -Recurse).FullName -join ', ')" }
+          if (-not (Test-Path $data)) { throw 'the uninstaller deleted the saves' }
+          Write-Host 'Windows: installed, came up, quit, uninstalled; saves kept.'
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: smoke-windows
+          path: ${{ runner.temp }}/smoke/
+          retention-days: 14
+
+  linux:
+    needs: build-linux
+    if: ${{ !cancelled() && needs.build-linux.result != 'failure' && (github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success') }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-22.04, ubuntu-24.04]
+        install: [tarball, deb, appimage]
+    env:
+      INSTALL: ${{ matrix.install }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: scripts
+      - uses: actions/download-artifact@v4
+        if: env.SOURCE == 'build'
+        with:
+          name: build-linux
+          path: dl
+      - name: Get the download
+        run: |
+          set -euo pipefail
+          case "$INSTALL" in
+            tarball) asset=BunkerBusters-linux-x86_64.tar.gz ;;
+            deb) asset=BunkerBusters-linux-amd64.deb ;;
+            appimage) asset=BunkerBusters-linux-x86_64.AppImage ;;
+          esac
+          mkdir -p dl
+          if [ "$SOURCE" = build ]; then
+            echo "EXPECT_VERSION=$(node -p "require('./package.json').version")" >> "$GITHUB_ENV"
+          else
+            gh release download ${TAG:+"$TAG"} --repo "$GITHUB_REPOSITORY" --pattern "$asset" --dir dl
+            echo "EXPECT_VERSION=${TAG#v}" >> "$GITHUB_ENV"
+          fi
+          echo "ASSET=$PWD/dl/$asset" >> "$GITHUB_ENV"
+          ls -la dl
+      - name: Test tools (no GPU here; the game renders with Mesa's llvmpipe under Xvfb)
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y -q xvfb imagemagick desktop-file-utils appstream
+          # the tarball uses the system WebKitGTK (install.sh asks for it); the .deb must pull it in itself
+          if [ "$INSTALL" = tarball ]; then sudo apt-get install -y -q libwebkit2gtk-4.1-0; fi
+      - name: Install, launch, quit, uninstall
+        run: |
+          set -euo pipefail
+          art="$RUNNER_TEMP/smoke"; mkdir -p "$art"
+          data="$HOME/.local/share/dev.bunkerbusters.game"
+          case "$INSTALL" in
+            tarball)
+              tar -xzf "$ASSET" -C "$RUNNER_TEMP"
+              pkg="$RUNNER_TEMP/bunker-busters"
+              ls -la "$pkg"
+              test -f "$pkg/licenses.txt" || { echo "::error::no licenses.txt in the tarball"; exit 1; }
+              "$pkg/install.sh"
+              bin="$HOME/.local/bin/bunker-busters"; expect=binary
+              desktop-file-validate "$HOME/.local/share/applications/bunker-busters.desktop"
+              ;;
+            deb)
+              dpkg-deb --info "$ASSET"
+              sudo apt-get install -y "$ASSET"
+              dpkg -L bunker-busters
+              bin=/usr/bin/bunker-busters; expect=deb
+              desktop-file-validate "/usr/share/applications/Bunker Busters.desktop"
+              appstreamcli validate --no-net /usr/share/metainfo/dev.bunkerbusters.game.metainfo.xml \
+                || echo "::warning::appstreamcli $(appstreamcli --version) flagged the metainfo (see above)"
+              test -f "/usr/lib/Bunker Busters/licenses.txt" || { echo "::error::no licenses.txt in the .deb"; exit 1; }
+              ;;
+            appimage)
+              chmod +x "$ASSET"
+              (cd "$RUNNER_TEMP" && "$ASSET" --appimage-extract >/dev/null)
+              root="$RUNNER_TEMP/squashfs-root"
+              desktop-file-validate "$root/Bunker Busters.desktop"
+              test -f "$root/usr/lib/Bunker Busters/licenses.txt" || { echo "::error::no licenses.txt in the AppImage"; exit 1; }
+              # the libraries it carries (licenses.txt section 3 describes them)
+              (cd "$root" && find . -name '*.so*' -type f | sort) > "$art/appimage-libraries.txt"
+              echo "The AppImage carries $(wc -l < "$art/appimage-libraries.txt") libraries (list in the artifacts)"
+              rm -rf "$root"
+              bin="$ASSET"; expect=appimage
+              export APPIMAGE_EXTRACT_AND_RUN=1
+              ;;
+          esac
+
+          # launch on a virtual display; the game reports once its title screen is up and drawing
+          Xvfb :99 -screen 0 1600x900x24 -nolisten tcp & xvfb=$!
+          export DISPLAY=:99 LIBGL_ALWAYS_SOFTWARE=1 WEBKIT_DISABLE_DMABUF_RENDERER=1
+          export BB_SMOKE="$art/report.json" BB_SMOKE_TIMEOUT=600 BB_SMOKE_HOLD=8
+          sleep 2
+          "$bin" > "$art/stdout.txt" 2>&1 & app=$!
+          shot=0
+          for _ in $(seq 360); do
+            if ! kill -0 "$app" 2>/dev/null; then break; fi
+            if [ "$shot" = 0 ] && [ -f "$BB_SMOKE" ]; then sleep 2; import -display :99 -window root "$art/title.png" || true; shot=1; fi
+            sleep 2
+          done
+          if kill -0 "$app" 2>/dev/null; then
+            import -display :99 -window root "$art/stuck.png" || true
+            kill -9 "$app"
+            echo "::error::the game was still running after 12 minutes and never reported (a build without the BB_SMOKE hook, before v1.0.4?)"
+            tail -n 40 "$art/stdout.txt"; exit 1
+          fi
+          code=0; wait "$app" || code=$?
+          kill "$xvfb" || true
+          echo "Game exit code: $code"
+          grep -E "BunkerBusters\]|bunker-busters\]|\[smoke\]" "$art/stdout.txt" | sed 's#^.*CONSOLE [A-Z]* ##' | tail -n 30 || true
+          test -f "$BB_SMOKE" || { echo "::error::the game quit without a report"; exit 1; }
+          node -e '
+            const r = JSON.parse(require("fs").readFileSync(process.env.BB_SMOKE, "utf8"));
+            console.log(JSON.stringify(r, null, 2));
+            const fail = (m) => { console.log(`::error::${m}`); process.exit(1); };
+            if (!r.ok) fail(`the game did not come up: ${r.result}`);
+            if (r.installer !== process.argv[1]) fail(`install type ${r.installer}, expected ${process.argv[1]} (the updater picks its download by this)`);
+            if (process.env.EXPECT_VERSION && r.version !== process.env.EXPECT_VERSION) fail(`version ${r.version}, expected ${process.env.EXPECT_VERSION}`);
+            console.log(`came up in ${r.seconds} s on ${r.page.backend}`);
+          ' "$expect"
+          [ "$code" = 0 ] || { echo "::error::the game exited with $code"; exit 1; }
+          test -d "$data" || { echo "::error::no game data folder at $data after a run"; exit 1; }
+
+          # uninstall: the program goes, the saves stay
+          case "$INSTALL" in
+            tarball)
+              "$RUNNER_TEMP/bunker-busters/install.sh" --uninstall
+              for f in "$HOME/.local/bin/bunker-busters" "$HOME/.local/share/applications/bunker-busters.desktop"; do
+                test ! -e "$f" || { echo "::error::uninstall left $f"; exit 1; }
+              done
+              ;;
+            deb)
+              sudo apt-get remove -y bunker-busters
+              test ! -e /usr/bin/bunker-busters || { echo "::error::apt remove left /usr/bin/bunker-busters"; exit 1; }
+              ;;
+            appimage) rm -f "$ASSET" ;;
+          esac
+          test -d "$data" || { echo "::error::uninstalling deleted the saves"; exit 1; }
+          echo "$INSTALL on ${{ matrix.os }}: installed, came up, quit, uninstalled; saves kept."
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: smoke-${{ matrix.os }}-${{ matrix.install }}
+          path: ${{ runner.temp }}/smoke/
+          retention-days: 14
+
+  # ---- licences ---------------------------------------------------------------------------------
+  licences:
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && github.ref || github.event.workflow_run.head_sha }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: public/licenses.txt matches the lockfiles
+        run: |
+          cargo fetch --manifest-path src-tauri/Cargo.toml
+          node scripts/licenses.mjs --check
