@@ -234,8 +234,9 @@ if (only === 'all' || only === 'settings') {
   await p.click('#title .menu-minor button:has-text("Report a bug")');
   await wait(200);
   const url = await ev(`window.__opened[1] || ''`);
-  const body = decodeURIComponent(url.split('body=')[1] || '');
-  check('Report a bug: a prefilled GitHub issue', url.startsWith('https://github.com/L0nE-F0x/Bunker-Busters/issues/new?title=') && /Version: \d+\.\d+\.\d+ \(browser\)/.test(body) && /Renderer: WebGL2/.test(body) && /Graphics: \w+/.test(body) && url.length < 2000, `${url.length} chars`);
+  const q = new URL(url).searchParams;
+  check('Report a bug: the issue form, filled in', url.startsWith('https://github.com/L0nE-F0x/Bunker-Busters/issues/new?template=bug_report.yml&') && /^\d+\.\d+\.\d+$/.test(q.get('version') || '') && q.get('platform') === 'Browser on a computer' && /Linux, Chrome \d+, 1280×720/.test(q.get('system') || '') && /^WebGL2, \w+ preset$/.test(q.get('gpu') || '') && url.length < 1000,
+    `${url.length} chars: ${q.get('platform')} | ${q.get('system')} | ${q.get('gpu')}`);
   // a blocked pop-up: the link in a box with a Copy button
   await ev(`window.open = () => null`);
   await p.click('#title .menu-minor button:has-text("Report a bug")');

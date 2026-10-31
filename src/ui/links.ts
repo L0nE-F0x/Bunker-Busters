@@ -61,46 +61,59 @@ export interface BugInfo {
   error?: string;
 }
 
-const platform = () => {
-  const n = navigator as any;
-  return String(n.userAgentData?.platform || n.platform || 'unknown');
-};
+const UA = typeof navigator !== 'undefined' ? navigator.userAgent : '';
+const standalone = () => typeof matchMedia === 'function' && matchMedia('(display-mode: standalone), (display-mode: fullscreen)').matches;
 
 /**
- * A new GitHub issue with the title and the system details filled in. Short enough for a URL
- * (GitHub takes a few thousand characters; this stays well under 2,000 even with an error).
+ * The bug form's "Where do you play?" option, exactly as .github/ISSUE_TEMPLATE/bug_report.yml spells
+ * it. The Linux app can't tell from here whether it is the tarball, the AppImage or the .deb, so it
+ * leaves the field for the player.
+ */
+function platformOption(): string {
+  if (isDesktopApp()) return /Windows/.test(UA) ? 'Windows app' : '';
+  const phone = /Android|iPhone|iPad|iPod|Mobile|Silk|Kindle/i.test(UA) || (/Macintosh/.test(UA) && navigator.maxTouchPoints > 1);
+  if (!phone) return 'Browser on a computer';
+  return standalone() ? 'Phone app (installed from the browser)' : 'Browser on a phone or tablet';
+}
+
+/** "Windows 10/11, Chrome 141, 1280×720 at 1x": the OS, the browser or app shell, the window. */
+function systemLine(): string {
+  const m = (re: RegExp) => re.exec(UA);
+  let r: RegExpExecArray | null;
+  let os = 'unknown OS';
+  if ((r = m(/Android ([\d.]+)/))) os = `Android ${r[1]}`;
+  else if ((r = m(/(?:iPhone|CPU) OS ([\d_]+)/))) os = `iOS ${r[1].replace(/_/g, '.')}`;
+  else if (/Macintosh/.test(UA) && navigator.maxTouchPoints > 1) os = 'iPadOS';
+  else if (/Windows NT 10/.test(UA)) os = 'Windows 10/11';
+  else if (/Windows/.test(UA)) os = 'Windows';
+  else if (/Mac OS X/.test(UA)) os = 'macOS';
+  else if (/CrOS/.test(UA)) os = 'ChromeOS';
+  else if (/Linux/.test(UA)) os = 'Linux';
+  let br = '';
+  if ((r = m(/Edg\/(\d+)/))) br = `Edge ${r[1]}`;
+  else if ((r = m(/Firefox\/(\d+)/))) br = `Firefox ${r[1]}`;
+  else if ((r = m(/(?:Chrome|CriOS)\/(\d+)/))) br = `Chrome ${r[1]}`;
+  else if ((r = m(/Version\/([\d.]+).*Safari/))) br = `Safari ${r[1]}`;
+  else if ((r = m(/AppleWebKit\/([\d.]+)/))) br = `WebKit ${r[1]}`;
+  const shell = isDesktopApp() ? `desktop app (${/Windows/.test(UA) ? 'WebView2' : 'WebKitGTK'}${br ? `, ${br}` : ''})` : br;
+  return [os, shell, `${innerWidth}×${innerHeight} at ${Math.round(devicePixelRatio * 100) / 100}x`].filter(Boolean).join(', ');
+}
+
+/**
+ * The bug form (.github/ISSUE_TEMPLATE/bug_report.yml: its field ids are URL parameters) with the
+ * version, where you play, the system and the renderer filled in. Short: well under 1,000 characters
+ * even with an error in the log field.
  */
 export function bugReportUrl(info: BugInfo = {}): string {
-  const standalone = typeof matchMedia === 'function' && matchMedia('(display-mode: standalone), (display-mode: fullscreen)').matches;
-  const build = isDesktopApp() ? 'desktop app' : standalone ? 'browser (installed app)' : 'browser';
-  const sys = [
-    `Version: ${__APP_VERSION__} (${build})`,
-    info.backend ? `Renderer: ${info.backend}` : '',
-    info.quality ? `Graphics: ${info.quality}` : '',
-    `Platform: ${platform()}`,
-    `Window: ${innerWidth}×${innerHeight} at ${Math.round(devicePixelRatio * 100) / 100}x`,
-    `User agent: ${navigator.userAgent.slice(0, 260)}`,
-  ].filter(Boolean);
-  const err = info.error ? `\nError:\n\`\`\`\n${info.error.slice(0, 500)}\n\`\`\`\n` : '';
-  const body = [
-    'What happened:',
-    '',
-    '',
-    'What you expected:',
-    '',
-    '',
-    'Where (a bunker, a town, a menu):',
-    '',
-    '',
-    'Steps, if it happens again:',
-    '',
-    '',
-    err,
-    '---',
-    ...sys,
-  ].join('\n');
-  const title = `[v${__APP_VERSION__}] `;
-  return `${REPO_URL}/issues/new?title=${encodeURIComponent(title)}&body=${encodeURIComponent(body)}`;
+  const fields: [string, string][] = [
+    ['template', 'bug_report.yml'],
+    ['version', __APP_VERSION__],
+    ['platform', platformOption()],
+    ['system', systemLine()],
+    ['gpu', [info.backend, info.quality ? `${info.quality} preset` : ''].filter(Boolean).join(', ')],
+    ['log', info.error ? info.error.slice(0, 500) : ''],
+  ];
+  return `${REPO_URL}/issues/new?${fields.filter(([, v]) => v).map(([k, v]) => `${k}=${encodeURIComponent(v)}`).join('&')}`;
 }
 
 /**
