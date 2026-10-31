@@ -1,7 +1,7 @@
 // Offline play for the browser build (/play/). This is a template: `npm run build` fills in the file
 // list (vite.config.ts, offlinePlugin) and writes it to dist/play/sw.js.
 //
-// Every file the game page uses (~55 MB: the bundle, fonts, models, voice clips, icons) is saved in
+// Every file the game page uses (~75 MB: the bundle, fonts, gzipped models, voice clips, icons) is saved in
 // one cache, keyed by path + content hash. A deploy only downloads the files whose hash changed, and
 // the game's own URLs (`x.glb?v=…`, `clip.mp3?v=<voice rev>`) map to those keys through FILES.
 // Navigations go to the network first (4 s), then to the saved page, so online players always get
@@ -69,7 +69,13 @@ async function fill() {
     while (next < todo.length) {
       const [url, key, bytes] = todo[next++];
       // unhashed files (the page, the manifest, icons) must come from this deploy, not the HTTP cache
-      let res = await fetch(url, { cache: url.includes('?') || url.startsWith('/assets/') ? 'default' : 'no-cache' });
+      const init = { cache: url.includes('?') || url.startsWith('/assets/') ? 'default' : 'no-cache' };
+      // one blip (a dropped connection on a phone) shouldn't stop the whole save: one more try
+      let res = await fetch(url, init).catch(() => null);
+      if (!res || (!res.ok && res.status >= 500)) {
+        await new Promise((r) => setTimeout(r, 2000));
+        res = await fetch(url, init);
+      }
       if (!res.ok) throw new Error(`${url}: HTTP ${res.status}`);
       // a redirected response can't answer a navigation: store a plain copy
       if (res.redirected) res = new Response(await res.blob(), { status: res.status, headers: res.headers });

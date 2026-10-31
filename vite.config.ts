@@ -1,6 +1,6 @@
 import { defineConfig, type Plugin } from 'vite';
 import { fileURLToPath, URL } from 'node:url';
-import { readFileSync, readdirSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { gzipSync } from 'node:zlib';
 
@@ -58,7 +58,8 @@ function offlinePlugin(): Plugin {
         add(`/models/${f}${gz ? '.gz' : ''}?v=${MODEL_REV[name]?.v}`, `models/${f}${gz ? '.gz' : ''}`);
       }
       for (const f of readdirSync(`${outDir}/voice`).sort()) add(`/voice/${f}?v=${VOICE_REV}`, `voice/${f}`);
-      for (const f of ['play.webmanifest', 'apple-touch-icon.png', 'icon-192.png', 'icon-512.png', 'icon-maskable-512.png', 'favicon.ico', 'favicon-32.png']) add(`/${f}`, f);
+      // (licenses.txt: the third-party notices the Credits screen links to, when the build has them)
+      for (const f of ['play.webmanifest', 'apple-touch-icon.png', 'icon-192.png', 'icon-512.png', 'icon-maskable-512.png', 'favicon.ico', 'favicon-32.png', 'licenses.txt']) if (existsSync(`${outDir}/${f}`)) add(`/${f}`, f);
       // the page carries the deploy's id; it registers sw.js?v=<id>, so a new deploy installs on its first online launch
       const page = `${outDir}/play/index.html`;
       const html = readFileSync(page, 'utf8');
