@@ -121,7 +121,7 @@ export const BANTER: Banter[] = [
     id: 'creek', speaker: 'Mara',
     near: { lm: 'creek', r: 95 },
     when: (v) => !v.has('seen:creek'),
-    text: 'That light west of the highway is Dry Creek. Nia\'s diner. They\'re not the job, but they\'ve been out here longer than we have.',
+    text: 'That light north of the highway is Dry Creek. Nia\'s diner. They\'re not the job, but they\'ve been out here longer than we have.',
   },
   {
     id: 'garage', speaker: 'Mara',
