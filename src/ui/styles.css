@@ -288,8 +288,9 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #000; color:
 .weapon.empty .mag { color: #ff4a3a; }
 .weapon.reloading .wname::after { content: ' · RELOADING'; color: var(--amber); }
 
-.subtitle { position: absolute; left: 50%; bottom: 210px; transform: translateX(-50%); max-width: 760px; text-align: center; font-size: 19px; line-height: 1.4; padding: 10px 18px; background: rgba(5,3,2,0.55); text-shadow: 0 2px 4px #000; transition: opacity 0.4s; }
-.subtitle .who { color: var(--amber); font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; font-size: 13px; display: block; margin-bottom: 2px; }
+/* Settings → Accessibility: --sub-k scales the text (and the dialogue cards'), --sub-bg is the box's opacity (game/access.ts) */
+.subtitle { position: absolute; left: 50%; bottom: 210px; transform: translateX(-50%); max-width: calc(760px * max(1, var(--sub-k, 1))); text-align: center; font-size: calc(19px * var(--sub-k, 1)); line-height: 1.4; padding: 10px 18px; background: rgba(5,3,2,var(--sub-bg, 0.55)); text-shadow: 0 2px 4px #000; transition: opacity 0.4s; }
+.subtitle .who { color: var(--amber); font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; font-size: calc(13px * var(--sub-k, 1)); display: block; margin-bottom: 2px; }
 .subtitle .who.bot { color: var(--teal); }
 
 .banner { position: absolute; top: 18vh; left: 50%; transform: translateX(-50%); width: min(92vw, 1200px); text-align: center; animation: bannerIn 0.6s cubic-bezier(.2,1.2,.3,1), bannerOut 0.8s ease 4.2s forwards; }
@@ -303,7 +304,7 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #000; color:
   html:not(.touch) .banner .big { font-size: clamp(40px, 5.6vw, 64px); }
   html:not(.touch) .banner .rule { margin-top: 8px; }
   html:not(.touch) .banner .sub { margin-top: 6px; font-size: 14px; }
-  html:not(.touch) .subtitle { font-size: 17px; padding: 8px 16px; }
+  html:not(.touch) .subtitle { font-size: calc(17px * var(--sub-k, 1)); padding: 8px 16px; }
 }
 @keyframes bannerIn { from { transform: translate(-50%, -20px) scale(1.15); opacity: 0; filter: blur(6px); } }
 @keyframes bannerOut { to { opacity: 0; transform: translate(-50%, -10px); } }
@@ -410,11 +411,11 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #000; color:
 
 .brief, .talk { width: min(680px, 94vw); padding: 28px 32px 18px; }
 .brief .who, .talk .who { color: var(--amber); font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; font-size: 13px; }
-.brief p, .talk p { font-size: 17px; line-height: 1.55; color: var(--ink); margin: 14px 0 18px; }
+.brief p, .talk p { font-size: calc(17px * var(--sub-k, 1)); line-height: 1.55; color: var(--ink); margin: 14px 0 18px; }
 .brief-foot { display: flex; justify-content: space-between; align-items: center; gap: 12px; color: var(--ink-faint); font-family: var(--mono); font-size: 12px; }
 .brief-foot .btns { display: flex; gap: 8px; }
 .choices { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
-.choice { display: flex; align-items: flex-start; gap: 12px; text-align: left; padding: 10px 12px; }
+.choice { display: flex; align-items: flex-start; gap: 12px; text-align: left; padding: 10px 12px; font-size: calc(15px * var(--sub-k, 1)); }
 .choice .n { font-family: var(--mono); color: var(--amber); width: 1.2em; }
 .choice small { display: block; color: var(--ink-faint); font-weight: 400; margin-top: 2px; }
 .choice:disabled { opacity: 0.55; }
@@ -820,7 +821,7 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #000; color:
 .touch .prompt .p .kbd { font-size: 10px; letter-spacing: 0.08em; background: var(--amber); color: #1a0d05; border-color: #ffd28a; }
 .touch .prompt .p.na .kbd { background: rgba(0,0,0,0.45); color: var(--ink-dim); border-color: rgba(255,220,170,0.4); }
 /* clear of two stacked prompts below it */
-.touch .subtitle { bottom: calc(var(--sb) + 160px); font-size: 14px; max-width: min(620px, 60vw); padding: 8px 14px; }
+.touch .subtitle { bottom: calc(var(--sb) + 160px); font-size: calc(14px * var(--sub-k, 1)); max-width: min(620px, calc(60vw * max(1, var(--sub-k, 1))), 86vw); padding: 8px 14px; }
 /* gun out: the weapon buttons take the right corner up to ~230 px in, so prompts sit in the lane
    between the vitals (186 px) and the buttons, right-aligned against them; the subtitle takes the
    same side of the screen above them */
@@ -906,7 +907,7 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #000; color:
   .camp-body { gap: 14px; }
   .spk { padding-bottom: 8px; }
   .brief, .talk { padding: 14px 18px 10px; max-height: 96dvh; overflow-y: auto; }
-  .brief p, .talk p { font-size: 14px; margin: 8px 0 10px; }
+  .brief p, .talk p { font-size: calc(14px * var(--sub-k, 1)); margin: 8px 0 10px; }
   .mapwrap { grid-template-columns: minmax(0, 1fr) 260px; gap: 14px; }
   .mapwrap canvas { max-width: calc(94vh - 110px); max-width: calc(94dvh - 110px); }
   .legend { font-size: 12px; }

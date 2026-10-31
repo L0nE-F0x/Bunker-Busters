@@ -89,6 +89,7 @@ import { AimAssist } from './combat/aimAssist';
 import { Machines } from './combat/Machines';
 import { MenuDirector } from './MenuDirector';
 import { comfort } from '@/engine/comfort';
+import { applyAccess } from './access';
 
 /** Debug: ?interior=off draws the exterior even from inside sealed interiors (A/B for interior mode). */
 const NO_INTERIOR = typeof location !== 'undefined' && new URLSearchParams(location.search).get('interior') === 'off';
@@ -1187,6 +1188,8 @@ export class Game {
       onContinue: () => this.startGame(new GameState(save!)),
       onNew: () => this.toCharSelect(),
       onSettings: () => this.ui.openSettings(this.settings, (s) => this.applySettings(s)),
+      settings: this.settings,
+      onChange: (s) => this.applySettings(s),
     });
   }
 
@@ -1657,6 +1660,8 @@ export class Game {
     this.audio.setVolumes({ master: this.settings.master, music: this.settings.music, sfx: this.settings.sfx });
     this.audio.setVoices(this.settings.voice !== false);
     this.input.sensitivity = this.settings.sensitivity;
+    // voice level, brightness, subtitles, shake, Reduce flashing, hold/toggle keys (access.ts)
+    applyAccess(this.settings, this.input, this.audio);
   }
 
   private resize() {
