@@ -43,12 +43,13 @@ def db(x):
 
 
 class Cut:
-    def __init__(self, name, media, footage_dirs, overlays, audio):
+    def __init__(self, name, media, footage_dirs, overlays, audio, size=(1920, 1080)):
         self.name = name
         self.media = Path(media)
         self.footage = [Path(d) for d in footage_dirs]
         self.ov_dir = Path(overlays)
         self.audio_dir = Path(audio)
+        self.W, self.H = size  # the output frame (1920×1080, 2560×1440, or 1080×1920 for a 9:16 cut)
         self.segs = []      # sequential picture
         self.overlays = []  # absolute-time PNG overlays
         self.sounds = []    # absolute-time audio events
@@ -63,10 +64,13 @@ class Cut:
                 return p
         raise FileNotFoundError(name)
 
-    def shot(self, clip, dur, src=0.0, gain=0.0, fade_in=0.0, fade_out=0.0, mark=None, audio=True, afade=0.04, speed=1.0, zoom=None, look=None):
-        """A piece of a captured clip; its game audio comes along at `gain` dB."""
+    def shot(self, clip, dur, src=0.0, gain=0.0, fade_in=0.0, fade_out=0.0, mark=None, audio=True, afade=0.04, speed=1.0, zoom=None, look=None, cx=None):
+        """A piece of a captured clip; its game audio comes along at `gain` dB.
+        cx: for a frame narrower than the source (a 9:16 cut of 16:9 footage), the centre of the
+        window as a fraction of the source's width (clamped so the window stays inside it): a number,
+        or (start, end) to pan during the shot."""
         at = self.t
-        self.segs.append(dict(kind='clip', clip=str(self.clip_path(clip)), src=src, dur=dur, fade_in=fade_in, fade_out=fade_out, speed=speed, zoom=zoom, look=look))
+        self.segs.append(dict(kind='clip', clip=str(self.clip_path(clip)), src=src, dur=dur, fade_in=fade_in, fade_out=fade_out, speed=speed, zoom=zoom, look=look, cx=cx))
         wavp = self.clip_path(clip).with_suffix('.wav')
         if audio and wavp.exists():
             self.sounds.append(dict(wav=str(wavp), at=at, src=src, dur=dur * speed, gain=gain, fade_in=max(afade, fade_in), fade_out=max(afade, fade_out), bus='fx', speed=speed))
@@ -177,11 +181,14 @@ class Cut:
         write_wav(out, mix[:, :int(self.t * SR)])
         print(f'  mix: integrated before {I:.1f} LUFS, limiter max reduction {20 * np.log10(gr.min() + 1e-9):.1f} dB')
 
-    def render(self, out_dir, grade=True, crf=17):
+    def render(self, out_dir, grade=True, crf=17, maxrate='22M', fps=FPS, mix=None):
+        """Picture + mix to <out_dir>/<name>.mp4. `mix`: reuse a WAV already mixed (same timeline)."""
+        W, H = self.W, self.H
         out_dir = Path(out_dir)
         out_dir.mkdir(parents=True, exist_ok=True)
-        wav = out_dir / f'{self.name}.wav'
-        self.mix(wav)
+        wav = Path(mix) if mix else out_dir / f'{self.name}.wav'
+        if not mix:
+            self.mix(wav)
         args = ['ffmpeg', '-y', '-loglevel', 'error']
         fc = []
         n_in = 0
@@ -191,15 +198,20 @@ class Cut:
                 fc.append(f'color=c=black:s={W}x{H}:r={FPS}:d={s["dur"]:.4f},format=yuv420p,setsar=1[s{i}]')
             else:
                 need = s['dur'] * s['speed']
-                args += ['-ss', f'{s["src"]:.4f}', '-t', f'{need + 0.1:.4f}', '-i', s['clip']]
+                args += ['-threads', '2', '-ss', f'{s["src"]:.4f}', '-t', f'{need + 0.1:.4f}', '-i', s['clip']]  # (every clip is open at once: few decoder threads each)
                 chain = f'[{n_in}:v]setpts=PTS-STARTPTS'
                 if s['speed'] != 1.0:
                     chain += f',setpts=PTS/{s["speed"]}'
                 chain += f',fps={FPS},trim=duration={s["dur"]:.4f},setpts=PTS-STARTPTS'
+                if s.get('cx') is not None:
+                    # a window of the output's shape out of a wider source, placed (or panned) across it
+                    c0, c1 = s['cx'] if isinstance(s['cx'], (list, tuple)) else (s['cx'], s['cx'])
+                    chain += (f",crop=w='trunc(ih*{W}/{H}/2)*2':h=ih:"
+                              f"x='max(0,min(iw-ow,iw*({c0}+({c1}-{c0})*min(t/{s['dur']:.4f},1))-ow/2))':y=0")
                 if s.get('zoom'):
                     z0, z1 = s['zoom']
-                    chain += (f",scale=w='trunc({W}*({z0}+({z1}-{z0})*t/{s['dur']:.4f})/2)*2':h=-2:eval=frame,crop={W}:{H}")
-                chain += f',scale={W}:{H},setsar=1'
+                    chain += (f",scale=w='trunc({W}*({z0}+({z1}-{z0})*t/{s['dur']:.4f})/2)*2':h=-2:eval=frame:flags=lanczos,crop={W}:{H}")
+                chain += f',scale={W}:{H}:flags=lanczos,setsar=1'
                 if s.get('look'):
                     chain += ',' + s['look']
                 chain += ',format=yuv420p'
@@ -243,8 +255,8 @@ class Cut:
         graph = out_dir / f'{self.name}.graph.txt'
         graph.write_text(';\n'.join(fc))
         args += ['-i', str(wav), '-/filter_complex', str(graph), '-map', '[vout]', '-map', f'{n_in}:a',
-                 '-c:v', 'libx264', '-preset', 'slow', '-crf', str(crf), '-maxrate', '22M', '-bufsize', '44M', '-profile:v', 'high', '-pix_fmt', 'yuv420p',
-                 '-r', str(FPS), '-g', str(FPS * 2), '-bf', '2', '-movflags', '+faststart',
+                 '-c:v', 'libx264', '-preset', 'slow', '-crf', str(crf), '-maxrate', maxrate, '-bufsize', f'{int(maxrate[:-1]) * 2}M', '-profile:v', 'high', '-pix_fmt', 'yuv420p',
+                 '-r', str(fps), '-g', str(fps * 2), '-bf', '2', '-movflags', '+faststart',
                  '-c:a', 'aac', '-b:a', '256k', '-ar', '48000', '-t', f'{self.t:.4f}', str(out_dir / f'{self.name}.mp4')]
         print(f'  rendering {self.name}: {self.t:.2f} s, {len(self.segs)} segments, {len(self.overlays)} overlays')
         subprocess.run(args, check=True)

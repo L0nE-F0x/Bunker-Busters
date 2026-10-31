@@ -59,8 +59,9 @@ Object.assign(window.D, (() => {
   return {
     /** Contractors still standing (Recovery members with a body). */
     hostiles() { return g.recovery.members.filter((m) => m.alive); },
-    /** The squad `summon` made (still standing). */
-    squad() { return (g.recovery.patrol?.members ?? []).filter((m) => m.alive); },
+    /** The squad `summon` made last (still standing). Since v0.6 scripted squads live in
+     *  `recovery.extra`, beside the road patrol, not in `recovery.patrol`. */
+    squad() { const ex = g.recovery.extra; const sq = ex?.length ? ex[ex.length - 1] : g.recovery.patrol; return (sq?.members ?? []).filter((m) => m.alive); },
     /** SeedBot zaps without the knockout (the cut to black and the walk of shame). */
     tame() { const d = g.garage.drone; d.events.onZap = () => { g.audio.play('zap'); g.cam.addTrauma(0.9); }; },
     /** The live contractor nearest the view direction (within `maxAng` rad), or null. */
@@ -127,6 +128,10 @@ Object.assign(window.D, (() => {
     camp: (p) => rel(g.landmarks.campPoint(p[0], p[1], p[2])),
     town: (p) => { const v = g.scene.getObjectByName('dry-creek').localToWorld(new D.V(p[0], 0, p[2])); return [v.x, p[1], v.z]; },
     garage: (p) => { const o = g.garage.b.origin; return [o.x + p[0], p[1], o.z + p[2]]; },
+    /** A point relative to a bunker's origin: [dx, heightAboveGround, dz] → world [x, h, z]. */
+    rel: (id, p) => { const o = g[id].b.origin; return [o.x + p[0], p[1], o.z + p[2]]; },
+    /** A world point at an absolute height y (not above the ground): [x, y, z] → [x, h, z]. */
+    abs: (p) => [p[0], p[1] - D.ground(p[0], p[2]), p[2]],
     /** A move: eye and target from → to over `dur` seconds, with an easing name. */
     move(t, dur, e0, e1, a0, a1, fov0 = 50, fov1 = fov0, easing = 'lin', roll = 0) {
       const k = D[easing](t / dur);
