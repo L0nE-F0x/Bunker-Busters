@@ -318,11 +318,52 @@ export function canCompileInParallel(renderer: THREE.WebGPURenderer) {
   return !!(be?.isWebGLBackend && be.parallel);
 }
 
+/** Neither WebGPU nor WebGL 2 could be started in this browser (ui/bootFail.ts explains). */
+export class GraphicsUnavailable extends Error {
+  constructor(readonly cause: unknown) {
+    super(`no WebGL 2 or WebGPU (${cause instanceof Error ? cause.message : String(cause)})`);
+    this.name = 'GraphicsUnavailable';
+  }
+}
+
+/** Renderer strings of the software rasterisers browsers fall back to without a usable GPU. */
+const SOFTWARE_GPU = /swiftshader|llvmpipe|softpipe|lavapipe|software rasterizer|software renderer|basic render driver|microsoft basic|apple software/i;
+
 /**
- * WebGPU first, WebGL2 fallback. Some driver stacks (e.g. Chrome + Vulkan on hybrid-GPU Linux)
- * expose WebGPU but fail at the canvas swapchain; if the device reports errors right after start
- * we remember that and reload on the WebGL2 backend.
+ * The GPU as the browser names it ('' if it won't say) and whether that's a software renderer
+ * (it'll run at a few frames a second). WebGL: the unmasked renderer string where it's offered.
+ * WebGPU: the adapter's description, and its fallback flag.
  */
+export function gpuInfo(renderer: THREE.WebGPURenderer): { name: string; software: boolean } {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const be = (renderer as any).backend;
+  try {
+    if (be?.isWebGLBackend && be.gl) {
+      const gl = be.gl as WebGL2RenderingContext;
+      let name = String(gl.getParameter(gl.RENDERER) ?? '');
+      // Chrome and Safari mask it ("WebKit WebGL"); the debug extension still tells (Firefox no longer needs it)
+      if (!name || /^(webkit webgl|mozilla)$/i.test(name)) {
+        const ext = gl.getExtension('WEBGL_debug_renderer_info');
+        if (ext) name = String(gl.getParameter(ext.UNMASKED_RENDERER_WEBGL) ?? name);
+      }
+      return { name, software: SOFTWARE_GPU.test(name) };
+    }
+    const info = be?.device?.adapterInfo as (GPUAdapterInfo & { isFallbackAdapter?: boolean }) | undefined;
+    if (info) {
+      const name = [info.vendor, info.architecture, info.device, info.description].filter(Boolean).join(' ').trim();
+      return { name: `WebGPU ${name}`.trim(), software: !!info.isFallbackAdapter || SOFTWARE_GPU.test(name) };
+    }
+  } catch { /* a lost context mid-question: say nothing */ }
+  return { name: '', software: false };
+}
+
+type LostInfo = { api: string; message: string; reason: string | null };
+const lostHandlers: ((info: LostInfo) => void)[] = [];
+/** Called when the GPU context is lost for good (WebGL context loss; WebGPU device loss after start-up). */
+export function onGraphicsLost(cb: (info: LostInfo) => void) {
+  lostHandlers.push(cb);
+}
+
 /**
  * Backend chain: WebGPU on the discrete GPU → WebGPU on the integrated GPU → WebGL2.
  * Some driver stacks (hybrid-GPU Linux: Chrome composites on Intel while Dawn picks the NVIDIA
@@ -344,7 +385,20 @@ export async function createRenderer(canvas: HTMLCanvasElement) {
     forceWebGL: choice === 'webgl',
     powerPreference: choice === 'webgpu-low' ? 'low-power' : 'high-performance',
   });
-  await renderer.init();
+  try {
+    await renderer.init();
+  } catch (err) {
+    // three falls back to WebGL 2 by itself when WebGPU fails, so this is both gone (or broken)
+    let gl2 = false;
+    try {
+      const c = document.createElement('canvas');
+      const gl = c.getContext('webgl2');
+      gl2 = !!gl;
+      gl?.getExtension('WEBGL_lose_context')?.loseContext();
+    } catch { /* no */ }
+    if (!gl2) throw new GraphicsUnavailable(err);
+    throw err;
+  }
   quietShadowAlphaTest(renderer);
   coalesceUniformUploads(renderer);
   if (!qs.has('noflipfix')) settleTextureFlips(); // (?noflipfix: A/B)
@@ -358,9 +412,19 @@ export async function createRenderer(canvas: HTMLCanvasElement) {
   const isWebGPU = !!backend.isWebGPUBackend;
   if (!isWebGPU && choice !== 'webgl') choice = 'webgl'; // three fell back on its own
   fitCanvas(renderer, canvas, Math.min(window.devicePixelRatio || 1, 2), isWebGPU);
+  const started = performance.now();
+  const early = () => performance.now() - started < 90000;
+  // a lost context or device: three logs it and stops drawing; the game says so (WebGPU's early
+  // losses are the driver bug below, handled by moving down the chain instead)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const r = renderer as any;
+  const ownLost = r.onDeviceLost?.bind(r);
+  r.onDeviceLost = (info: LostInfo) => {
+    ownLost?.(info);
+    if (isWebGPU && early()) return;
+    for (const cb of lostHandlers) cb(info);
+  };
   if (isWebGPU && backend.device) {
-    const started = performance.now();
-    const early = () => performance.now() - started < 90000;
     backend.device.lost.then((info) => {
       if (info.reason !== 'destroyed' && early()) demote(choice, info.message.split('\n')[0]);
     });
