@@ -1487,6 +1487,9 @@ export class Game {
 
   private removePlayer() {
     this.recovery?.reset();
+    // ...and the outposts' machines come back for the next run, as they do after a reload (a sentry
+    // shot, a Hornet downed or a mine set off in one run was still gone in the next)
+    if (this.machines) for (const op of OUTPOSTS) this.machines.reset(op.id);
     this.throwables?.reset();
     this.story?.dispose();
     this.story = null;
