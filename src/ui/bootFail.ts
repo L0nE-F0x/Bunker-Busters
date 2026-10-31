@@ -6,11 +6,11 @@
  * Imported first by main.ts, so an error while the game's modules load still reaches a screen.
  */
 
+import { openExternal, bugReportUrl, isDesktopApp, SITE_URL } from './links';
+
 /** What's known about the machine, for the details (filled in as the boot learns it). */
 export const bootInfo: { backend: string; gpu: string; quality: string } = { backend: '', gpu: '', quality: '' };
 
-const REPO_ISSUES = 'https://github.com/L0nE-F0x/Bunker-Busters/issues/new';
-const DOWNLOAD = 'https://bunker-busters.netlify.app/#get';
 
 export type FailKind = 'no-webgl' | 'software' | 'context-lost' | 'download' | 'memory' | 'crash';
 
@@ -41,14 +41,10 @@ export function failDetails(kind: FailKind, error?: unknown) {
   return lines.join('\n');
 }
 
-/** A GitHub "new issue" link with the details filled in (kept well under URL length limits). */
-export function reportUrl(kind: FailKind, error?: unknown) {
-  const msg = error instanceof Error ? error.message : error ? String(error) : '';
-  const title = `Can't play in the browser: ${kind}${msg ? ` (${msg.slice(0, 60)})` : ''}`;
-  let body = `What happened:\n\n\nDetails:\n\`\`\`\n${failDetails(kind, error)}\n\`\`\``;
-  const make = () => `${REPO_ISSUES}?title=${encodeURIComponent(title)}&body=${encodeURIComponent(body)}`;
-  while (make().length > 1900 && body.length > 200) body = `${body.slice(0, Math.floor(body.length * 0.85))}\n…\n\`\`\``;
-  return make();
+/** The repo's bug form with the version, platform, system and renderer filled in, and the error (ui/links.ts). */
+function reportUrl(kind: FailKind, error?: unknown) {
+  const first = errorText(error).split('\n')[0];
+  return bugReportUrl({ backend: bootInfo.backend || undefined, quality: bootInfo.quality || undefined, error: `${kind}${first ? `: ${first}` : ''}` });
 }
 
 async function copy(text: string) {
@@ -91,8 +87,8 @@ export function failScreen(o: { kind: FailKind; title: string; body: string; ste
       <div class="bf-actions"></div>
       <div class="bf-meta">
         <button class="bf-link bf-copy" type="button">Copy details</button>
-        <a class="bf-link" href="${esc(reportUrl(o.kind, o.error))}" target="_blank" rel="noopener">Report this on GitHub</a>
-        ${o.download ? `<a class="bf-link" href="${DOWNLOAD}" target="_blank" rel="noopener">Get the desktop app</a>` : ''}
+        <button class="bf-link bf-report" type="button">Report this on GitHub</button>
+        ${o.download && !isDesktopApp() ? '<button class="bf-link bf-get" type="button">Get the desktop app</button>' : ''}
         <button class="bf-link bf-show" type="button">Show details</button>
       </div>
       <pre class="bf-details" hidden></pre>
@@ -111,6 +107,10 @@ export function failScreen(o: { kind: FailKind; title: string; body: string; ste
   pre.textContent = details;
   const copyBtn = el.querySelector<HTMLButtonElement>('.bf-copy')!;
   copyBtn.onclick = async () => { copyBtn.textContent = (await copy(details)) ? 'Copied' : 'Select the details below and copy them'; if (pre.hidden) { pre.hidden = false; } };
+  // (links go through openExternal: the system browser in the desktop app, a new tab here)
+  el.querySelector<HTMLButtonElement>('.bf-report')!.onclick = () => void openExternal(reportUrl(o.kind, o.error));
+  const get = el.querySelector<HTMLButtonElement>('.bf-get');
+  if (get) get.onclick = () => void openExternal(`${SITE_URL}/#get`);
   const showBtn = el.querySelector<HTMLButtonElement>('.bf-show')!;
   showBtn.onclick = () => { pre.hidden = !pre.hidden; showBtn.textContent = pre.hidden ? 'Show details' : 'Hide details'; };
   document.body.appendChild(el);
