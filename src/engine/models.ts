@@ -138,6 +138,9 @@ export function prefetchModels(names: string[], concurrency = 3) {
 export function modelBytes(name: string): Promise<ArrayBuffer> {
   const e = entries.get(name);
   if (e) {
+    // parsed once already and its bytes let go (a second model needing the same file: the respirator):
+    // fetch it again, from the HTTP cache
+    if (released.has(name)) return download(name, e);
     // still waiting in the queue: it's wanted now, so it goes next
     const i = queue.findIndex((j) => j.name === name);
     if (i > 0) queue.unshift(...queue.splice(i, 1));
@@ -146,10 +149,22 @@ export function modelBytes(name: string): Promise<ArrayBuffer> {
   return enqueue(name, true).promise;
 }
 
-/** Parse a model (textures included) from its prefetched bytes. */
+/** Files whose bytes were parsed and dropped (the entry stays, for the byte counts). */
+const released = new Set<string>();
+
+/**
+ * Parse a model (textures included) from its prefetched bytes, then let go of them: the parser copies
+ * what it keeps, and the prefetch held every model's bytes (~30 MB unpacked) for the whole session.
+ */
 export async function loadGLB(name: string): Promise<GLTF> {
   const buf = await modelBytes(name);
-  return new GLTFLoader().parseAsync(buf, BASE);
+  const gltf = await new GLTFLoader().parseAsync(buf, BASE);
+  const e = entries.get(name);
+  if (e && !e.failed) {
+    released.add(name);
+    e.promise = Promise.resolve(new ArrayBuffer(0));
+  }
+  return gltf;
 }
 
 /** Downloaded / total bytes over the given models (all queued ones by default). */
