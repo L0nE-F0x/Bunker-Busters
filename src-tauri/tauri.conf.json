@@ -19,6 +19,7 @@
         "minWidth": 960,
         "minHeight": 540,
         "center": true,
+        "preventOverflow": true,
         "resizable": true,
         "url": "play/index.html"
       }
@@ -33,7 +34,11 @@
       "appimage",
       "deb"
     ],
-    "category": "Game",
+    "category": "ActionGame",
+    "shortDescription": "First-person heist game: break into the tech elite's doomsday bunkers",
+    "longDescription": "They built bunkers. You brought lockpicks. Bunker Busters is a free first-person heist game set in a desert wasteland: scout the founders' doomsday bunkers, get past their half-broken security and Kade's contractors, and bring the water back to camp. Eight bunkers, a fully voiced story, lockpicking, circuit, keypad and hacking minigames, wolves, dust storms and a day-night cycle.",
+    "homepage": "https://bunker-busters.netlify.app/",
+    "copyright": "Copyright © 2026 Lone Fox",
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
@@ -42,6 +47,24 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ],
+    "resources": {
+      "../public/licenses.txt": "licenses.txt"
+    },
+    "linux": {
+      "deb": {
+        "section": "games",
+        "desktopTemplate": "linux/bunker-busters.desktop",
+        "files": {
+          "/usr/share/metainfo/dev.bunkerbusters.game.metainfo.xml": "linux/dev.bunkerbusters.game.metainfo.xml"
+        }
+      }
+    },
+    "windows": {
+      "nsis": {
+        "installerIcon": "icons/icon.ico",
+        "uninstallerIcon": "icons/icon.ico"
+      }
+    },
     "createUpdaterArtifacts": true
   },
   "plugins": {

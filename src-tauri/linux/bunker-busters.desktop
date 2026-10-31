@@ -1,0 +1,13 @@
+[Desktop Entry]
+Type=Application
+Name={{name}}
+GenericName=Heist Game
+{{#if comment}}
+Comment={{comment}}
+{{/if}}
+Exec={{exec}}
+Icon={{icon}}
+Terminal=false
+Categories={{categories}}
+Keywords=heist;bunker;post-apocalyptic;wasteland;stealth;lockpicking;first-person;shooter;open world;
+StartupWMClass={{exec}}

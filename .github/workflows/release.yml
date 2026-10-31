@@ -99,6 +99,8 @@ jobs:
           [ "$unk" = 1 ] || { echo "tarball binary has a bundle type stamped in (UNK count $unk)"; exit 1; }
           cp src-tauri/icons/128x128@2x.png out/bunker-busters/icon.png
           cp scripts/install-linux.sh out/bunker-busters/install.sh
+          # third-party licences ship next to the binary (tags before v1.0.4 have no licenses.txt)
+          if [ -f public/licenses.txt ]; then cp public/licenses.txt out/bunker-busters/licenses.txt; else echo "::warning::no public/licenses.txt at $TAG"; fi
           chmod +x out/bunker-busters/install.sh out/bunker-busters/bunker-busters-bin
           tar -C out -czf out/BunkerBusters-linux-x86_64.tar.gz bunker-busters
           # the same binary, raw, is what tarball installs download when they update in-app. The version

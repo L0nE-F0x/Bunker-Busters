@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- AppStream metadata, installed by the .deb to /usr/share/metainfo so software centres (GNOME
+     Software, KDE Discover) can show the game properly. The id is the Tauri identifier. -->
+<component type="desktop-application">
+  <id>dev.bunkerbusters.game</id>
+  <name>Bunker Busters</name>
+  <summary>First-person heist game: break into the tech elite's doomsday bunkers</summary>
+  <developer id="io.github.l0ne-f0x">
+    <name>Lone Fox</name>
+  </developer>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>LicenseRef-proprietary</project_license>
+  <description>
+    <p>
+      They built bunkers. You brought lockpicks. Bunker Busters is a free first-person heist game set in
+      a desert wasteland: scout the founders' doomsday bunkers, get past their half-broken security and
+      Kade's contractors, and bring the water back to camp.
+    </p>
+    <ul>
+      <li>Eight bunkers, each with its own defences and more than one way in</li>
+      <li>A fully voiced story across eight acts</li>
+      <li>Lockpicking, circuit, keypad and hacking minigames</li>
+      <li>Wolves, dust storms and a day-night cycle in an open desert</li>
+      <li>Keyboard and mouse or a gamepad, with every key rebindable</li>
+    </ul>
+  </description>
+  <launchable type="desktop-id">Bunker Busters.desktop</launchable>
+  <url type="homepage">https://bunker-busters.netlify.app/</url>
+  <url type="bugtracker">https://github.com/L0nE-F0x/Bunker-Busters/issues</url>
+  <url type="vcs-browser">https://github.com/L0nE-F0x/Bunker-Busters</url>
+  <screenshots>
+    <screenshot type="default">
+      <caption>The camp at Last Chance at dusk</caption>
+      <image>https://bunker-busters.netlify.app/media/hero.jpg</image>
+    </screenshot>
+    <screenshot>
+      <caption>A fight with Kade's contractors in the desert</caption>
+      <image>https://bunker-busters.netlify.app/media/combat.jpg</image>
+    </screenshot>
+    <screenshot>
+      <caption>The Alignment Spire</caption>
+      <image>https://bunker-busters.netlify.app/media/place-spire.jpg</image>
+    </screenshot>
+    <screenshot>
+      <caption>Picking a vault lock</caption>
+      <image>https://bunker-busters.netlify.app/media/lockpick.jpg</image>
+    </screenshot>
+  </screenshots>
+  <provides>
+    <binary>bunker-busters</binary>
+  </provides>
+  <supports>
+    <control>keyboard</control>
+    <control>pointing</control>
+    <control>gamepad</control>
+  </supports>
+  <content_rating type="oars-1.1">
+    <content_attribute id="violence-realistic">moderate</content_attribute>
+    <content_attribute id="violence-bloodshed">mild</content_attribute>
+  </content_rating>
+</component>
