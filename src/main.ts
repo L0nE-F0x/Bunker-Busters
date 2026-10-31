@@ -1,10 +1,15 @@
+// first, so a module that fails to load or run below still ends on a screen (ui/bootFail.ts)
+import { bootStarted, bootInfo, noGraphics, softwareWarning, memoryTrouble, bootCrashed, contextLost, unfinishedBoots } from '@/ui/bootFail';
 import './fonts';
-import { createRenderer } from '@/engine/renderer';
-import { isMobile, lockLandscape } from '@/engine/device';
+import { createRenderer, gpuInfo, onGraphicsLost, GraphicsUnavailable } from '@/engine/renderer';
+import { isMobile, isTouch, lockLandscape } from '@/engine/device';
 import { Game } from '@/game/Game';
+import { loadSettings, saveSettings } from '@/game/State';
 import { prefetchBootModels } from '@/game/bootModels';
 import { startOffline } from '@/engine/offline';
 import { initInstall, openInstallSheet, isPhone, isInstalledApp } from '@/ui/install';
+
+bootStarted();
 
 // Uncaught errors → console, so the desktop app (whose console goes to stdout) shows them in a terminal.
 const describe = (e: unknown) => (e instanceof Error ? `${e.message}\n${e.stack ?? ''}` : String(e));
@@ -78,24 +83,58 @@ lockLandscape();
   }
 }
 
+/** Quality Low from now on (the player chose it on a warning screen; Settings can change it back). */
+function settleOnLow() {
+  const st = loadSettings();
+  st.quality = 'low';
+  saveSettings(st);
+}
+
+/** A software renderer is only worth a warning once per renderer string (the player has chosen). */
+const SW_KEY = 'bunker-busters.software-warned';
+
 async function boot() {
+  const qs = new URLSearchParams(location.search);
+  // the last two loads never got to the title: on a phone or tablet that's the tab running out of
+  // memory and being reloaded. Offer Low before trying again (?bootfail=memory shows it, for testing).
+  if ((unfinishedBoots() >= 2 && isTouch) || qs.get('bootfail') === 'memory') {
+    if ((await memoryTrouble()) === 'low') settleOnLow();
+  }
   // the models download while the renderer starts and the world is built (Game.build parses them)
   prefetchBootModels();
   const canvas = document.getElementById('game') as HTMLCanvasElement;
   const { renderer, isWebGPU, backendLabel } = await createRenderer(canvas);
   console.info(`[BunkerBusters] renderer backend: ${backendLabel}`);
+  const gpu = gpuInfo(renderer);
+  bootInfo.backend = backendLabel;
+  bootInfo.gpu = gpu.name;
+  if (gpu.name) console.info(`[BunkerBusters] GPU: ${gpu.name}${gpu.software ? ' (software)' : ''}`);
+  // drawing in software: warn once (it runs, at a few frames a second), offer Low. Test harnesses
+  // (navigator.webdriver) skip it unless ?bootfail=software asks for it.
+  if ((gpu.software && !navigator.webdriver) || qs.get('bootfail') === 'software') {
+    let seen = '';
+    try { seen = localStorage.getItem(SW_KEY) ?? ''; } catch { /* ignore */ }
+    if (seen !== gpu.name || qs.get('bootfail') === 'software') {
+      if ((await softwareWarning(gpu.name || 'a software renderer')) === 'low') settleOnLow();
+      try { localStorage.setItem(SW_KEY, gpu.name); } catch { /* ignore */ }
+    }
+  }
   const game = new Game(renderer, isWebGPU, canvas);
   game.backendLabel = backendLabel;
+  bootInfo.quality = game.quality.level;
   (window as unknown as { game: Game }).game = game;
+  // the context or device gone for good: keep the run if it can be kept, then say what happened
+  onGraphicsLost((info) => {
+    const saved = game.saveForLoss();
+    contextLost(saved, new Error(`${info.api} lost: ${info.message}${info.reason ? ` (${info.reason})` : ''}`));
+  });
   await game.build();
-  // after the boot, so saving the game for offline play doesn't compete with loading it
-  startOffline();
+  // saving the game for offline play waits for the late cast, so it doesn't compete with loading it
+  void game.worldReady.then(() => startOffline());
 }
 
 boot().catch((err) => {
   console.error(err);
-  const el = document.createElement('pre');
-  el.style.cssText = 'position:fixed;inset:20px;color:#ffb347;font:14px monospace;white-space:pre-wrap;z-index:99';
-  el.textContent = `Bunker Busters failed to start:\n\n${err?.stack ?? err}`;
-  document.body.appendChild(el);
+  if (err instanceof GraphicsUnavailable) noGraphics(err);
+  else bootCrashed(err);
 });

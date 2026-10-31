@@ -78,7 +78,8 @@ async function run(ending) {
       }
     };
     window.__code = null;
-    game.ui.keypad = async (o) => { window.__code = o.code; window.__hint = o.hint; return 'ok'; };
+    // (the clock as the keypad opened: a game minute is ~1.1 s at 26-minute days, so it may have turned by the check)
+    game.ui.keypad = async (o) => { window.__code = o.code; window.__hint = o.hint; window.__clockAt = Z.clockDigits(); return 'ok'; };
     game.ui.lockpick = async () => 'success';
     game.ui.circuit = async () => true;
     game.ui.hack = async (o) => ({ aborted: false, traced: false, done: o.daemons.map((d) => d.id) });
@@ -130,7 +131,7 @@ async function run(ending) {
     // the clock gate's keypad
     await ev(`L(1.9, -23.6); act('clock')`);
     await wait(900);
-    await check('clock gate: the code is the clock (HHMM)', `game.state.has('zero.clock.open') && window.__code === Z.clockDigits()`);
+    await check('clock gate: the code is the clock (HHMM)', `game.state.has('zero.clock.open') && window.__code === window.__clockAt`);
     // the board: cameras and Doormen off, Model Zero its two units
     await ev(`L(9.3, -41.5); window.__pick = ['cameras', 'doormen', 'vault', 'no']; act('zero-board')`);
     await wait(1500);
