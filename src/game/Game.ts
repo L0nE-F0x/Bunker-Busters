@@ -266,6 +266,7 @@ export class Game {
   constructor(private renderer: THREE.WebGPURenderer, public isWebGPU: boolean, private canvas: HTMLCanvasElement) {
     this.input = new Input(canvas);
     this.ui = new UI(this.audio);
+    this.ui.bugInfo = () => ({ backend: this.backendLabel, quality: this.quality?.level });
     // controls: the saved bindings, persisted whenever the Controls screen changes them
     binds.set(this.settings.binds);
     binds.onChange = (m) => { this.settings.binds = m; saveSettings(this.settings); };

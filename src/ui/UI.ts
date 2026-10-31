@@ -27,6 +27,8 @@ import type { ArmsHud } from '@/game/combat/PlayerArms';
 import { binds, actionGlyph, actionKey, actionWord, kbdGlyph, keyLabel, padName, type Action } from '@/engine/bindings';
 import { openControls } from './ControlsView';
 import { openSettingsPanel, needsFlashNotice, openFlashNotice } from './SettingsView';
+import { openCredits } from './Credits';
+import { openExternal, bugReportUrl, type BugInfo } from './links';
 
 /** Which device's glyphs to show (html.pad is set by Input when a controller was used last). */
 const device = () => (isTouch ? 'touch' : document.documentElement.classList.contains('pad') ? 'pad' : 'kbm');
@@ -97,6 +99,8 @@ export class UI implements UIBridge {
   private xhairKey = '';
   private hitT = 0;
   private hitKind = '';
+  /** What a bug report says about the renderer and the preset (set by Game). */
+  bugInfo: () => BugInfo = () => ({});
 
   constructor(private audio: AudioEngine) {
     this.root = document.getElementById('ui')!;
@@ -155,6 +159,7 @@ export class UI implements UIBridge {
     add('Controls', () => this.showControls());
     // phones in the browser: put the game on the home screen (full screen, plays offline)
     if (isTouch && isPhone && !isInstalledApp()) add('Install app', () => openInstallSheet({ onGamePage: true }));
+    menu.appendChild(this.minorRow());
     this.root.appendChild(el);
     void mountUpdateNotice(el, () => { this.audio.start(); this.audio.play('uiConfirm'); });
     // first launch: the photosensitivity notice, over the title
@@ -162,6 +167,29 @@ export class UI implements UIBridge {
     // first interaction starts audio
     const kick = () => { this.audio.start(); window.removeEventListener('pointerdown', kick); };
     window.addEventListener('pointerdown', kick);
+  }
+
+  /** Credits · Report a bug: the small row under the title and pause menus. */
+  private minorRow() {
+    const row = h('div', 'menu-minor');
+    const add = (label: string, fn: () => void) => {
+      const b = h('button', 'btn', label);
+      b.onmouseenter = () => this.audio.play('uiHover');
+      b.onclick = () => { this.audio.start(); this.audio.play('ui'); fn(); };
+      row.appendChild(b);
+    };
+    add('Credits', () => this.showCredits());
+    add('Report a bug', () => this.reportBug());
+    return row;
+  }
+
+  showCredits() {
+    openCredits(this.root, this.audio, { onBug: () => this.reportBug() });
+  }
+
+  /** A new GitHub issue with the version and system filled in (the browser, or the system browser from the app). */
+  reportBug() {
+    void openExternal(bugReportUrl(this.bugInfo()));
   }
 
   showControls() {
@@ -806,6 +834,7 @@ export class UI implements UIBridge {
       add('Controls', () => this.showControls());
       if (isTouch && canFullscreen() && !isFullscreen()) add('Full screen', () => enterFullscreen());
       add('Quit to title', () => { quitting = true; close(); opts.onQuit(); });
+      m.appendChild(this.minorRow());
       return m;
     }, () => { if (!quitting) opts.onResume(); });
     return closeFn;

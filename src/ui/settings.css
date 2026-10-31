@@ -18,6 +18,14 @@
 .st-foot .btn { flex: 0 0 auto; }
 .st-foot .done { min-width: 140px; }
 
+/* ---------- the title and pause menus' small row: Credits · Report a bug ---------- */
+.menu-minor { display: flex; gap: 6px; margin-top: 4px; }
+.menu-minor .btn { flex: 1 1 0; padding: 8px 10px; font-size: 11.5px; letter-spacing: 0.14em; text-align: center; color: var(--ink-dim); background: rgba(0, 0, 0, 0.25); }
+.menu .menu-minor .btn:hover:not(:disabled), .pause .menu-minor .btn:hover:not(:disabled) { padding-left: 10px; color: var(--ink); }
+.menu .menu-minor .btn:hover:not(:disabled)::before, .pause .menu-minor .btn:hover:not(:disabled)::before { content: none; }
+html.pad .menu-minor .btn.pad-focus, html.keynav .menu-minor .btn.pad-focus { padding-left: 10px !important; }
+html.pad .menu-minor .btn.pad-focus::before, html.keynav .menu-minor .btn.pad-focus::before { content: none !important; }
+
 /* ---------- photosensitivity notice (first launch) ---------- */
 .overlay.notice { z-index: 40; }
 .notice-card { width: min(560px, 92vw); padding: 26px 30px 22px; box-sizing: border-box; }
@@ -29,15 +37,46 @@
 .notice-card .st-later { font-size: 12.5px; color: var(--ink-faint); margin: 8px 0 14px; }
 .notice-card .st-foot { justify-content: flex-end; }
 
+/* ---------- credits (Credits.ts) ---------- */
+.overlay.credits { overflow-y: auto; padding: 4vh 16px; align-items: safe center; background: radial-gradient(ellipse at 50% 30%, rgba(40, 20, 8, 0.85), rgba(4, 3, 2, 0.96) 70%); }
+.cr { width: min(900px, 100%); padding: 28px 34px 22px; box-sizing: border-box; }
+.cr-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 0 32px; }
+.cr p.fine { font-size: 12.5px; color: var(--ink-faint); margin-top: 8px; }
+.cr .kicker { font-family: var(--mono); font-size: 11px; letter-spacing: 0.3em; text-transform: uppercase; color: var(--amber); }
+.cr .big { margin: 6px 0 2px; font-family: var(--display); font-weight: 900; font-size: clamp(40px, 7vh, 64px); line-height: 0.9; letter-spacing: 0.02em; text-transform: uppercase; color: #ffd08a; text-shadow: 0 3px 0 rgba(40, 15, 5, 0.9); }
+.cr .by { font-size: 15px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink); }
+.cr .rule { height: 1px; margin: 14px 0 4px; background: linear-gradient(90deg, var(--amber), transparent); }
+.cr h4 { margin: 16px 0 6px; font-size: 11px; letter-spacing: 0.26em; text-transform: uppercase; color: var(--amber); font-weight: 600; }
+.cr ul { list-style: none; margin: 0; padding: 0; }
+.cr li { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 1px 14px; padding: 5px 0; border-bottom: 1px solid rgba(255, 179, 71, 0.1); font-size: 14px; }
+.cr li b { font-weight: 600; color: var(--ink); }
+.cr li span { color: var(--ink-dim); }
+.cr li small { font-family: var(--mono); font-size: 11.5px; color: var(--ink-faint); text-align: right; align-self: center; white-space: nowrap; }
+.cr li em { grid-column: 1 / -1; font-style: normal; font-size: 12.5px; color: var(--ink-faint); }
+.cr p { margin: 6px 0; font-size: 13.5px; line-height: 1.5; color: var(--ink-dim); }
+.cr .cr-foot { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 18px; align-items: center; }
+.cr .cr-foot .ver { margin-right: auto; font-family: var(--mono); font-size: 11px; letter-spacing: 0.12em; color: var(--ink-faint); }
+@media (max-width: 760px) { .cr-cols { grid-template-columns: 1fr; } }
+@media (max-width: 620px) {
+  .cr { padding: 20px 18px 16px; }
+  .cr li { grid-template-columns: 1fr; }
+  .cr li small { text-align: left; }
+}
+
 /* ---------- short screens (phones in landscape) ---------- */
 @media (max-height: 560px) {
   .st-panel .settings { min-height: 0; }
   .st-tabs .tab { padding: 6px 8px; font-size: 10.5px; letter-spacing: 0.1em; }
   .st-hint { margin-left: calc(140px + 16px); font-size: 11px; margin-top: -4px; }
   .st-sample { padding: 8px 6px; }
+  .menu-minor .btn { padding: 7px 8px; font-size: 10.5px; }
   .notice-card { padding: 16px 20px 14px; max-height: 94dvh; overflow-y: auto; }
   .notice-card h3 { font-size: 28px; margin-bottom: 8px; }
   .notice-card p { font-size: 12.5px; margin-bottom: 6px; }
+  .cr { padding: 16px 18px 14px; }
+  .cr .big { font-size: 34px; }
+  .cr h4 { margin-top: 10px; }
+  .cr li { padding: 4px 0; font-size: 12.5px; }
 }
 @media (max-height: 440px) {
   .st-hint { display: none; }
