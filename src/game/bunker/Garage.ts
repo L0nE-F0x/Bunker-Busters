@@ -217,7 +217,7 @@ export class Garage extends Bunker<GarageBuilder> {
       return 'The vault. Five pins, or a code he thinks is obvious.';
     }
     if (s.has(F.side)) return 'Get inside. SeedBot doesn\'t follow you through the door.';
-    if (this.playerOnGrounds) return 'Side door is on the east wall. The intercom inside the gate still reaches Tanner.';
+    if (this.playerOnGrounds) return 'The side door is on the east wall. The intercom inside the gate still reaches Tanner.';
     if (s.has(F.gate) || s.has(F.gap)) return `You're through the fence. SeedBot hunts light and noise: ${keyed('crouch', 'crouch')} and keep the torch off.`;
     const gap = s.has(F.intelGap) ? ', use the loose panel on the north-east fence,' : '';
     return `Get past the fence: pick the gate${gap} or hail Tanner on the intercom beside it.`;
