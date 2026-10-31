@@ -6,6 +6,7 @@
 import { launch, waitForGame } from './browser.mjs';
 import fs from 'node:fs';
 import path from 'node:path';
+const ORIGIN = process.env.DEV_ORIGIN || `http://localhost:${process.env.BB_PORT || 5173}`; // another dev server (a worktree): BB_PORT=5181
 
 const [dir = 'closeups', ...want] = process.argv.slice(2);
 const kinds = want.length ? want : ['car', 'tree', 'grass', 'rock', 'pole', 'wide'];
@@ -14,7 +15,7 @@ const b = await launch();
 const p = await b.newPage({ viewport: { width: 1280, height: 720 } });
 p.on('pageerror', (e) => console.log('[pageerror]', e.message));
 p.on('console', (m) => { if (m.type() === 'error' && !/GL Driver/.test(m.text())) console.log('[console.error]', m.text().slice(0, 300)); });
-await p.goto(`${process.env.DEV_ORIGIN || 'http://localhost:5173'}/play/?webgl&autostart&q=${process.env.Q || 'high'}`);
+await p.goto(`${ORIGIN}/play/?webgl&autostart&q=${process.env.Q || 'high'}`);
 await waitForGame(p);
 await p.waitForTimeout(2500);
 

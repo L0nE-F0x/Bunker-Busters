@@ -1,8 +1,9 @@
 // Rebinding end to end, settings migration, keyboard/mouse and touch regressions (headless).
 //   node scripts/dev/controls-test.mjs [all|kb|touch]   (BB_URL=http://localhost:5173, OUT=/tmp for screenshots)
 import { launch, waitForGame } from './browser.mjs';
+const ORIGIN = process.env.DEV_ORIGIN || `http://localhost:${process.env.BB_PORT || 5173}`; // another dev server (a worktree): BB_PORT=5181
 
-const BASE = `${process.env.BB_URL || 'http://localhost:5173'}/play/?webgl`;
+const BASE = `${process.env.BB_URL || ORIGIN}/play/?webgl`;
 const OUT = process.env.OUT || '/tmp';
 const only = process.argv[2] || 'all';
 const b = await launch(process.env.GPU_MODE || 'nvidia');

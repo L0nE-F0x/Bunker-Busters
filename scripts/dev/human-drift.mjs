@@ -4,11 +4,12 @@
 // of a standing squad: prop lab `what=human&meshy&pose=relaxed&still=6` logs it.) Needs `npm run dev`.
 //   node scripts/dev/human-drift.mjs
 import { launch, waitForGame } from './browser.mjs';
+const ORIGIN = process.env.DEV_ORIGIN || `http://localhost:${process.env.BB_PORT || 5173}`; // another dev server (a worktree): BB_PORT=5181
 
 const b = await launch();
 const p = await b.newPage({ viewport: { width: 960, height: 540 } });
 p.on('pageerror', (e) => console.log('[pageerror]', e.message));
-await p.goto((process.env.DEV_ORIGIN ?? 'http://localhost:5173') + '/play/?webgl&autostart');
+await p.goto(ORIGIN + '/play/?webgl&autostart');
 console.log('mode:', await waitForGame(p));
 const out = await p.evaluate(async () => {
   const g = window.game, R = g.recovery;

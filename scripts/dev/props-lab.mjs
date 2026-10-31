@@ -2,6 +2,7 @@
 //   node scripts/dev/props-lab.mjs sheet.png "what=car&kind=sedan" "what=car&kind=pickup&yaw=2.4" ...
 // Each query renders one 960x600 tile; tiles go two per row. DEV_ORIGIN=http://localhost:5185 picks another dev server.
 import { launch } from './browser.mjs';
+const ORIGIN = process.env.DEV_ORIGIN || `http://localhost:${process.env.BB_PORT || 5173}`; // another dev server (a worktree): BB_PORT=5181
 
 const [out = 'props.png', ...qs] = process.argv.slice(2);
 if (!qs.length) qs.push('what=car');
@@ -14,7 +15,7 @@ p.on('console', (m) => {
 });
 const shots = [];
 for (const q of qs) {
-  await p.goto((process.env.DEV_ORIGIN ?? 'http://localhost:5173') + '/debug/props.html?' + q);
+  await p.goto(ORIGIN + '/debug/props.html?' + q);
   await p.waitForFunction(() => window.__done, null, { timeout: 60000 });
   await p.waitForTimeout(300);
   shots.push(await p.screenshot());

@@ -8,9 +8,10 @@
 //       tripped, breaker, vault charge at Demolition 5.
 // loud: hangar charge standing (alarm, loud), the corridor camera rings, the ledger route.
 import { open, STUBS } from './early-common.mjs';
+const ORIGIN = process.env.DEV_ORIGIN || `http://localhost:${process.env.BB_PORT || 5173}`; // another dev server (a worktree): BB_PORT=5181
 
 const which = process.argv[2] || 'all';
-const URL = 'http://localhost:5173/play/?webgl&autostart&hour=15';
+const URL = `${ORIGIN}/play/?webgl&autostart&hour=15`;
 const PRE = `(() => { const s = game.state; for (const f of ['briefed', 'debriefed', 'act1.broadcast', 'garage.complete', 'q:act1:done']) s.set(f); game.combat.difficulty = 'story'; })()`;
 const loot = (t) => t.ev(`(async () => { for (const id of ['tank_a', 'tank_b', 'cistern']) { const sp = B.b.lootSpots.find((l) => l.id === id); game.player.teleport(sp.pos.clone().setY(O.y + 0.1)); act(id); await new Promise((r) => setTimeout(r, 300)); } })()`);
 

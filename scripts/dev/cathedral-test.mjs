@@ -10,9 +10,10 @@
 //   hand:  Rider 9's order (the swarm lets you be); the returns line; Lo (badge, code, she'll run it);
 //          the swarm grounded; the transfer.
 import { launch, waitForGame } from './browser.mjs';
+const ORIGIN = process.env.DEV_ORIGIN || `http://localhost:${process.env.BB_PORT || 5173}`; // another dev server (a worktree): BB_PORT=5181
 
 const which = process.argv[2] || 'both';
-const URL = 'http://localhost:5173/play/?webgl&autostart&at=cathedral&hour=15';
+const URL = `${ORIGIN}/play/?webgl&autostart&at=cathedral&hour=15`;
 
 async function run(ending) {
   const b = await launch();

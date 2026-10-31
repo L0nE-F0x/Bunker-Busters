@@ -2,13 +2,14 @@
 // every paw vs the terrain under it (m; negative = through the soil). Needs `npm run dev`.
 //   node scripts/dev/paw-probe.mjs [seconds=20] [--coyote] [--walk] [--shots dir]
 import { launch, waitForGame } from './browser.mjs';
+const ORIGIN = process.env.DEV_ORIGIN || `http://localhost:${process.env.BB_PORT || 5173}`; // another dev server (a worktree): BB_PORT=5181
 
 const args = process.argv.slice(2);
 const secs = +(args.find((a) => /^\d+$/.test(a)) ?? 20);
 const coyote = args.includes('--coyote');
 const shotsAt = args.indexOf('--shots');
 const shots = shotsAt >= 0 ? args[shotsAt + 1] : null;
-const url = 'http://localhost:5173/play/?webgl&autostart' + (args.includes('--proc') ? '&procwolf' : '');
+const url = `${ORIGIN}/play/?webgl&autostart` + (args.includes('--proc') ? '&procwolf' : '');
 const b = await launch();
 const p = await b.newPage({ viewport: { width: 1280, height: 720 } });
 p.on('pageerror', (e) => console.log('[pageerror]', e.message));

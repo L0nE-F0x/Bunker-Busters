@@ -2,6 +2,7 @@
 //   node scripts/dev/cpu-profile.mjs [spotJs] [--secs 4] [--top 40] [--size 480x270] [--by file]
 // spotJs runs in the page first (game = window.game); default: Dry Creek at noon.
 import { launch, waitForGame } from './browser.mjs';
+const ORIGIN = process.env.DEV_ORIGIN || `http://localhost:${process.env.BB_PORT || 5173}`; // another dev server (a worktree): BB_PORT=5181
 
 const args = process.argv.slice(2);
 const opt = (k, d) => { const i = args.indexOf(`--${k}`); return i >= 0 ? args[i + 1] : d; };
@@ -9,7 +10,7 @@ const spot = args[0] && !args[0].startsWith('--') ? args[0] : `const p = game.pl
 const [W, H] = opt('size', '480x270').split('x').map(Number);
 const b = await launch();
 const p = await b.newPage({ viewport: { width: W, height: H } });
-await p.goto('http://localhost:5173/play/?webgl&autostart&q=high');
+await p.goto(`${ORIGIN}/play/?webgl&autostart&q=high`);
 await waitForGame(p, 180000);
 for (let i = 0; i < 100; i++) { if (await p.evaluate(() => window.game?.mode === 'playing' && !!window.game.player)) break; await p.waitForTimeout(300); }
 await p.evaluate(`(async () => { const game = window.game; ${spot} })()`);

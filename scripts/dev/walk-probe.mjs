@@ -6,13 +6,14 @@
 // Expect stalls only at real obstacles (rocks, wrecks, fences, terrain faces > ~45°). Ground-only
 // stalls on gentle slopes mean the controller regressed (see NOTES "Invisible walls").
 import { launch, waitForGame } from './browser.mjs';
+const ORIGIN = process.env.DEV_ORIGIN || `http://localhost:${process.env.BB_PORT || 5173}`; // another dev server (a worktree): BB_PORT=5181
 
 const trials = +(process.argv[2] || 120);
 const sprint = process.argv.includes('--sprint');
 const b = await launch();
 const p = await b.newPage({ viewport: { width: 640, height: 360 } });
 p.on('pageerror', (e) => console.log('[pageerror]', e.message));
-await p.goto(`${process.env.DEV_ORIGIN || 'http://localhost:5173'}/play/?webgl&autostart&skip=post,dust,haze`); // DEV_ORIGIN: another dev server
+await p.goto(`${ORIGIN}/play/?webgl&autostart&skip=post,dust,haze`); // DEV_ORIGIN: another dev server
 console.log('mode:', await waitForGame(p));
 await p.waitForTimeout(3000);
 const res = await p.evaluate(({ trials, sprint, FPS }) => {

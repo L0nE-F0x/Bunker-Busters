@@ -10,9 +10,10 @@
 //   open: the padlock picked; the grid's junction box; the clock gate spliced; the board (Doormen and
 //         lights off); Agnes (the well); the key broken and the well sent up; the standpipe.
 import { launch, waitForGame } from './browser.mjs';
+const ORIGIN = process.env.DEV_ORIGIN || `http://localhost:${process.env.BB_PORT || 5173}`; // another dev server (a worktree): BB_PORT=5181
 
 const which = process.argv[2] || 'both';
-const URL = 'http://localhost:5173/play/?webgl&autostart&at=zero&hour=15';
+const URL = `${ORIGIN}/play/?webgl&autostart&at=zero&hour=15`;
 
 async function run(ending) {
   const b = await launch();

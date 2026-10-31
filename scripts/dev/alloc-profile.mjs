@@ -1,13 +1,14 @@
 // Where the game allocates per frame (headless, CDP sampling heap profiler): top sites by bytes.
 //   node scripts/dev/alloc-profile.mjs [spotJs] [--secs 4] [--top 40]
 import { launch, waitForGame } from './browser.mjs';
+const ORIGIN = process.env.DEV_ORIGIN || `http://localhost:${process.env.BB_PORT || 5173}`; // another dev server (a worktree): BB_PORT=5181
 
 const args = process.argv.slice(2);
 const opt = (k, d) => { const i = args.indexOf(`--${k}`); return i >= 0 ? args[i + 1] : d; };
 const spot = args[0] && !args[0].startsWith('--') ? args[0] : `const p = game.player.position.clone(); p.x = -232; p.z = -8; p.y = game.hf.heightAt(p.x, p.z) + 0.2; game.player.teleport(p); game.atmo.hour = 12; await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))); game.cam.snap(Math.atan2(30, 40), -0.05);`;
 const b = await launch();
 const p = await b.newPage({ viewport: { width: 480, height: 270 } });
-await p.goto('http://localhost:5173/play/?webgl&autostart&q=high');
+await p.goto(`${ORIGIN}/play/?webgl&autostart&q=high`);
 await waitForGame(p, 180000);
 for (let i = 0; i < 100; i++) { if (await p.evaluate(() => window.game?.mode === 'playing' && !!window.game.player)) break; await p.waitForTimeout(300); }
 await p.evaluate(`(async () => { const game = window.game; ${spot} })()`);

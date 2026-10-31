@@ -4,7 +4,7 @@
 // More: &view=side|palm|top&hand=r|l (orbit camera), &frame={"sprint":true,"speed":6.4} (movement state), &t=secs.
 import { launch } from './browser.mjs';
 // dev server origin (BB_PORT=5183 for a second server, e.g. from a worktree)
-const ORIGIN = `http://localhost:${process.env.BB_PORT || 5173}`;
+const ORIGIN = process.env.DEV_ORIGIN || `http://localhost:${process.env.BB_PORT || 5173}`;
 
 const [out = 'hands.png', ...poses] = process.argv.slice(2);
 if (!poses.length) poses.push('pose=reach', 'pose=lockpick', 'pose=empHold', 'pose=idle&torch');

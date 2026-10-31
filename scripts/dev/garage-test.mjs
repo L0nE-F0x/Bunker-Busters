@@ -7,9 +7,10 @@
 // loud: gap (intel), charge on the side door (loud + quiet), vault charge at Demolition 5, SeedBot alert + zap
 //       (caught: teleported out, a pick lost), EMP.
 import { open, STUBS } from './early-common.mjs';
+const ORIGIN = process.env.DEV_ORIGIN || `http://localhost:${process.env.BB_PORT || 5173}`; // another dev server (a worktree): BB_PORT=5181
 
 const which = process.argv[2] || 'all';
-const URL = 'http://localhost:5173/play/?webgl&autostart&hour=15';
+const URL = `${ORIGIN}/play/?webgl&autostart&hour=15`;
 
 async function pick() {
   const t = await open(URL, 'pick');

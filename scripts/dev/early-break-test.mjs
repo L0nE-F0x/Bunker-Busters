@@ -3,13 +3,14 @@
 //   node scripts/dev/early-break-test.mjs [continue|quit|timers|vesper|lockout|all]
 import { open, STUBS } from './early-common.mjs';
 import { waitForGame } from './browser.mjs';
+const ORIGIN = process.env.DEV_ORIGIN || `http://localhost:${process.env.BB_PORT || 5173}`; // another dev server (a worktree): BB_PORT=5181
 
 const which = process.argv[2] || 'all';
-const AUTO = 'http://localhost:5173/play/?webgl&autostart&hour=15';
+const AUTO = `${ORIGIN}/play/?webgl&autostart&hour=15`;
 
 /** Reload into the saved run from the title, the way a player does (the title runs a few seconds first). */
 async function continueFromTitle(t, hook = '') {
-  await t.p.goto('http://localhost:5173/play/?webgl');
+  await t.p.goto(`${ORIGIN}/play/?webgl`);
   await waitForGame(t.p);
   await t.wait(4000);
   if (hook) await t.ev(hook);
@@ -27,7 +28,7 @@ async function cont() {
   await wait(800);
   await ev(`L(0, -3); game.save(true)`);
   await wait(300);
-  await t.p.goto('http://localhost:5173/play/?webgl&continue');
+  await t.p.goto(`${ORIGIN}/play/?webgl&continue`);
   await waitForGame(t.p); await wait(3500);
   await ev(STUBS('garage'));
   await check('Garage after Continue: doors open, colliders gone', `['gateL','gateR','side','vault'].every((d) => B.b.doors[d].open > 0.99 && !B.b.doors[d].collider) && !B.b.doors.gap.collider === false`);
@@ -38,7 +39,7 @@ async function cont() {
   await ev(STUBS('apex'));
   await ev(`(() => { const s = game.state; for (const f of ['apex.hangar.open', 'apex.airlock.open', 'apex.cam.x']) s.set(f); B.applyFlags(true); L(-10, -11); game.save(true); })()`);
   await wait(300);
-  await t.p.goto('http://localhost:5173/play/?webgl&continue');
+  await t.p.goto(`${ORIGIN}/play/?webgl&continue`);
   await waitForGame(t.p); await wait(3500);
   await ev(STUBS('apex'));
   await check('Apex after Continue: hangar + airlock open, colliders gone, padlock gone', `['hangarL','hangarR','airlockOut','airlockIn'].every((d) => B.b.doors[d].open > 0.99 && !B.b.doors[d].collider) && !B.b.lockMeshes.hangar.visible && !!B.b.doors.vault.collider`);
@@ -47,7 +48,7 @@ async function cont() {
   await ev(STUBS('panopticon'));
   await ev(`(() => { const s = game.state; for (const f of ['panopticon.gate.open', 'panopticon.enrolled', 'panopticon.cam.cam1.off', 'panopticon.cam.cam2.off', 'panopticon.ada.met', 'panopticon.ada.ready']) s.set(f); B.applyFlags(true); L(-7, 3); game.save(true); })()`);
   await wait(300);
-  await t.p.goto('http://localhost:5173/play/?webgl&continue');
+  await t.p.goto(`${ORIGIN}/play/?webgl&continue`);
   await waitForGame(t.p); await wait(3500);
   await ev(STUBS('panopticon'));
   await check('Panopticon after Continue: gate open, cam1+2 dark (LEDs, boxes), cam3+4 live, Ada at her desk', `!B.b.doors.gateL.collider && B.b.doors.gateL.open > 0.99 && !find('pan-box-cam1').visible() && !find('pan-box-cam2').visible() && find('pan-box-cam3').visible() && B.cameras.cams[0].lens.value === 0 && B.cameras.cams[2].lens.value > 0 && find('pan-ada').visible()`);
@@ -122,7 +123,7 @@ async function lockout() {
   await ev(`act('tower')`); await wait(300); await ev(`act('tower')`); await wait(13500);
   await check('locked out', `avail('tower') === 'Keypad locked out'`);
   await ev(`game.save(true)`);
-  await t.p.goto('http://localhost:5173/play/?webgl&continue');
+  await t.p.goto(`${ORIGIN}/play/?webgl&continue`);
   await waitForGame(t.p); await wait(3500);
   await ev(STUBS('panopticon'));
   await check('after Continue the keypad works again (the only way out of the lock)', `avail('tower') === true`);

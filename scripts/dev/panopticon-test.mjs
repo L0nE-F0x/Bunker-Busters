@@ -8,9 +8,10 @@
 //         the archive broadcast.
 // short:  shorting the gate motor (quiet), then what the debrief says about it; the keypad soft-lock.
 import { open, STUBS } from './early-common.mjs';
+const ORIGIN = process.env.DEV_ORIGIN || `http://localhost:${process.env.BB_PORT || 5173}`; // another dev server (a worktree): BB_PORT=5181
 
 const which = process.argv[2] || 'all';
-const URL = 'http://localhost:5173/play/?webgl&autostart&at=panopticon&hour=15';
+const URL = `${ORIGIN}/play/?webgl&autostart&at=panopticon&hour=15`;
 const PRE = `(() => { const s = game.state; for (const f of ['briefed', 'debriefed', 'act1.broadcast', 'garage.complete', 'apex.complete', 'act2.debriefed', 'q:act1:done', 'q:act2:done']) s.set(f); game.combat.difficulty = 'story'; })()`;
 const loot = (t) => t.ev(`(async () => { for (const id of ['cistern', 'locker', 'shelf']) { const sp = B.b.lootSpots.find((l) => l.id === id); game.player.teleport(sp.pos.clone().setY(O.y + 0.1)); act(id); await new Promise((r) => setTimeout(r, 300)); } })()`);
 

@@ -3,7 +3,7 @@
 import { fileURLToPath } from 'node:url';
 import { launch } from './browser.mjs';
 // dev server origin (BB_PORT=5183 for a second server, e.g. from a worktree)
-const ORIGIN = `http://localhost:${process.env.BB_PORT || 5173}`;
+const ORIGIN = process.env.DEV_ORIGIN || `http://localhost:${process.env.BB_PORT || 5173}`;
 
 const out = fileURLToPath(new URL('../../public/og.jpg', import.meta.url));
 const b = await launch('soft');

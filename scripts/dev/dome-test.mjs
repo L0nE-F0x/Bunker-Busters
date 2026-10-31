@@ -5,9 +5,10 @@
 // The UI's cards, conversations and minigames are stubbed: `window.__pick` answers cards (by choice
 // id), `window.__talk` picks conversation choices in order, keypads and locks succeed. PASS/FAIL per check.
 import { launch, waitForGame } from './browser.mjs';
+const ORIGIN = process.env.DEV_ORIGIN || `http://localhost:${process.env.BB_PORT || 5173}`; // another dev server (a worktree): BB_PORT=5181
 
 const which = process.argv[2] || 'both';
-const URL = 'http://localhost:5173/play/?webgl&autostart&at=dome&hour=15';
+const URL = `${ORIGIN}/play/?webgl&autostart&at=dome&hour=15`;
 
 async function run(ending) {
   const b = await launch();

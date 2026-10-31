@@ -8,6 +8,7 @@
 // every switch (neighbours within 4.5 m must never start one motion within 3 s of each other), and
 // the phase gaps between same-motion pairs after the fast-forward.
 import { launch, waitForGame } from './browser.mjs';
+const ORIGIN = process.env.DEV_ORIGIN || `http://localhost:${process.env.BB_PORT || 5173}`; // another dev server (a worktree): BB_PORT=5181
 
 const args = process.argv.slice(2);
 const which = args.find((a) => !a.startsWith('--')) ?? 'camp';
@@ -18,7 +19,7 @@ const b = await launch();
 const p = await b.newPage({ viewport: { width: 960, height: 540 } });
 p.on('pageerror', (e) => console.log('[pageerror]', e.message));
 p.on('console', (m) => { if (m.type() === 'error' && !/GL Driver/.test(m.text())) console.log('[console.error]', m.text().slice(0, 300)); });
-await p.goto((process.env.DEV_ORIGIN ?? 'http://localhost:5173') + '/play/?webgl&autostart');
+await p.goto(ORIGIN + '/play/?webgl&autostart');
 console.log('mode:', await waitForGame(p));
 
 const setup = await p.evaluate((which) => {

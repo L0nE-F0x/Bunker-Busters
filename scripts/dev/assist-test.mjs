@@ -3,8 +3,9 @@
 // Friction: the same right-stick push turns the view less across a contractor than across open desert.
 // Pull: raising the sights a few degrees off a contractor eases the aim toward it; on the mouse it doesn't.
 import { launch, waitForGame } from './browser.mjs';
+const ORIGIN = process.env.DEV_ORIGIN || `http://localhost:${process.env.BB_PORT || 5173}`; // another dev server (a worktree): BB_PORT=5181
 
-const BASE = `${process.env.BB_URL || 'http://localhost:5173'}/play/?webgl&autostart`;
+const BASE = `${process.env.BB_URL || ORIGIN}/play/?webgl&autostart`;
 const b = await launch(process.env.GPU_MODE || 'nvidia');
 const p = await b.newPage({ viewport: { width: 1280, height: 720 } });
 p.on('console', (m) => { const t = m.text(); if (m.type() === 'error' && !/GL Driver|Failed to load/.test(t)) console.log('[console.error]', t.slice(0, 300)); });

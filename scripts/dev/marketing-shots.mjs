@@ -6,7 +6,7 @@
 import { fileURLToPath } from 'node:url';
 import { launch, waitForGame } from './browser.mjs';
 // dev server origin (BB_PORT=5183 for a second server, e.g. from a worktree)
-const ORIGIN = `http://localhost:${process.env.BB_PORT || 5173}`;
+const ORIGIN = process.env.DEV_ORIGIN || `http://localhost:${process.env.BB_PORT || 5173}`;
 
 const OUT = process.env.BB_MEDIA_OUT || fileURLToPath(new URL('../../public/media/', import.meta.url));
 const only = new Set(process.argv.slice(2));
