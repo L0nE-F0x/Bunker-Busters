@@ -149,14 +149,18 @@ def trailer(fmt='1080'):
     c.vo('kade-fire', t + 0.05, sub='sub-kade-fire')  # ends just after the charge goes off
     S(c, 'blast-tp', 2 * BEAT, src=0.9, gain=0)
     # ---- the cut to black, then Bunker Zero: the tease
+    # Agnes starts over the black ("It isn't locked."); the showroom comes up under "It never was.";
+    # "It's just heavy." lands as Model Zero starts to swing (4.3 s into the take), and we cut
+    # before the hall behind it shows (it's wide open by 4.6 s)
     t = c.black(1.1)
     c.sound('sfx/impact', t, gain=0)
     c.sound('sfx/subdrop', t, gain=-4)
-    t = S(c, 'zero-door', 5.2, src=0.8, gain=-4, fade_in=0.5)
-    label(c, 'zero', t, 3.2)
-    c.vo('agnes-heavy', t + 0.6, sub='sub-agnes-heavy')
-    c.sound('sfx/drone', t, gain=-12, fade_in=1.0, dur=5.6, fade_out=0.4)
-    c.black(0.5)
+    c.vo('agnes-heavy', t + 0.5, sub='sub-agnes-heavy', sub_pad=0.05)
+    t = S(c, 'zero-door', 3.15, src=1.25, gain=-4, fade_in=0.4)
+    label(c, 'zero', t, 2.6)
+    c.sound('sfx/drone', t - 0.6, gain=-12, fade_in=1.0, dur=4.0, fade_out=0.3)
+    t = c.black(0.6)
+    c.sound('sfx/impact-metal', t, gain=-5)
     # ---- the end card
     t = endcard(c)
     c.sound('music-title', t + 0.25, src=TITLE_DOWN + 16 * BEAT, dur=6.2, gain=-3, fade_in=0.3, fade_out=1.6, bus='music')
@@ -206,7 +210,7 @@ def teaser30(fmt='1080'):
     c.sound('sfx/riser-1.5', c.t - 1.5, gain=-7)
     t = c.black(0.6)
     c.sound('sfx/impact', t, gain=-2)
-    t = S(c, 'zero-door', 2.4, src=2.6, gain=-4, cx=0.5)
+    t = S(c, 'zero-door', 2.4, src=1.95, gain=-4, cx=0.5)
     c.overlay('label-zero', t + 0.1, 2.2, fade_in=0.2, fade_out=0.3)
     t = c.black(4.0)
     c.sound('sfx/braam', t, gain=-3)
@@ -228,7 +232,7 @@ LOOPS = {
     'loop-dome-hologram': ('dome-inside', 1.3, 5.5, None, 'beta-ship', 0.8, None),
     'loop-sentinel': ('h-sentinel', 0.6, 5.5, None, 'sentinel-apology', 0.9, DUSK),
     'loop-fortress-bridge': ('fort-bridge-down', 0.0, 6.6, None, 'kit-bridge', 0.5, DUSK),
-    'loop-zero-door': ('zero-door', 0.8, 6.0, None, 'agnes-heavy', 0.6, None),
+    'loop-zero-door': ('zero-door', 0.15, 4.25, None, 'agnes-heavy', 0.0, None),
 }
 
 

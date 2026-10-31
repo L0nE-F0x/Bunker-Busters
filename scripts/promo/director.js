@@ -59,8 +59,9 @@ Object.assign(window.D, (() => {
   return {
     /** Contractors still standing (Recovery members with a body). */
     hostiles() { return g.recovery.members.filter((m) => m.alive); },
-    /** The squad `summon` made (still standing). */
-    squad() { return (g.recovery.patrol?.members ?? []).filter((m) => m.alive); },
+    /** The squad `summon` made last (still standing). Since v0.6 scripted squads live in
+     *  `recovery.extra`, beside the road patrol, not in `recovery.patrol`. */
+    squad() { const ex = g.recovery.extra; const sq = ex?.length ? ex[ex.length - 1] : g.recovery.patrol; return (sq?.members ?? []).filter((m) => m.alive); },
     /** SeedBot zaps without the knockout (the cut to black and the walk of shame). */
     tame() { const d = g.garage.drone; d.events.onZap = () => { g.audio.play('zap'); g.cam.addTrauma(0.9); }; },
     /** The live contractor nearest the view direction (within `maxAng` rad), or null. */
