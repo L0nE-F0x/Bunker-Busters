@@ -148,7 +148,7 @@ const DIRECTOR = fs.readFileSync(new URL('./director.js', import.meta.url), 'utf
  * seconds of offline audio to allot for the whole session (0 = no audio). `settle` waits (real ms)
  * after loading for shaders and streaming.
  */
-export async function openRig({ url, size = [1920, 1080], settle = 6000, audio = 0, log = true } = {}) {
+export async function openRig({ url, size = (process.env.SIZE || '1920x1080').split('x').map(Number), settle = 6000, audio = 0, log = true } = {}) {
   const browser = await launch(undefined, ['--autoplay-policy=no-user-gesture-required', '--hide-scrollbars']);
   const page = await browser.newPage({ viewport: { width: size[0], height: size[1] } });
   page.on('pageerror', (e) => log && console.log('[pageerror]', e.message));
@@ -162,7 +162,11 @@ export async function openRig({ url, size = [1920, 1080], settle = 6000, audio =
   await waitForGame(page);
   if (settle) await page.waitForTimeout(settle);
   const cdp = await page.context().newCDPSession(page);
-  await page.evaluate(DIRECTOR);
+  // (the director's last statement evaluates to window.D, which holds the whole game: Playwright
+  // would serialise all of it back, and the game has outgrown the pipe's 512 MB message limit)
+  await page.evaluate(DIRECTOR + '\n;void 0;');
+  // a lost pointer lock opens the pause menu, and since v1.0.2 a menu holds the world still
+  await page.evaluate(() => { window.game.openPause = () => {}; });
   // the director's hook after playFrame (the first-person camera), so a scripted camera wins; and
   // one right before the render (exposure lift for night shots: Game sets exposure every frame)
   await page.evaluate(() => {
@@ -179,11 +183,12 @@ export async function openRig({ url, size = [1920, 1080], settle = 6000, audio =
   });
   const takes = []; // [wavPath, audioStart, seconds]
 
-  const setHooks = (pre, post) => page.evaluate(({ pre, post }) => {
+  // keepT: carry on the hooks' clock (a move resumed across several run() calls)
+  const setHooks = (pre, post, keepT = false) => page.evaluate(({ pre, post, keepT }) => {
     window.__cap.pre = pre ? (0, eval)(`(${pre})`) : null;
     window.__cap.post = post ? (0, eval)(`(${post})`) : null;
-    window.__cap.t = 0; window.__cap.i = 0;
-  }, { pre: pre && String(pre), post: post && String(post) });
+    if (!keepT) { window.__cap.t = 0; window.__cap.i = 0; }
+  }, { pre: pre && String(pre), post: post && String(post), keepT });
 
   const rig = {
     page, browser, cdp, size,
@@ -206,8 +211,8 @@ export async function openRig({ url, size = [1920, 1080], settle = 6000, audio =
       throw new Error('the game loop never reached the virtual clock');
     },
     /** Run frames on the virtual clock without capturing (let a shot settle). */
-    async run(seconds, { fps = 60, pre, post } = {}) {
-      await setHooks(pre, post);
+    async run(seconds, { fps = 60, pre, post, keepT = false } = {}) {
+      await setHooks(pre, post, keepT);
       const n = Math.round(seconds * fps);
       for (let i = 0; i < n; i += 20) await page.evaluate(({ k, dt }) => window.__cap.steps(k, dt), { k: Math.min(20, n - i), dt: 1 / fps });
     },
