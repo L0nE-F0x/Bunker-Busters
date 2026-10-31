@@ -99,7 +99,9 @@ export function releaseStatic(renderer: THREE.WebGPURenderer, root: THREE.Object
     for (const a of attrs) {
       if ((a as unknown as THREE.InterleavedBufferAttribute).isInterleavedBufferAttribute || !a.array || !a.array.byteLength) continue;
       if (a.usage !== THREE.StaticDrawUsage || released.has(a)) continue;
-      if (be.has?.(a)) drop(a); else pending.add(a);
+      // already on the GPU (WebGL keeps `bufferGPU`, WebGPU `buffer`)? Then now, else at its upload
+      const d = be.has?.(a) ? be.get(a) : null;
+      if (d && (d.bufferGPU || d.buffer)) drop(a); else pending.add(a);
     }
   }
   return bytes;
