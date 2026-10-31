@@ -34,7 +34,7 @@ export const RUMOURS: Rumour[] = [
   },
   {
     id: 'waitlist', when: (v) => !v.has('site.waitlist.done'),
-    text: 'There\'s a place in the basin south-east of the Tube they call Waitlist City. Four thousand people queued for a bunker called Everafter. The board over the door still says now serving number one. Somebody up there still keeps a fire going.',
+    text: 'There\'s a place in the basin south of the Tube they call Waitlist City. Four thousand people queued for a bunker called Everafter. The board over the door still says now serving number one. Somebody up there still keeps a fire going.',
   },
   {
     id: 'solar', when: (v) => !v.has('site.solar.cut'),
@@ -75,7 +75,7 @@ export const RUMOURS: Rumour[] = [
   },
   {
     id: 'wellhead', op: 'wellhead', when: (v) => !v.has('outpost.wellhead.cleared'),
-    text: 'The Wellhead crew changes shift at dawn, south-west of Dry Creek. For about twenty minutes the tank\'s only got one sentry on it, and it apologises before it shoots. Twenty minutes is a lot of water.',
+    text: 'The Wellhead crew changes shift at dawn, north of Dry Creek. For about twenty minutes the tank\'s only got one sentry on it, and it apologises before it shoots. Twenty minutes is a lot of water.',
   },
   {
     id: 'pipeline', op: 'pipeline', when: (v) => !v.has('seen:pipeline'),
@@ -469,7 +469,7 @@ export const CAMP: CampMember[] = [
       if (id === 'lifeboat') {
         return {
           speaker: 'Dez Marlow',
-          text: 'Something syncs on our band at three every morning. A group chat, called LIFEBOAT. Founders. Seven of them, and Tanner, who keeps rejoining. It comes in pieces: every phone and watch and tablet that died out here still holds its last page, and they all try to sync at once. Find me the pieces. I\'ll ping you where the next one is. I have never wanted anything more. Including the karaoke machine.',
+          text: 'Something syncs on our band at three every morning. A group chat, called LIFEBOAT. Founders. Six of them, and Tanner, who keeps rejoining. It comes in pieces: every phone and watch and tablet that died out here still holds its last page, and they all try to sync at once. Find me the pieces. I\'ll ping you where the next one is. I have never wanted anything more. Including the karaoke machine.',
           choices: [{ id: 'back', label: 'I\'ll find the pieces.', next: 'hello' }],
         };
       }
