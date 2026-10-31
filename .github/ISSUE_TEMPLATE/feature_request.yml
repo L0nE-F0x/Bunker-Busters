@@ -1,0 +1,21 @@
+name: Idea or request
+description: Something you'd like the game to have or do differently.
+title: "[Idea] "
+labels: [enhancement]
+body:
+  - type: textarea
+    id: idea
+    attributes:
+      label: What would you like?
+    validations:
+      required: true
+  - type: textarea
+    id: why
+    attributes:
+      label: Why?
+      description: What were you doing when you wanted it? What gets better?
+  - type: input
+    id: version
+    attributes:
+      label: Game version (if it's about something already in the game)
+      placeholder: "1.0.4"

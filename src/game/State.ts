@@ -560,6 +560,25 @@ export interface Settings {
   showFps: boolean;
   /** v0.5.6: key and controller bindings (src/engine/bindings.ts); older settings get the defaults. */
   binds: BindMap;
+  // ---- 2026-10-31 (settings, accessibility and credits): older settings get ACCESS_DEFAULTS
+  /** Voice level, 0..1. Voices rode the Effects level before; an older file starts from its Effects. */
+  voiceVol: number;
+  /** Display brightness (a gamma over the finished frame), 0.7..1.4; 1 = as graded. */
+  brightness: number;
+  /** Subtitle and dialogue text size. */
+  subSize: SubSize;
+  /** The box behind subtitles. */
+  subBg: SubBg;
+  /** Camera shake, 0..1: blasts, hits taken, recoil kick, hard landings. */
+  shake: number;
+  /** Dims flashes and strobes: lightning, muzzle flashes, blasts, EMP static, alarm strobes. */
+  reduceFlash: boolean;
+  /** Keyboard and mouse: a press toggles crouch / sprint / aim instead of holding it (pad and touch have their own). */
+  toggleCrouch: boolean;
+  toggleSprint: boolean;
+  toggleAim: boolean;
+  /** The photosensitivity notice has been seen (it shows once, over the first title screen). */
+  flashNotice: boolean;
   /**
    * v1.0.4: Graphics AUTO (browser only, engine/autoQuality.ts): the game picks `quality` from the GPU
    * and holds the frame rate with the render scale. On for a browser that has never stored settings
@@ -568,8 +587,17 @@ export interface Settings {
   autoQuality?: boolean;
 }
 
+export const SUB_SIZES = ['small', 'medium', 'large', 'xl'] as const;
+export type SubSize = (typeof SUB_SIZES)[number];
+export const SUB_BGS = ['none', 'light', 'dark', 'solid'] as const;
+export type SubBg = (typeof SUB_BGS)[number];
+export const ACCESS_DEFAULTS = {
+  voiceVol: 0.9, brightness: 1, subSize: 'medium' as SubSize, subBg: 'light' as SubBg, shake: 1, reduceFlash: false,
+  toggleCrouch: false, toggleSprint: false, toggleAim: false, flashNotice: false,
+};
+
 // phones start on Low: a phone GPU at native resolution under the full post stack crawls
-export const DEFAULT_SETTINGS: Settings = { quality: isMobile ? 'low' : 'high', difficulty: 'normal', master: 0.8, music: 0.5, sfx: 0.9, sensitivity: 1, voice: true, voiceOff051: true, voiceOn052: true, fov: 64, invertY: false, bob: 1, showFps: false, binds: defaultBinds(), autoQuality: !isDesktopApp };
+export const DEFAULT_SETTINGS: Settings = { quality: isMobile ? 'low' : 'high', difficulty: 'normal', master: 0.8, music: 0.5, sfx: 0.9, sensitivity: 1, voice: true, voiceOff051: true, voiceOn052: true, fov: 64, invertY: false, bob: 1, showFps: false, binds: defaultBinds(), ...ACCESS_DEFAULTS, autoQuality: !isDesktopApp };
 
 const num = (v: unknown, lo: number, hi: number, dflt: number) => (typeof v === 'number' && Number.isFinite(v) ? Math.min(hi, Math.max(lo, v)) : dflt);
 
@@ -596,6 +624,14 @@ export function loadSettings(): Settings {
     s.invertY = s.invertY === true;
     s.showFps = s.showFps === true;
     s.binds = sanitizeBinds(s.binds);
+    // 2026-10-31 fields: an older file lacks them (the defaults fill them in); a bad value goes back to its default
+    const had = parsed && typeof parsed === 'object' ? (parsed as Record<string, unknown>) : {};
+    s.voiceVol = num(had.voiceVol, 0, 1, s.sfx);
+    s.brightness = num(s.brightness, 0.7, 1.4, ACCESS_DEFAULTS.brightness);
+    if (!SUB_SIZES.includes(s.subSize)) s.subSize = ACCESS_DEFAULTS.subSize;
+    if (!SUB_BGS.includes(s.subBg)) s.subBg = ACCESS_DEFAULTS.subBg;
+    s.shake = num(s.shake, 0, 1, ACCESS_DEFAULTS.shake);
+    for (const k of ['reduceFlash', 'toggleCrouch', 'toggleSprint', 'toggleAim', 'flashNotice'] as const) s[k] = s[k] === true;
     return s;
   } catch {
     return { ...DEFAULT_SETTINGS, binds: defaultBinds() };

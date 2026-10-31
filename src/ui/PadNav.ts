@@ -37,7 +37,43 @@ export class PadNav {
   onIdle: ((f: NavFrame) => void) | null = null;
   private scrollAcc = 0;
 
-  constructor(private root: HTMLElement) {}
+  constructor(private root: HTMLElement) {
+    // keyboard only: the arrows and Enter drive the same focus ring in the plain menus (Tab is the
+    // Kit and Input swallows it, so the browser's own focus order never worked here)
+    window.addEventListener('keydown', (e) => this.key(e));
+    window.addEventListener('mousemove', (e) => {
+      if (Math.abs(e.movementX) + Math.abs(e.movementY) > 3) document.documentElement.classList.remove('keynav');
+    });
+  }
+
+  /**
+   * Menus that take the arrow keys: the title, pause, Settings, Controls, Credits, the notice and the
+   * link box. Character select, dialogue, the minigames, the Kit and the map keep their own keys.
+   */
+  private keyMenu(c: HTMLElement) {
+    if (c.id === 'title') return true;
+    if (!c.classList.contains('overlay')) return false;
+    if (c.querySelector('.mg, .wmap, .keypad, .brief, .talk, .modal')) return false;
+    return c.classList.contains('linkbox') || !!c.querySelector(':scope > .pause, :scope > .cr, :scope > .notice-card');
+  }
+
+  private key(e: KeyboardEvent) {
+    // trusted keys only: the synthetic ones this class types into the minigames come back through here
+    if (!e.isTrusted || e.altKey || e.ctrlKey || e.metaKey) return;
+    const dir = e.code === 'ArrowUp' ? 'up' : e.code === 'ArrowDown' ? 'down' : e.code === 'ArrowLeft' ? 'left' : e.code === 'ArrowRight' ? 'right' : null;
+    const press = e.code === 'Enter' || e.code === 'NumpadEnter' || e.code === 'Space';
+    if (!dir && !press) return;
+    const c = this.top();
+    if (!c || !this.keyMenu(c)) return;
+    e.preventDefault(); // a focused slider or select would also step on its own
+    if (e.repeat && press) return;
+    document.documentElement.classList.add('keynav');
+    this.handle({
+      up: dir === 'up', down: dir === 'down', left: dir === 'left', right: dir === 'right',
+      a: press, b: false, x: false, y: false, lb: false, rb: false, start: false, back: false,
+      aHeld: false, lx: 0, ly: 0, rx: 0, ry: 0, dt: 1 / 60,
+    });
+  }
 
   /** The menu on top, or null. */
   private top(): HTMLElement | null {

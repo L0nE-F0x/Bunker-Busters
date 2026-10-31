@@ -723,7 +723,7 @@ export class Cathedral extends Bunker<CathedralBuilder> {
     if (this.isOpen('office')) return 'Orrin\'s console is on the desk in the office. Decide what happens to the Cathedral.';
     if (this.playerInside) {
       const stop = this.eStop > 0 ? ` E-stop: ${Math.ceil(this.eStop)} s.` : '';
-      if (!s.has(F.loMet)) return `The office is up the stair behind the altar, past the floor. A woman at a desk on the west of the crossing is running the shift.${stop}`;
+      if (!s.has(F.loMet)) return `The office is up the stair behind the altar, past the floor. A woman at a desk on the west side of the crossing is running the shift.${stop}`;
       return `Up the stair on the east side of the apse to the office door: four digits, SPLICE (Electronics 4), or a charge.${stop}`;
     }
     if (this.isOpen('dock') || this.isOpen('returns')) return 'In through the dock, or ride the returns line from the kiosk on the east wall.';

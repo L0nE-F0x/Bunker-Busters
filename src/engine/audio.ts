@@ -144,7 +144,8 @@ export class AudioEngine {
   private started = false;
   private stepFoot = 0;
   private stepPan: StereoPannerNode[] = [];
-  volume = { master: 0.8, music: 0.5, sfx: 0.9 };
+  /** Bus levels 0..1 (Settings → Audio). Voices had no level of their own before 2026-10-31: they rode `sfx`. */
+  volume = { master: 0.8, music: 0.5, sfx: 0.9, voice: 0.9 };
   /** Gunfire, impacts, creatures, explosions (null until start()). */
   combat: CombatAudio | null = null;
   private listenerPos = new THREE.Vector3();
@@ -255,7 +256,7 @@ export class AudioEngine {
       deafen: (k) => this.deafen(k),
     });
     this.voiceBus = ctx.createGain();
-    this.voiceBus.gain.value = this.volume.sfx;
+    this.voiceBus.gain.value = this.volume.voice;
     this.voiceBus.connect(this.master);
     this.voice = new VoicePlayer(ctx, this.voiceBus, (pos) => this.panner(pos, 6, 1.1), (k) => {
       // talk sits on top of the score: duck it while someone speaks (a bark only a little)
@@ -365,7 +366,7 @@ export class AudioEngine {
     this.music.gain.value = this.volume.music * this.musicDuck;
     this.sfx.gain.value = this.volume.sfx;
     this.foley.gain.value = this.volume.sfx;
-    this.voiceBus.gain.value = this.volume.sfx;
+    this.voiceBus.gain.value = this.volume.voice;
   }
 
   private makeNoise(seconds: number) {

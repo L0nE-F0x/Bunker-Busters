@@ -188,7 +188,7 @@ export const APEX: Bunker = {
         { id: 'tank_b', label: 'Open the crew locker', take: [3] },
         { id: 'cistern', label: 'Open the cistern tap', take: 'guaranteed' },
       ],
-      overburdened: 'You\'re overloaded. Drop some junk, the water matters more.',
+      overburdened: 'You\'re overloaded. Drop some junk; the water matters more.',
       busted: {
         reason: 'BUNKER BUSTED: Apex Vault',
         banner: 'The cistern runs east tonight.',
@@ -308,7 +308,7 @@ export const VESPER_POSTS: { when: string; text: string; likes: string }[] = [
   { when: APEX_FLAGS.lasers, text: 'turning off lasers is literally violence', likes: '3.3M' },
   { when: APEX_FLAGS.cameras, text: 'cameras down. if u see someone in my vault no u didnt', likes: '1.9M' },
   { when: APEX_FLAGS.airlock, text: 'live from my airlock: this is what poverty looks like up close. so brave', likes: '2.7M' },
-  { when: APEX_FLAGS.demo, text: 'giving a fan a tour. humanizing. very relatable of me', likes: '4.4M' },
+  { when: APEX_FLAGS.demo, text: 'giving a fan a tour. humanising. very relatable of me', likes: '4.4M' },
   { when: APEX_FLAGS.hangar, text: 'breaking: man discovers doors have hinges. more at 11', likes: '4.1M' },
   { when: '', text: 'the camps are the free tier. upgrade or hydrate elsewhere', likes: '12.8M' },
 ];

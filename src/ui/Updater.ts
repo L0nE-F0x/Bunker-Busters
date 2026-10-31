@@ -66,8 +66,11 @@ export async function mountUpdateNotice(host: HTMLElement, onClick: () => void) 
     go.disabled = later.disabled = true;
     bar.style.display = 'block';
     status.textContent = 'Downloading…';
+    card.classList.remove('failed');
     const poll = setInterval(async () => {
-      const p: Progress = await ipc!.invoke('update_progress');
+      let p: Progress;
+      try { p = await ipc!.invoke('update_progress'); } catch { return; }
+      if (p.phase === 'error') return; // the install call below reports it
       if (p.total) fill.style.width = `${Math.min(100, (p.downloaded / p.total) * 100).toFixed(1)}%`;
       const mb = (n: number) => (n / 1048576).toFixed(1);
       if (p.phase === 'downloading') status.textContent = `Downloading… ${mb(p.downloaded)}${p.total ? ` / ${mb(p.total)}` : ''} MB`;
@@ -79,7 +82,13 @@ export async function mountUpdateNotice(host: HTMLElement, onClick: () => void) 
       fill.style.width = '100%';
       status.textContent = 'Done. Restarting…';
     } catch (e) {
-      status.innerHTML = `Update failed: ${esc(String(e))}<br>You can download it from <b>bunker-busters.netlify.app</b>.`;
+      // one line from update.rs (`plain`); the game you have is untouched
+      console.warn('[update] install failed:', e);
+      status.innerHTML = `${esc(String(e))}<br>Your copy still works. <b class="u-site" role="link" tabindex="0" style="cursor:pointer;text-decoration:underline">Download it from the website</b>`;
+      const site = status.querySelector('.u-site') as HTMLElement;
+      const open = () => { void ipc!.invoke('open_external', { url: 'https://bunker-busters.netlify.app/#get' }).catch(() => {}); };
+      site.onclick = open;
+      site.onkeydown = (ev) => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); open(); } };
       card.classList.add('failed');
       go.disabled = later.disabled = false;
       go.textContent = 'Try again';

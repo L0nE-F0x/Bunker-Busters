@@ -151,8 +151,12 @@ function whole(piece) {
 
 /** What Kokoro reads: shouted words in normal case (it spells long capitals out), brand marks dropped. */
 const ACRONYMS = new Set(['SLA', 'EMP', 'CEO', 'AI', 'OK', 'HR', 'PR', 'VIP', 'GPS', 'NDA', 'IPO', 'B2B', 'SaaS', 'UI', 'CVR', 'ID', 'II', 'III']);
+// "Act IV" went to Kokoro as "Act Iv" (the capitals rule below lowercases unknown acronyms): numbers
+// after Act/Tier are said as words. The subtitle keeps the numeral.
+const ROMAN = { I: 'One', II: 'Two', III: 'Three', IV: 'Four', V: 'Five', VI: 'Six', VII: 'Seven', VIII: 'Eight' };
 function forTts(words) {
   return words
+    .replace(/\b(Act|Tier) (VIII|VII|VI|IV|V|III|II|I)\b/g, (_, w, n) => `${w} ${ROMAN[n]}`)
     .replace(/[™®]/g, '')
     .replace(/\bSeedBot\b/g, 'Seed Bot')
     .replace(/\bBunkrly\b/g, 'Bunker dot lee')

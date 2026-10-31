@@ -4,7 +4,7 @@ import type { BunkerSecurity } from '@/content/types';
 import type { GameContext, Interactable } from '../context';
 import type { Bunker } from './Bunker';
 import type { Laser, SecurityCamera, Tripwire } from './shell';
-import { isTouch } from '@/engine/device';
+import { actionWord } from '@/engine/bindings';
 
 /**
  * The bunker runtime's hazards. Each one is driven by `Bunker` (flags, interactables, per-frame)
@@ -12,8 +12,11 @@ import { isTouch } from '@/engine/device';
  */
 
 type Player = GameContext['player'];
-const CROUCH_KEY = isTouch ? 'crouch' : 'crouch [C]';
-const crouchText = (t: string) => t.replace('{crouch}', CROUCH_KEY);
+/** "{crouch}" in a hint: the crouch control as bound now (a rebind or a pad shows its own key; touch has none). */
+const crouchText = (t: string) => {
+  const k = actionWord('crouch');
+  return t.replace('{crouch}', k ? `crouch [${k}]` : 'crouch');
+};
 
 function segIntersect(p1: THREE.Vector2, p2: THREE.Vector2, q1: THREE.Vector2, q2: THREE.Vector2) {
   const d = (p2.x - p1.x) * (q2.y - q1.y) - (p2.y - p1.y) * (q2.x - q1.x);
