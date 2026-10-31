@@ -3,6 +3,7 @@ import {
   vec2, vec3, float, positionWorld, mix, sin, normalWorld, texture, floor, step, uv, time, fract, abs, smoothstep,
 } from 'three/tsl';
 import { Simplex2, mulberry32 } from '@/engine/noise';
+import { markStatic } from '@/engine/release';
 import type { Heightfield } from './Heightfield';
 import type { Physics } from '@/engine/physics';
 import { HIGHWAY, WORLD_SEED } from '@/content/world';
@@ -316,7 +317,7 @@ export class Props {
     const low = (y: number) => Math.min(1, Math.max(0, (-1 - y) / 4));
     plant(dead, 60, (_x, _z, y) => 0.25 + low(y) * 0.75, [0.8, 1.5], 0.25);
     plant(josh, 55, (_x, _z, y) => 0.9 - low(y) * 0.85, [0.85, 1.35], 0.2);
-    const mesh = new THREE.Mesh(hi.geometry(), floraMaterial());
+    const mesh = new THREE.Mesh(markStatic(hi.geometry()), floraMaterial());
     mesh.name = 'trees';
     mesh.castShadow = true;
     mesh.receiveShadow = true;

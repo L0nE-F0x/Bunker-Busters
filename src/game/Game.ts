@@ -29,7 +29,8 @@ import { updateRim, glow, desertRock } from './world/materials';
 import { buildIntelProp, type IntelProp } from './world/intelProps';
 import { Scavenge } from './world/Scavenge';
 import { NpcModels } from './world/npcSkin';
-import { updateShownMatrices, viewCull, mergeStatic, shadowProxy } from './world/kit';
+import { updateShownMatrices, viewCull, mergeStatic, shadowProxy, releaseBatchParts } from './world/kit';
+import { releaseStatic } from '@/engine/release';
 import { NpcCrowd } from './world/npc';
 import { routineOpen } from '@/content/routines';
 import { HumanSkins } from './combat/humanSkin';
@@ -537,6 +538,11 @@ export class Game {
     console.log(`[BunkerBusters] shader warm-up: ${drawn.length} objects in ${batches} frames, ${warmMs.toFixed(0)} ms (${(performance.now() - tWarm).toFixed(0)} ms wall${parallel ? ', parallel links' : ''})`);
     unstageMenuHands();
     menuHands.dispose();
+    // everything static is on the GPU now: drop the CPU copies of its vertex data (the rest goes at its
+    // first upload) and the batches' source parts (engine/release.ts: ~half the page's memory)
+    releaseBatchParts();
+    const freed = releaseStatic(this.renderer, this.scene);
+    console.log(`[BunkerBusters] released ${(freed / 1048576).toFixed(0)} MB of static vertex data`);
     await step(0.95, 'Polishing neon');
     this.renderer.setAnimationLoop(() => this.frame());
     window.addEventListener('resize', () => this.resize());

@@ -1,6 +1,7 @@
 import * as THREE from 'three/webgpu';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { batchSpec, familyMaterial, plainStandard, GLOW_SLOTS, type BatchSpec, type Family } from './materials';
+import { markStatic } from '@/engine/release';
 
 /**
  * Geometry kit: helpers that produce transformed, attribute-normalised (position/normal/uv, non-indexed)
@@ -56,15 +57,37 @@ export function merge(parts: THREE.BufferGeometry[]) {
   const g = mergeGeometries(parts.map(norm), false);
   if (!g) throw new Error('merge failed');
   g.computeBoundingSphere();
-  return g;
+  // static unless something writes to it later (engine/release.ts reports that)
+  return markStatic(g);
 }
 
 /** Debug: ?nofam disables family merging (A/B the draw-call savings against identical visuals). */
 const NOFAM = typeof location !== 'undefined' && new URLSearchParams(location.search).has('nofam');
 
+/** Every batch built during boot, so `releaseBatchParts` can let their source parts go afterwards. */
+const builtBatches = new Set<MeshBatch>();
+let batchesReleased = false;
+
+/**
+ * After boot nothing builds a boot-time batch again: drop the source parts every built batch still
+ * holds (CPU-only geometry, never drawn: ~40 MB across the sites, the town and the bunkers). A batch
+ * built again after this reports it on the console (it would come out empty).
+ */
+export function releaseBatchParts() {
+  for (const b of builtBatches) b.releaseParts();
+  builtBatches.clear();
+  batchesReleased = true;
+}
+
 /** Builds a group from {material → geometry parts} with one mesh per material. */
 export class MeshBatch {
   private parts = new Map<THREE.Material, THREE.BufferGeometry[]>();
+  private released = false;
+  /** (releaseBatchParts) */
+  releaseParts() {
+    this.parts.clear();
+    this.released = true;
+  }
   add(mat: THREE.Material, ...g: THREE.BufferGeometry[]) {
     let arr = this.parts.get(mat);
     if (!arr) this.parts.set(mat, (arr = []));
@@ -72,9 +95,12 @@ export class MeshBatch {
     return this;
   }
   build(name = 'batch', castShadow = true, receiveShadow = true) {
+    if (this.released) console.error(`[kit] MeshBatch '${name}' built again after its parts were released`);
+    if (!batchesReleased) builtBatches.add(this);
     const group = new THREE.Group();
     group.name = name;
     const add = (geo: THREE.BufferGeometry, mat: THREE.Material) => {
+      markStatic(geo);
       const mesh = new THREE.Mesh(geo, mat);
       mesh.castShadow = castShadow;
       mesh.receiveShadow = receiveShadow;
@@ -127,6 +153,8 @@ export class MeshBatch {
    * out. Call before build(): it reads the same parts.
    */
   buildFar(name = 'far', opts: { minSize?: number; colors?: Map<THREE.Material, THREE.ColorRepresentation>; keep?: THREE.Material[] } = {}) {
+    if (this.released) console.error(`[kit] MeshBatch far '${name}' built after its parts were released`);
+    if (!batchesReleased) builtBatches.add(this);
     const minSize = opts.minSize ?? 0.35;
     const far = new MeshBatch();
     const bb = new THREE.Vector3();
@@ -218,7 +246,7 @@ export function mergeStatic(dst: THREE.Object3D, roots: THREE.Object3D[], inUse:
     const geo = mergeGeometries(e.parts, false);
     if (!geo) continue;
     geo.computeBoundingSphere();
-    const mesh = new THREE.Mesh(geo, e.mat);
+    const mesh = new THREE.Mesh(markStatic(geo), e.mat);
     mesh.name = name;
     mesh.castShadow = false;
     mesh.receiveShadow = e.receive;
@@ -280,7 +308,9 @@ export function shadowProxy(root: THREE.Object3D, skip: THREE.Object3D[] = [], n
       const pos = src.attributes.position as THREE.BufferAttribute;
       const start = src.drawRange.start, idx = src.index;
       const count = Math.min(src.drawRange.count, idx ? idx.count : pos.count) - start;
-      if (pos && count > 0) {
+      // a geometry whose CPU copy was released after upload (engine/release.ts) keeps its own caster
+      if (pos && pos.array.length === 0 && count > 0) console.error(`[kit] shadowProxy: '${o.name || name}' was released; it keeps casting itself`);
+      else if (pos && count > 0) {
         const arr = new Float32Array(count * 3);
         for (let i = 0; i < count; i++) {
           const v = idx ? idx.getX(start + i) : start + i;
@@ -304,7 +334,7 @@ export function shadowProxy(root: THREE.Object3D, skip: THREE.Object3D[] = [], n
     const geo = parts.length === 1 ? parts[0] : mergeGeometries(parts, false);
     if (!geo) continue;
     geo.computeBoundingSphere();
-    const proxy = new THREE.Mesh(geo, proxyMaterial(side));
+    const proxy = new THREE.Mesh(markStatic(geo), proxyMaterial(side));
     proxy.name = name;
     proxy.layers.set(SHADOW_LAYER);
     proxy.castShadow = true;
