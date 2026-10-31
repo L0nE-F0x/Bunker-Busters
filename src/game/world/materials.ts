@@ -2,7 +2,7 @@ import * as THREE from 'three/webgpu';
 import {
   Fn, vec2, float, positionWorld, positionLocal, normalWorld, mix, smoothstep, abs, sin, uniform, time, pow, max,
   fract, step, uv, cameraPosition, normalize, dot, attribute, uniformArray, int, vertexStage, varying, texture,
-  renderGroup, materialColor, floor, vec3, fwidth,
+  renderGroup, materialColor, floor, vec3, fwidth, materialReference,
 } from 'three/tsl';
 import { bumpFromHeight } from './Terrain';
 import { noise } from '@/engine/noiseTex';
@@ -22,6 +22,46 @@ function memo<T extends THREE.Material>(key: string, make: () => T): T {
   return m;
 }
 const k = (name: string, ...args: unknown[]) => name + JSON.stringify(args, (_, v) => (v instanceof THREE.Color ? '#' + v.getHexString() : v));
+
+// ------------------------------------------------------------------ one graph per factory
+// Every instance of a factory used to build its own node graph, with its parameters in its own
+// uniforms: the same shader in the end, but three builds a graph per distinct graph, and a build is
+// ~30 ms of JS (more on a phone). 116 of the boot's ~600 builds were factory variants that only
+// differed in a colour or a number: ~4 s of the shader warm-up, every boot. Now each factory builds
+// its graph once and every material of that kind shares those nodes, reading its own parameters
+// from `material.userData.bb` (material references, the way three reads `color` and `roughness`),
+// so three builds it once and only the uniform values change between draws. Same maths, same look.
+// `?nosharedmat` A/Bs it (every material builds its own graph again, parameters in its own uniforms).
+const NODE_PROPS = ['colorNode', 'roughnessNode', 'metalnessNode', 'normalNode', 'emissiveNode', 'aoNode'] as const;
+const _graphs = new Map<string, Partial<Record<(typeof NODE_PROPS)[number], N>>>();
+const SHARED = typeof location === 'undefined' || !new URLSearchParams(location.search).has('nosharedmat');
+/** A factory parameter as a node: `p('base', 'color')`. */
+type Param = (name: string, type: 'float' | 'color') => N;
+/** Give `m` the graph `setup` builds, built once per `key` (on a template that's never drawn). */
+function sharedGraph(m: THREE.MeshStandardNodeMaterial, key: string, params: Record<string, number | THREE.Color>, setup: (t: THREE.MeshStandardNodeMaterial, p: Param) => void) {
+  m.userData.bb = params;
+  if (!SHARED) { setup(m, (name) => uniform(params[name] as N)); return m; }
+  let g = _graphs.get(key);
+  if (!g) {
+    const t = new THREE.MeshStandardNodeMaterial();
+    setup(t, (name, type) => materialReference(`userData.bb.${name}`, type));
+    g = {};
+    for (const p of NODE_PROPS) if ((t as N)[p]) g[p] = (t as N)[p];
+    _graphs.set(key, g);
+  }
+  for (const p of NODE_PROPS) if (g[p]) (m as N)[p] = g[p];
+  _own.set(m, () => {
+    for (const p of NODE_PROPS) (m as N)[p] = null;
+    setup(m, (name) => uniform(params[name] as N));
+    m.needsUpdate = true;
+  });
+  return m;
+}
+const _own = new WeakMap<THREE.Material, () => void>();
+/** Test hook (an A/B in one frozen frame): give a shared-graph material its own graph and uniforms, as before. */
+export function unshareMaterial(m: THREE.Material) {
+  _own.get(m)?.();
+}
 
 // ------------------------------------------------------------------ batch families
 // Many batches use several *variants* of one factory (a dozen rustyMetal paints, a handful of
@@ -215,17 +255,11 @@ export const rustyMetal = (o: RustOpts) => memo(k('rust', o), () =>
   tag(rustyMetalUnique(o), 'rust', o.base, o.rim ?? 0, [o.rust ?? 0.5, o.roughness ?? 0.55, o.metalness ?? 0.6, o.scale ?? 1]));
 
 export function rustyMetalUnique(o: RustOpts) {
-  const m = new THREE.MeshStandardNodeMaterial();
-  rustSetup(m, {
-    base: uniform(new THREE.Color(o.base)),
-    rustAmt: uniform(o.rust ?? 0.5),
-    rough: uniform(o.roughness ?? 0.55),
-    metal: uniform(o.metalness ?? 0.6),
-    s: uniform(o.scale ?? 1),
-    rimK: uniform(o.rim ?? 0),
-  });
-  return m;
+  return sharedGraph(new THREE.MeshStandardNodeMaterial(), 'rust', rustParams(o), (t, p) => rustSetup(t, rustNodes(p)));
 }
+
+function rustParams(o: RustOpts) { return { base: new THREE.Color(o.base), rustAmt: o.rust ?? 0.5, rough: o.roughness ?? 0.55, metal: o.metalness ?? 0.6, s: o.scale ?? 1, rimK: o.rim ?? 0 }; }
+function rustNodes(p: Param) { return { base: p('base', 'color'), rustAmt: p('rustAmt', 'float'), rough: p('rough', 'float'), metal: p('metal', 'float'), s: p('s', 'float'), rimK: p('rimK', 'float') }; }
 
 function rustSetup(m: THREE.MeshStandardNodeMaterial, P: { base: N; rustAmt: N; rough: N; metal: N; s: N; rimK: N }) {
   const { base, rustAmt, rough, metal, s, rimK } = P;
@@ -251,8 +285,8 @@ function rustSetup(m: THREE.MeshStandardNodeMaterial, P: { base: N; rustAmt: N; 
  */
 export const carPaint = (base: THREE.ColorRepresentation, rust = 0.5, fade = 0.5) =>
   memo(k('paint', base, rust, fade), () => {
-    const m = new THREE.MeshStandardNodeMaterial();
-    paintSetup(m, uniform(new THREE.Color(base)), uniform(rust), uniform(fade));
+    const m = sharedGraph(new THREE.MeshStandardNodeMaterial(), 'paint', { base: new THREE.Color(base), rustAmt: rust, fade },
+      (t, p) => paintSetup(t, p('base', 'color'), p('rustAmt', 'float'), p('fade', 'float')));
     return tag(m, 'paint', base, 0, [rust, fade]);
   });
 
@@ -446,9 +480,9 @@ export const concrete = (tint: THREE.ColorRepresentation = '#9a9184', opts: { sc
   memo(k('concrete', tint, opts), () => tag(concreteUnique(tint, opts), 'concrete', tint, 0, [opts.scale ?? 1, opts.stains ?? 0.6]));
 
 function concreteUnique(tint: THREE.ColorRepresentation, opts: { scale?: number; stains?: number }) {
-  const m = new THREE.MeshStandardNodeMaterial({ roughness: 0.92, metalness: 0 });
-  concreteSetup(m, uniform(new THREE.Color(tint)), uniform(opts.scale ?? 1), uniform(opts.stains ?? 0.6));
-  return m;
+  return sharedGraph(new THREE.MeshStandardNodeMaterial({ roughness: 0.92, metalness: 0 }), 'concrete',
+    { base: new THREE.Color(tint), s: opts.scale ?? 1, stainAmt: opts.stains ?? 0.6 },
+    (t, p) => concreteSetup(t, p('base', 'color'), p('s', 'float'), p('stainAmt', 'float')));
 }
 
 function concreteSetup(m: THREE.MeshStandardNodeMaterial, base: N, s: N, stainAmt: N) {
@@ -477,9 +511,8 @@ export const corrugated = (base: THREE.ColorRepresentation, rust = 0.6, axis: 'x
   memo(k('corr', base, rust, axis), () => tag(corrugatedUnique(base, rust, axis), `corr-${axis}`, base, 0, [rust, 0.5, 0.7, 1]));
 
 function corrugatedUnique(base: THREE.ColorRepresentation, rust: number, axis: 'x' | 'y' | 'z') {
-  const m = rustyMetalUnique({ base, rust, roughness: 0.5, metalness: 0.7 });
-  corrSetup(m, axis);
-  return m;
+  return sharedGraph(new THREE.MeshStandardNodeMaterial(), `corr-${axis}`, rustParams({ base, rust, roughness: 0.5, metalness: 0.7 }),
+    (t, p) => { rustSetup(t, rustNodes(p)); corrSetup(t, axis); });
 }
 
 function corrSetup(m: THREE.MeshStandardNodeMaterial, axis: 'x' | 'y' | 'z') {
@@ -494,11 +527,14 @@ export function plainStandard(c: THREE.ColorRepresentation, roughness = 0.8, met
     const m = new THREE.MeshStandardNodeMaterial({ color: c, roughness, metalness, ...extra });
     // only plain opaque variants batch together (extras like side/transparent change the pipeline)
     if (Object.keys(extra).length) return m;
-    // same look as the batched 'plain' family (dust + contact layer); the colour stays m.color
-    const sd = settle(m, materialColor, float(0.8));
-    m.colorNode = sd.color;
-    m.roughnessNode = mix(uniform(roughness), float(0.95), sd.dust);
-    m.emissiveNode = sunRim();
+    // same look as the batched 'plain' family (dust + contact layer); the colour stays m.color and
+    // the roughness m.roughness (one graph for every plain variant)
+    sharedGraph(m, 'plain', { rough: roughness }, (t, p) => {
+      const sd = settle(t, materialColor, float(0.8));
+      t.colorNode = sd.color;
+      t.roughnessNode = mix(p('rough', 'float'), float(0.95), sd.dust);
+      t.emissiveNode = sunRim();
+    });
     return tag(m, 'plain', c, 0, [roughness, metalness]);
   });
 }
@@ -548,9 +584,7 @@ function chainLinkUnique() {
 export const fabric = (c: THREE.ColorRepresentation, roughness = 0.95) => memo(k('fabric', c, roughness), () => tag(fabricUnique(c, roughness), 'fabric', c, 0, [roughness]));
 
 export function fabricUnique(c: THREE.ColorRepresentation, roughness = 0.95) {
-  const m = new THREE.MeshStandardNodeMaterial({ roughness, metalness: 0 });
-  fabricSetup(m, uniform(new THREE.Color(c)));
-  return m;
+  return sharedGraph(new THREE.MeshStandardNodeMaterial({ roughness, metalness: 0 }), 'fabric', { base: new THREE.Color(c) }, (t, p) => fabricSetup(t, p('base', 'color')));
 }
 
 function fabricSetup(m: THREE.MeshStandardNodeMaterial, base: N) {
@@ -565,9 +599,7 @@ function fabricSetup(m: THREE.MeshStandardNodeMaterial, base: N) {
 export const leather = (c: THREE.ColorRepresentation) => memo(k('leather', c), () => tag(leatherUnique(c), 'leather', c, 0, []));
 
 function leatherUnique(c: THREE.ColorRepresentation) {
-  const m = new THREE.MeshStandardNodeMaterial({ roughness: 0.65, metalness: 0 });
-  leatherSetup(m, uniform(new THREE.Color(c)));
-  return m;
+  return sharedGraph(new THREE.MeshStandardNodeMaterial({ roughness: 0.65, metalness: 0 }), 'leather', { base: new THREE.Color(c) }, (t, p) => leatherSetup(t, p('base', 'color')));
 }
 
 function leatherSetup(m: THREE.MeshStandardNodeMaterial, base: N) {
@@ -582,9 +614,8 @@ export const warmWindow = (c: THREE.ColorRepresentation = '#ffb35c', intensity =
   memo(k('window', c, intensity), () => tag(warmWindowUnique(c, intensity), 'window', c, 0, [intensity]));
 
 function warmWindowUnique(c: THREE.ColorRepresentation, intensity: number) {
-  const m = new THREE.MeshStandardNodeMaterial({ color: 0x111111, roughness: 0.1, metalness: 0.2 });
-  windowSetup(m, uniform(new THREE.Color(c)), uniform(intensity));
-  return m;
+  return sharedGraph(new THREE.MeshStandardNodeMaterial({ color: 0x111111, roughness: 0.1, metalness: 0.2 }), 'window', { col: new THREE.Color(c), k: intensity },
+    (t, p) => windowSetup(t, p('col', 'color'), p('k', 'float')));
 }
 
 function windowSetup(m: THREE.MeshStandardNodeMaterial, col: N, k: N) {
@@ -596,9 +627,7 @@ function windowSetup(m: THREE.MeshStandardNodeMaterial, col: N, k: N) {
 export const wood = (c: THREE.ColorRepresentation = '#6b4a2e') => memo(k('wood', c), () => tag(woodUnique(c), 'wood', c, 0, []));
 
 function woodUnique(c: THREE.ColorRepresentation) {
-  const m = new THREE.MeshStandardNodeMaterial({ roughness: 0.85 });
-  woodSetup(m, uniform(new THREE.Color(c)));
-  return m;
+  return sharedGraph(new THREE.MeshStandardNodeMaterial({ roughness: 0.85 }), 'wood', { base: new THREE.Color(c) }, (t, p) => woodSetup(t, p('base', 'color')));
 }
 
 function woodSetup(m: THREE.MeshStandardNodeMaterial, base: N) {
