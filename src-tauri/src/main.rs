@@ -19,18 +19,24 @@ static QUITTING: AtomicBool = AtomicBool::new(false);
 /// the window goes (every quit left a ~300 MB core dump). So: let the game save (`__bbQuit`, the
 /// same save as `pagehide`), give WebKit a moment to hand the write to its storage process, then
 /// end the web process outright (a kill: no teardown runs) and exit. NOTES 2026-10-12.
-fn quit(app: &tauri::AppHandle) {
+/// An update being written over the game finishes first (up to a minute): cut short, it would
+/// leave a broken copy.
+fn quit(app: &tauri::AppHandle, code: i32) {
     if QUITTING.swap(true, Ordering::SeqCst) {
         return;
     }
     let Some(win) = app.get_webview_window("main") else {
-        app.exit(0);
+        app.exit(code);
         return;
     };
     let _ = win.eval("window.__bbQuit && window.__bbQuit()");
     let app = app.clone();
     std::thread::spawn(move || {
         std::thread::sleep(Duration::from_millis(400));
+        let t0 = std::time::Instant::now();
+        while update::installing(&app) && t0.elapsed() < Duration::from_secs(60) {
+            std::thread::sleep(Duration::from_millis(100));
+        }
         #[cfg(target_os = "linux")]
         if let Some(win) = app.get_webview_window("main") {
             let _ = win.with_webview(|wv| {
@@ -39,7 +45,7 @@ fn quit(app: &tauri::AppHandle) {
             });
             std::thread::sleep(Duration::from_millis(150));
         }
-        app.exit(0);
+        app.exit(code);
     });
 }
 
@@ -118,7 +124,7 @@ fn main() {
         .on_window_event(|window, event| {
             if let tauri::WindowEvent::CloseRequested { api, .. } = event {
                 api.prevent_close();
-                quit(window.app_handle());
+                quit(window.app_handle(), 0);
             }
         })
         .setup(|app| {
@@ -158,7 +164,7 @@ fn main() {
                 let secs: u64 = secs.parse().unwrap_or(10);
                 std::thread::spawn(move || {
                     std::thread::sleep(Duration::from_secs(secs));
-                    quit(&handle);
+                    quit(&handle, 0);
                 });
             }
             Ok(())

@@ -101,9 +101,11 @@ jobs:
           cp scripts/install-linux.sh out/bunker-busters/install.sh
           chmod +x out/bunker-busters/install.sh out/bunker-busters/bunker-busters-bin
           tar -C out -czf out/BunkerBusters-linux-x86_64.tar.gz bunker-busters
-          # the same binary, raw, is what tarball installs download when they update in-app
+          # the same binary, raw, is what tarball installs download when they update in-app. The version
+          # goes into the signature's trusted comment, as `tauri build` does for the other packages:
+          # the app's updater (requireSignedVersion) refuses a signature that doesn't name its version.
           cp out/bunker-busters/bunker-busters-bin out/BunkerBusters-linux-x86_64-update.bin
-          npx tauri signer sign out/BunkerBusters-linux-x86_64-update.bin
+          npx tauri signer sign --app-version "${TAG#v}" out/BunkerBusters-linux-x86_64-update.bin
           mv out/BunkerBusters-linux-x86_64-update.bin.sig sigs/linux-x86_64.sig
           ls -la out sigs
       - uses: actions/upload-artifact@v4

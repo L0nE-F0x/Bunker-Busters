@@ -50,6 +50,7 @@
       "endpoints": [
         "https://github.com/L0nE-F0x/Bunker-Busters/releases/latest/download/latest.json"
       ],
+      "requireSignedVersion": true,
       "windows": {
         "installMode": "passive"
       }
