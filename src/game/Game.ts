@@ -2,7 +2,8 @@ import * as THREE from 'three/webgpu';
 import { Fn, vec4, vec3, uv, length, smoothstep, time, sin, float, color } from 'three/tsl';
 import type { QualitySettings } from '@/engine/renderer';
 import { makeQuality, fitCanvas, compileInParallel, canCompileInParallel } from '@/engine/renderer';
-import { isTouch, isWebKit } from '@/engine/device';
+import { isTouch, isWebKit, isMobile } from '@/engine/device';
+import { AUTOQ_OVERRIDE, GpuTimer, RenderScale, gpuName, isDesktopApp, learn, startPreset } from '@/engine/autoQuality';
 import { TouchControls } from '@/ui/TouchControls';
 import { PostFX } from '@/engine/postfx';
 import { Physics } from '@/engine/physics';
@@ -138,6 +139,11 @@ export class Game {
   private padNav: PadNav;
   settings: Settings = loadSettings();
   quality: QualitySettings;
+  /** Graphics AUTO (browser only): the render scale held to the frame rate, the GPU's own frame time. */
+  renderScale: RenderScale | null = null;
+  private gpuTimer: GpuTimer | null = null;
+  private gpuLabel = '';
+  private learnT = 0;
   post!: PostFX;
   atmo!: Atmosphere;
   hf!: Heightfield;
@@ -277,6 +283,16 @@ export class Game {
     };
     if (isTouch) this.touch = new TouchControls(this.input);
     const qOverride = new URLSearchParams(location.search).get('q') as Settings['quality'] | null;
+    // Graphics AUTO: the starting preset from the GPU (and what the last session here learned), then
+    // the render scale (engine/autoQuality.ts). Never in the desktop app, nor with ?q= (benches)
+    if (AUTOQ_OVERRIDE ?? (!qOverride && !!this.settings.autoQuality && !isDesktopApp)) {
+      this.gpuLabel = gpuName(renderer);
+      const s = startPreset(this.gpuLabel, isMobile);
+      this.settings.quality = s.level;
+      this.renderScale = new RenderScale(isMobile, s.scale);
+      this.gpuTimer = new GpuTimer(renderer);
+      console.info(`[BunkerBusters] auto quality: ${s.tier} GPU "${this.gpuLabel}" → ${qOverride ?? s.level}, render scale ${this.renderScale.scale}`);
+    }
     this.quality = makeQuality(qOverride ?? this.settings.quality);
     // WebGL: skip the GTAO pre-pass — it renders the whole scene a second time and draw calls are
     // the bottleneck there (especially in WebKitGTK). WebGPU keeps it.
@@ -551,6 +567,7 @@ export class Game {
       if (this.mode === 'playing' && this.state && this.state.data.health > 0 && !this.bunkerAlarm) this.save(true);
     };
     window.addEventListener('pagehide', saveOnLeave);
+    window.addEventListener('pagehide', () => { if (this.renderScale) learn(this.gpuLabel, this.quality.level, this.renderScale); });
     // the desktop shell calls this before it ends the web process on quit (main.rs `quit`)
     (window as unknown as { __bbQuit?: () => void }).__bbQuit = saveOnLeave;
     document.addEventListener('bb-lockchange', () => this.onLockChange());
@@ -1635,6 +1652,16 @@ export class Game {
     this.applyView();
     this.input.sensitivity = s.sensitivity;
     if (this.combat) this.combat.difficulty = s.difficulty ?? 'normal';
+    // Graphics AUTO on or off: the render scale starts from full, or goes back to it
+    if (s.autoQuality && !this.renderScale && !isDesktopApp) {
+      this.gpuLabel ||= gpuName(this.renderer);
+      this.renderScale = new RenderScale(isMobile, 1);
+      this.gpuTimer ??= new GpuTimer(this.renderer);
+    } else if (!s.autoQuality && this.renderScale && AUTOQ_OVERRIDE !== true) {
+      this.renderScale = null;
+      this.gpuTimer = null;
+      this.resize();
+    }
     if (s.quality !== this.quality.level && this.post) {
       this.quality = makeQuality(s.quality);
       if (!this.isWebGPU) this.quality.ao = false;
@@ -1667,7 +1694,7 @@ export class Game {
   private resize() {
     this.fitW = innerWidth;
     this.fitH = innerHeight;
-    const { aspect } = fitCanvas(this.renderer, this.canvas, this.quality.pixelRatio, this.isWebGPU);
+    const { aspect } = fitCanvas(this.renderer, this.canvas, this.quality.pixelRatio * (this.renderScale?.scale ?? 1), this.isWebGPU);
     this.camera.aspect = aspect;
     this.camera.updateProjectionMatrix();
   }
@@ -2149,6 +2176,20 @@ export class Game {
     }
   }
 
+  /** Graphics AUTO: feed the frame to the render scale (a resize when it steps); keep what it learned. */
+  private autoScale(now: number) {
+    const rs = this.renderScale!;
+    const rows = innerHeight * this.quality.pixelRatio;
+    if (rs.frame(this.frameGap, performance.now() - now, this.gpuTimer?.last ?? -1, rows)) {
+      this.resize();
+      console.info(`[BunkerBusters] render scale ${rs.scale} (${this.renderer.domElement.width}×${this.renderer.domElement.height}, ${this.quality.level})`);
+    }
+    if (now - this.learnT > 30000) {
+      if (this.learnT) learn(this.gpuLabel, this.quality.level, rs);
+      this.learnT = now;
+    }
+  }
+
   // ------------------------------------------------------------------ frame
   private fitW = 0;
   private fitH = 0;
@@ -2301,10 +2342,13 @@ export class Game {
       updateShownMatrices(this.scene); // once a frame (scene.matrixWorldAutoUpdate is off: see build)
       const inner = this.activeInterior();
       const hidden = inner ? hideExcept(this.exteriorRoots(), inner.keep, this._hidden) : null;
+      this.gpuTimer?.begin();
       if (SKIP.has('post')) this.renderer.render(this.scene, this.camera); else this.post.render();
+      this.gpuTimer?.end();
       if (hidden) { for (const o of hidden) o.visible = true; hidden.length = 0; }
       if (inner) this.interiorFrames++;
       this.interiorName = inner?.name ?? '';
+      if (this.renderScale) this.autoScale(now);
     }
     if (BENCH) { this.benchUpd += tPhys - now; this.benchPhys += tRender - tPhys; this.benchRen += performance.now() - tRender; }
     this.input.endFrame();

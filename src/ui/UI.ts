@@ -5,6 +5,7 @@ import { ITEMS, HOTBAR_ITEMS, CAN_DROP } from '@/content/items';
 import { itemStatus, USE_LABEL, hotbarItem } from '@/content/items';
 import { openTill, type TillOpts } from './Trader';
 import { offlineLabel } from '@/engine/offline';
+import { isDesktopApp } from '@/engine/autoQuality';
 import { openInstallSheet, isPhone, isInstalledApp } from './install';
 import { SKILLS, SKILL_ORDER, focusesFor, capstonesFor } from '@/content/skills';
 import { ARCHETYPES } from '@/content/archetypes';
@@ -817,7 +818,7 @@ export class UI implements UIBridge {
         <h3>SETTINGS</h3>
         <div class="settings">
           <span>Difficulty</span><select data-k="difficulty">${(['story', 'normal', 'hard'] as const).map((d) => `<option value="${d}" ${(settings.difficulty ?? 'normal') === d ? 'selected' : ''}>${DIFFICULTY[d].label.toUpperCase()} · ${({ story: 'forgiving', normal: 'as intended', hard: 'brutal' })[d]}</option>`).join('')}</select>
-          <span>Graphics</span><select data-k="quality">${['low', 'medium', 'high', 'ultra'].map((q) => `<option value="${q}" ${settings.quality === q ? 'selected' : ''}>${q.toUpperCase()}</option>`).join('')}</select>
+          <span>Graphics</span><select data-k="quality">${isDesktopApp ? '' : `<option value="auto" ${settings.autoQuality ? 'selected' : ''}>AUTO (${settings.quality.toUpperCase()})</option>`}${['low', 'medium', 'high', 'ultra'].map((q) => `<option value="${q}" ${!settings.autoQuality && settings.quality === q ? 'selected' : ''}>${q.toUpperCase()}</option>`).join('')}</select>
           <span>Master volume</span><input type="range" min="0" max="1" step="0.05" data-k="master" value="${settings.master}">
           <span>Music</span><input type="range" min="0" max="1" step="0.05" data-k="music" value="${settings.music}">
           <span>Effects</span><input type="range" min="0" max="1" step="0.05" data-k="sfx" value="${settings.sfx}">
@@ -837,6 +838,8 @@ export class UI implements UIBridge {
         const v = (inp as HTMLInputElement).value;
         const next = { ...settings } as Record<string, unknown>;
         next[k] = k === 'quality' || k === 'difficulty' ? v : k === 'voice' || k === 'invertY' || k === 'showFps' ? v === '1' : Number(v);
+        // Graphics AUTO keeps the preset it runs on; picking a preset turns it off
+        if (k === 'quality') { next.autoQuality = v === 'auto'; if (v === 'auto') next.quality = settings.quality; }
         Object.assign(settings, next);
         onChange(settings);
         fovLabel();
