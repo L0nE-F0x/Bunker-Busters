@@ -38,12 +38,18 @@ export async function launch(mode = process.env.GPU_MODE || 'nvidia', extraArgs 
   return chromium.launch({ executablePath: findChrome(), headless: true, env, args: ['--headless=new', ...args, ...extraArgs] });
 }
 
-/** Wait until the game has finished loading (window.game.mode leaves 'loading'). */
+/**
+ * Wait until the game has finished loading (window.game.mode leaves 'loading'). With ?autostart or
+ * ?continue, until the run has started: a run waits for the late cast (game/lateCast.ts), which in the
+ * browser finishes a moment after the title.
+ */
 export async function waitForGame(page, timeoutMs = 120000) {
   const t0 = Date.now();
+  const url = page.url();
   while (Date.now() - t0 < timeoutMs) {
-    const m = await page.evaluate(() => window.game?.mode).catch(() => null);
-    if (m && m !== 'loading') return m;
+    const [m, saved] = await page.evaluate(() => [window.game?.mode, !!localStorage.getItem('bunker-busters.save.v1')]).catch(() => [null, false]);
+    const run = /[?&]autostart\b/.test(url) || (/[?&]continue\b/.test(url) && saved);
+    if (m && m !== 'loading' && (!run || m === 'playing')) return m;
     await page.waitForTimeout(400);
   }
   throw new Error('game did not finish loading');
