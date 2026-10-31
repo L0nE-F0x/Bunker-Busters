@@ -61,7 +61,7 @@ const PRIMARY: Record<OS, { asset?: string; label: string; sub: string; icon: st
 const p = PRIMARY[os];
 label.textContent = p.label;
 sub.textContent = p.sub;
-icon.classList.add(p.icon);
+icon.className = `os-icon ${p.icon}`;
 if (!p.asset) primary.href = '/play/';
 if (os === 'mobile' || os === 'mac' || os === 'other') {
   // the main button already plays: the second one points at the other platforms

@@ -11,6 +11,8 @@
     <!-- sections fade in as they scroll into view (site.ts); without scripts everything just shows.
          If site.ts never runs, the class comes off again after 4 s. -->
     <script>document.documentElement.classList.add('js'); setTimeout(function () { if (!window.__bbSite) document.documentElement.classList.remove('js'); }, 4000);</script>
+    <!-- without scripts the loop never starts, and browsers then draw its controls: the poster behind it is enough -->
+    <noscript><style>.hero-video { display: none; }</style></noscript>
 
     <!-- Open Graph (Facebook, Discord, Slack, WhatsApp, LinkedIn, iMessage…) -->
     <meta property="og:type" content="website" />
@@ -112,7 +114,7 @@
         <p class="lede">The founders saw the end coming and sealed themselves in with the region's water. You live outside, at a camp by a dead gas station. Scout their doors, get past their half-broken security, and carry what you can back to the fire.</p>
         <div class="cta-row">
           <a class="btn primary" id="dl-primary" href="#get">
-            <span class="os-icon" id="dl-primary-icon"></span>
+            <span class="os-icon desktop" id="dl-primary-icon"></span>
             <span class="btn-text"><b id="dl-primary-label">Download</b><small id="dl-primary-sub">Free</small></span>
           </a>
           <a class="btn ghost" id="cta-second" href="/play/">Play in your browser</a>
