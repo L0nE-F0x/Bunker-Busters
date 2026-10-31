@@ -52,7 +52,7 @@ import { Stories } from './sites/stories';
 import { Player } from './player/Player';
 import { FirstPersonCamera } from './player/FirstPersonCamera';
 import { Hands, HAND_LOOKS, torchLight } from './player/Hands';
-import { GameState, saveGame, loadGame, loadSettings, saveSettings, clearSave, START_DAY, type Settings } from './State';
+import { GameState, saveGame, loadGame, readSave, storageStatus, loadSettings, saveSettings, clearSave, START_DAY, type Settings } from './State';
 import type { GameContext, Interactable, UIBridge } from './context';
 import { UI, type HudFrame } from '@/ui/UI';
 import { MapData, LANDMARK_MARKERS, type MapMarker } from '@/ui/Minimap';
@@ -102,6 +102,13 @@ const POINT_LIGHTS: Record<string, number> = { low: 2, medium: 3, high: 4, ultra
 
 /** Debug: ?bench logs frame-rate stats to the console every 2s (read by the desktop test runs). */
 const BENCH = new URLSearchParams(location.search).has('bench');
+
+// when the save can't be written (State.saveGame), and when another tab owns it
+const SAVE_OFF = 'Saving is off. This browser won\'t let the game store anything here (a private window, or site data blocked), so the run lasts until the tab closes.';
+const SAVE_FULL = 'Couldn\'t save: the browser\'s storage for this site is full. Free some space, then save from the pause menu.';
+const SAVE_ELSEWHERE = 'This run is open in another tab now, so this tab has stopped saving. Quit to the title and Continue to play here again.';
+/** Tabs of the game in one browser: the tab that started (or continued) a run most recently owns the save. */
+const CHANNEL = 'bunker-busters';
 
 /** Only two hand looks exist. Work gloves for the Brute and the Scout, thin ones for the Fixer and the Defector. */
 function handArchetype(id: string) {
@@ -229,6 +236,17 @@ export class Game {
   private t = 0;
   private revealTimer = 0;
   private autosaveTimer = 60;
+  /** A failed autosave has been reported this run (the Save button reports every time). */
+  private saveFailWarned = false;
+  /** The browser can't store anything (checked as each run starts) ... */
+  private storageOff = false;
+  /** ...said once a session, when a run starts (or at the first autosave). */
+  private storageWarned = false;
+  /** Another tab started a run after this one did: this run no longer writes the save (see CHANNEL). */
+  savingElsewhere = false;
+  /** ...and the player hasn't been told yet (it happened while this tab was hidden). */
+  private elsewhereUntold = false;
+  private channel: BroadcastChannel | null = null;
   private titleT = 0;
   private director!: MenuDirector;
   private busy = false; // minigame/modal in progress
@@ -545,8 +563,25 @@ export class Game {
       if (this.mode === 'playing' && this.state && this.state.data.health > 0 && !this.bunkerAlarm) this.save(true);
     };
     window.addEventListener('pagehide', saveOnLeave);
+    // switching tabs or apps: phones often kill a backgrounded tab without a pagehide, and a run picked
+    // up in another tab starts from this save
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'hidden') saveOnLeave();
+      else if (this.elsewhereUntold && this.mode === 'playing') { this.elsewhereUntold = false; this.ui.toast(SAVE_ELSEWHERE, 'bad'); }
+    });
     // the desktop shell calls this before it ends the web process on quit (main.rs `quit`)
     (window as unknown as { __bbQuit?: () => void }).__bbQuit = saveOnLeave;
+    // the game open in two tabs (a link opened twice): both would autosave the one save and undo each
+    // other's progress. The tab that started its run last owns it; an older run stops writing.
+    try {
+      this.channel = new BroadcastChannel(CHANNEL);
+      this.channel.onmessage = (e: MessageEvent<{ type?: string }>) => {
+        if (e.data?.type !== 'run' || this.mode !== 'playing' || !this.state || this.savingElsewhere) return;
+        this.savingElsewhere = true;
+        if (document.visibilityState === 'visible') this.ui.toast(SAVE_ELSEWHERE, 'bad');
+        else this.elsewhereUntold = true;
+      };
+    } catch { /* no BroadcastChannel (old Safari): no guard */ }
     document.addEventListener('bb-lockchange', () => this.onLockChange());
     // the grab can fail (WebKitGTK/XWayland, now and then): say so, and the next click on the view retries
     document.addEventListener('bb-lockerror', () => {
@@ -1166,7 +1201,7 @@ export class Game {
     this.removePlayer();
     this.ui.hud?.remove();
     this.input.exitLock();
-    const save = loadGame();
+    const { save, problem } = readSave();
     if (new URLSearchParams(location.search).has('autostart')) {
       // debug: skip menus straight into a fresh Infiltrator run (used by automated benchmarks)
       setTimeout(() => this.startGame(GameState.fresh('infiltrator', [SPAWN[0], this.hf.heightAt(SPAWN[0], SPAWN[2]), SPAWN[2]])), 50);
@@ -1180,10 +1215,15 @@ export class Game {
     // debug: ?open=controls|settings opens a menu over the title (desktop perf testing)
     const open = new URLSearchParams(location.search).get('open');
     if (open) setTimeout(() => (open === 'settings' ? this.ui.openSettings(this.settings, (s) => this.applySettings(s)) : this.ui.showControls()), 1500);
+    const notice = problem === 'unreadable'
+      ? 'The saved run couldn\'t be read, so there\'s nothing to continue. A copy of it is kept aside.'
+      : storageStatus() !== 'ok' ? 'Saving is off in this browser (a private window, or site data blocked).' : '';
     this.ui.showTitle({
       canContinue: !!save,
       backend: this.backendLabel,
-      onContinue: () => this.startGame(new GameState(save!)),
+      notice,
+      // read again on the click: another tab may have saved since this title came up
+      onContinue: () => this.startGame(new GameState(loadGame() ?? save!)),
       onNew: () => this.toCharSelect(),
       onSettings: () => this.ui.openSettings(this.settings, (s) => this.applySettings(s)),
     });
@@ -1231,6 +1271,11 @@ export class Game {
     this.state = state;
     this.mode = 'playing';
     this.takenAway = false;
+    // this tab's run owns the save from now on; a run in any other tab stops writing it (see CHANNEL)
+    this.savingElsewhere = false;
+    this.elsewhereUntold = false;
+    this.saveFailWarned = false;
+    try { this.channel?.postMessage({ type: 'run' }); } catch { /* closed */ }
     this.cam.snapFov(); // charselect/title leave the lens elsewhere; start the run at the player's FOV
     // out of the menus' dip to black: the picture comes up as the run begins
     const f0 = this.post.fade.value as number;
@@ -1364,15 +1409,24 @@ export class Game {
     setTimeout(() => this.ui.fade(false), 300);
     // Harness runs and old saves skip the radio. A new game hears why the radio exists.
     const skipBrief = new URLSearchParams(location.search).has('autostart') || state.has('briefed');
+    // nowhere to keep a save (a private window, blocked site data): say so once, before it matters
+    this.storageOff = storageStatus() !== 'ok';
+    const warnStorage = () => {
+      if (this.storageWarned || !this.storageOff) return;
+      this.storageWarned = true;
+      setTimeout(() => { if (this.state === state) this.ui.toast(SAVE_OFF, 'bad'); }, 2500);
+    };
     if (skipBrief) {
       if (!state.has('briefed')) { state.set('briefed'); state.set('intro'); }
       this.input.requestLock();
+      warnStorage();
     } else if (this.player) {
       this.player.frozen = true;
       this.busy = true;
       void this.ui.pages(briefingFor(state.archetype)).then(() => {
         state.set('briefed');
         state.set('intro');
+        warnStorage();
         if (state.set('tut.arms')) setTimeout(() => this.ui.toast(isTouch ? 'Armed: FIRE, AIM, RELOAD and SWAP sit over the jump button.' : armsHelp(), 'info'), 4000);
         if (this.player) this.player.frozen = false;
         this.busy = false;
@@ -1523,13 +1577,25 @@ export class Game {
     if (!this.state || !this.player) return;
     // down in the dust: the pack isn't dropped yet. die() saves once you wake at the camp
     if (this.state.data.health <= 0) { if (!silent) this.ui.toast('Not now.', 'bad'); return; }
+    // the run is open in another tab that started after this one: writing now would undo its progress
+    if (this.savingElsewhere) { if (!silent) this.ui.toast(SAVE_ELSEWHERE, 'bad'); return; }
     const d = this.state.data;
-    d.position = [this.player.position.x, this.player.position.y, this.player.position.z];
-    d.yaw = this.player.yaw;
+    const p = this.player.position;
+    // (a position that isn't a number would load as nowhere, every time: keep the last good one)
+    if (Number.isFinite(p.x + p.y + p.z)) d.position = [p.x, p.y, p.z];
+    if (Number.isFinite(this.player.yaw)) d.yaw = this.player.yaw;
     d.hour = this.atmo.hour;
     d.discovered = this.map.serialize();
-    const ok = saveGame(this.state);
-    if (!silent) this.ui.toast(ok ? 'Game saved.' : 'Save failed (storage blocked?)', ok ? 'good' : 'bad');
+    const res = saveGame(this.state);
+    if (res === 'ok') { if (!silent) this.ui.toast('Game saved.', 'good'); return; }
+    // (a browser that couldn't store even a byte at the start of the run isn't "full": it stores nothing)
+    const off = res === 'blocked' || this.storageOff;
+    if (!silent) { this.ui.toast(off ? SAVE_OFF : SAVE_FULL, 'bad'); return; }
+    // a failing autosave says so once: once a session when nothing can be stored, once a run when it's full
+    if (off ? !this.storageWarned : !this.saveFailWarned) {
+      if (off) this.storageWarned = true; else this.saveFailWarned = true;
+      this.ui.toast(off ? SAVE_OFF : SAVE_FULL, 'bad');
+    }
   }
 
   /** Bunker Zero's ladder: a fade with a line of text, and you're at the other end. */

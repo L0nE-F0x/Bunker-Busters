@@ -131,7 +131,8 @@ export class UI implements UIBridge {
   }
 
   // ------------------------------------------------------------------ title
-  showTitle(opts: { canContinue: boolean; backend: string; onContinue: () => void; onNew: () => void; onSettings: () => void }) {
+  /** `notice`: a line under the menu about the save (unreadable, or a browser that can't keep one). */
+  showTitle(opts: { canContinue: boolean; backend: string; notice?: string; onContinue: () => void; onNew: () => void; onSettings: () => void }) {
     const el = h('div', '', `
       <div class="logo">
         <span class="l1">BUNKER</span><span class="l2">BUSTERS</span>
@@ -155,6 +156,7 @@ export class UI implements UIBridge {
     add('Controls', () => this.showControls());
     // phones in the browser: put the game on the home screen (full screen, plays offline)
     if (isTouch && isPhone && !isInstalledApp()) add('Install app', () => openInstallSheet({ onGamePage: true }));
+    if (opts.notice) menu.after(h('div', 'title-notice', esc(opts.notice)));
     this.root.appendChild(el);
     void mountUpdateNotice(el, () => { this.audio.start(); this.audio.play('uiConfirm'); });
     // first interaction starts audio

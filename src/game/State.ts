@@ -13,7 +13,8 @@ import {
 import { EventBus } from '@/engine/events';
 import { defaultBinds, sanitizeBinds, type BindMap } from '@/engine/bindings';
 import type { WeaponId, Difficulty } from '@/content/weapons';
-import { MODS, modBlock } from '@/content/weapons';
+import { MODS, modBlock, WEAPONS } from '@/content/weapons';
+import { SPAWN } from '@/content/world';
 
 /** What you dropped where you fell: walk back for it. A second death loses it. */
 export interface DroppedPack {
@@ -416,26 +417,70 @@ export class GameState {
 
 // ---------- persistence ----------
 const SAVE_KEY = 'bunker-busters.save.v1';
+/** A save this version can't read is copied here first, so a new game (which clears SAVE_KEY) can't destroy it. */
+const BAD_SAVE_KEY = 'bunker-busters.save.v1.unreadable';
 const SETTINGS_KEY = 'bunker-busters.settings.v1';
 
-export function saveGame(state: GameState) {
+/** What a write came to: stored; refused outright (a private window, blocked site data); or no room left. */
+export type SaveResult = 'ok' | 'blocked' | 'full';
+
+function storageFailure(e: unknown): Exclude<SaveResult, 'ok'> {
+  const ex = e as { name?: string; code?: number } | null;
+  // QuotaExceededError (code 22) everywhere but old Firefox (NS_ERROR_DOM_QUOTA_REACHED, 1014)
+  if (ex && (ex.name === 'QuotaExceededError' || ex.name === 'NS_ERROR_DOM_QUOTA_REACHED' || ex.code === 22 || ex.code === 1014)) return 'full';
+  return 'blocked';
+}
+
+export function saveGame(state: GameState): SaveResult {
   state.data.savedAt = Date.now();
   try {
     localStorage.setItem(SAVE_KEY, JSON.stringify(state.data));
-    return true;
-  } catch {
-    return false;
+    return 'ok';
+  } catch (e) {
+    return storageFailure(e);
   }
 }
 
-export function loadGame(): SaveData | null {
+/** Can this browser keep a save at all? A tiny write (old Safari private windows have room for nothing). */
+export function storageStatus(): SaveResult {
   try {
-    const raw = localStorage.getItem(SAVE_KEY);
-    if (!raw) return null;
-    return migrateSave(JSON.parse(raw));
-  } catch {
-    return null;
+    const k = 'bunker-busters.probe';
+    localStorage.setItem(k, '1');
+    localStorage.removeItem(k);
+    return 'ok';
+  } catch (e) {
+    return storageFailure(e);
   }
+}
+
+export interface SaveRead {
+  save: SaveData | null;
+  /** 'unreadable': there is a save, but it's damaged or not one this version understands. */
+  problem: '' | 'unreadable';
+}
+
+/** The saved run, if there is one this version can load. */
+export function readSave(): SaveRead {
+  let raw: string | null;
+  try {
+    raw = localStorage.getItem(SAVE_KEY);
+  } catch {
+    return { save: null, problem: '' }; // no storage at all (storageStatus says so)
+  }
+  if (!raw) return { save: null, problem: '' };
+  let save: SaveData | null = null;
+  try {
+    save = migrateSave(JSON.parse(raw));
+  } catch {
+    save = null; // cut short, or not JSON at all
+  }
+  if (save) return { save, problem: '' };
+  try { localStorage.setItem(BAD_SAVE_KEY, raw); } catch { /* full or blocked: nothing more to do */ }
+  return { save: null, problem: 'unreadable' };
+}
+
+export function loadGame(): SaveData | null {
+  return readSave().save;
 }
 
 function readFocuses(raw: unknown): Partial<Record<SkillId, string>> {
@@ -469,26 +514,74 @@ function readNumbers(raw: unknown): Record<string, number> {
   return out;
 }
 
+/** A finite number, else the default; clamped. */
+const finite = (v: unknown, lo: number, hi: number, dflt: number) => (typeof v === 'number' && Number.isFinite(v) ? Math.min(hi, Math.max(lo, v)) : dflt);
+
+function readVec3(v: unknown): Vec3 | null {
+  if (!Array.isArray(v) || v.length < 3) return null;
+  const [x, y, z] = v as unknown[];
+  return typeof x === 'number' && typeof y === 'number' && typeof z === 'number' && Number.isFinite(x + y + z) ? [x, y, z] : null;
+}
+
+/** Known items in whole positive counts: an id this version doesn't know broke the Kit and the Till. */
+function readInventory(v: unknown): { id: string; qty: number }[] {
+  const out: { id: string; qty: number }[] = [];
+  if (!Array.isArray(v)) return out;
+  for (const it of v) {
+    const id = (it as { id?: unknown } | null)?.id, qty = (it as { qty?: unknown } | null)?.qty;
+    if (typeof id !== 'string' || !ITEMS[id] || typeof qty !== 'number' || !Number.isFinite(qty) || qty < 1) continue;
+    const have = out.find((s) => s.id === id);
+    if (have) have.qty += Math.floor(qty);
+    else out.push({ id, qty: Math.floor(qty) });
+  }
+  return out;
+}
+
+function readSkills(v: unknown): Record<SkillId, number> {
+  const out = emptySkills();
+  if (!v || typeof v !== 'object') return out;
+  for (const id of SKILL_ORDER) out[id] = Math.round(finite((v as Record<string, unknown>)[id], 0, SKILLS[id].max, 0));
+  return out;
+}
+
+function readArms(v: unknown): NonNullable<SaveData['arms']> {
+  const a = (v && typeof v === 'object' ? v : {}) as { equipped?: unknown; mags?: unknown };
+  const equipped = typeof a.equipped === 'string' && a.equipped in WEAPONS ? (a.equipped as WeaponId) : null;
+  const mags: Partial<Record<WeaponId, number>> = {};
+  for (const [k, n] of Object.entries(readNumbers(a.mags))) if (k in WEAPONS) mags[k as WeaponId] = Math.max(0, Math.floor(n));
+  return { equipped, mags };
+}
+
+function readPack(v: unknown): DroppedPack | null {
+  if (!v || typeof v !== 'object') return null;
+  const p = v as { position?: unknown; items?: unknown; day?: unknown };
+  const position = readVec3(p.position), items = readInventory(p.items);
+  return position && items.length ? { position, items, day: Math.floor(finite(p.day, 0, 1e6, 0)) } : null;
+}
+
 const ACT1_ENDINGS = ['act1.broadcast', 'act1.leverage', 'act1.deal'];
 
 /**
  * v1 predates hunger, thirst and four of the six skills. v2 predates capstones, standing and quests.
  * Keep the run: every missing field gets a default. Quest progress is rebuilt from flags on load
  * (Story.sync), so an old save picks up the quests it already finished without replaying them.
+ * Every field is checked as it's read, so a damaged save either loads whole (a position that isn't
+ * three numbers puts you at the camp) or is refused, never half-loaded into a run with no player.
  */
 function migrateSave(raw: unknown): SaveData | null {
-  if (!raw || typeof raw !== 'object') return null;
-  const d = raw as Partial<SaveData> & { skills?: Partial<Record<SkillId, number>> };
-  const version = (raw as { version?: number }).version;
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null;
+  const d = raw as Partial<Record<keyof SaveData, unknown>>;
+  const version = d.version;
   if (version !== 1 && version !== 2 && version !== 3) return null;
-  if (!d.archetype || !d.inventory || !d.position) return null;
-  const flags = [...(d.flags ?? [])];
+  // the three a run can't be rebuilt without
+  if (typeof d.archetype !== 'string' || !Array.isArray(d.inventory) || !d.position) return null;
+  const flags = Array.isArray(d.flags) ? (d.flags as unknown[]).filter((f): f is string => typeof f === 'string') : [];
   if (flags.includes('intro') && !flags.includes('briefed')) flags.push('briefed');
   // a v2 run that already heard the debrief ended Act I before the choice existed: Mara read the names
   if (flags.includes('debriefed') && !ACT1_ENDINGS.some((f) => flags.includes(f))) flags.push('act1.broadcast');
   // before 1.0.2 the Alignment Spire shared `seen:spire` with the 5G tower; only its own discovery set the marker
   if (flags.includes('spire.marker') && !flags.includes('seen:alignment')) flags.push('seen:alignment');
-  const inventory = [...d.inventory];
+  const inventory = readInventory(d.inventory);
   if (version !== 3) {
     // Things v2 looted before they carried a story: hand over the quest item, or count the choice as made.
     const give = (id: string) => { if (!inventory.some((s) => s.id === id)) inventory.push({ id, qty: 1 }); };
@@ -497,34 +590,41 @@ function migrateSave(raw: unknown): SaveData | null {
     if (flags.includes('cave.pocket.loot')) flags.push('q.wick.took');
     if (!flags.includes('migrated.v3')) flags.push('migrated.v3');
   }
+  const st = (d.stats && typeof d.stats === 'object' ? d.stats : {}) as Record<string, unknown>;
+  const count = (k: string) => Math.floor(finite(st[k], 0, 1e9, 0));
+  const health = finite(d.health, 0, MAX_HEALTH, MAX_HEALTH);
+  const hour = finite(d.hour, -1e6, 1e6, 17.1);
   return {
     version: 3,
-    archetype: ARCHETYPES.some((a) => a.id === d.archetype) ? d.archetype : ARCHETYPES[0].id,
-    level: d.level ?? 1,
-    xp: d.xp ?? 0,
-    skillPoints: d.skillPoints ?? 0,
-    skills: { ...emptySkills(), ...(d.skills ?? {}) },
+    archetype: ARCHETYPES.some((a) => a.id === d.archetype) ? (d.archetype as string) : ARCHETYPES[0].id,
+    level: Math.floor(finite(d.level, 1, 999, 1)),
+    xp: Math.floor(finite(d.xp, 0, 1e9, 0)),
+    skillPoints: Math.floor(finite(d.skillPoints, 0, 999, 0)),
+    skills: readSkills(d.skills),
     focuses: readFocuses(raw),
     capstones: readCapstones(raw),
-    rep: readNumbers((raw as { rep?: unknown }).rep) as Partial<Record<PersonId, number>>,
+    rep: readNumbers(d.rep) as Partial<Record<PersonId, number>>,
     tracked: typeof d.tracked === 'string' ? d.tracked : '',
-    rests: typeof d.rests === 'number' ? d.rests : 0,
-    marks: readNumbers((raw as { marks?: unknown }).marks),
-    health: d.health ?? MAX_HEALTH,
-    hunger: d.hunger ?? 78,
-    thirst: d.thirst ?? 72,
+    rests: Math.floor(finite(d.rests, 0, 1e9, 0)),
+    marks: readNumbers(d.marks),
+    // saved at 0 (before 1.0.2 an autosave could land mid-fall): wake as Mara's people leave you, next
+    // to the pack, instead of going down again on load and losing the pack for good
+    health: health > 0 ? health : 45,
+    hunger: finite(d.hunger, 0, NEED_MAX, 78),
+    thirst: finite(d.thirst, 0, NEED_MAX, 72),
     inventory,
-    position: d.position,
-    yaw: d.yaw ?? 0,
-    hour: d.hour ?? 17.1,
+    // (y 0 is the placeholder startGame puts on the ground)
+    position: readVec3(d.position) ?? [SPAWN[0], 0, SPAWN[2]],
+    yaw: finite(d.yaw, -1e6, 1e6, 0),
+    hour: ((hour % 24) + 24) % 24,
     flags,
-    discovered: d.discovered ?? '',
-    stats: d.stats ?? { picks: 0, caught: 0, playTime: 0, busted: 0 },
-    savedAt: d.savedAt ?? Date.now(),
-    arms: d.arms ?? { equipped: null, mags: {} },
-    pack: d.pack ?? null,
-    poison: d.poison ?? 0,
-    days: typeof d.days === 'number' && d.days >= 0 ? Math.floor(d.days) : 0,
+    discovered: typeof d.discovered === 'string' ? d.discovered : '',
+    stats: { picks: count('picks'), caught: count('caught'), playTime: finite(st.playTime, 0, 1e12, 0), busted: count('busted'), kills: count('kills'), deaths: count('deaths') },
+    savedAt: finite(d.savedAt, 0, 1e15, Date.now()),
+    arms: readArms(d.arms),
+    pack: readPack(d.pack),
+    poison: finite(d.poison, 0, 70, 0),
+    days: Math.floor(finite(d.days, 0, 1e6, 0)),
   };
 }
 
