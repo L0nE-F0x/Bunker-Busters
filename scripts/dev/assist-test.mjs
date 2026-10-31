@@ -66,7 +66,8 @@ const m0 = await ev(angTo);
 await p.mouse.down({ button: 'right' }); await wait(450);
 const m1 = await ev(angTo);
 await p.mouse.up({ button: 'right' }); await wait(200);
-check('no pull on the mouse', Math.abs(m1 - m0) < 0.004, `${(m0 * 57.3).toFixed(2)} deg -> ${(m1 * 57.3).toFixed(2)} deg`);
+// (0.57 deg: the contractor sways and steps, ADS breathes; the pad's pull above moves ~1.7 deg)
+check('no pull on the mouse', Math.abs(m1 - m0) < 0.01, `${(m0 * 57.3).toFixed(2)} deg -> ${(m1 * 57.3).toFixed(2)} deg`);
 
 // through a wall: nothing (the target behind the player's own back = out of the cone; behind cover = no line)
 const slowBehind = await ev(`(() => { const a = game.aimAssist; return a ? a.slow : -1; })()`);
