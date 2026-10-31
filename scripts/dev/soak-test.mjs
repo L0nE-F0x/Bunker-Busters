@@ -327,6 +327,9 @@ if (after.length >= 3) {
   const md = med(after.map((r) => r.domNodes));
   checks.push([`DOM nodes near the median ${md} (${la.map((r) => r.domNodes).join(', ')})`, la.every((r) => r.domNodes <= md + 60)]);
 }
+// engine/release.ts and kit.ts report a write to a released geometry, or a batch rebuilt after its parts went
+const rel = errors.filter((e) => /released/.test(e.m));
+checks.push([`no writes to released vertex data (${rel.length})`, rel.length === 0]);
 checks.push([`no page errors (${errors.length})`, errors.length === 0]);
 checks.push([`every step ran (${issues.length} failed)`, issues.length === 0]);
 for (const [n, ok] of checks) console.log(`${ok ? 'PASS' : 'FAIL'}  [soak] ${n}`);

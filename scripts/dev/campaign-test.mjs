@@ -512,6 +512,10 @@ for (const [bk, owner] of [['garage', 'Tanner'], ['apex', 'Vesper'], ['panoptico
 const stats = await ev(`(() => { const d = game.state.data; return { level: d.level, kills: d.stats.kills, picks: d.stats.picks, caught: d.stats.caught, days: d.days, flags: d.flags.length, saveKB: Math.round(localStorage.getItem('bunker-busters.save.v1').length / 1024), topups: window.__topups, keptUp: window.__keptUp }; })()`);
 console.log('    run:', JSON.stringify(stats));
 const errs = [...new Set(errors)];
+// engine/release.ts and kit.ts report a write to a released geometry, or a batch rebuilt after its parts went
+const rel = errs.filter((e) => /released/.test(e));
+checks.push(['end: no writes to released vertex data', rel.length === 0]);
+console.log(`${rel.length ? 'FAIL' : 'PASS'}  [end] no writes to released vertex data${rel.length ? `  (${rel.length})` : ''}`);
 console.log(errs.length ? `ERRORS (${errs.length}):\n  ${errs.slice(0, 12).join('\n  ')}` : 'no page errors');
 await b.close();
 const failed = checks.filter(([, ok]) => !ok);
