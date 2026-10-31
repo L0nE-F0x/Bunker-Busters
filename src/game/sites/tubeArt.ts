@@ -129,7 +129,7 @@ export const TUBE_ART: Record<TubeArt, [number, number, AtlasDraw]> = {
   vacuum: [256, 128, (c, w, h, r) => {
     signPlate(c, w, h, r, '#f2c230', '#1b1b1b');
     fitText(c, 'VACUUM', w / 2, 52, `900 40px ${FONT_DISPLAY}`, '#1b1b1b', w - 30);
-    fitText(c, 'EQUALIZE BEFORE OPENING', w / 2, 84, `700 16px ${FONT_UI}`, '#1b1b1b', w - 30);
+    fitText(c, 'EQUALISE BEFORE OPENING', w / 2, 84, `700 16px ${FONT_UI}`, '#1b1b1b', w - 30);
     fitText(c, 'it will try to eat you', w / 2, 108, `500 13px ${FONT_MONO}`, '#5a3a10', w - 30);
   }],
   stencil: [512, 96, (c, w, h) => {
@@ -245,7 +245,7 @@ export const TUBE_ART: Record<TubeArt, [number, number, AtlasDraw]> = {
   portalSign: [256, 128, (c, w, h, r) => {
     signPlate(c, w, h, r, '#1c2127', ORANGE);
     fitText(c, 'SERVICE TUNNEL', w / 2, 52, `800 28px ${FONT_UI}`, ORANGE, w - 30);
-    fitText(c, 'AUTHORIZED FOUNDERS ONLY', w / 2, 86, `600 15px ${FONT_MONO}`, '#e8e0cc', w - 30);
+    fitText(c, 'AUTHORISED FOUNDERS ONLY', w / 2, 86, `600 15px ${FONT_MONO}`, '#e8e0cc', w - 30);
     weather(c, w, h, r, 1.2);
   }],
   grate: [128, 128, (c, w, h) => {

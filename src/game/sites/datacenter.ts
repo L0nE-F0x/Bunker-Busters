@@ -204,7 +204,7 @@ export class DataCenterSite extends Site {
   }
 
   private pinHint() {
-    if (this.s.has(F.log)) return 'Priya, in the gate log: "Core PIN is the SLA. Digits only." The lobby whiteboard has the SLA on it.';
+    if (this.s.has(F.log)) return 'Priya, in the visitor log: "Core PIN is the SLA. Digits only." The lobby whiteboard has the SLA on it.';
     return 'Nothing on the reader. Somebody on staff will have written it down somewhere.';
   }
 
