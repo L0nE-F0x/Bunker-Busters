@@ -12,6 +12,15 @@ import { uDustCover, uDaylight, uRimSunDir, uBacklight, uFloraWind } from './mat
 /* eslint-disable @typescript-eslint/no-explicit-any */
 type N = any;
 
+/**
+ * Terms that are exactly zero most of the time (the storm wall while no front approaches, the
+ * storm's own haze while there's no storm, cloud shadows at night) run inside a uniform branch, so
+ * the GPU skips their atlas taps instead of multiplying them by zero: the same picture, and on an
+ * integrated GPU the sky and fog cost a good deal less. `?nozeroskip` computes them all (A/B).
+ */
+const ZERO_SKIP = typeof location === 'undefined' || !new URLSearchParams(location.search).has('nozeroskip');
+const unlessZero = (cond: N, body: () => void) => { if (ZERO_SKIP) If(cond, body); else body(); };
+
 interface SkyKey {
   e: number; // sun elevation (dir.y)
   zenith: string;
@@ -228,14 +237,19 @@ export class Atmosphere {
    */
   private cloudShadow = Fn(() => {
     const sd = this.uSunDir;
-    const p = positionWorld.xz.add(sd.xz.div(max(sd.y, 0.08)).mul(1500));
-    const cq = p.div(900).add(this.uCloudDrift.mul(1.3));
-    const cw = noise(cq.mul(0.25).add(vec2(0.13, 0.71))).g.sub(0.5);
-    const th = float(0.82).sub(this.uCloudCover.add(cw.mul(0.6)).mul(0.42));
-    const d = noise(cq).r.add(noise(cq.mul(2.7).add(0.41)).g.sub(0.5).mul(0.55));
-    const sh = smoothstep(th.sub(0.02), th.add(0.12), d);
-    const k = this.uCloudShadow.mul(smoothstep(-0.02, 0.12, sd.y)).mul(float(1).sub(this.uStorm));
-    return (this.uSunLight as N).mul(float(1).sub(sh.mul(k)));
+    // k is uniform (no shadows at night, in a storm or with cloud shadows off): skip the taps then
+    const k = this.uCloudShadow.mul(smoothstep(-0.02, 0.12, sd.y)).mul(float(1).sub(this.uStorm)).toVar();
+    const out = vec3(this.uSunLight as N).toVar();
+    unlessZero(k.greaterThan(0), () => {
+      const p = positionWorld.xz.add(sd.xz.div(max(sd.y, 0.08)).mul(1500));
+      const cq = p.div(900).add(this.uCloudDrift.mul(1.3));
+      const cw = noise(cq.mul(0.25).add(vec2(0.13, 0.71))).g.sub(0.5);
+      const th = float(0.82).sub(this.uCloudCover.add(cw.mul(0.6)).mul(0.42));
+      const d = noise(cq).r.add(noise(cq.mul(2.7).add(0.41)).g.sub(0.5).mul(0.55));
+      const sh = smoothstep(th.sub(0.02), th.add(0.12), d);
+      out.assign((this.uSunLight as N).mul(float(1).sub(sh.mul(k))));
+    });
+    return out;
   });
 
   /** Haze colour seen along a view ray (no sun disk). Shared by sky + fog. */
@@ -273,9 +287,14 @@ export class Atmosphere {
     // a lightning flash lights the dust from inside: pale violet-white, strongest overhead
     const stormCol = (this.uStormColor as N).add(this.uSunColor.mul(pow(mu, 4).mul(sunVis).mul(0.35)))
       .add(vec3(0.55, 0.52, 0.68).mul(this.uFlash).mul(this.uStorm).mul(float(0.6).add(clamp(rd.y, 0, 1))));
-    const w = this.wall(rd);
     const stormK = this.uStorm.mul(float(2).sub(this.uStorm)); // ease-out: brown early, not a milky half-way
-    return mix(mix(calm, stormCol, stormK.mul(0.94)), this.wallShade(rd, w), w.mul(0.97));
+    const out = mix(calm, stormCol, stormK.mul(0.94)).toVar();
+    // the wall is 0 until a front approaches (five taps and two atans a call, three calls a sky pixel)
+    unlessZero(this.uFront.greaterThan(0), () => {
+      const w = this.wall(rd);
+      out.assign(mix(out, this.wallShade(rd, w), w.mul(0.97)));
+    });
+    return out;
   });
 
   private buildSky() {
@@ -293,8 +312,10 @@ export class Atmosphere {
       // storm: one brown dome, a little darker overhead. It uses exactly the fog's colour, so far
       // ridges and the skyline melt into it instead of standing out as flat cut-outs
       const storm = this.uStorm;
-      const hzFog = this.haze(vec3(rd.x, max(h, 0.0).mul(0.3), rd.z).normalize(), float(0.3));
-      col.assign(mix(col, hzFog.mul(mix(float(1), float(0.6), clamp(h, 0, 1))), storm.mul(0.97)));
+      unlessZero(storm.greaterThan(0), () => {
+        const hzFog = this.haze(vec3(rd.x, max(h, 0.0).mul(0.3), rd.z).normalize(), float(0.3));
+        col.assign(mix(col, hzFog.mul(mix(float(1), float(0.6), clamp(h, 0, 1))), storm.mul(0.97)));
+      });
 
       // sun disk + corona
       const sunVis = smoothstep(-0.08, 0.02, this.uSunDir.y);
@@ -417,8 +438,10 @@ export class Atmosphere {
       // faint dust band glow near horizon
       col.addAssign(hz.mul(smoothstep(0.08, 0.0, abs(h)).mul(0.08)));
       // approaching storm wall: billowing brown band on the upwind horizon (sky part; fog does the ground)
-      const w = this.wall(rd);
-      col.assign(mix(col, this.wallShade(rd, w), w.mul(0.98)));
+      unlessZero(this.uFront.greaterThan(0), () => {
+        const w = this.wall(rd);
+        col.assign(mix(col, this.wallShade(rd, w), w.mul(0.98)));
+      });
       return vec4(col, 1);
     });
     mat.colorNode = sky();
@@ -465,7 +488,9 @@ export class Atmosphere {
       const near = mix(smoothstep(6, 80, dist), float(1), this.uStorm);
       const amount = density.mul(exp(cameraPosition.y.sub(this.uFogBase).mul(b).negate())).mul(dist).mul(ratio).mul(near).toVar();
       // terrain behind the approaching dust wall disappears into it
-      amount.addAssign(this.wall(vec3(rd.x, 0.0, rd.z)).mul(smoothstep(120, 650, dist)).mul(5));
+      unlessZero(this.uFront.greaterThan(0), () => {
+        amount.addAssign(this.wall(vec3(rd.x, 0.0, rd.z)).mul(smoothstep(120, 650, dist)).mul(5));
+      });
       return clamp(float(1).sub(exp(amount.negate())), 0, 1);
     });
     const color = Fn(() => {
