@@ -11,6 +11,27 @@
   to = "/play/"
   status = 301
 
+[[redirects]]
+  from = "/press"
+  to = "/press/"
+  status = 301
+
+[[redirects]]
+  from = "/privacy"
+  to = "/privacy/"
+  status = 301
+
+# Every page and file: safe defaults. Deliberately no Content-Security-Policy (the game needs
+# WebAssembly, workers and blob: URLs) and no X-Frame-Options (the game may be embedded on itch.io).
+# Permissions-Policy only switches off what nothing here uses; the game's gamepad, fullscreen,
+# autoplay and clipboard keep their defaults.
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    Permissions-Policy = "camera=(), microphone=(), geolocation=(), payment=(), usb=(), serial=(), hid=(), midi=(), display-capture=(), browsing-topics=()"
+
 # Vite emits content-hashed filenames under /assets — cache them forever.
 [[headers]]
   for = "/assets/*"
