@@ -290,7 +290,8 @@ async function hidden() {
   await p.waitForTimeout(400);
   const s1 = await p.evaluate(snap);
   console.log('    fight, before/after a 2-minute freeze:', JSON.stringify({ hp: [s0.hp, s1.hp], moved: Math.hypot(s1.pos.x - s0.pos.x, s1.pos.z - s0.pos.z).toFixed(2), dy: (s1.pos.y - s0.pos.y).toFixed(2), hour: [s0.hour.toFixed(2), s1.hour.toFixed(2)] }));
-  await t.check(p, 'after the freeze: same place, same health, clock barely moved', `${Math.hypot(s1.pos.x - s0.pos.x, s1.pos.z - s0.pos.z) < 1 && Math.abs(s1.pos.y - s0.pos.y) < 1 && s1.hp >= s0.hp - 15 && Math.abs(s1.hour - s0.hour) < 0.2}`);
+  // (no frames run while frozen; the squad still shoots in the half second either side: one hit is 20)
+  await t.check(p, 'after the freeze: same place, no run of damage, clock barely moved', `${Math.hypot(s1.pos.x - s0.pos.x, s1.pos.z - s0.pos.z) < 1 && Math.abs(s1.pos.y - s0.pos.y) < 1 && s1.hp >= s0.hp - 35 && Math.abs(s1.hour - s0.hour) < 0.2}`);
   await p.waitForTimeout(3000);
   await t.check(p, 'the frame loop is back (frames counting, dt sane)', `(async () => { const a = game.frames; await new Promise((r) => setTimeout(r, 1000)); return game.frames - a > 5; })()`);
   await t.check(p, 'the player is on the ground and can move', `Math.abs(game.player.position.y - game.hf.heightAt(game.player.position.x, game.player.position.z)) < 2`);
