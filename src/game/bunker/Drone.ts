@@ -5,6 +5,7 @@ import { lightCone, GlowSprites, ElectricArc, type Sparks, type DustPuffs } from
 import { canvasTexture, MeshBatch, merge } from '../world/kit';
 import { damp, dampAngle } from '@/engine/noise';
 import type { Physics } from '@/engine/physics';
+import { comfort } from '@/engine/comfort';
 
 export type DroneState = 'patrol' | 'suspicious' | 'alert' | 'search' | 'sputter' | 'disabled';
 
@@ -474,8 +475,9 @@ export class Drone {
     if (this.state === 'alert') colorKey = 'alert';
     else if (this.state === 'suspicious' || this.state === 'search' || this.detection > 0.25) colorKey = 'sus';
     let power = 1;
-    if (this.state === 'disabled') power = this.disabledFor < 1 ? (Math.sin(t * 30) > 0 ? 0.8 : 0) : 0;
-    else if (this.state === 'sputter') power = Math.sin(t * 23) * Math.sin(t * 7) > 0.2 ? 0.6 : 0.05;
+    // rebooting and sputtering stutter its lights; Reduce flashing holds them at a steady low glow
+    if (this.state === 'disabled') power = this.disabledFor < 1 ? (comfort.calm ? 0.35 : Math.sin(t * 30) > 0 ? 0.8 : 0) : 0;
+    else if (this.state === 'sputter') power = comfort.calm ? 0.25 : Math.sin(t * 23) * Math.sin(t * 7) > 0.2 ? 0.6 : 0.05;
     this.colorNow.lerp(COLORS[colorKey], 1 - Math.exp(-8 * dt));
     (this.eye.color.value as THREE.Color).copy(this.colorNow);
     this.eye.intensity.value = 8 * power + (this.state === 'alert' ? Math.sin(t * 20) * 3 : 0);
@@ -490,9 +492,9 @@ export class Drone {
     this.rotorSpin.value = damp(this.rotorSpin.value as number, this.state === 'disabled' ? 0.02 : this.state === 'sputter' ? 0.7 : 1, 3, dt);
     if (this.zapT > 0) {
       // the discharge washes the yard in blue-white for a beat
-      const k = Math.min(1, this.zapT / 0.3) * (Math.random() < 0.6 ? 1 : 0.4);
+      const k = Math.min(1, this.zapT / 0.3) * (comfort.calm ? 1 : Math.random() < 0.6 ? 1 : 0.4);
       this.spot.color.lerp(_zapCol, k);
-      this.spot.intensity += 220 * k;
+      this.spot.intensity += 220 * k * comfort.flash;
     }
     (this.screen.material as THREE.MeshStandardNodeMaterial).emissiveIntensity = Math.sin(t * 4) > 0 ? 1 : 0.25;
     // nav lights, strobe and the eye halo
@@ -536,7 +538,7 @@ export class Drone {
       _pm.copy(L).lerp(tgt, 0.3 + Math.random() * 0.3).add(_pj.set(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5).multiplyScalar(0.5));
       a.bolt(R, _pm, { width: 0.025, jag: 0.1 });
       a.bolt(L, R, { width: 0.03, jag: 0.03 });
-      a.intensity.value = 0.7 + Math.random() * 0.6;
+      a.intensity.value = comfort.calm ? 0.6 : 0.7 + Math.random() * 0.6;
     } else if (this.state === 'alert' && this.closeTime > 0.05) {
       // charging: the gap between the prongs crackles harder the longer you stay in reach
       const k = Math.min(1, this.closeTime / 0.6);

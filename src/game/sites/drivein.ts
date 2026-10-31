@@ -15,6 +15,7 @@ import {
   uSiteNight, uSiteFlicker, glassMat, type Col,
 } from './jetKit';
 import { screenTexture, marqueeTexture, neonTexture, drawKeynote, keynoteTint, CUES, KEYNOTE_LEN, REVEAL_AT } from './driveinArt';
+import { comfort } from '@/engine/comfort';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 type N = any;
@@ -1054,7 +1055,7 @@ export class DriveInSite extends Site {
     for (let i = 0; i < 3; i++) this.kit.halos.channels[2 + i] = powered ? (i === chase ? 1 : 0.2) * night : 0;
     this.kit.halos.channels[1] = powered ? 0 : (Math.floor(this.t * 1.5) % 2) * 0.8;
     // solar lot lamps: on after dusk; one has a failing driver
-    const fail = Math.sin(this.t * 17) * Math.sin(this.t * 2.3) > 0.55 ? 0.08 : 1;
+    const fail = !comfort.calm && Math.sin(this.t * 17) * Math.sin(this.t * 2.3) > 0.55 ? 0.08 : 1;
     const lamps = THREE.MathUtils.smoothstep(night, 0.15, 0.5);
     this.lotLamp.intensity.value = lamps * 6;
     this.lotLampBad.intensity.value = lamps * 6 * fail;
@@ -1066,7 +1067,7 @@ export class DriveInSite extends Site {
     this.lotLights[1].intensity = lamps * 9 * fail;
     this.genLed.intensity.value = powered ? 0 : (Math.floor(this.t * 1.5) % 2) * 3;
     // inside: tubes flicker on with the generator
-    const tubeFl = Math.sin(this.t * 23) * Math.sin(this.t * 3.7) > 0.93 ? 0.3 : 1;
+    const tubeFl = !comfort.calm && Math.sin(this.t * 23) * Math.sin(this.t * 3.7) > 0.93 ? 0.3 : 1;
     this.tubes.intensity.value = powered ? 3.2 * tubeFl : 0;
     this.hallLight.intensity = powered ? 5 * tubeFl : 0;
     if (this.lods[0]?.near.visible) {
@@ -1075,7 +1076,8 @@ export class DriveInSite extends Site {
     }
 
     // ---- the projector
-    const flick = 0.86 + 0.08 * Math.sin(this.t * 151) + 0.06 * Math.sin(this.t * 37.3) - (Math.random() < 0.015 ? 0.35 : 0);
+    // the old projector's gate flutter (24 Hz) and dropouts; held steady with Reduce flashing
+    const flick = comfort.calm ? 0.86 : 0.86 + 0.08 * Math.sin(this.t * 151) + 0.06 * Math.sin(this.t * 37.3) - (Math.random() < 0.015 ? 0.35 : 0);
     if (running) {
       const prev = this.kt;
       this.kt = (this.kt + dt) % KEYNOTE_LEN;

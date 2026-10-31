@@ -740,7 +740,7 @@ export class Dome extends Bunker<DomeBuilder> {
     const p = this.ctx.player.position;
     const near = this.playerInside || this.playerOnGrounds || Math.hypot(p.x - this.b.origin.x, p.z - this.b.origin.z) < 110;
     if (!near) return '';
-    const pd = this.pending ? ` A fix for ${PATCHES.find((x) => x.id === this.pending!.id)!.name.toLowerCase()} is waiting on Gil: ${Math.ceil(this.pending.left)} s.` : '';
+    const pd = this.pending ? ` A fix for ${PATCHES.find((x) => x.id === this.pending!.id)!.word} is waiting on Gil: ${Math.ceil(this.pending.left)} s.` : '';
     if (this.ended) return 'Fill up at the chilled-water tap, then Hunter\'s locker and the spares cage.';
     if (this.isOpen('pod')) return `The Cluster's tank is on the south side of the pod. Decide what happens to it.${pd}`;
     if (this.playerInside) {

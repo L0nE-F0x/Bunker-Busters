@@ -206,7 +206,7 @@ export const GARAGE: Bunker = {
         { id: 'crate_b', label: 'Open supply crate', take: [4] },
         { id: 'safe', label: 'Crack Tanner\'s safe', take: 'guaranteed' },
       ],
-      overburdened: 'You\'re overloaded. Drop some junk, the water matters more.',
+      overburdened: 'You\'re overloaded. Drop some junk; the water matters more.',
       busted: {
         reason: 'BUNKER BUSTED: The Garage',
         banner: 'The cistern is open. Radio Mara at the campfire. She wants the names read out loud.',

@@ -1,5 +1,6 @@
 import type { Atmosphere } from './Atmosphere';
 import { clamp, damp } from '@/engine/noise';
+import { comfort, CALM_FLASH } from '@/engine/comfort';
 
 export type WeatherPhase = 'calm' | 'front' | 'storm' | 'clearing';
 
@@ -81,11 +82,13 @@ export class Weather {
     // a stroke is a few rapid pulses, the first the brightest
     this.flicker = [0, k, 0.07 + Math.random() * 0.05, k * 0.55, 0.09 + Math.random() * 0.12, k * 0.8];
     if (Math.random() < 0.5) this.flicker.push(0.2 + Math.random() * 0.2, k * 0.35);
+    // Reduce flashing: one dim glow that fades, not the strobe
+    if (comfort.calm) this.flicker = [0, k * CALM_FLASH];
     this.onLightning?.(k);
   }
 
   private updateLightning(dt: number) {
-    this.flash = Math.max(0, this.flash - dt * 9);
+    this.flash = Math.max(0, this.flash - dt * (comfort.calm ? 1 : 9));
     if (this.flicker.length) {
       this.flicker[0] -= dt;
       if (this.flicker[0] <= 0) {

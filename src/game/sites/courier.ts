@@ -410,9 +410,9 @@ export class CourierSite extends Site {
         'ACTIVE ORDER #88-1047\n' +
         '1× stove igniter (universal) → N. Pell, Dry Creek Diner · ETA 10 min · RUNNING LATE\n' +
         'Rider notes (voice to text):\n' +
-        'day 1276. front wheels gone. ankles gone. app says im on a roll. solar keeps the phone up so the order stays open and you dont drop an order\n' +
-        'day 1279. told hollis on 19 id be late. he laughed. good\n' +
-        'day 1281. if youre reading this youre the next rider. 10 minutes or free. make it free',
+        'day 1248. front wheels gone. ankles gone. app says im on a roll. solar keeps the phone up so the order stays open and you dont drop an order\n' +
+        'day 1251. told hollis on 19 id be late. he laughed. good\n' +
+        'day 1253. if youre reading this youre the next rider. 10 minutes or free. make it free',
       choices: first
         ? [
           { id: 'take', label: 'Take the last order.' },

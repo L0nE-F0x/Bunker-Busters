@@ -98,9 +98,15 @@ export default defineConfig({
       input: {
         site: fileURLToPath(new URL('./index.html', import.meta.url)),
         play: fileURLToPath(new URL('./play/index.html', import.meta.url)),
+        // (the site- prefix keeps the site's text pages out of the game's offline cache)
+        'site-press': fileURLToPath(new URL('./press/index.html', import.meta.url)),
+        'site-privacy': fileURLToPath(new URL('./privacy/index.html', import.meta.url)),
+        'site-404': fileURLToPath(new URL('./404.html', import.meta.url)),
       },
     },
   },
-  server: { port: 5173, host: true },
+  // agent worktrees live under .claude/ inside the repo: watching them made this server force full reloads
+  // (their tsconfig.json) and broke tests running against it. Assets/ holds raw Meshy exports, never served.
+  server: { port: 5173, host: true, watch: { ignored: ['**/.claude/**', '**/Assets/**', '**/src-tauri/target/**', '**/dist/**'] } },
   optimizeDeps: { exclude: ['@dimforge/rapier3d-compat'] },
 });

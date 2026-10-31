@@ -65,9 +65,13 @@ jobs:
           node-version: 22
           cache: npm
       - uses: dtolnay/rust-toolchain@stable
+      # Caches made on a tag are only visible to that tag, so a release can only reuse one saved on
+      # main: the Smoke workflow's `build` runs on main save under the same key.
       - uses: swatinem/rust-cache@v2
         with:
           workspaces: src-tauri
+          shared-key: release-linux
+          save-if: ${{ github.ref == 'refs/heads/main' }}
       - name: System dependencies
         run: |
           sudo apt-get update
@@ -99,11 +103,15 @@ jobs:
           [ "$unk" = 1 ] || { echo "tarball binary has a bundle type stamped in (UNK count $unk)"; exit 1; }
           cp src-tauri/icons/128x128@2x.png out/bunker-busters/icon.png
           cp scripts/install-linux.sh out/bunker-busters/install.sh
+          # third-party licences ship next to the binary (tags before v1.0.4 have no licenses.txt)
+          if [ -f public/licenses.txt ]; then cp public/licenses.txt out/bunker-busters/licenses.txt; else echo "::warning::no public/licenses.txt at $TAG"; fi
           chmod +x out/bunker-busters/install.sh out/bunker-busters/bunker-busters-bin
           tar -C out -czf out/BunkerBusters-linux-x86_64.tar.gz bunker-busters
-          # the same binary, raw, is what tarball installs download when they update in-app
+          # the same binary, raw, is what tarball installs download when they update in-app. The version
+          # goes into the signature's trusted comment, as `tauri build` does for the other packages:
+          # the app's updater (requireSignedVersion) refuses a signature that doesn't name its version.
           cp out/bunker-busters/bunker-busters-bin out/BunkerBusters-linux-x86_64-update.bin
-          npx tauri signer sign out/BunkerBusters-linux-x86_64-update.bin
+          npx tauri signer sign --app-version "${TAG#v}" out/BunkerBusters-linux-x86_64-update.bin
           mv out/BunkerBusters-linux-x86_64-update.bin.sig sigs/linux-x86_64.sig
           ls -la out sigs
       - uses: actions/upload-artifact@v4
@@ -133,6 +141,8 @@ jobs:
       - uses: swatinem/rust-cache@v2
         with:
           workspaces: src-tauri
+          shared-key: release-windows
+          save-if: ${{ github.ref == 'refs/heads/main' }}
       - run: npm ci
       - name: Build (NSIS installer, signed for the updater)
         env:

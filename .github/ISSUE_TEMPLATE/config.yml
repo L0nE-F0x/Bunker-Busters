@@ -1,0 +1,6 @@
+# Blank issues are off so every report comes with a version and platform; the two forms cover the rest.
+blank_issues_enabled: false
+contact_links:
+  - name: Play or download Bunker Busters
+    url: https://bunker-busters.netlify.app/
+    about: The browser version and the Windows and Linux downloads.
