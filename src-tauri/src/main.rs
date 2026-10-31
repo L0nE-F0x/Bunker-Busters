@@ -6,6 +6,7 @@
 mod external;
 #[cfg(target_os = "linux")]
 mod rawmouse;
+mod smoke;
 mod update;
 
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -139,6 +140,11 @@ fn main() {
             // Dev/testing: open a different page (e.g. the GPU canary) instead of the game.
             if let Ok(url) = std::env::var("BB_START_URL") {
                 win.navigate(url.parse()?)?;
+            }
+
+            // CI install test: report whether the game came up, then quit (smoke.rs).
+            if let Some(report) = std::env::var_os("BB_SMOKE") {
+                smoke::start(app.handle().clone(), report.into());
             }
 
             #[cfg(target_os = "linux")]
