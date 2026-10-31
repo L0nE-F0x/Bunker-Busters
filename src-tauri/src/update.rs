@@ -4,12 +4,19 @@
 //! The manifest (`latest.json`, built by .github/workflows/release.yml) carries one entry per install
 //! type, and the updater picks `linux-x86_64-appimage`, `-deb`, `windows-x86_64-nsis`, or plain
 //! `linux-x86_64` for the Omarchy/Arch tarball binary (which it simply swaps in place, no root).
-//! Every download is verified against the public key in tauri.conf.json before it's installed.
+//! Every download is verified against the public key in tauri.conf.json before it's installed, and
+//! `requireSignedVersion` there makes each signature name the version it was made for, so an old
+//! release can't be passed off as a new one.
+//!
+//! Failures leave the installed game as it was: a check that fails just means "no update" (the card
+//! never shows), and an install that fails says why in one line on the card (`plain`), with the full
+//! error on stdout.
 
 use serde::Serialize;
 use std::sync::Mutex;
-use tauri::{AppHandle, State};
-use tauri_plugin_updater::{Update, UpdaterExt};
+use std::time::Duration;
+use tauri::{AppHandle, Manager, State};
+use tauri_plugin_updater::{Update, Updater, UpdaterExt};
 
 #[derive(Default)]
 pub struct UpdateState {
@@ -36,7 +43,7 @@ pub struct UpdateInfo {
     installer: String,
 }
 
-fn installer() -> String {
+pub(crate) fn installer() -> String {
     use tauri::utils::{config::BundleType, platform::bundle_type};
     match bundle_type() {
         Some(BundleType::Deb) => "deb",
@@ -50,9 +57,42 @@ fn installer() -> String {
     .into()
 }
 
+/// The updater with time limits: the manifest request gives up after 30 s, and a connection that
+/// stops sending for a minute fails the download instead of leaving the card on "Downloading…".
+fn updater(app: &AppHandle) -> tauri_plugin_updater::Result<Updater> {
+    app.updater_builder()
+        .timeout(Duration::from_secs(30))
+        .configure_client(|client| client.connect_timeout(Duration::from_secs(20)).read_timeout(Duration::from_secs(60)))
+        .build()
+}
+
+/// One line for the player; the full error goes to stdout.
+fn plain(e: &tauri_plugin_updater::Error) -> String {
+    use std::io::ErrorKind;
+    use tauri_plugin_updater::Error as E;
+    match e {
+        E::Network(status) if status.contains("404") => "The update isn't on GitHub yet. Try again in a few minutes.",
+        E::Network(_) | E::Reqwest(_) => "The download didn't finish. Check your connection and try again.",
+        E::Minisign(_) | E::Base64(_) | E::SignatureUtf8(_) | E::SignedVersionMismatch { .. } | E::MissingSignedVersion => {
+            "The download failed its signature check, so nothing was installed."
+        }
+        E::Io(io) if io.kind() == ErrorKind::StorageFull => "There isn't enough free disk space for the update.",
+        E::Io(io) if matches!(io.kind(), ErrorKind::PermissionDenied | ErrorKind::ReadOnlyFilesystem) => {
+            "The game's folder can't be written to, so the update wasn't installed."
+        }
+        E::AuthenticationFailed | E::PackageInstallFailed | E::DebInstallFailed => {
+            "The package wasn't installed: the password prompt was closed, or the package manager refused it."
+        }
+        E::TempDirNotOnSameMountPoint | E::TempDirNotFound => "There was no room to unpack the update next to the game.",
+        E::InvalidUpdaterFormat | E::BinaryNotFoundInArchive => "The download wasn't the right kind of file for this copy of the game.",
+        _ => "The update couldn't be installed.",
+    }
+    .into()
+}
+
 #[tauri::command]
 pub async fn update_check(app: AppHandle, state: State<'_, UpdateState>) -> Result<Option<UpdateInfo>, String> {
-    let update = app.updater().map_err(|e| e.to_string())?.check().await.map_err(|e| e.to_string())?;
+    let update = updater(&app).map_err(|e| e.to_string())?.check().await.map_err(|e| e.to_string())?;
     let info = update.as_ref().map(|u| UpdateInfo {
         version: u.version.clone(),
         current: u.current_version.clone(),
@@ -69,10 +109,17 @@ pub fn update_progress(state: State<'_, UpdateState>) -> Progress {
     state.progress.lock().unwrap().clone()
 }
 
+/// True while an update is being written over the installed game. Quitting then (main.rs `quit`)
+/// waits for it: the tarball binary and the AppImage are replaced in place, and a write cut short
+/// would leave a broken copy.
+pub fn installing(app: &AppHandle) -> bool {
+    app.try_state::<UpdateState>().is_some_and(|s| s.progress.lock().map(|p| p.phase == "installing").unwrap_or(false))
+}
+
 /// Download, verify, install, restart. On Windows the installer takes over and closes the app.
 #[tauri::command]
 pub async fn update_install(app: AppHandle, state: State<'_, UpdateState>) -> Result<(), String> {
-    let update = state.pending.lock().unwrap().clone().ok_or("no update pending (check first)")?;
+    let update = state.pending.lock().unwrap().clone().ok_or("No update is waiting. Reopen the title screen to check again.")?;
     let set = |f: &dyn Fn(&mut Progress)| f(&mut state.progress.lock().unwrap());
     set(&|p| *p = Progress { phase: "downloading".into(), ..Default::default() });
     let result = async {
@@ -85,20 +132,24 @@ pub async fn update_install(app: AppHandle, state: State<'_, UpdateState>) -> Re
                 },
                 || {},
             )
-            .await
-            .map_err(|e| e.to_string())?;
+            .await?; // the signature is checked inside download(): only verified bytes come back
         set(&|p| p.phase = "installing".into());
-        update.install(bytes).map_err(|e| e.to_string())
+        update.install(bytes)
     }
     .await;
     if let Err(e) = result {
-        set(&|p| { p.phase = "error".into(); p.error = Some(e.clone()); });
-        return Err(e);
+        println!("[update] install of {} failed: {e}", update.version);
+        let msg = plain(&e);
+        set(&|p| {
+            p.phase = "error".into();
+            p.error = Some(msg.clone());
+        });
+        return Err(msg);
     }
     set(&|p| p.phase = "restarting".into());
     // give the UI a moment to show "restarting", then come back up as the new version
     tauri::async_runtime::spawn(async move {
-        std::thread::sleep(std::time::Duration::from_millis(600));
+        std::thread::sleep(Duration::from_millis(600));
         app.restart();
     });
     Ok(())

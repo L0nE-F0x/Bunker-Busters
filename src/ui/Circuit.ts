@@ -36,9 +36,9 @@ export class CircuitGame {
         <header><h3>${opts.title}</h3><span class="sub">SIGNAL INJECTION · ELECTRONICS ${opts.skill}</span></header>
         <canvas width="1720" height="700"></canvas>
         <footer>${isTouch ? `
-          <span>Drag on the scope: up/down is amplitude, left/right is frequency. Match the green trace and hold it.</span>
+          <span>Drag on the scope: up/down is amplitude, left/right is frequency. Match the steady green trace and hold it.</span>
           <button class="btn back">Abort</button>` : `
-          <span class="kbh">Move the mouse (or ${moveCap('forward')}${moveCap('back')} amplitude, ${moveCap('left')}${moveCap('right')} frequency) to match the green trace</span>
+          <span class="kbh">Move the mouse (or ${moveCap('forward')}${moveCap('back')} amplitude, ${moveCap('left')}${moveCap('right')} frequency) to match the steady green trace</span>
           <span class="kbh"><span class="kbd">Esc</span> — abort</span>
           <span class="padh">Left stick: up/down amplitude, left/right frequency · ${padGlyph('P1')} abort</span>`}
         </footer>

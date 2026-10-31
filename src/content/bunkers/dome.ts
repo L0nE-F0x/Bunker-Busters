@@ -65,17 +65,18 @@ export const PATCH_LINES: Record<string, { speaker: string; text: string }> = {
 
 /**
  * The methods the Dome learns, what a patch does about each, and what the patch notes say (the
- * board in the dome and the toast). Order is the tie-break when two are used equally.
+ * board in the dome and the toast). Order is the tie-break when two are used equally. `word` is the
+ * method mid-sentence ("a fix for SPLICE", "top behaviour: shooting"), so acronyms keep their capitals.
  */
-export const PATCHES: { id: string; name: string; note: string; blocked: string }[] = [
-  { id: 'pick', name: 'Lockpicking', note: 'Locks now have two more pins than any pick can hold.', blocked: 'Patched: more pins than a pick can hold' },
-  { id: 'splice', name: 'SPLICE', note: 'Rotated every key on the network.', blocked: 'Patched: the keys were rotated' },
-  { id: 'circuit', name: 'Shorting boards', note: 'Door boards potted in epoxy.', blocked: 'Patched: the board is potted in epoxy' },
-  { id: 'charge', name: 'Breach charges', note: 'Doors and gates blast-rated.', blocked: 'Patched: blast-rated now' },
-  { id: 'keypad', name: 'Door codes', note: 'Door codes rotated.', blocked: 'Patched: the code was rotated' },
-  { id: 'emp', name: 'EMP', note: 'Helpers shielded against EMP.', blocked: 'Patched: shielded' },
-  { id: 'shoot', name: 'Shooting Helpers', note: 'Helpers armoured.', blocked: 'Patched: armoured' },
-  { id: 'sneak', name: 'Sneaking', note: 'Thermal cameras in every Helper. Crouching no longer hides you.', blocked: 'Patched: thermal' },
+export const PATCHES: { id: string; name: string; word: string; note: string; blocked: string }[] = [
+  { id: 'pick', name: 'Lockpicking', word: 'lockpicking', note: 'Locks now have two more pins than any pick can hold.', blocked: 'Patched: more pins than a pick can hold' },
+  { id: 'splice', name: 'SPLICE', word: 'SPLICE', note: 'Rotated every key on the network.', blocked: 'Patched: the keys were rotated' },
+  { id: 'circuit', name: 'Shorting boards', word: 'shorting boards', note: 'Door boards potted in epoxy.', blocked: 'Patched: the board is potted in epoxy' },
+  { id: 'charge', name: 'Breach charges', word: 'breach charges', note: 'Doors and gates blast-rated.', blocked: 'Patched: blast-rated now' },
+  { id: 'keypad', name: 'Door codes', word: 'door codes', note: 'Door codes rotated.', blocked: 'Patched: the code was rotated' },
+  { id: 'emp', name: 'EMP', word: 'EMP', note: 'Helpers shielded against EMP.', blocked: 'Patched: shielded' },
+  { id: 'shoot', name: 'Shooting Helpers', word: 'shooting', note: 'Helpers armoured.', blocked: 'Patched: armoured' },
+  { id: 'sneak', name: 'Sneaking', word: 'sneaking', note: 'Thermal cameras in every Helper. Crouching no longer hides you.', blocked: 'Patched: thermal' },
 ];
 
 /** Seconds Gil takes to approve a fix (he takes the whole review window, every time). */
@@ -391,14 +392,14 @@ export function recordUses(v: DomeRecord): Record<string, number> {
 export function profileText(v: DomeRecord, top: string | null) {
   const apex = v.has('apex.vent.open') ? 'vent' : v.has('apex.spliced') ? 'SPLICE' : v.has('apex.code') ? 'launch-clock code' : v.has('apex.complete') ? 'front door' : '—';
   const spire = v.has('spire.door.honest') ? 'answered the door' : v.has('spire.door.jailbreak') ? 'jailbreak' : v.has('spire.door.badge') ? 'dead man\'s badge' : v.has('spire.door.forced') ? 'charge' : '—';
-  const name = PATCHES.find((p) => p.id === top)?.name;
+  const word = PATCHES.find((p) => p.id === top)?.word;
   return [
     'ASCEND · USER INSIGHTS · VISITOR 0001',
     `Locks picked: ${v.picks}`,
     `Kills: ${v.kills}`,
     `Apex Vault: ${apex}`,
     `Alignment Spire: ${spire}`,
-    name ? `Top behaviour: ${name.toLowerCase()}. Mitigation shipped before arrival.` : 'Top behaviour: none on file. Monitoring.',
+    word ? `Top behaviour: ${word}. Mitigation shipped before arrival.` : 'Top behaviour: none on file. Monitoring.',
     'Churn risk: high.',
   ].join('\n');
 }

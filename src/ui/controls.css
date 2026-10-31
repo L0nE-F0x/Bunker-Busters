@@ -19,11 +19,12 @@
 .pg-hold { font-family: var(--font); font-size: 10px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; color: var(--ink-dim); margin-right: 5px; vertical-align: middle; }
 
 /* ---------- controller focus ring (menus) and the hidden cursor while playing on a pad ---------- */
-html.pad .pad-focus { outline: 2px solid var(--amber); outline-offset: 2px; box-shadow: 0 0 0 5px rgba(255, 179, 71, 0.16), 0 0 22px rgba(255, 138, 42, 0.3); }
-html.pad .btn.pad-focus:not(.primary):not(:disabled) { background: linear-gradient(90deg, rgba(255, 138, 42, 0.35), rgba(255, 138, 42, 0.05)); border-color: var(--amber); color: #fff; }
-html.pad .menu .btn.pad-focus, html.pad .pause .btn.pad-focus:not(.cx-b) { padding-left: 30px; }
-html.pad .menu .btn.pad-focus::before, html.pad .pause .btn.pad-focus:not(.primary):not(.cx-b)::before { content: '▸'; position: absolute; left: 12px; color: var(--amber); }
-html.pad .cs-card.pad-focus { outline-offset: 1px; }
+/* html.keynav: the same ring while the menus are driven from the keyboard (arrows + Enter, PadNav) */
+html.pad .pad-focus, html.keynav .pad-focus { outline: 2px solid var(--amber); outline-offset: 2px; box-shadow: 0 0 0 5px rgba(255, 179, 71, 0.16), 0 0 22px rgba(255, 138, 42, 0.3); }
+html.pad .btn.pad-focus:not(.primary):not(:disabled), html.keynav .btn.pad-focus:not(.primary):not(:disabled) { background: linear-gradient(90deg, rgba(255, 138, 42, 0.35), rgba(255, 138, 42, 0.05)); border-color: var(--amber); color: #fff; }
+html.pad .menu .btn.pad-focus, html.pad .pause .btn.pad-focus:not(.cx-b), html.keynav .menu .btn.pad-focus, html.keynav .pause .btn.pad-focus:not(.cx-b) { padding-left: 30px; }
+html.pad .menu .btn.pad-focus::before, html.pad .pause .btn.pad-focus:not(.primary):not(.cx-b)::before, html.keynav .menu .btn.pad-focus::before, html.keynav .pause .btn.pad-focus:not(.primary):not(.cx-b)::before { content: '▸'; position: absolute; left: 12px; color: var(--amber); }
+html.pad .cs-card.pad-focus, html.keynav .cs-card.pad-focus { outline-offset: 1px; }
 html.padplay, html.padplay * { cursor: none !important; }
 
 /* ---------- Settings → Controls ---------- */

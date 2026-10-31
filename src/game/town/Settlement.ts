@@ -1041,7 +1041,7 @@ export class Settlement {
     if (id === 'creek') {
       return {
         speaker: 'Doc Ivers',
-        text: 'The summer before the Pivot, the county let Kade Holdings run a "pilot" on our aquifer. We got a school with a rocket on the sign. Eight months later the creek stopped. They called it a drought. Droughts don\'t come with a pump station.',
+        text: 'The year before the Pivot, the county let Kade Holdings run a "pilot" on our aquifer. We got a school with a rocket on the sign. Eight months later the creek stopped. They called it a drought. Droughts don\'t come with a pump station.',
         choices: [{ id: 'ok', label: 'Kade Holdings.', next: 'hello' }],
       };
     }
@@ -1329,7 +1329,7 @@ export class Settlement {
     if (id === 'ending') {
       return {
         speaker: 'Ren Oka',
-        text: 'Tell me. Or don\'t. I\'ve been fine not knowing for two years. Mostly fine.',
+        text: 'Tell me. Or don\'t. I\'ve been fine not knowing for three years. Mostly fine.',
         choices: [
           { id: 'truth', label: 'Tell Ren everything you saw.', next: 'truthful' },
           { id: 'spare', label: 'It was static, Ren. Just static.', next: 'spared' },
@@ -1432,7 +1432,7 @@ export class Settlement {
     if (id === 'view') {
       return {
         speaker: 'Wick',
-        text: 'The highway. The Garage\'s neon, when he remembers to pay for it. And southwest, out in the dunes, a tail fin. A private jet tried to leave the week of the Pivot. The desert said no.',
+        text: 'The highway. The Garage\'s neon, when he remembers to pay for it. And west, out in the dunes, a tail fin. A private jet tried to leave the week of the Pivot. The desert said no.',
         choices: [{ id: 'ok', label: 'A jet in the dunes.', next: 'hello' }],
       };
     }
@@ -1457,7 +1457,7 @@ export class Settlement {
     if (id === 'kitted') {
       return {
         speaker: 'Wick',
-        text: 'From the town. Sure. (He coughs, and uses it.) ...Tell Doc thank you. Don\'t tell him I said it. Here, water from the seep. And look southwest off the edge sometime. There\'s a jet out there.',
+        text: 'From the town. Sure. (He coughs, and uses it.) ...Tell Doc thank you. Don\'t tell him I said it. Here, water from the seep. And look west off the edge sometime. There\'s a jet out there.',
         choices: [{ id: 'ok', label: 'I won\'t tell him.' }],
       };
     }
@@ -1511,7 +1511,7 @@ export class Settlement {
     if (id === 'crew') {
       return {
         speaker: 'Wick',
-        text: 'I\'ve been looking at the salt from up here for two years. Might as well walk on it. Yes.',
+        text: 'I\'ve been looking at the salt from up here for three years. Might as well walk on it. Yes.',
         choices: [{ id: 'ok', label: 'Bring the view.' }],
       };
     }

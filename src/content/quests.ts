@@ -716,7 +716,7 @@ export const QUESTS: QuestDef[] = [
       {
         flag: 'q.ren.truth',
         label: 'You told Ren how it ended.',
-        text: 'Ren listened to all of it without looking away, then laughed for the first time in two years. In the morning Ren walked to Last Chance and took over as the camp\'s lookout.',
+        text: 'Ren listened to all of it without looking away, then laughed for the first time in three years. In the morning Ren walked to Last Chance and took over as the camp\'s lookout.',
         reward: { xp: 90, items: [{ id: 'ration', qty: 1 }, { id: 'water', qty: 2 }], rep: { ren: 2, compact: 1 } },
       },
       {
@@ -939,7 +939,7 @@ export const QUESTS: QuestDef[] = [
       },
       {
         id: 'relay', text: 'Patch Dez\'s relay into the Spire', at: 'spire',
-        hint: 'The fallen 5G tower, northeast of camp. The generator by the shack still runs. Red to red.',
+        hint: 'The fallen 5G tower, east of camp. The generator by the shack still runs. Red to red.',
         done: (v) => v.has('q.dez.relay'),
       },
       {

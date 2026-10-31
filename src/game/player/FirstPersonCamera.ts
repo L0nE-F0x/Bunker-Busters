@@ -1,6 +1,7 @@
 import * as THREE from 'three/webgpu';
 import type { Input } from '@/engine/input';
 import { damp, clamp, Simplex2 } from '@/engine/noise';
+import { comfort } from '@/engine/comfort';
 
 export interface FPFrame {
   feet: THREE.Vector3;
@@ -47,8 +48,9 @@ export class FirstPersonCamera {
     camera.rotation.order = 'YXZ';
   }
 
+  /** Shake: blasts, hits, recoil kick, hard landings (scaled by Settings → Camera shake). */
   addTrauma(v: number) {
-    this.trauma = Math.min(1, this.trauma + v);
+    this.trauma = Math.min(1, this.trauma + v * comfort.shake);
   }
 
   /** A blow knocks the head: pitch, yaw, roll offsets on a stiff spring (the aim itself isn't moved). */
@@ -56,6 +58,7 @@ export class FirstPersonCamera {
   private punchV = new THREE.Vector3();
   /** Knocked by a hit from `bearing` (radians, 0 = ahead, + = to the left), strength 0..1. */
   punch(bearing: number, k: number) {
+    k *= comfort.shake;
     const s = Math.sin(bearing), c = Math.cos(bearing);
     // the head snaps back from a hit in front, and turns and tilts away from one at the side
     this.punchV.x += c * 6 * k;

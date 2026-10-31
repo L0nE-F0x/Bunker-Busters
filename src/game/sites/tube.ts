@@ -7,6 +7,7 @@ import { Sparks } from '../world/effects';
 import { ITEMS } from '@/content/items';
 import { XP_REWARDS } from '@/content/progression';
 import { Site } from './Site';
+import { comfort } from '@/engine/comfort';
 import { TubeBuild, CH, DECK, TZ, STATION, INNER, AIRLOCK, EAST_END, WEST_END, POD, R } from './tubeBuild';
 
 /** Story flags (see Site.ts). */
@@ -423,7 +424,7 @@ export class TubeSite extends Site {
     let lit = 0, screens = 0;
     if (this.powerT >= 0) {
       const pt = (this.powerT += dt);
-      const flick = pt < 1.4 ? (Math.sin(pt * 47) > 0.2 ? 1 : 0.15) : 1;
+      const flick = pt < 1.4 && !comfort.calm ? (Math.sin(pt * 47) > 0.2 ? 1 : 0.15) : 1; // Reduce flashing: a plain ramp
       lit = Math.min(1, pt / 1.0) * flick;
       screens = THREE.MathUtils.clamp((pt - 0.8) / 0.6, 0, 1);
       B.chase.power.value = THREE.MathUtils.clamp((pt - 1.3) / 0.3, 0, 1);
@@ -447,7 +448,7 @@ export class TubeSite extends Site {
       B.setPod(this.podX);
     }
     // lights and screens
-    const flick = Math.sin(t * 29) > 0.95 ? 0.35 : 1;
+    const flick = !comfort.calm && Math.sin(t * 29) > 0.95 ? 0.35 : 1;
     S.strip.intensity.value = 0.1 + lit * 5;
     S.emerg.intensity.value = (lit > 0.5 ? 3 : 2.0) * flick;
     S.cove.intensity.value = 0.1 + lit * 4;

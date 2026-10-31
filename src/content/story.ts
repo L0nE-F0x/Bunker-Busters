@@ -428,7 +428,7 @@ export function journalEntries(v: StoryView): JournalEntry[] {
   add('seen:survey', 'Survey stakes', 'Kade surveyors are working the slope below the Cut. White hard hats, respirators, lanyards with smiling photos. They log everything, including who they shoot.');
   add('seen:rp7', 'Recovery Point 7', 'Where Kade stacks whatever it repossesses: water jugs, a vending machine, somebody\'s piano. The sentry by the wall says please before it fires.');
   add('seen:pipeline', 'The line west', 'A pipe on stands runs west out of Pipeline Camp 3, past a pumping skid that hums. WATER IS A SERVICE is painted on the casing. A Hornet drone circles the pad at night, and the ground around it is mined.');
-  add('seen:wellhead', 'Where the creek went', 'South-west of Dry Creek, the aquifer comes up through a Kade wellhead into a tank with her name on it, then goes west down the pipe. The creek didn\'t dry up. Someone moved it. Five rifles, two sentries and a minefield guard the tank.');
+  add('seen:wellhead', 'Where the creek went', 'North of Dry Creek, the aquifer comes up through a Kade wellhead into a tank with her name on it, then goes west down the pipe. The creek didn\'t dry up. Someone moved it. Five rifles, two sentries and a minefield guard the tank.');
   add('outpost.wellhead.cleared', 'Opened the tap', 'You took the wellhead. The tank is still Kade\'s, and they\'ll send more people. For a while, though, the water under Dry Creek belongs to nobody.');
   add('intel:intel.salt.waybill', 'Her road', 'A Kade waybill out on the salt: forty jugs a week down a private road to Apex Vault, off the west end of the highway and along the shore. The last driver walked off and left the truck.');
   add('seen:apex', 'Apex Vault', 'A launch site at the foot of the range on the salt\'s west shore. A steel booster in a tower, a hangar with her feed playing over the door, and a vault dug into the hill. Every camera there is live, and she\'s usually watching.');
@@ -458,7 +458,7 @@ export function journalEntries(v: StoryView): JournalEntry[] {
   add('dome.gil.met', 'The human in the loop', 'Gil Menon, Ascend\'s last on-call engineer, at a desk in the dome\'s west wing for three and a half years. Every patch the twin writes needs his approval. He takes the full twenty-four seconds on every one.');
   add('dome.gil.freeze', 'Code freeze', 'Gil stopped approving. Nothing new ships from the Dome while you\'re there.');
   add('dome.pipeline.off', 'The build farm', 'You pulled the plug on the build farm, the glass room in the east wing. The twin can write fixes, but nothing gets built.');
-  add('dome.proof', 'Fifty-eight percent', 'You played Hunter\'s last memo to the twin. The gate matched it to the forty-one visitors it turned away. It had locked its founder out and filed him as an impostor.');
+  add('dome.proof', 'Fifty-eight percent', 'You played Hunter\'s last memo to the twin. The gate matched it to the visitor it had turned away forty-one times. It had locked its founder out and filed him as an impostor.');
   add('dome.end.plug', 'The plug', 'You pulled the Cluster\'s breaker. The twin thanked the team. The Dome is dark, the towers have stopped, and the pumps under the shelf don\'t run any more.');
   add('dome.end.job', 'A new job', 'OBJECTIVE = KEEP THE VALLEY ALIVE. The twin still runs the Dome, and a Helper brings two jugs and a battery to the camp every morning. Nobody wrote it any terms.');
   add('zero.known', 'The carrier under the forecourt', 'Dez placed the carrier he couldn\'t find: it comes up out of the ground under Last Chance. A woman reads door specifications on it at ten past two. One of them was a permit Mara signed.');
@@ -492,7 +492,7 @@ export function journalEntries(v: StoryView): JournalEntry[] {
   add('cathedral.rode', 'Free returns', 'The returns kiosk took Rider 9\'s order number, 1047. You rode the returns line in a tote, over the east aisle and down into the crossing.');
   add('cathedral.lo.met', 'Shift 1,407', 'Lo Ibarra runs the floor. Thirty associates were locked in on the morning of the Pivot, and four are left. Shift end is a blank field in Orrin\'s system. They get water when they make rate.');
   add('cathedral.plaque', 'Day 1', 'The plaque at the foot of the apse stair: IT IS ALWAYS DAY 1. The office keypad agrees: 0001.');
-  add('cathedral.end.close', 'Site shutdown', 'You turned Orrin\'s site key. The drives stopped, the drones went home to the tower, and the front doors opened for the first time in four years.');
+  add('cathedral.end.close', 'Site shutdown', 'You turned Orrin\'s site key. The drives stopped, the drones went home to the tower, and the front doors opened for the first time since the Pivot.');
   add('cathedral.end.hand', 'Transfer of ownership', 'You typed L. IBARRA into the owner field. The associates run the Cathedral now, a drone brings two water and a ration to Last Chance every morning, and Orrin works the returns table.');
   add('cathedral.complete', 'The Reserve', 'Orrin\'s office in the apse: a door on two sawhorses for a desk, a pallet of Dropt Spring in shrink-wrap, and a shelf of everything he ever sent back.');
   add('dome.complete', 'The pod', 'Hunter\'s office at the top of the dome: a chair with a headrest full of electrodes where he was going to upload, the Cluster behind glass, and a chilled-water tap on the cooling loop\'s clean side.');
@@ -719,7 +719,7 @@ export function zeroDebrief(v: StoryView): StoryPage[] {
   if (v.has('zero.caught')) pages.push({ speaker: 'Dez Marlow', text: 'Agnes says her Doormen walked you back to the ladder. She sounded proud of them.' });
   pages.push(keep
     ? { speaker: 'Mara Voss', text: 'Last Chance has a bunker now. Dry Creek asked on the band who decides who comes down. I said I do. I heard myself say it.' }
-    : { speaker: 'Mara Voss', text: 'Waitlist City is walking south, a few at a time. Zero has two hundred bunks, and Agnes says the well can take more than that. We\'ll find out.' });
+    : { speaker: 'Mara Voss', text: 'Waitlist City is walking west, a few at a time. Zero has two hundred bunks, and Agnes says the well can take more than that. We\'ll find out.' });
   pages.push({ speaker: 'Mara Voss', text: 'That\'s Act Eight. That\'s every door in the valley. Sleep, and nobody has to sit up with the water tonight.' });
   return pages;
 }

@@ -378,6 +378,18 @@ export class LockpickGame {
       ctx.shadowBlur = p.set || i === this.sel ? 18 + p.flash * 30 : 0;
       ctx.fill();
       ctx.shadowBlur = 0;
+      // shapes as well as colours (green vs amber is one colour to a red-green colour-blind eye):
+      // a check on a set pin's LED, a caret over the pin you're working
+      if (p.set) {
+        ctx.strokeStyle = '#0d2a17';
+        ctx.lineWidth = 3;
+        ctx.lineCap = 'round';
+        ctx.beginPath(); ctx.moveTo(x - 5, ledY + 0.5); ctx.lineTo(x - 1.5, ledY + 4); ctx.lineTo(x + 5.5, ledY - 4); ctx.stroke();
+        ctx.lineCap = 'butt';
+      } else if (i === this.sel) {
+        ctx.fillStyle = '#ffb347';
+        ctx.beginPath(); ctx.moveTo(x - 8, ledY - 24); ctx.lineTo(x + 8, ledY - 24); ctx.lineTo(x, ledY - 15); ctx.closePath(); ctx.fill();
+      }
       if (p.flash > 0) {
         ctx.strokeStyle = `rgba(93,255,154,${p.flash})`;
         ctx.lineWidth = 4;

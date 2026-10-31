@@ -41,8 +41,17 @@ if (only === 'all' || only === 'menus') {
   const f2 = await focused();
   await p.screenshot({ path: `${OUT}/title-focus.png` });
   check('title focus moves', !!f2, f2);
+  // Credits from the title's small row: A opens, B closes
+  for (let i = 0; i < 6 && !/credits/i.test(await focused()); i++) await btn(DOWN);
+  check('focus reaches Credits', /credits/i.test(await focused()), await focused());
+  await btn(A, 90, 500);
+  check('A opens Credits', await ev(`!!document.querySelector('.cr')`));
+  for (let i = 0; i < 3 && !/back/i.test(await focused()); i++) await btn(DOWN);
+  await p.screenshot({ path: `${OUT}/credits-pad.png` });
+  await btn(B, 90, 400);
+  check('B closes Credits, title stays', await ev(`!document.querySelector('.cr') && !!document.querySelector('#title')`));
   // walk to New Game and press A
-  for (let i = 0; i < 4 && !/new game/i.test(await focused()); i++) await btn(UP);
+  for (let i = 0; i < 8 && !/new game/i.test(await focused()); i++) await btn(UP);
   check('on New Game', /new game/i.test(await focused()), await focused());
   await btn(A, 90, 2500);
   check('charselect after A', (await ev('game.mode')) === 'charselect');
@@ -219,7 +228,18 @@ if (only === 'all' || only === 'play') {
   const v1 = await ev(`+document.querySelector('.pad-focus').value`);
   check('d-pad left lowers a slider', v1 < v0, `${k} ${v0} -> ${v1} (settings ${await ev(`game.settings['${k}']`)})`);
   await btn(RIGHT); await btn(RIGHT);
-  for (let i = 0; i < 14 && !/controls/i.test(await focused()); i++) await btn(DOWN);
+  // RB flips the pages: on to Controls, where Controls… is
+  const st0 = await ev(`document.querySelector('.st-tabs .tab.on')?.dataset.tab`);
+  await btn(RB);
+  const st1 = await ev(`document.querySelector('.st-tabs .tab.on')?.dataset.tab`);
+  check('RB flips the Settings tabs', st0 && st1 && st0 !== st1, `${st0} -> ${st1}`);
+  for (let i = 0; i < 5 && (await ev(`document.querySelector('.st-tabs .tab.on')?.dataset.tab`)) !== 'controls'; i++) await btn(RB);
+  // the controls page: a toggle select takes left/right like any other
+  for (let i = 0; i < 8 && !(await ev(`!!document.querySelector('.pad-focus[data-k="toggleCrouch"]')`)); i++) await btn(DOWN);
+  await btn(RIGHT);
+  check('d-pad sets Crouch to toggle', (await ev(`game.settings.toggleCrouch`)) === true);
+  await btn(LEFT);
+  for (let i = 0; i < 14 && !/controls…/i.test(await focused()); i++) await btn(DOWN);
   await p.screenshot({ path: `${OUT}/settings-pad.png` });
   await btn(A, 80, 500);
   check('Controls opens from Settings', await ev(`!!document.querySelector('.cx')`));

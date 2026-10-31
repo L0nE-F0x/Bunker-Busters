@@ -196,7 +196,7 @@ export const ZERO: Bunker = {
         },
         secondary: {
           label: 'Another way through the clock gate', speaker: 'The clock gate',
-          text: 'A steel gate across the showroom, and a railway flip clock over it, four digits, twenty-four hour. A keypad on the right, and a placard:KADE HOLDINGS · AIRLOCK, PROTOTYPE 3 · "CODE ROTATES WITH LAUNCH CLOCK" · DEEPWELL ADVISED AGAINST.',
+          text: 'A steel gate across the showroom, and a railway flip clock over it, four digits, twenty-four hour. A keypad on the right, and a placard:\nKADE HOLDINGS · AIRLOCK, PROTOTYPE 3 · "CODE ROTATES WITH LAUNCH CLOCK" · DEEPWELL ADVISED AGAINST.',
           leave: 'Leave it',
           methods: [
             { kind: 'circuit', id: 'circuit', label: 'Short the keypad', title: 'CLOCK GATE', difficulty: 3, electronics: 3, xp: 45, reason: 'Gate shorted' },
@@ -216,7 +216,7 @@ export const ZERO: Bunker = {
         primary: { kind: 'open', id: 'power', label: 'Turn Model Zero\'s wheel', xp: 80, reason: 'Model Zero' },
         secondary: {
           label: 'Another way through Model Zero', speaker: 'Model Zero',
-          text: 'A round door three metres across, set in the rock. Eight brass cylinders round its rim, each under a maker\'s plate with a founder\'s name, and an eighth in the middle under a plate that says ZERO. A lamp beside each one. A controller box on the wall, sealed with wire and lead.',
+          text: 'A round door three metres across, set in the rock. Seven brass cylinders round its rim, each under a maker\'s plate with a founder\'s name, and an eighth in the middle under a plate that says ZERO. A lamp beside each one. A controller box on the wall, sealed with wire and lead.',
           leave: 'Leave it',
           methods: [
             {
@@ -456,7 +456,7 @@ export const AGNES_TALK: ZeroTalk = {
   },
   well: {
     speaker: AGNES_ROOM,
-    text: 'More than you\'d think. The pump runs on a timer into the cistern. Throw the red handle behind the board and it goes up the surface line instead, to a standpipe on the forecourt, every day for as long as the bore holds. That\'s years.',
+    text: 'More than you\'d think. The pump runs on a timer into the cistern. Throw the red handle on the wellhead and it goes up the surface line instead, to a standpipe on the forecourt, every day for as long as the bore holds. That\'s years.',
     choices: [{ id: 'ok', label: '"Show me the handle."', next: 'hello', effect: 'well' }],
   },
   after: {

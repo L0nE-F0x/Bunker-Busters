@@ -3,6 +3,7 @@ import { Fn, vec4, float, uv, length, atan, cos, pow, smoothstep, uniform, vec3 
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { hardMat, steelMat, bakeParts, type HandPose, type HandRig } from './Hands';
 import type { WeaponId } from '@/content/weapons';
+import { comfort } from '@/engine/comfort';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
@@ -880,7 +881,7 @@ export class Arms {
     if (m.flash) {
       this.flashT -= dt;
       m.flash.visible = this.flashT > 0;
-      flashIntensity.value = this.flashT > 0 ? 6.5 : 0;
+      flashIntensity.value = this.flashT > 0 ? 6.5 * (comfort.calm ? 0.45 : 1) : 0;
     }
 
     // --- hands

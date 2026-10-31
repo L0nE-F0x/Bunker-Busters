@@ -300,7 +300,8 @@ export const CUES: Cue[] = [
   { at: 36, speaker: 'HUNTER VALE', text: 'One more thing. We\'re already gone.' },
   { at: 39.5, speaker: 'AUDIENCE', text: '(applause, on a loop, from every speaker post)' },
   { at: 43, speaker: 'HUNTER VALE', text: 'No questions? Great. Great energy. Thank you.' },
-  { at: 48, speaker: 'HUNTER VALE', text: '(hot mic) Is the jet fueled?' },
+  // (capital H: the voice extractor skips a line that opens on a lowercase stage direction)
+  { at: 48, speaker: 'HUNTER VALE', text: '(Hot mic) Is the jet fuelled?' },
   { at: 50.5, speaker: 'ASSISTANT', text: 'Wheels up at eleven, from the lot. North-west, like you said.' },
   { at: 53, speaker: 'HUNTER VALE', text: 'Just me. Seats were always zero. It\'s a waitlist. Kill the—' },
 ];
@@ -474,7 +475,7 @@ export function drawKeynote(c: CanvasRenderingContext2D, w: number, h: number, t
       c.fillStyle = '#ffe28a';
       c.font = `600 15px ${F_UI}`;
       c.textAlign = 'center';
-      c.fillText(`${cue.speaker === 'ASSISTANT' ? 'ASSISTANT' : 'HUNTER'}: ${cue.text.replace('(hot mic) ', '')}`, w / 2, h - 32, w - 60);
+      c.fillText(`${cue.speaker === 'ASSISTANT' ? 'ASSISTANT' : 'HUNTER'}: ${cue.text.replace('(Hot mic) ', '')}`, w / 2, h - 32, w - 60);
     }
   } else {
     bg('#050505', '#050505');

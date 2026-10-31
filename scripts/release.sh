@@ -52,21 +52,27 @@ s = re.sub(r'(name = "bunker-busters"\nversion = ")[^"]+(")', r'\g<1>' + sys.arg
 open(p, "w").write(s)
 PY
 
+# ---- third-party licences (public/licenses.txt ships in every download) -----------------------
+echo "Refreshing third-party licences…"
+cargo fetch -q --manifest-path src-tauri/Cargo.toml   # every target's crates, Windows included
+node scripts/licenses.mjs
+
 # ---- verify ----------------------------------------------------------------------------------
 echo "Verifying web build…"
 npm run build >/dev/null
 echo "Verifying desktop shell compiles…"
 cargo check -q --manifest-path src-tauri/Cargo.toml
 
+FILES=(package.json package-lock.json src-tauri/tauri.conf.json src-tauri/Cargo.toml src-tauri/Cargo.lock public/licenses.txt)
 if [ "$DRY" = 1 ]; then
   git diff --stat
-  git checkout -- package.json package-lock.json src-tauri/tauri.conf.json src-tauri/Cargo.toml src-tauri/Cargo.lock
+  git checkout -- "${FILES[@]}"
   echo "Dry run OK — files restored, nothing committed."
   exit 0
 fi
 
 # ---- commit, tag, push ------------------------------------------------------------------------
-git add package.json package-lock.json src-tauri/tauri.conf.json src-tauri/Cargo.toml src-tauri/Cargo.lock
+git add "${FILES[@]}"
 git commit -q -m "Release $tag"
 git tag -a "$tag" -m "Bunker Busters $tag"
 git push -q origin main
@@ -75,4 +81,5 @@ echo
 echo "Pushed $tag. CI is building Linux + Windows and will publish the release."
 echo "  Watch:   gh run watch \$(gh run list --workflow Release --limit 1 --json databaseId --jq '.[0].databaseId') --exit-status"
 echo "  Release: https://github.com/L0nE-F0x/Bunker-Busters/releases/tag/$tag"
+echo "  Then the Smoke workflow installs each download on clean Windows/Ubuntu machines (Actions → Smoke)."
 echo "  Update your own install afterwards:  npm run desktop:install"
