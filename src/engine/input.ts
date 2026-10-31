@@ -1,5 +1,6 @@
 import { isTouch, enterFullscreen } from './device';
 import { binds, type Action } from './bindings';
+import { pad } from './gamepad';
 
 export type Device = 'kbm' | 'pad' | 'touch';
 
@@ -244,6 +245,11 @@ export class Input {
     if (this.toggles.has(a)) return this.latched.has(a);
     for (const c of binds.keys(a)) if (this.codeDown(c)) return true;
     return false;
+  }
+  /** A new run starts standing and walking: toggled crouch/sprint/aim don't carry over (keyboard and pad). */
+  resetLatches() {
+    this.latched.clear();
+    pad.resetLatches();
   }
   /** Settings → Controls: which actions toggle on the keyboard and mouse. */
   setToggles(on: Action[]) {

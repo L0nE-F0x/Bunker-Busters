@@ -62,6 +62,8 @@ export class Pad {
   private startedInPlay = new Array<boolean>(N).fill(false);
   private crouchLatch = false;
   private sprintLatch = false;
+  /** A new run starts standing and walking (a crouch toggled in the last run stayed on). */
+  resetLatches() { this.crouchLatch = false; this.sprintLatch = false; }
   private rimT = 0;
   /**
    * Aim assist (combat/aimAssist.ts, set by Game): called once a frame in play while the pad is the

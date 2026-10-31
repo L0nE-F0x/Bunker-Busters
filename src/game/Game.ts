@@ -1345,6 +1345,7 @@ export class Game {
     this.state = state;
     this.mode = 'playing';
     this.takenAway = false;
+    this.input.resetLatches();
     this.cam.snapFov(); // charselect/title leave the lens elsewhere; start the run at the player's FOV
     // out of the menus' dip to black: the picture comes up as the run begins
     const f0 = this.post.fade.value as number;
