@@ -620,7 +620,9 @@ export abstract class Bunker<S extends BunkerShell = BunkerShell> {
     // Act I, Kit taunted Photon Park)
     const v = this.sec.voice;
     const d = this.playerOnGrounds || this.s.has(`q:act${this.def.tier}`) ? this.distToPlayer() : Infinity;
-    if (!this.greeted && d < v.greetRadius) {
+    // (not once it's busted: the greeting is a first meeting, and after a reload it replayed at every
+    // busted bunker you passed, the switched-off twin included; the taunts already stop there)
+    if (!this.greeted && !this.complete && d < v.greetRadius) {
       this.greeted = true;
       this.taunt(v.greet);
       this.tauntTimer = 30;

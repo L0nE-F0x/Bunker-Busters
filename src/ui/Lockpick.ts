@@ -80,6 +80,8 @@ export class LockpickGame {
       this.canvas.addEventListener('pointerdown', this.onDown);
       window.addEventListener('pointerup', this.onUp);
       window.addEventListener('pointercancel', this.onUp);
+      // focus gone mid-lift (alt-tab): the key comes up in another window, so let the pin go here
+      window.addEventListener('blur', this.onUp);
       this.loop();
     });
   }
@@ -96,6 +98,7 @@ export class LockpickGame {
     window.removeEventListener('keyup', this.onKeyUp);
     window.removeEventListener('pointerup', this.onUp);
     window.removeEventListener('pointercancel', this.onUp);
+    window.removeEventListener('blur', this.onUp);
     this.root.remove();
     this.resolve(r);
   }

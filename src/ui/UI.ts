@@ -132,7 +132,8 @@ export class UI implements UIBridge {
   }
 
   // ------------------------------------------------------------------ title
-  showTitle(opts: { canContinue: boolean; backend: string; onContinue: () => void; onNew: () => void; onSettings: () => void; settings?: Settings; onChange?: (s: Settings) => void }) {
+  /** `notice`: a line under the menu about the save (unreadable, or a browser that can't keep one). */
+  showTitle(opts: { canContinue: boolean; backend: string; notice?: string; onContinue: () => void; onNew: () => void; onSettings: () => void; settings?: Settings; onChange?: (s: Settings) => void }) {
     const el = h('div', '', `
       <div class="logo">
         <span class="l1">BUNKER</span><span class="l2">BUSTERS</span>
@@ -147,7 +148,9 @@ export class UI implements UIBridge {
       const b = h('button', `btn${primary ? ' primary' : ''}`, label) as HTMLButtonElement;
       b.disabled = disabled;
       b.onmouseenter = () => this.audio.play('uiHover');
-      b.onclick = () => { this.audio.start(); this.audio.play('uiConfirm'); fn(); };
+      // (the first-click listener goes too: left on window it kept this whole title alive, every time
+      // the title was left by keyboard or controller, which never sends a pointerdown)
+      b.onclick = () => { this.audio.start(); this.audio.play('uiConfirm'); window.removeEventListener('pointerdown', kick); fn(); };
       menu.appendChild(b);
     };
     if (opts.canContinue) add('Continue', () => { el.remove(); opts.onContinue(); }, true);
@@ -157,6 +160,7 @@ export class UI implements UIBridge {
     // phones in the browser: put the game on the home screen (full screen, plays offline)
     if (isTouch && isPhone && !isInstalledApp()) add('Install app', () => openInstallSheet({ onGamePage: true }));
     menu.appendChild(this.minorRow());
+    if (opts.notice) menu.after(h('div', 'title-notice', esc(opts.notice)));
     this.root.appendChild(el);
     void mountUpdateNotice(el, () => { this.audio.start(); this.audio.play('uiConfirm'); });
     // first launch: the photosensitivity notice, over the title

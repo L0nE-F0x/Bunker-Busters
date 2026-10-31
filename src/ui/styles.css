@@ -141,6 +141,8 @@ noscript .boot-note { position: fixed; left: 50%; top: 62%; transform: translate
 .tagline { font-size: clamp(14px, 1.4vw, 19px); letter-spacing: 0.42em; text-transform: uppercase; color: var(--ink-dim); margin: 18px 0 42px 6px; }
 .tagline b { color: var(--teal); font-weight: 600; }
 .menu { display: flex; flex-direction: column; gap: 8px; width: min(340px, 80vw); position: relative; }
+/* a word about the save under the title menu (unreadable, or a browser that can't keep one) */
+.title-notice { width: min(340px, 80vw); margin-top: 14px; font-size: 13px; line-height: 1.45; color: var(--ink-dim); border-left: 2px solid var(--red); padding-left: 10px; }
 /* in-app update notice (desktop app) */
 .update-card {
   position: absolute; right: 8vw; bottom: 72px; width: min(360px, 84vw); padding: 16px 18px 14px;

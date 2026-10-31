@@ -47,7 +47,7 @@ export async function waitForGame(page, timeoutMs = 120000) {
   const t0 = Date.now();
   const url = page.url();
   while (Date.now() - t0 < timeoutMs) {
-    const [m, saved] = await page.evaluate(() => [window.game?.mode, !!localStorage.getItem('bunker-busters.save.v1')]).catch(() => [null, false]);
+    const [m, saved] = await page.evaluate(() => { let saved = false; try { saved = !!localStorage.getItem('bunker-busters.save.v1'); } catch { /* storage blocked (hostile-test) */ } return [window.game?.mode, saved]; }).catch(() => [null, false]);
     const run = /[?&]autostart\b/.test(url) || (/[?&]continue\b/.test(url) && saved);
     if (m && m !== 'loading' && (!run || m === 'playing')) return m;
     await page.waitForTimeout(400);

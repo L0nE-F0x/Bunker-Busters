@@ -55,6 +55,7 @@ export class CircuitGame {
       this.resolve = res;
       window.addEventListener('keydown', this.onKey);
       window.addEventListener('keyup', this.onKeyUp);
+      window.addEventListener('blur', this.onBlur);
       this.canvas.addEventListener('pointermove', this.onMouse);
       this.canvas.addEventListener('pointerdown', this.onMouse);
       this.loop();
@@ -66,10 +67,14 @@ export class CircuitGame {
     if (!this.done) this.finish(false);
   }
 
+  /** Focus gone with a key held (alt-tab): its keyup lands elsewhere, so stop turning the dial here. */
+  private onBlur = () => this.keys.clear();
+
   private finish(ok: boolean) {
     cancelAnimationFrame(this.raf);
     window.removeEventListener('keydown', this.onKey);
     window.removeEventListener('keyup', this.onKeyUp);
+    window.removeEventListener('blur', this.onBlur);
     this.root.remove();
     this.resolve(ok);
   }

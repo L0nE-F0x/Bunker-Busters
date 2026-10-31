@@ -166,6 +166,11 @@ export class MapData {
   }
 
   deserialize(s: string) {
+    // every run starts from a blank sheet: a new game after Quit to title (discovered '') kept the old
+    // run's map, its survey percentage, and saved it as its own
+    this.fog.fill(0);
+    this.fogDirty = true;
+    this.version++;
     if (!s) return;
     try {
       const bytes = atob(s);

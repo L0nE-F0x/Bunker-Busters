@@ -73,9 +73,11 @@ async function run(ending) {
   await check('quest act4 started', `!!game.story && JSON.stringify(game.story).length > 0`);
   // cross beam 1 standing up (the beams are between the guardrails)
   // (in steps: a jump of more than 2 m in a frame counts as a teleport, not a step across the beam)
+  // (a beam only counts a grounded step: each hop lands on the ground, and the next waits until it has)
   for (const k of [-2, -1.4, -0.8, -0.2, 0.4, 1, 1.6, 2]) {
-    await ev(`(() => { const w = game.spire.tripwires.wires[0]; const m = w.a.clone().lerp(w.b, 0.5); const t = w.b.clone().sub(w.a).normalize(); const n = new V(t.z, 0, -t.x); go(m.x + n.x * ${k}, m.z + n.z * ${k}); })()`);
+    await ev(`(() => { const w = game.spire.tripwires.wires[0]; const m = w.a.clone().lerp(w.b, 0.5); const t = w.b.clone().sub(w.a).normalize(); const n = new V(t.z, 0, -t.x); const x = m.x + n.x * ${k}, z = m.z + n.z * ${k}; go(x, z, game.hf.heightAt(x, z) + 0.02); })()`);
     await wait(k === -2 ? 400 : 150);
+    for (let i = 0; i < 8 && !(await ev(`game.player.grounded`)); i++) await wait(100);
   }
   await wait(450);
   await check('a beam raises the level to 2', `game.spire.level === 2`);
@@ -88,7 +90,12 @@ async function run(ending) {
 
   // a sentinel with a weapon out: it apologises; out of sight before the end it logs a near miss
   await ev(`(() => { const s = game.spire.sentinels.get('s2'); const p = s.center; go(p.x - Math.sin(s.spot.yaw) * -8, p.z - Math.cos(s.spot.yaw) * -8); game.arms.equip('revolver', true); })()`);
-  await wait(2500);
+  // (it scans ±0.95 rad with a 0.7 rad cone: right in the middle of its sweep you're outside the cone for
+  // up to ~3 s while it looks at either end, so a fixed 2.5 s wait failed whenever you arrived early in that)
+  for (let t = 0; t < 6000; t += 200) {
+    if (await ev(`['sorry','fire','track'].includes(game.spire.sentinels.get('s2').state)`)) break;
+    await wait(200);
+  }
   await check('sentinel apologises at an armed player', `['sorry','fire','track'].includes(game.spire.sentinels.get('s2').state)`);
   await ev(`game.arms.equip(null, true)`);
   await wait(2500);
