@@ -4,6 +4,7 @@ import { ApexBuilder, APEX_GROUNDS } from './ApexBuilder';
 import { APEX, APEX_FLAGS as F, VESPER, VESPER_TALK, VESPER_POSTS, type VesperView } from '@/content/bunkers/apex';
 import type { BunkerEntryDef, LockMethod } from '@/content/types';
 import type { GameContext } from '../../context';
+import { comfort } from '@/engine/comfort';
 
 const CH = ApexBuilder.CH;
 /** Launch hour (game time): the clock over the airlock counts down to it, and the code is the clock. */
@@ -394,7 +395,7 @@ export class Apex extends Bunker<ApexBuilder> {
     const alarm = this.alarm > 0;
     const pulse = alarm ? Math.max(0, Math.sin(this.t * 10)) : 0;
     const nightOn = THREE.MathUtils.smoothstep(night, 0.2, 0.45);
-    const flick = Math.sin(this.t * 29) > 0.985 ? 0.5 : 1;
+    const flick = !comfort.calm && Math.sin(this.t * 29) > 0.985 ? 0.5 : 1; // steady with Reduce flashing
     // the hangar's high bays are always on (it's dark under the arch); the apron flood and the
     // stand's uplight come on at night. In an alarm everything inside goes red and pulses.
     for (const l of L.hangar) {

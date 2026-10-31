@@ -8,6 +8,7 @@ import { ITEMS } from '@/content/items';
 import { XP_REWARDS } from '@/content/progression';
 import { DAEMONS } from '@/content/hacks';
 import { Site } from './Site';
+import { comfort, CALM_FLASH } from '@/engine/comfort';
 import { ColdStorageBuild, CH, FY, INSIDE, CAGE, HALL, LOBBY } from './datacenterBuild';
 
 /** Story flags (see Site.ts). */
@@ -591,7 +592,7 @@ export class DataCenterSite extends Site {
     S.red.intensity.value = (t * 0.6 + 0.3) % 1 < 0.25 ? 3.4 : 0.2;
     for (let i = 0; i < 6; i++) ch[CH.BLINK + i] = Math.sin(t * (2 + i * 1.3) + this.ledPhase[i + 8]) > 0 ? 1 : 0.1;
     // emergency strips on the battery flicker; the main strips follow the power
-    const flick = Math.sin(t * 31) > 0.96 ? 0.35 : 1;
+    const flick = !comfort.calm && Math.sin(t * 31) > 0.96 ? 0.35 : 1;
     S.emerg.intensity.value = (power ? 3.5 : 2.0) * flick;
     ch[CH.EMERG] = flick;
     const pw = power ? Math.min(1, B.lights.hall.intensity / 14 + dt) : 0;
@@ -644,7 +645,8 @@ export class DataCenterSite extends Site {
       }
     }
     this.flash = Math.max(0, this.flash - dt * 7);
-    const f = this.flash * (0.6 + 0.4 * Math.sin(t * 90));
+    // the arc stutters at 14 Hz; with Reduce flashing it's one dimmer spark that fades
+    const f = comfort.calm ? this.flash * CALM_FLASH : this.flash * (0.6 + 0.4 * Math.sin(t * 90));
     S.spark.intensity.value = f * 16;
     ch[CH.SPARK] = f;
     B.lights.spark.intensity = f * 22;

@@ -10,6 +10,7 @@ import { TANNER, visibleChoices } from '@/content/dialogue';
 import type { TalkCtx } from '@/content/dialogue';
 import type { GameContext } from '../context';
 import type { LoopHandle } from '@/engine/audio';
+import { comfort } from '@/engine/comfort';
 
 /** Flags the Garage's own code reads (the runtime derives the rest from content/bunkers/garage.ts). */
 const F = {
@@ -167,7 +168,7 @@ export class Garage extends Bunker<GarageBuilder> {
     for (const bulb of this.b.floodBulbs) bulb.value = night > 0.3 ? 8 : 0.3;
     const n = Math.sin(this.t * 13) * Math.sin(this.t * 2.7 + 1);
     this.b.neonFlicker.value = n > 0.93 ? 0.1 : 1;
-    this.b.interiorLight.intensity = (this.alarm > 0 ? 6 + Math.max(0, Math.sin(this.t * 10)) * 20 : 14) * (Math.sin(this.t * 31) > 0.97 ? 0.4 : 1);
+    this.b.interiorLight.intensity = (this.alarm > 0 ? 6 + Math.max(0, Math.sin(this.t * 10)) * 20 : 14) * (!comfort.calm && Math.sin(this.t * 31) > 0.97 ? 0.4 : 1);
     this.b.interiorLight.color.set(this.alarm > 0 ? 0xff3020 : 0xffb070);
     for (const bc of this.b.beacons) {
       bc.visible = this.alarm > 0;
@@ -184,7 +185,8 @@ export class Garage extends Bunker<GarageBuilder> {
     });
     // halos, tubes and light pools follow the same lights
     const nightOn = THREE.MathUtils.smoothstep(night, 0.2, 0.45);
-    const flick = Math.sin(this.t * 31) > 0.97 ? 0.4 : 1;
+    // a tired tube dips five times a second (held steady with Reduce flashing)
+    const flick = !comfort.calm && Math.sin(this.t * 31) > 0.97 ? 0.4 : 1;
     const alarmOn = this.alarm > 0;
     const alarmPulse = alarmOn ? Math.max(0, Math.sin(this.t * 10)) : 0;
     ch[CH.ON] = 1;
