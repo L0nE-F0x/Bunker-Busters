@@ -7,6 +7,7 @@ import type { Heightfield } from '../world/Heightfield';
 import type { Atmosphere } from '../world/Atmosphere';
 import type { DustPuffs, Sparks } from '../world/effects';
 import { VirtualLight } from '../world/lights';
+import { comfort } from '@/engine/comfort';
 import { Tracers, Debris, Flames } from './fx';
 import { Marks, Brass } from './marks';
 import type { WeaponId } from '@/content/weapons';
@@ -338,7 +339,7 @@ export class Combat {
   /** The player's muzzle: a flash of real light at `p` (it lights the dust and the hands). */
   playerFlash(p: THREE.Vector3, k = 1) {
     this.muzzle.position.copy(p);
-    this.muzzle.intensity = 40 * k;
+    this.muzzle.intensity = 40 * k * comfort.flash;
   }
 
   /** An enemy's muzzle flash at `p` pointing along `dir`. */
@@ -347,7 +348,7 @@ export class Combat {
     this.flames.emit(2, p, 1, null, 0, 0.5 * k, 0.05, 0.5, 2);
     const l = this.enemyMuzzle[this.enemyMuzzleI++ % this.enemyMuzzle.length];
     l.position.copy(p);
-    l.intensity = 30 * k;
+    l.intensity = 30 * k * comfort.flash;
     this.debris.emit('smoke', p, 2, _a.copy(dir).multiplyScalar(1.2), 0.2, 0.12, undefined, 0.35);
   }
 
@@ -463,7 +464,7 @@ export class Combat {
     this.sparks?.emit(p, 40, 9 * k, { up: 4, size: 0.035, life: 1.1, floorY: this.hf.heightAt(p.x, p.z) + 0.02 });
     this.puffs?.emit(p, 16, 4 * k, 0.8, 1.4 * k);
     this.blast.position.copy(p).setY(p.y + 1);
-    this.blast.intensity = 220 * k;
+    this.blast.intensity = 220 * k * comfort.flash;
     this.audio.combat?.explosion(p, Math.min(1.2, 0.6 + k * 0.4));
     this.noise(p, 260, 'explosion');
     // the player

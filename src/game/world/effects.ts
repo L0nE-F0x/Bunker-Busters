@@ -10,6 +10,7 @@ import type { Heightfield } from './Heightfield';
 import { noise } from '@/engine/noiseTex';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { VirtualLight } from './lights';
+import { comfort } from '@/engine/comfort';
 import { setGroundHeight } from './materials';
 import { canvasTexture } from './kit';
 
@@ -947,7 +948,7 @@ export class Shockwave {
     this.ring.scale.setScalar(0.1 + (1 - Math.pow(1 - tt, 2.2)) * this.radius * 1.15);
     this.arcTimer -= dt;
     if (this.arcTimer <= 0) {
-      this.arcTimer = 0.045;
+      this.arcTimer = comfort.calm ? 0.25 : 0.045; // Reduce flashing: the arcs crawl, not flicker
       this.strike(Math.max(0.6, e * this.radius * 0.9), camPos ?? this.center.clone().add(new THREE.Vector3(0, 2, 6)));
     }
     if (this.t >= 1) this.done = true;

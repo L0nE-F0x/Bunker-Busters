@@ -88,6 +88,8 @@ import { Recovery, CREW_SLOTS } from './combat/Recovery';
 import { AimAssist } from './combat/aimAssist';
 import { Machines } from './combat/Machines';
 import { MenuDirector } from './MenuDirector';
+import { comfort } from '@/engine/comfort';
+import { applyAccess } from './access';
 
 /** Debug: ?interior=off draws the exterior even from inside sealed interiors (A/B for interior mode). */
 const NO_INTERIOR = typeof location !== 'undefined' && new URLSearchParams(location.search).get('interior') === 'off';
@@ -264,6 +266,7 @@ export class Game {
   constructor(private renderer: THREE.WebGPURenderer, public isWebGPU: boolean, private canvas: HTMLCanvasElement) {
     this.input = new Input(canvas);
     this.ui = new UI(this.audio);
+    this.ui.bugInfo = () => ({ backend: this.backendLabel, quality: this.quality?.level });
     // controls: the saved bindings, persisted whenever the Controls screen changes them
     binds.set(this.settings.binds);
     binds.onChange = (m) => { this.settings.binds = m; saveSettings(this.settings); };
@@ -1186,6 +1189,8 @@ export class Game {
       onContinue: () => this.startGame(new GameState(save!)),
       onNew: () => this.toCharSelect(),
       onSettings: () => this.ui.openSettings(this.settings, (s) => this.applySettings(s)),
+      settings: this.settings,
+      onChange: (s) => this.applySettings(s),
     });
   }
 
@@ -1656,6 +1661,8 @@ export class Game {
     this.audio.setVolumes({ master: this.settings.master, music: this.settings.music, sfx: this.settings.sfx });
     this.audio.setVoices(this.settings.voice !== false);
     this.input.sensitivity = this.settings.sensitivity;
+    // voice level, brightness, subtitles, shake, Reduce flashing, hold/toggle keys (access.ts)
+    applyAccess(this.settings, this.input, this.audio);
   }
 
   private resize() {
@@ -1904,10 +1911,10 @@ export class Game {
         this.scene.add(sw.mesh);
         this.shockwaves.push(sw);
         this.flash.position.copy(g.mesh.position).y += 0.3;
-        this.flash.intensity = 80;
+        this.flash.intensity = 80 * comfort.flash;
         this.audio.play('emp', { pos: g.mesh.position });
         const near = this.player ? this.player.position.distanceTo(g.mesh.position) : 99;
-        this.post.emp.value = Math.max(0, 1 - near / 14);
+        this.post.emp.value = Math.max(0, 1 - near / 14) * comfort.flash;
         this.cam.addTrauma(Math.max(0, 0.6 - near / 20));
         this.hands?.jolt(Math.max(0, 0.8 - near / 15));
         const hitGarage = this.bunkers.map((b) => b.emp(g.mesh.position, 8.5)).some(Boolean);
@@ -2251,6 +2258,8 @@ export class Game {
     }
     // gameplay-driven post
     this.post.damage.value = damp(this.post.damage.value as number, 0, 2.5, dt);
+    // Reduce flashing: the red edge stays faint (a sentry burst re-triggers it 7-9 times a second)
+    if (comfort.calm) this.post.damage.value = Math.min(this.post.damage.value as number, 0.3);
     this.post.menuShade.value = damp(this.post.menuShade.value as number, this.mode === 'title' || this.mode === 'charselect' ? 1 : 0, 3, dt);
     this.post.emp.value = damp(this.post.emp.value as number, 0, 1.2, dt);
     if (this.mode !== 'playing') { this.post.lowHp.value = 0; this.post.vignette.value = 0.32; this.post.aberration.value = 0.0007; }

@@ -22,6 +22,7 @@ import { dressSpire } from './spire';
 import { decalMat, glowDecalMat, uSiteNight, uSiteFlicker } from '../sites/jetKit';
 import { printMaterial } from './printAtlas';
 import { ridgeTent } from './tent';
+import { comfort } from '@/engine/comfort';
 
 export interface Flicker { set: (v: number) => void; phase: number; speed: number; broken: number }
 
@@ -507,6 +508,8 @@ export class Landmarks {
     if (cam) for (const l of this.lods) l.update(cam);
     for (const fire of this.fires) fire.update(dt, cam);
     for (const fl of this.flickers) {
+      // Reduce flashing: broken neon holds a steady, dimmer glow instead of stuttering
+      if (comfort.calm) { fl.set(1 - fl.broken * 0.5); continue; }
       const n = Math.sin(t * 17 * fl.speed + fl.phase) * Math.sin(t * 3.1 * fl.speed + fl.phase * 2);
       const off = n > 1 - fl.broken * 2 ? 0.08 : 1;
       fl.set(off * (0.92 + 0.08 * Math.sin(t * 60)));
@@ -516,7 +519,7 @@ export class Landmarks {
       const night = 1 - uDaylight.value;
       const near = sp.near.visible;
       // the office's porch lamp buzzes on at dusk; the cabinets' status LEDs blink out of step
-      const buzz = Math.sin(t * 23) * Math.sin(t * 2.3) > 0.9 ? 0.4 : 1;
+      const buzz = !comfort.calm && Math.sin(t * 23) * Math.sin(t * 2.3) > 0.9 ? 0.4 : 1;
       sp.bulb.value = (0.3 + night * 7) * buzz;
       sp.light.intensity = near ? night * 9 * buzz : 0;
       sp.leds[0].value = Math.sin(t * 2.1) > 0 ? 5 : 0.4;

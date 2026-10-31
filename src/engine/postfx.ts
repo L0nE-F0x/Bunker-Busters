@@ -35,6 +35,12 @@ export const gradeU = {
 };
 
 /**
+ * Settings → Brightness: a display gamma over the finished frame (1 = as graded, below 1 lifts the
+ * darks). One uniform in the finishing pass: changing it never compiles anything.
+ */
+export const displayGamma = uniform(1);
+
+/**
  * The "AAA look": HDR scene → ambient-only GTAO → phase-weighted godrays → exposure → bloom →
  * time-of-day split tone → ACES → saturation → SMAA → chromatic aberration, vignette, film grain,
  * and gameplay-driven overlays (damage flash, detection pulse, EMP static).
@@ -58,6 +64,8 @@ export class PostFX {
   readonly godrayStrength = uniform(0.35);
   /** debug handle: `game.post.gradeU` */
   readonly gradeU = gradeU;
+  /** debug handle: `game.post.displayGamma` (Settings → Brightness) */
+  readonly displayGamma = displayGamma;
   /** direction toward the shadow-casting light (sun by day, moon by night), refreshed per frame */
   private readonly uLightDir = uniform(new THREE.Vector3(0, 1, 0));
 
@@ -212,6 +220,8 @@ export class PostFX {
       // near death: the colour drains out and the edges darken and throb with the pulse
       col.assign(mix(col, vec3(dot(col, vec3(0.3, 0.59, 0.11))), lowHp.mul(0.6)));
       col.assign(mix(col, vec3(0.32, 0.0, 0.0), smoothstep(0.3, 0.85, r).mul(lowHp).mul(0.6)));
+      // the player's brightness, before the grain (so the grain stays the same size in the darks)
+      col.assign(pow(max(col, vec3(0)), vec3(displayGamma)));
 
       // film grain (luma-weighted so blacks stay clean-ish)
       const g = hash2(uv.mul(vec2(1280.0, 720.0)).floor().mul(0.731).add(time.fract().mul(431.0))).sub(0.5);

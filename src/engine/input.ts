@@ -40,6 +40,12 @@ export class Input {
    * upgrades it to a real capture; Escape releases it like any other.
    */
   soft = false;
+  /**
+   * Settings → Controls: actions whose key or mouse button toggles instead of being held (crouch,
+   * sprint, aim). The controller and the touch buttons keep their own behaviour.
+   */
+  private toggles = new Set<Action>();
+  private latched = new Set<Action>();
 
   constructor(private el: HTMLElement) {
     window.addEventListener('keydown', (e) => {
@@ -235,8 +241,30 @@ export class Input {
   act(a: Action) {
     if (!this.enabled) return false;
     if (this.padDown.has(a) || this.down.has(`act:${a}`)) return true;
+    if (this.toggles.has(a)) return this.latched.has(a);
     for (const c of binds.keys(a)) if (this.codeDown(c)) return true;
     return false;
+  }
+  /** Settings → Controls: which actions toggle on the keyboard and mouse. */
+  setToggles(on: Action[]) {
+    this.toggles = new Set(on);
+    for (const a of [...this.latched]) if (!this.toggles.has(a)) this.latched.delete(a);
+  }
+  /**
+   * A press flips a toggled action (read next frame). They give way to each other as held keys would:
+   * sprinting stands you up and drops the sights, crouching ends a sprint, and a sprint ends when you
+   * stop moving forward. Changing weapons drops the sights; menus drop aim and sprint (crouch stays).
+   */
+  private flipToggles() {
+    if (!this.enabled || !this.locked) { this.latched.delete('aim'); this.latched.delete('sprint'); return; }
+    const pressed = (a: Action) => binds.keys(a).some((c) => this.codePressed(c));
+    const L = this.latched;
+    for (const a of this.toggles) if (pressed(a) && !L.delete(a)) L.add(a);
+    if (pressed('sprint')) { L.delete('crouch'); L.delete('aim'); }
+    if (pressed('crouch')) L.delete('sprint');
+    if (this.wheel || pressed('nextWeapon') || pressed('prevWeapon') || pressed('lastWeapon') || pressed('holster')) L.delete('aim');
+    const forward = this.padZ > 0.3 || this.moveZ > 0.3 || binds.keys('forward').some((c) => this.codeDown(c));
+    if (!forward) L.delete('sprint');
   }
   /** Action pressed this frame. */
   actPressed(a: Action) {
@@ -264,6 +292,7 @@ export class Input {
   }
 
   endFrame() {
+    if (this.toggles.size) this.flipToggles();
     this.pressedThisFrame.clear();
     this.releasedThisFrame.clear();
     this.mouseDX = 0;

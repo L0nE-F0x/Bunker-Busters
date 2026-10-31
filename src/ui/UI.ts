@@ -24,9 +24,11 @@ import { buildWorldMap, type WorldMapOpts, type MapViewState } from './WorldMap'
 import { mountUpdateNotice } from './Updater';
 import { isTouch, canFullscreen, isFullscreen, enterFullscreen } from '@/engine/device';
 import type { ArmsHud } from '@/game/combat/PlayerArms';
-import { DIFFICULTY } from '@/content/weapons';
 import { binds, actionGlyph, actionKey, actionWord, kbdGlyph, keyLabel, padName, type Action } from '@/engine/bindings';
 import { openControls } from './ControlsView';
+import { openSettingsPanel, needsFlashNotice, openFlashNotice } from './SettingsView';
+import { openCredits } from './Credits';
+import { openExternal, bugReportUrl, type BugInfo } from './links';
 
 /** Which device's glyphs to show (html.pad is set by Input when a controller was used last). */
 const device = () => (isTouch ? 'touch' : document.documentElement.classList.contains('pad') ? 'pad' : 'kbm');
@@ -97,6 +99,8 @@ export class UI implements UIBridge {
   private xhairKey = '';
   private hitT = 0;
   private hitKind = '';
+  /** What a bug report says about the renderer and the preset (set by Game). */
+  bugInfo: () => BugInfo = () => ({});
 
   constructor(private audio: AudioEngine) {
     this.root = document.getElementById('ui')!;
@@ -131,7 +135,7 @@ export class UI implements UIBridge {
   }
 
   // ------------------------------------------------------------------ title
-  showTitle(opts: { canContinue: boolean; backend: string; onContinue: () => void; onNew: () => void; onSettings: () => void }) {
+  showTitle(opts: { canContinue: boolean; backend: string; onContinue: () => void; onNew: () => void; onSettings: () => void; settings?: Settings; onChange?: (s: Settings) => void }) {
     const el = h('div', '', `
       <div class="logo">
         <span class="l1">BUNKER</span><span class="l2">BUSTERS</span>
@@ -155,11 +159,37 @@ export class UI implements UIBridge {
     add('Controls', () => this.showControls());
     // phones in the browser: put the game on the home screen (full screen, plays offline)
     if (isTouch && isPhone && !isInstalledApp()) add('Install app', () => openInstallSheet({ onGamePage: true }));
+    menu.appendChild(this.minorRow());
     this.root.appendChild(el);
     void mountUpdateNotice(el, () => { this.audio.start(); this.audio.play('uiConfirm'); });
+    // first launch: the photosensitivity notice, over the title
+    if (opts.settings && opts.onChange && needsFlashNotice(opts.settings)) openFlashNotice(this.root, this.audio, opts.settings, opts.onChange);
     // first interaction starts audio
     const kick = () => { this.audio.start(); window.removeEventListener('pointerdown', kick); };
     window.addEventListener('pointerdown', kick);
+  }
+
+  /** Credits · Report a bug: the small row under the title and pause menus. */
+  private minorRow() {
+    const row = h('div', 'menu-minor');
+    const add = (label: string, fn: () => void) => {
+      const b = h('button', 'btn', label);
+      b.onmouseenter = () => this.audio.play('uiHover');
+      b.onclick = () => { this.audio.start(); this.audio.play('ui'); fn(); };
+      row.appendChild(b);
+    };
+    add('Credits', () => this.showCredits());
+    add('Report a bug', () => this.reportBug());
+    return row;
+  }
+
+  showCredits() {
+    openCredits(this.root, this.audio, { onBug: () => this.reportBug() });
+  }
+
+  /** A new GitHub issue with the version and system filled in (the browser, or the system browser from the app). */
+  reportBug() {
+    void openExternal(bugReportUrl(this.bugInfo()));
   }
 
   showControls() {
@@ -804,65 +834,15 @@ export class UI implements UIBridge {
       add('Controls', () => this.showControls());
       if (isTouch && canFullscreen() && !isFullscreen()) add('Full screen', () => enterFullscreen());
       add('Quit to title', () => { quitting = true; close(); opts.onQuit(); });
+      m.appendChild(this.minorRow());
       return m;
     }, () => { if (!quitting) opts.onResume(); });
     return closeFn;
   }
 
+  /** Settings: the tabbed panel in SettingsView.ts. */
   openSettings(settings: Settings, onChange: (s: Settings) => void) {
-    const ov = h('div', 'overlay');
-    ov.style.zIndex = '35';
-    ov.innerHTML = `
-      <div class="panel pause interactive"><div class="scan"></div>
-        <h3>SETTINGS</h3>
-        <div class="settings">
-          <span>Difficulty</span><select data-k="difficulty">${(['story', 'normal', 'hard'] as const).map((d) => `<option value="${d}" ${(settings.difficulty ?? 'normal') === d ? 'selected' : ''}>${DIFFICULTY[d].label.toUpperCase()} · ${({ story: 'forgiving', normal: 'as intended', hard: 'brutal' })[d]}</option>`).join('')}</select>
-          <span>Graphics</span><select data-k="quality">${['low', 'medium', 'high', 'ultra'].map((q) => `<option value="${q}" ${settings.quality === q ? 'selected' : ''}>${q.toUpperCase()}</option>`).join('')}</select>
-          <span>Master volume</span><input type="range" min="0" max="1" step="0.05" data-k="master" value="${settings.master}">
-          <span>Music</span><input type="range" min="0" max="1" step="0.05" data-k="music" value="${settings.music}">
-          <span>Effects</span><input type="range" min="0" max="1" step="0.05" data-k="sfx" value="${settings.sfx}">
-          <span>${isTouch ? 'Look sensitivity' : 'Mouse sensitivity'}</span><input type="range" min="0.3" max="2.5" step="0.05" data-k="sensitivity" value="${settings.sensitivity}">
-          <span>Voices</span><select data-k="voice"><option value="1" ${settings.voice ? 'selected' : ''}>ON</option><option value="0" ${settings.voice ? '' : 'selected'}>OFF (subtitles only)</option></select>
-          <span>Field of view <b class="val" data-v="fov"></b></span><input type="range" min="50" max="90" step="1" data-k="fov" value="${settings.fov}">
-          <span>Head bob</span><input type="range" min="0" max="1" step="0.1" data-k="bob" value="${settings.bob}">
-          ${isTouch ? '' : `<span>Invert look</span><select data-k="invertY"><option value="0" ${settings.invertY ? '' : 'selected'}>OFF</option><option value="1" ${settings.invertY ? 'selected' : ''}>ON (pull back to look up)</option></select>`}
-          <span>FPS counter</span><select data-k="showFps"><option value="0" ${settings.showFps ? '' : 'selected'}>OFF</option><option value="1" ${settings.showFps ? 'selected' : ''}>ON</option></select>
-          ${isTouch ? '' : '<span>Keys & controller</span><button class="btn to-controls">Controls…</button>'}
-        </div>
-        <button class="btn primary done">Done</button>
-      </div>`;
-    ov.querySelectorAll('[data-k]').forEach((inp) => {
-      inp.addEventListener('input', () => {
-        const k = (inp as HTMLElement).dataset.k as keyof Settings;
-        const v = (inp as HTMLInputElement).value;
-        const next = { ...settings } as Record<string, unknown>;
-        next[k] = k === 'quality' || k === 'difficulty' ? v : k === 'voice' || k === 'invertY' || k === 'showFps' ? v === '1' : Number(v);
-        Object.assign(settings, next);
-        onChange(settings);
-        fovLabel();
-      });
-    });
-    // three.js counts the vertical angle; players know the horizontal one, so show that (at this window's shape)
-    const fovLabel = () => {
-      const el = ov.querySelector('[data-v="fov"]');
-      const hor = 2 * Math.atan(Math.tan((settings.fov * Math.PI) / 360) * (innerWidth / Math.max(1, innerHeight)));
-      if (el) el.textContent = `${Math.round((hor * 180) / Math.PI)}°`;
-    };
-    fovLabel();
-    const esc = (e: KeyboardEvent) => {
-      if (e.code !== 'Escape') return;
-      // the Controls screen over this one handles its own Escape
-      const overlays = this.root.querySelectorAll(':scope > .overlay');
-      if (overlays[overlays.length - 1] !== ov) return;
-      e.stopPropagation();
-      done();
-    };
-    const done = () => { ov.remove(); window.removeEventListener('keydown', esc, true); };
-    window.addEventListener('keydown', esc, true);
-    (ov.querySelector('.done') as HTMLElement).onclick = done;
-    const toControls = ov.querySelector('.to-controls') as HTMLElement | null;
-    if (toControls) toControls.onclick = () => { this.audio.play('ui'); this.showControls(); };
-    this.root.appendChild(ov);
+    return openSettingsPanel(this.root, this.audio, settings, onChange, { showControls: () => this.showControls() });
   }
 
   private fpsEl: HTMLElement | null = null;
