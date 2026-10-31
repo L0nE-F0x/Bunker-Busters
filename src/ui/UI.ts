@@ -25,8 +25,9 @@ import { mountUpdateNotice } from './Updater';
 import { isTouch, canFullscreen, isFullscreen, enterFullscreen } from '@/engine/device';
 import type { ArmsHud } from '@/game/combat/PlayerArms';
 import { DIFFICULTY } from '@/content/weapons';
-import { binds, actionGlyph, actionKey, actionWord, kbdGlyph, keyLabel, padName, type Action } from '@/engine/bindings';
+import { binds, actionGlyph, actionKey, kbdGlyph, keyLabel, padName, padGlyph, type Action } from '@/engine/bindings';
 import { openControls } from './ControlsView';
+import { proseKeys } from './keyWords';
 
 /** Which device's glyphs to show (html.pad is set by Input when a controller was used last). */
 const device = () => (isTouch ? 'touch' : document.documentElement.classList.contains('pad') ? 'pad' : 'kbm');
@@ -34,8 +35,6 @@ const device = () => (isTouch ? 'touch' : document.documentElement.classList.con
 const kk = (a: Action) => kbdGlyph(binds.keys(a)[0] ?? '');
 /** HUD prompt keys (Game sends 'E', 'F', 'LMB') → the action they stand for. */
 const PROMPT_ACT: Record<string, Action> = { E: 'interact', F: 'alt', LMB: 'fire' };
-/** "(F)" / "(E)" written into content → the control bound on the device in use (touch: its USE / ALT buttons). */
-const proseKeys = (s: string) => (s.indexOf('(') < 0 ? s : s.replace(/\((E|F)\)/g, (_, k: string) => `(${isTouch ? (k === 'E' ? 'USE' : 'ALT') : actionWord(PROMPT_ACT[k])})`));
 
 const esc = (s: string) => s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]!));
 
@@ -303,6 +302,7 @@ export class UI implements UIBridge {
     this.map = map;
     this.minimap = new Minimap(map);
     this.detCache = { show: null, color: '', width: '', text: '' };
+    this.heldToasts = [];
     this.hud?.remove();
     const hud = (this.hud = h('div', ''));
     hud.id = 'hud';
@@ -368,8 +368,15 @@ export class UI implements UIBridge {
     for (const it of this.pendingItems) if (it.qty > 0 && text.includes(`${it.qty}× ${it.name}`)) it.qty = 0;
   }
 
+  /** Toasts raised while a card or minigame has the HUD hidden: shown when it comes back, not into the dark. */
+  private heldToasts: [string, 'info' | 'good' | 'bad' | 'xp'][] = [];
+  private get hudHidden() {
+    return !!this.hud?.classList.contains('dim');
+  }
+
   toast(text: string, kind: 'info' | 'good' | 'bad' | 'xp' = 'info') {
     this.claimItems(text);
+    if (this.hudHidden) { this.heldToasts.push([text, kind]); return; }
     const t = h('div', `toast ${kind}`, proseKeys(text));
     this.els.toasts?.appendChild(t);
     setTimeout(() => t.remove(), 4800);
@@ -404,7 +411,7 @@ export class UI implements UIBridge {
   private pendingLevel = 0;
   levelUp(level: number) {
     this.refreshVitals();
-    if (this.bannerBusy) { this.pendingLevel = level; return; }
+    if (this.bannerBusy || this.hudHidden) { this.pendingLevel = level; return; }
     this.audio.play('levelUp');
     const el = h('div', 'levelup', `<div class="ring">${level}</div><div class="t">LEVEL UP</div><div class="s">+1 skill point — ${isTouch ? 'open your kit' : device() === 'pad' ? `open your kit (${actionGlyph('kit', 'pad')})` : `press ${kk('skills')}`} to spend</div>`);
     this.hud.appendChild(el);
@@ -418,10 +425,12 @@ export class UI implements UIBridge {
   banner(title: string, sub: string, kind: 'good' | 'bad' | 'info' = 'good') {
     this.claimItems(sub);
     this.bannerQueue.push([title, sub, kind]);
-    if (!this.bannerBusy) this.nextBanner();
+    if (!this.bannerBusy && !this.hudHidden) this.nextBanner();
   }
 
   private nextBanner() {
+    // a card came up between two banners: the rest wait for it (setHudVisible picks them up)
+    if (this.hudHidden) { this.bannerBusy = false; return; }
     const next = this.bannerQueue.shift();
     if (!next) {
       this.bannerBusy = false;
@@ -457,6 +466,12 @@ export class UI implements UIBridge {
     return this.subtitleTimer > 0;
   }
 
+  /** Toasts start under the objective box, however many lines it runs to (at a fixed top a long objective ran under them). */
+  private placeToasts() {
+    const o = this.els.objective, t = this.els.toasts;
+    if (o && t) t.style.top = `${o.offsetTop + o.offsetHeight + 8}px`;
+  }
+
   /** The small caps line over the objective: the quest the corner is following. Called on change only. */
   setObjectiveLabel(label: string) {
     const el = this.els.objective?.querySelector('.label');
@@ -472,9 +487,10 @@ export class UI implements UIBridge {
       this.els.objective.classList.remove('flash');
       void this.els.objective.offsetWidth;
       this.els.objective.classList.add('flash', 'fresh');
+      this.placeToasts();
       // touch clamps the objective to two lines once it has been read (styles.css)
       clearTimeout(this.objectiveTimer);
-      this.objectiveTimer = window.setTimeout(() => this.els.objective?.classList.remove('fresh'), 9000);
+      this.objectiveTimer = window.setTimeout(() => { this.els.objective?.classList.remove('fresh'); this.placeToasts(); }, 9000);
     }
     // detection (only touch the DOM when something visible changed: every write costs a style pass
     // and a recomposite of the overlay, which is what hurts in WebKitGTK)
@@ -495,7 +511,7 @@ export class UI implements UIBridge {
     // on touch the prompts are buttons themselves (data-key → TouchControls)
     const dev = device();
     const html = f.prompt.map((p) => isTouch
-      ? `<div class="p ${p.na ? 'na' : ''}" data-key="act:${PROMPT_ACT[p.key] ?? p.key}"><span class="kbd">${p.key === 'E' ? 'USE' : 'ALT'}</span>${p.label}${p.na ? `<small>${proseKeys(p.na)}</small>` : ''}</div>`
+      ? `<div class="p ${p.na ? 'na' : ''}" data-key="act:${PROMPT_ACT[p.key] ?? p.key}"><span class="kbd">${p.key === 'E' ? 'USE' : p.key === 'F' ? 'ALT' : 'FIRE'}</span>${p.label}${p.na ? `<small>${proseKeys(p.na)}</small>` : ''}</div>`
       : `<div class="p ${p.na ? 'na' : ''}">${PROMPT_ACT[p.key] ? actionGlyph(PROMPT_ACT[p.key], dev) : `<span class="kbd">${p.key}</span>`}${p.label}${p.na ? `<small>${proseKeys(p.na)}</small>` : ''}</div>`).join('');
     if (pr.dataset.html !== html) { pr.innerHTML = html; pr.dataset.html = html; }
     // stance
@@ -512,7 +528,8 @@ export class UI implements UIBridge {
     }
     // clock
     const hh = Math.floor(f.hour), mm = Math.floor((f.hour - hh) * 60);
-    const phase = f.hour < 5 || f.hour > 20.5 ? 'NIGHT' : f.hour < 7.5 ? 'DAWN' : f.hour < 16.5 ? 'DAY' : f.hour < 19 ? 'GOLDEN HOUR' : 'DUSK';
+    // by the sun (up at 6, down at 18) and the night stealth works to (Atmosphere.isNight: about 18:24 to 05:36)
+    const phase = f.hour < 5.6 || f.hour >= 18.4 ? 'NIGHT' : f.hour < 7.5 ? 'DAWN' : f.hour < 16.5 ? 'DAY' : f.hour < 18 ? 'GOLDEN HOUR' : 'DUSK';
     const clock = `<b>${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}</b> · ${phase}`;
     if (clock !== this.lastClock) { this.lastClock = clock; this.els.clock.innerHTML = clock; }
     const hk = `${Math.round(f.hunger)}|${Math.round(f.thirst)}`;
@@ -611,6 +628,10 @@ export class UI implements UIBridge {
 
   setHudVisible(v: boolean) {
     this.hud?.classList.toggle('dim', !v);
+    if (!v) return;
+    // what happened behind the card: its toasts (the last few), then its banners and level-ups
+    for (const [text, kind] of this.heldToasts.splice(0).slice(-6)) this.toast(text, kind);
+    if (!this.bannerBusy) this.nextBanner();
   }
 
   // ------------------------------------------------------------------ modals
@@ -1014,7 +1035,7 @@ export class UI implements UIBridge {
         ${this.speakerHead(speaker)}
         <p>${esc(text).replace(/\n/g, '<br>')}</p>
         <div class="choices">${(() => { let n = 0; return choices.map((c) => `<button class="btn choice" data-id="${esc(c.id)}" ${c.disabled ? 'disabled' : ''}><span class="n">${c.disabled ? '·' : ++n}</span><span><b>${esc(c.label)}</b>${c.disabled ? `<small>${esc(c.disabled)}</small>` : ''}</span></button>`).join(''); })()}</div>
-        <div class="brief-foot"><span>Esc ${speaker.includes('Tanner') ? 'hangs up' : 'leaves'}</span><span>${enabled.length ? 'Number keys work' : ''}</span></div>`;
+        ${this.choiceFoot(speaker.includes('Tanner') ? 'hangs up' : 'leaves', enabled.length > 0)}`;
       panel.querySelectorAll('.choice').forEach((b) => {
         const btn = b as HTMLButtonElement;
         if (btn.disabled) return;
@@ -1042,6 +1063,13 @@ export class UI implements UIBridge {
     this.root.appendChild(ov);
     window.addEventListener('keydown', onKey, true);
     return finish;
+  }
+
+  /** A talk card's footer in the device's terms: Esc and the number keys, or B and A on a pad (touch taps the replies). */
+  private choiceFoot(leave: string, any: boolean) {
+    if (isTouch) return '';
+    return `<div class="brief-foot"><span><span class="kbh">Esc ${leave}</span><span class="padh">${padGlyph('P1')} ${leave}</span></span>`
+      + `<span>${any ? `<span class="kbh">Number keys pick a reply</span><span class="padh">${padGlyph('P0')} picks a reply</span>` : ''}</span></div>`;
   }
 
   choose(opts: { speaker: string; text: string; choices: TalkChoiceView[] }): Promise<string | null> {
@@ -1149,7 +1177,7 @@ export class UI implements UIBridge {
               <div class="recipes">${opts.recipes.filter((r) => (r.group ?? '') === rgroup).map((r) => `<div class="recipe"><div><b>${esc(r.name)}</b><span>${esc(r.detail)}</span>${r.disabled ? `<small>${esc(r.disabled)}</small>` : ''}</div><button class="btn craft" data-id="${esc(r.id)}" ${r.disabled ? 'disabled' : ''}>Make</button></div>`).join('')}</div>
             </div>
           </div>
-          <footer><span class="kb"><span class="kbd">Esc</span> back to the fire</span></footer>`;
+          <footer><span class="kb kbh"><span class="kbd">Esc</span> back to the fire</span><span class="kb padh">${padGlyph('P1')} back to the fire</span></footer>`;
         (panel.querySelector('.rest') as HTMLButtonElement).onclick = () => { this.audio.play('uiConfirm'); opts.onRest(); note = 'You rest for a while by the fire. Saved.'; paint(); };
         const radio = panel.querySelector('.radio') as HTMLButtonElement;
         radio.onclick = () => { if (radio.disabled) return; this.audio.play('uiConfirm'); finish('radio'); };
