@@ -5,9 +5,9 @@
   "identifier": "dev.bunkerbusters.game",
   "build": {
     "devUrl": "http://localhost:5173",
-    "frontendDist": "../dist",
+    "frontendDist": "../dist-desktop",
     "beforeDevCommand": "npm run dev",
-    "beforeBuildCommand": "npm run build"
+    "beforeBuildCommand": "npm run build && node scripts/desktop-dist.mjs"
   },
   "app": {
     "windows": [
