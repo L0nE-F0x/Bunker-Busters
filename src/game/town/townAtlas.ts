@@ -186,7 +186,7 @@ const FLAT: Record<string, [number, number, Draw]> = {
   wash: [512, 256, (c, w, h, r) => {
     board(c, w, h, r, '#2a2018', '#c9b48a', 3);
     text(c, 'THE WASH', w / 2, 95, `700 72px ${UI}`, '#e8d6b0', w - 60);
-    text(c, 'POSTS. NORTH OF THE SPIRE.', w / 2, 155, `500 30px ${UI}`, '#ffb347', w - 60);
+    text(c, 'POSTS. SOUTH OF THE SPIRE.', w / 2, 155, `500 30px ${UI}`, '#ffb347', w - 60);
     text(c, 'THE RIDGE DOES NOT HAVE A ROAD.', w / 2, 205, `500 30px ${UI}`, '#c9b48a', w - 60);
     grime(c, w, h, 1.2, 4);
   }],
@@ -202,7 +202,7 @@ const FLAT: Record<string, [number, number, Draw]> = {
     c.fillStyle = '#4a3a2a'; c.fillRect(48, 82, w - 96, 150);
     c.fillStyle = '#c9b48a'; c.beginPath(); c.arc(w / 2, 145, 40, 0, Math.PI * 2); c.fill();
     c.fillRect(w / 2 - 60, 190, 120, 42);
-    text(c, 'T. PRICE, FOUNDER', w / 2, 262, `700 24px ${UI}`, '#2a1a10', w - 30);
+    text(c, 'T. PIVOTSON, FOUNDER', w / 2, 262, `700 24px ${UI}`, '#2a1a10', w - 30);
     text(c, 'FOR HOARDING WATER', w / 2, 292, `600 20px ${UI}`, '#3a2a1a', w - 30);
     text(c, 'REWARD: A DRINK', w / 2, 330, `900 30px ${DISPLAY}`, '#7a1e14', w - 30);
     grime(c, w, h, 1.3, 31); void r;

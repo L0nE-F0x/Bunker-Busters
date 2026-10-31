@@ -254,8 +254,8 @@ export const DC_ART: Record<DCArt, [number, number, AtlasDraw]> = {
     c.fillRect(14, 14, w - 28, 70);
     mark(c, 60, 50, 54, CYAN);
     fitText(c, 'COLDSTORAGE · CAMPUS 4', 290, 64, `800 34px ${FONT_UI}`, '#e9fbff', 400);
-    fitText(c, 'AUTHORIZED PERSONNEL', w / 2, 128, `900 40px ${FONT_DISPLAY}`, '#1b1b1b', w - 40);
-    fitText(c, '& AUTHORIZED AGENTS ONLY', w / 2, 166, `700 26px ${FONT_UI}`, '#1b1b1b', w - 40);
+    fitText(c, 'AUTHORISED PERSONNEL', w / 2, 128, `900 40px ${FONT_DISPLAY}`, '#1b1b1b', w - 40);
+    fitText(c, '& AUTHORISED AGENTS ONLY', w / 2, 166, `700 26px ${FONT_UI}`, '#1b1b1b', w - 40);
     fitText(c, 'NO TAILGATING (THIS MEANS YOU, KYLE)', w / 2, 214, `600 18px ${FONT_MONO}`, '#b3201a', w - 40);
     weather(c, w, h, r, 1.1);
   }],
