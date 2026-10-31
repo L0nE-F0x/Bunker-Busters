@@ -3,6 +3,23 @@
 Each `## vX.Y.Z` section becomes the GitHub release notes and the "what's new" list in the in-app
 update notice (the first few bullets). `scripts/release.sh` refuses to release a version without one.
 
+## v1.1.0
+- **Starts sooner in the browser.** A third less to download before the title screen, the later bunkers' people load while you're on it, and the loading screen shows real progress, time left and a few tips
+- **Settings for everyone.** Five tabs (Gameplay, Video, Audio, Controls, Accessibility) with voice volume, brightness, subtitle size and background, camera shake, Reduce flashing, and hold or toggle for crouch, sprint and aim. Menus also work with the arrow keys and Enter
+- **Graphics AUTO.** New players in the browser start on a preset that suits their graphics card, and the resolution adjusts to stay smooth. Pick a preset yourself and it stays put. The game also uses about half the memory, so phones close the tab far less often
+- **The first hour tells you what to press.** Hints, prompts and minigame footers name your actual controls: rebound keys, controller buttons, or the on-screen buttons on a phone. Mara no longer reads keyboard keys over the radio, and your first night tells you where the torch is
+- **News you used to miss.** New quests, XP and level-ups that arrived during a conversation, at the camp or in a minigame now show when you're back. Act I's last line no longer talks over Mara
+- **Your save is safer.** The game tells you when this browser can't keep a save (a private window, blocked site data) or its storage is full; a damaged save no longer vanishes or loads into an empty world (the title says so and keeps a copy); playing in two tabs no longer undoes your progress; and the game saves when you switch away from its tab
+- **Long sessions stay light.** Quit to title and Continue no longer leak memory each time, and a new game after Quit no longer inherits the old run's map or its wrecked outposts
+- **Smaller fixes.** Bunker owners no longer greet you again at bunkers you've already busted, holding a controller button works at low frame rates, and alt-tabbing mid-lift no longer bends your lockpick
+- **When something goes wrong.** If the game can't start, or the graphics driver resets, it says what happened and what to try. Credits and Report a bug are in the title and pause menus
+- **Apex's corridor.** The chevrons painted on the floor lie on the floor again; they stood on their edges and looked like dark shards over the laser beams. The forecast on Prudence's desk lies flat too
+- **The words match the map.** Directions, distances and years in a dozen spoken lines and many notes now agree with the valley, People entries no longer give later acts away, and Mara says "Act Four", not "Act Iv"
+- **Desktop.** A failed update says why in one line and leaves your game as it was, downloads are about 30 MB smaller and carry their licences, Linux launchers group properly in the dock, and the Windows installer has the game's icon
+- **Colour isn't the only cue.** The minimap, the lockpick, hit markers and food and water warnings no longer rely on colour alone
+- **Phones and small things.** The Kit always has its close button, takedowns get a prompt, toasts no longer slide under the objective, the clock calls night night, and a new run starts standing even if you quit while crouched
+- **The website.** A press kit and a privacy page, and a much lighter first view (8 MB down to under 0.5 MB)
+
 ## v1.0.3
 - **People round the fires sit up.** Everyone at Last Chance and Dry Creek's street fire used to share one hunched, chin-on-hand pose, staring into their shirts. They sit upright and cross-legged now, neighbours crossing opposite legs, and Hollis and Wick still nod off now and then
 - **One at a time.** Round a fire one person talks while the others turn to listen, and the talker looks at them. Walk up to a group and the nearest one talks to you while the rest just look up, instead of all of them gesturing at you at once. Talking comes in short spells, and seated talk is calmer
