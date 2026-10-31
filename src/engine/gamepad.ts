@@ -59,6 +59,8 @@ export class Pad {
   private cur = new Array<boolean>(N).fill(false);
   private holdT = new Float32Array(N);
   private holdFired = new Array<boolean>(N).fill(false);
+  /** performance.now() at the last update: holds are timed in real time (see `update`). */
+  private lastNow = 0;
   private startedInPlay = new Array<boolean>(N).fill(false);
   private crouchLatch = false;
   private sprintLatch = false;
@@ -131,13 +133,20 @@ export class Pad {
     const [rx, ry] = deadzone(ax(2), ax(3), 0.13);
     if (any || Math.hypot(lx, ly) > 0.4 || Math.hypot(rx, ry) > 0.4) input.setDevice('pad');
 
-    if (this.capture) { this.captureFrame(dt); this.clearPlay(); return; }
+    // a hold is the thumb's time, not the world's: the frame's dt stops at 50 ms, so below 20 fps a
+    // 0.7 s hold of Y counted as a tap (reload, not holster). Real time, but no more than 0.1 s from
+    // any one frame, so a single long stall doesn't turn a tap into a hold.
+    const now = performance.now();
+    const hdt = this.lastNow ? Math.min(0.1, Math.max(0, (now - this.lastNow) / 1000)) : dt;
+    this.lastNow = now;
+
+    if (this.capture) { this.captureFrame(hdt); this.clearPlay(); return; }
 
     const edge = (i: number) => this.cur[i] && !this.prev[i];
     const up = (i: number) => !this.cur[i] && this.prev[i];
     for (let i = 0; i < N; i++) {
       if (edge(i)) { this.holdT[i] = 0; this.holdFired[i] = false; this.startedInPlay[i] = gameplay; }
-      if (this.cur[i]) this.holdT[i] += dt;
+      if (this.cur[i]) this.holdT[i] += hdt;
     }
 
     if (!gameplay) {
