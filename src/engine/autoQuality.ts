@@ -58,6 +58,8 @@ export function classifyGpu(name: string): GpuTier {
   const n = name.toLowerCase();
   if (!n) return 'unknown';
   if (/swiftshader|llvmpipe|softpipe|lavapipe|basic render|software|microsoft basic/.test(n)) return 'software';
+  // Ryzen APUs say "Radeon(TM) RX Vega 10 Graphics"; old APUs "Radeon R7 Graphics"
+  if (/rx vega \d{1,2}\b|vega \d{1,2} graphics|radeon\s*(\(tm\)\s*)?r[4-7] graphics/.test(n)) return 'integrated';
   if (/nvidia|geforce|quadro|rtx|gtx|tesla/.test(n) && !/tegra/.test(n)) return 'discrete';
   if (/radeon\s*(\(tm\)\s*)?(rx|pro|r9|r7|hd [6-8]\d{3}|vii)|vega (56|64)|firepro/.test(n)) return 'discrete';
   if (/arc(\(tm\))?\s*(a|b)\d{3}/.test(n)) return 'discrete';
