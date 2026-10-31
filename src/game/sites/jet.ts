@@ -14,6 +14,7 @@ import {
   beamMaterial, uSiteNight, uSiteFlicker, glassMat, type Col,
 } from './jetKit';
 import './jetArt';
+import { comfort } from '@/engine/comfort';
 
 /**
  * The Exit Strategy: Hunter Vale's jet (Ascend, "evacuation as a service"). He left early, by
@@ -1459,9 +1460,9 @@ export class JetSite extends Site {
     if (!nearOn) return;
 
     uSiteNight.value = night;
-    uSiteFlicker.value = 0.85 + 0.15 * Math.sin(this.t * 31) * Math.sin(this.t * 7.7);
+    uSiteFlicker.value = comfort.calm ? 0.85 : 0.85 + 0.15 * Math.sin(this.t * 31) * Math.sin(this.t * 7.7);
     // the captain's display stutters; the aisle strip and coves breathe on the last of the battery
-    const stutter = Math.sin(this.t * 13) * Math.sin(this.t * 3.1) > 0.82 ? 0.1 : 1;
+    const stutter = !comfort.calm && Math.sin(this.t * 13) * Math.sin(this.t * 3.1) > 0.82 ? 0.1 : 1;
     this.screenFlicker.intensity.value = (0.4 + night * 1.6) * stutter;
     this.aisle.intensity.value = (0.25 + night * 1.4) * (0.85 + 0.15 * Math.sin(this.t * 1.7));
     this.cove.intensity.value = night * 0.6 * (Math.sin(this.t * 0.9) > -0.6 ? 1 : 0.2);

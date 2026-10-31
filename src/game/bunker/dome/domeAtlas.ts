@@ -91,7 +91,7 @@ const DRAW: Record<string, [number, number, Draw]> = {
     c.fillStyle = INK; c.fillRect(0, 0, w, 120);
     wordmark(c, 34, 88, 70, GOLD, 420);
     fit(c, 'PRIVATE ROAD', 34, 200, `800 64px ${DISPLAY}`, INK, w - 68, 'left');
-    fit(c, 'THE DOME · 400 m', 34, 262, `600 38px ${UI}`, INK, w - 68, 'left');
+    fit(c, 'THE DOME · 50 m', 34, 262, `600 38px ${UI}`, INK, w - 68, 'left');
     fit(c, 'Ascend vehicles have right of way', 34, 330, `400 26px ${UI}`, '#5c5850', w - 68, 'left');
     grime(c, w, h, 0.9, Math.floor(r() * 99));
   }],

@@ -322,7 +322,7 @@ const DRAW: Record<string, [number, number, Draw]> = {
   }],
   restricted: [512, 96, (c, w, h) => {
     c.clearRect(0, 0, w, h);
-    centeredText(c, 'AUTHORIZED FOUNDERS ONLY', w / 2, 66, `900 58px ${FONT_DISPLAY}`, 'rgba(200,40,30,0.9)', w - 20);
+    centeredText(c, 'AUTHORISED FOUNDERS ONLY', w / 2, 66, `900 58px ${FONT_DISPLAY}`, 'rgba(200,40,30,0.9)', w - 20);
   }],
   pegboard: [512, 256, (c, w, h, r) => {
     c.fillStyle = '#9a7b55';

@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title>Privacy · Bunker Busters</title>
+    <meta name="description" content="What Bunker Busters keeps and sends: your saves stay on your device, there are no accounts, ads, analytics or cookies, and the only outside requests go to GitHub." />
+    <link rel="canonical" href="https://bunker-busters.netlify.app/privacy/" />
+    <meta name="theme-color" content="#0b0806" />
+    <meta name="color-scheme" content="dark" />
+
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Bunker Busters" />
+    <meta property="og:url" content="https://bunker-busters.netlify.app/privacy/" />
+    <meta property="og:title" content="Bunker Busters privacy" />
+    <meta property="og:description" content="Your saves stay on your device. No accounts, ads, analytics or cookies." />
+    <meta property="og:image" content="https://bunker-busters.netlify.app/og.jpg" />
+    <meta property="og:image:type" content="image/jpeg" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="The Bunker Busters logo beside four people round a campfire under a gas station canopy at dusk" />
+    <meta property="og:locale" content="en_US" />
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content="Bunker Busters privacy" />
+    <meta name="twitter:description" content="Your saves stay on your device. No accounts, ads, analytics or cookies." />
+
+    <link rel="icon" href="/favicon.ico" sizes="any" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+  </head>
+  <body class="page">
+    <a class="skip" href="#main">Skip to content</a>
+    <div class="grain"></div>
+
+    <nav class="nav solid" aria-label="Main">
+      <a class="brand" href="/"><span class="mark"></span>BUNKER BUSTERS</a>
+      <div class="links">
+        <a href="/#game">The game</a>
+        <a href="/press/">Press kit</a>
+        <a href="/#get" class="cta-small">Download</a>
+      </div>
+    </nav>
+
+    <main id="main">
+      <header class="page-head narrow">
+        <div class="kicker">Privacy</div>
+        <h1>What the game keeps</h1>
+        <p class="lede"><span>Bunker Busters has no accounts, ads, analytics, tracking or cookies. This page lists everything it stores and every request it makes.</span></p>
+        <p class="updated">Last changed 31 October 2026</p>
+      </header>
+
+      <section aria-label="Details">
+        <div class="prose">
+          <h2>On your device</h2>
+          <ul>
+            <li><b>Your saved game and your settings</b> (graphics, sound, controls) are kept in your browser's local storage for this site, or in the desktop app's own storage. They never leave your device. Clearing the site's data in your browser, or uninstalling the app, deletes them. On Linux the app keeps them in <code>~/.local/share/dev.bunkerbusters.game</code>.</li>
+            <li>The same storage holds a few small notes the game makes for itself: which graphics mode works on your device, whether you've installed it on your phone, and, on the home page, the latest release's details for an hour so it doesn't ask GitHub on every visit.</li>
+            <li><b>Offline play.</b> After the browser version first loads, it saves all of the game's files (under 100 MB) in your browser's cache, so it starts faster and plays with no connection, and asks the browser to keep them. Clearing the site's data removes them.</li>
+          </ul>
+
+          <h2>Over the network</h2>
+          <ul>
+            <li><b>Netlify</b> hosts this site and the browser version. Like any web host it keeps standard server logs (your IP address, the address you asked for, your browser's name) to run and protect the service. The game adds no analytics on top of them. See <a href="https://www.netlify.com/privacy/">Netlify's privacy policy</a>.</li>
+            <li><b>GitHub.</b> The download section of the home page asks GitHub's API for the latest release, to show its version and file sizes. The downloads themselves come from GitHub Releases. Both are covered by <a href="https://docs.github.com/en/site-policy/privacy-policies/github-general-privacy-statement">GitHub's privacy statement</a>.</li>
+            <li><b>The desktop app</b> asks GitHub Releases whether there's a newer version when you reach the title screen. It sends nothing about you or your game. It only downloads an update when you choose <i>Update &amp; restart</i>, and it checks the update's signature before installing it.</li>
+            <li><b>The trailer on the press kit page</b>, once there is one, comes from YouTube. Nothing loads from YouTube until you press play; from then on <a href="https://policies.google.com/privacy">Google's privacy policy</a> applies.</li>
+            <li>Everything else, including fonts, models and voices, comes from this site. No page loads scripts, fonts or embeds from anyone else.</li>
+          </ul>
+
+          <h2>Questions</h2>
+          <p>Open an issue on <a href="https://github.com/L0nE-F0x/Bunker-Busters/issues">the game's GitHub page</a>. If any of this changes, this page will change with it and get a new date.</p>
+        </div>
+      </section>
+    </main>
+
+    <footer class="foot">
+      <div class="brand"><span class="mark"></span>BUNKER BUSTERS</div>
+      <div class="foot-mid"><span data-version>Free</span> · made with Three.js, TSL and Rapier · the desert is generated in code</div>
+      <nav class="foot-links" aria-label="More">
+        <a href="/">Home</a>
+        <a href="/press/">Press kit</a>
+        <a href="/privacy/" aria-current="page">Privacy</a>
+        <a href="/licenses.txt">Open-source licences</a>
+        <a href="https://github.com/L0nE-F0x/Bunker-Busters" target="_blank" rel="noopener">GitHub</a>
+      </nav>
+    </footer>
+
+    <script type="module" src="/src/site/site-pages.ts"></script>
+  </body>
+</html>

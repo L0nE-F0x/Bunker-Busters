@@ -3,8 +3,10 @@
 // user's everyday browser.
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+mod external;
 #[cfg(target_os = "linux")]
 mod rawmouse;
+mod smoke;
 mod update;
 
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -18,18 +20,24 @@ static QUITTING: AtomicBool = AtomicBool::new(false);
 /// the window goes (every quit left a ~300 MB core dump). So: let the game save (`__bbQuit`, the
 /// same save as `pagehide`), give WebKit a moment to hand the write to its storage process, then
 /// end the web process outright (a kill: no teardown runs) and exit. NOTES 2026-10-12.
-fn quit(app: &tauri::AppHandle) {
+/// An update being written over the game finishes first (up to a minute): cut short, it would
+/// leave a broken copy.
+fn quit(app: &tauri::AppHandle, code: i32) {
     if QUITTING.swap(true, Ordering::SeqCst) {
         return;
     }
     let Some(win) = app.get_webview_window("main") else {
-        app.exit(0);
+        app.exit(code);
         return;
     };
     let _ = win.eval("window.__bbQuit && window.__bbQuit()");
     let app = app.clone();
     std::thread::spawn(move || {
         std::thread::sleep(Duration::from_millis(400));
+        let t0 = std::time::Instant::now();
+        while update::installing(&app) && t0.elapsed() < Duration::from_secs(60) {
+            std::thread::sleep(Duration::from_millis(100));
+        }
         #[cfg(target_os = "linux")]
         if let Some(win) = app.get_webview_window("main") {
             let _ = win.with_webview(|wv| {
@@ -38,7 +46,7 @@ fn quit(app: &tauri::AppHandle) {
             });
             std::thread::sleep(Duration::from_millis(150));
         }
-        app.exit(0);
+        app.exit(code);
     });
 }
 
@@ -89,6 +97,8 @@ fn select_gpu() {
 fn main() {
     #[cfg(target_os = "linux")]
     {
+        // before select_gpu(): a browser opened from the game gets the player's environment back
+        external::linux_env::remember();
         select_gpu();
         // mouse-look source on X11/XWayland (see rawmouse.rs)
         let x11 = std::env::var("GDK_BACKEND").map(|b| b == "x11").unwrap_or(false) || std::env::var_os("WAYLAND_DISPLAY").is_none();
@@ -100,8 +110,10 @@ fn main() {
 
     tauri::Builder::default()
         .plugin(tauri_plugin_updater::Builder::new().build())
+        .plugin(external::guard())
         .manage(update::UpdateState::default())
         .invoke_handler(tauri::generate_handler![
+            external::open_external,
             update::update_check,
             update::update_install,
             update::update_progress,
@@ -113,7 +125,7 @@ fn main() {
         .on_window_event(|window, event| {
             if let tauri::WindowEvent::CloseRequested { api, .. } = event {
                 api.prevent_close();
-                quit(window.app_handle());
+                quit(window.app_handle(), 0);
             }
         })
         .setup(|app| {
@@ -128,6 +140,11 @@ fn main() {
             // Dev/testing: open a different page (e.g. the GPU canary) instead of the game.
             if let Ok(url) = std::env::var("BB_START_URL") {
                 win.navigate(url.parse()?)?;
+            }
+
+            // CI install test: report whether the game came up, then quit (smoke.rs).
+            if let Some(report) = std::env::var_os("BB_SMOKE") {
+                smoke::start(app.handle().clone(), report.into());
             }
 
             #[cfg(target_os = "linux")]
@@ -153,7 +170,7 @@ fn main() {
                 let secs: u64 = secs.parse().unwrap_or(10);
                 std::thread::spawn(move || {
                     std::thread::sleep(Duration::from_secs(secs));
-                    quit(&handle);
+                    quit(&handle, 0);
                 });
             }
             Ok(())
