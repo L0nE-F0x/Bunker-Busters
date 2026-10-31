@@ -2,7 +2,7 @@ import * as THREE from 'three/webgpu';
 import {
   Fn, vec2, float, positionWorld, positionLocal, normalWorld, mix, smoothstep, abs, sin, uniform, time, pow, max,
   fract, step, uv, cameraPosition, normalize, dot, attribute, uniformArray, int, vertexStage, varying, texture,
-  renderGroup, materialColor, floor, vec3, fwidth, materialReference,
+  renderGroup, materialColor, floor, vec3, fwidth,
 } from 'three/tsl';
 import { bumpFromHeight } from './Terrain';
 import { noise } from '@/engine/noiseTex';
@@ -37,6 +37,25 @@ const _graphs = new Map<string, Partial<Record<(typeof NODE_PROPS)[number], N>>>
 const SHARED = typeof location === 'undefined' || !new URLSearchParams(location.search).has('nosharedmat');
 /** A factory parameter as a node: `p('base', 'color')`. */
 type Param = (name: string, type: 'float' | 'color') => N;
+/**
+ * A shared graph's parameter: `material.userData.bb[name]` of the material being drawn. Three's
+ * shadow pass draws casters with its own override material but keeps the caster's colorNode (for its
+ * alpha), so there the parameter comes from the caster (the renderer's current source material).
+ */
+class BBParam extends THREE.MaterialReferenceNode {
+  private static readonly zero = { float: 0, color: new THREE.Color(0, 0, 0) };
+  constructor(private param: string, private kind: 'float' | 'color') {
+    super(`userData.bb.${param}`, kind);
+  }
+  override updateReference(state: N) {
+    const m = state.material;
+    this.reference = m?.userData?.bb ? m : (state.renderer?._currentSourceMaterial ?? m);
+    return this.reference;
+  }
+  getValueFromReference(object: N = this.reference) {
+    return object?.userData?.bb?.[this.param] ?? BBParam.zero[this.kind];
+  }
+}
 /** Give `m` the graph `setup` builds, built once per `key` (on a template that's never drawn). */
 function sharedGraph(m: THREE.MeshStandardNodeMaterial, key: string, params: Record<string, number | THREE.Color>, setup: (t: THREE.MeshStandardNodeMaterial, p: Param) => void) {
   m.userData.bb = params;
@@ -44,7 +63,7 @@ function sharedGraph(m: THREE.MeshStandardNodeMaterial, key: string, params: Rec
   let g = _graphs.get(key);
   if (!g) {
     const t = new THREE.MeshStandardNodeMaterial();
-    setup(t, (name, type) => materialReference(`userData.bb.${name}`, type));
+    setup(t, (name, type) => new BBParam(name, type));
     g = {};
     for (const p of NODE_PROPS) if ((t as N)[p]) g[p] = (t as N)[p];
     _graphs.set(key, g);
