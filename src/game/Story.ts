@@ -78,8 +78,18 @@ export class Story {
   }
 
   private recapT: ReturnType<typeof setTimeout> | null = null;
+  /** A card, minigame or the camp is up (as of the last update): spoken lines wait for it. */
+  private held = false;
+  private afterHeld: (() => void)[] = [];
+
+  /** Run `fn` now, or once nothing is on screen over the world. */
+  private whenFree(fn: () => void) {
+    if (this.held) this.afterHeld.push(fn);
+    else fn();
+  }
 
   dispose() {
+    this.afterHeld = [];
     if (this.recapT) clearTimeout(this.recapT);
     for (const off of this.offs) off();
     this.offs = [];
@@ -167,7 +177,10 @@ export class Story {
       this.ui.banner(q.kind === 'main' ? q.title.toUpperCase() : 'FAVOUR DONE', q.kind === 'main' ? sub || 'Complete.' : `${q.title}${sub ? '  ·  ' + sub : ''}`, 'good');
       if (q.wrap) {
         const speaker = q.wrap.speaker === 'You' ? s.archetype.name.split(' ')[0] : q.wrap.speaker;
-        setTimeout(() => this.ui.subtitle(speaker, q.wrap!.text), 2600);
+        const wrap = q.wrap.text;
+        // a quest that ends on a card (Act I ends on the radio's choice) closes its line once the card is
+        // gone: said under it, it cut off the page being read
+        this.whenFree(() => setTimeout(() => this.whenFree(() => this.ui.subtitle(speaker, wrap)), 2600));
         this.sinceBanter = 0;
       }
     }
@@ -307,7 +320,9 @@ export class Story {
 
   // ------------------------------------------------------------------ per frame (cheap)
   update(dt: number, ctx: { blocked: boolean; px: number; pz: number; night: boolean; storm: number; alarm: boolean; hour?: number }) {
+    this.held = ctx.blocked;
     if (this.dirty) this.sync(false);
+    if (!ctx.blocked && this.afterHeld.length) for (const fn of this.afterHeld.splice(0)) fn();
     this.sinceBanter += dt;
     this.banterT -= dt;
     if (this.banterT > 0) return;

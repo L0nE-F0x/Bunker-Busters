@@ -9,6 +9,7 @@ import type { Heightfield } from './Heightfield';
 import type { Atmosphere } from './Atmosphere';
 import type { Physics } from '@/engine/physics';
 import { LANDMARKS, SALT_FLAT } from '@/content/world';
+import { markStatic } from '@/engine/release';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 type N = any;
@@ -53,7 +54,7 @@ export class Terrain {
     this.dataTexture = this.buildDataTexture();
     this.cavityTexture = buildCavityTexture(hf);
     const material = this.buildMaterial();
-    this.mesh = new THREE.Mesh(this.buildGeometry(), material);
+    this.mesh = new THREE.Mesh(markStatic(this.buildGeometry()), material);
     this.mesh.receiveShadow = true;
     this.mesh.castShadow = true;
     this.mesh.name = 'terrain';
@@ -149,7 +150,7 @@ export class Terrain {
     geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
     geo.setIndex(idx);
     geo.computeVertexNormals();
-    const m = new THREE.Mesh(geo, material);
+    const m = new THREE.Mesh(markStatic(geo), material);
     m.receiveShadow = false;
     m.name = 'farTerrain';
     return m;

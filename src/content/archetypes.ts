@@ -14,13 +14,13 @@ export const ARCHETYPES: ArchetypeDef[] = [
     role: 'Infiltrator',
     tagline: 'Late is still delivered.',
     description:
-      'Ex-courier. You delivered Tanner\'s last pallet the morning the sky turned, and he shut the door on your fingers. You still know the brand of his padlock.',
+      'Ex-courier. You delivered Tanner\'s last pallet the day the sky turned, and he shut the door on your fingers. You still know the brand of his padlock.',
     motive: 'That pallet had the camp\'s name on it. You\'d like to finish the delivery.',
     briefing:
       'Rue Calder. You carried Tanner\'s last pallet to his door: meal shakes, with Last Chance on the label. He signed for it through a gap and shut the gap on your fingers. You watched him film himself putting that padlock on. So bring the pallet home. Late is still delivered.',
     journal:
       'Rue Calder, courier. The last thing you delivered ended up on the wrong side of a door. Mara says that makes the lock your problem.',
-    coda: 'Rue, you finished the delivery. Two years late, and you still beat the postal service.',
+    coda: 'Rue, you finished the delivery. Three and a half years late, and you still beat the postal service.',
     accent: '#3ff2e0',
     skills: { lockpicking: 2, stealth: 1 },
     carry: 0,
@@ -78,7 +78,7 @@ export const ARCHETYPES: ArchetypeDef[] = [
     carry: 6,
     stats: { stealth: 1.22, speed: 0.96, toughness: 1.3 },
     signature: { name: 'Shoulder', description: 'You carry 6 kg more, and you take a hit better than most.' },
-    playstyle: 'Loud, heavy, hard to stop.',
+    playstyle: 'Blows the gate, takes a hit, carries the most home.',
     startingItems: [
       { id: 'lockpick', qty: 2 },
       { id: 'charge', qty: 2 },

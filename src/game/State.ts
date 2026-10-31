@@ -1,4 +1,5 @@
 import { isMobile } from '@/engine/device';
+import { isDesktopApp } from '@/engine/autoQuality';
 import { ITEMS } from '@/content/items';
 import { restoreBlock } from '@/content/items';
 import { ARCHETYPES } from '@/content/archetypes';
@@ -678,6 +679,12 @@ export interface Settings {
   toggleAim: boolean;
   /** The photosensitivity notice has been seen (it shows once, over the first title screen). */
   flashNotice: boolean;
+  /**
+   * v1.0.4: Graphics AUTO (browser only, engine/autoQuality.ts): the game picks `quality` from the GPU
+   * and holds the frame rate with the render scale. On for a browser that has never stored settings
+   * or a save; anyone who played before keeps what they had, and picking a preset turns it off.
+   */
+  autoQuality?: boolean;
 }
 
 export const SUB_SIZES = ['small', 'medium', 'large', 'xl'] as const;
@@ -690,7 +697,7 @@ export const ACCESS_DEFAULTS = {
 };
 
 // phones start on Low: a phone GPU at native resolution under the full post stack crawls
-export const DEFAULT_SETTINGS: Settings = { quality: isMobile ? 'low' : 'high', difficulty: 'normal', master: 0.8, music: 0.5, sfx: 0.9, sensitivity: 1, voice: true, voiceOff051: true, voiceOn052: true, fov: 64, invertY: false, bob: 1, showFps: false, binds: defaultBinds(), ...ACCESS_DEFAULTS };
+export const DEFAULT_SETTINGS: Settings = { quality: isMobile ? 'low' : 'high', difficulty: 'normal', master: 0.8, music: 0.5, sfx: 0.9, sensitivity: 1, voice: true, voiceOff051: true, voiceOn052: true, fov: 64, invertY: false, bob: 1, showFps: false, binds: defaultBinds(), ...ACCESS_DEFAULTS, autoQuality: !isDesktopApp };
 
 const num = (v: unknown, lo: number, hi: number, dflt: number) => (typeof v === 'number' && Number.isFinite(v) ? Math.min(hi, Math.max(lo, v)) : dflt);
 
@@ -699,6 +706,8 @@ export function loadSettings(): Settings {
     const raw = localStorage.getItem(SETTINGS_KEY);
     const parsed: unknown = raw ? JSON.parse(raw) : null;
     const s: Settings = parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? { ...DEFAULT_SETTINGS, ...parsed } : { ...DEFAULT_SETTINGS };
+    // automatic quality: a first visit in a browser only (stored settings or a save keep their preset)
+    s.autoQuality = !isDesktopApp && (raw ? (parsed as Partial<Settings> | null)?.autoQuality === true : !localStorage.getItem(SAVE_KEY));
     // once: the setting used to switch robot speech; now it switches the new voices, which start on
     if (!s.voiceOn052) { s.voice = true; s.voiceOff051 = true; s.voiceOn052 = true; }
     // older saves lack the v0.5.6 fields (the defaults fill them); a hand-edited or corrupt value is clamped
