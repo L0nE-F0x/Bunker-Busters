@@ -81,6 +81,8 @@ export default defineConfig({
       },
     },
   },
-  server: { port: 5173, host: true },
+  // agent worktrees live under .claude/ inside the repo: watching them made this server force full reloads
+  // (their tsconfig.json) and broke tests running against it. Assets/ holds raw Meshy exports, never served.
+  server: { port: 5173, host: true, watch: { ignored: ['**/.claude/**', '**/Assets/**', '**/src-tauri/target/**', '**/dist/**'] } },
   optimizeDeps: { exclude: ['@dimforge/rapier3d-compat'] },
 });
