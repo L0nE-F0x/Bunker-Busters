@@ -181,6 +181,25 @@ export class MapData {
   }
 }
 
+/** Busted bunkers and cleared outposts are drawn in this grey (Game.mapMarkers). */
+const SPENT = '#7d725f';
+/**
+ * The marker's shape, after the world map's icons (WorldMap.ts icon()), so no two kinds differ by
+ * hue alone (red-green colour blindness): the objective is a ring with a dot, your pack a box, an
+ * outpost a square with a cross, a cache a dot; a spent bunker or outpost is hollow; tagged security
+ * is a ring, a tagged hostile a dot; SeedBot on alert gets a ring round its dot.
+ */
+function markerShape(m: MapMarker) {
+  if (m.id === 'quest') return 'quest';
+  if (m.id === 'pack') return 'pack';
+  if (m.id.startsWith('op:')) return m.color === SPENT ? 'outpost-spent' : 'outpost';
+  if (m.id.startsWith('cache.')) return 'cache';
+  if (m.id === 'tag') return m.label === 'Tagged security' ? 'ring' : 'dot';
+  if (m.kind === 'bunker') return m.color === SPENT ? 'bunker-spent' : 'bunker';
+  if (m.kind === 'drone') return m.color === '#ff3b3b' ? 'alert' : 'dot';
+  return m.kind;
+}
+
 function drawMarker(ctx: CanvasRenderingContext2D, m: MapMarker, x: number, y: number, scale: number, label: boolean, labelDy = 0) {
   ctx.save();
   ctx.translate(x, y);
@@ -189,16 +208,45 @@ function drawMarker(ctx: CanvasRenderingContext2D, m: MapMarker, x: number, y: n
   ctx.fillStyle = m.color;
   ctx.strokeStyle = '#0c0806';
   ctx.lineWidth = 2 * scale;
-  if (m.kind === 'bunker') {
+  const shape = markerShape(m);
+  const ring = (r: number, w: number) => {
+    ctx.beginPath(); ctx.arc(0, 0, r * scale, 0, Math.PI * 2);
+    ctx.lineWidth = (w + 2.4) * scale; ctx.strokeStyle = '#0c0806'; ctx.stroke();
+    ctx.lineWidth = w * scale; ctx.strokeStyle = m.color; ctx.stroke();
+  };
+  if (shape === 'bunker' || shape === 'bunker-spent') {
     ctx.beginPath();
     ctx.moveTo(0, -9 * scale); ctx.lineTo(9 * scale, 6 * scale); ctx.lineTo(-9 * scale, 6 * scale); ctx.closePath();
-    ctx.fill(); ctx.stroke();
-  } else if (m.kind === 'camp') {
+    if (shape === 'bunker') { ctx.fill(); ctx.stroke(); } else { ctx.lineWidth = 4.4 * scale; ctx.stroke(); ctx.lineWidth = 2 * scale; ctx.strokeStyle = m.color; ctx.stroke(); }
+  } else if (shape === 'camp') {
     ctx.beginPath();
     ctx.moveTo(0, -8 * scale); ctx.quadraticCurveTo(7 * scale, 2 * scale, 0, 7 * scale); ctx.quadraticCurveTo(-7 * scale, 2 * scale, 0, -8 * scale);
     ctx.fill(); ctx.stroke();
-  } else if (m.kind === 'drone') {
-    ctx.beginPath(); ctx.arc(0, 0, 4 * scale, 0, Math.PI * 2); ctx.fill();
+  } else if (shape === 'quest') {
+    ring(7, 2.2);
+    ctx.beginPath(); ctx.arc(0, 0, 2.6 * scale, 0, Math.PI * 2); ctx.fillStyle = m.color; ctx.fill();
+  } else if (shape === 'outpost' || shape === 'outpost-spent') {
+    const h = 6 * scale;
+    ctx.fillStyle = '#1a0c0a';
+    ctx.fillRect(-h, -h, 2 * h, 2 * h);
+    ctx.strokeStyle = m.color; ctx.lineWidth = 2 * scale;
+    ctx.strokeRect(-h, -h, 2 * h, 2 * h);
+    if (shape === 'outpost') {
+      ctx.beginPath(); ctx.moveTo(-h * 0.55, -h * 0.55); ctx.lineTo(h * 0.55, h * 0.55); ctx.moveTo(h * 0.55, -h * 0.55); ctx.lineTo(-h * 0.55, h * 0.55);
+      ctx.stroke();
+    }
+  } else if (shape === 'pack') {
+    ctx.beginPath(); ctx.rect(-5.5 * scale, -4 * scale, 11 * scale, 10 * scale); ctx.fill(); ctx.stroke();
+    ctx.beginPath(); ctx.arc(0, -4 * scale, 3 * scale, Math.PI, 0); ctx.lineWidth = 2 * scale; ctx.strokeStyle = m.color; ctx.stroke();
+  } else if (shape === 'ring') {
+    ring(4.5, 2);
+  } else if (shape === 'alert') {
+    ctx.beginPath(); ctx.arc(0, 0, 3.5 * scale, 0, Math.PI * 2); ctx.fill();
+    ctx.shadowBlur = 0;
+    ring(7.5, 1.6);
+  } else if (shape === 'dot' || shape === 'cache') {
+    ctx.beginPath(); ctx.arc(0, 0, (shape === 'cache' ? 5 : 4) * scale, 0, Math.PI * 2); ctx.fill();
+    if (shape === 'cache') ctx.stroke();
   } else {
     ctx.rotate(Math.PI / 4);
     ctx.fillRect(-5 * scale, -5 * scale, 10 * scale, 10 * scale);
@@ -306,7 +354,7 @@ export class Minimap {
         if (!RIM(m)) continue;
         x = (mx / d) * (R - 14); y = (mz / d) * (R - 14);
       }
-      const spr = this.cached(`m:${m.kind}:${m.color}`, () => sprite(SPRITE, (c) => drawMarker(c, m, 0, 0, 1.4, false)));
+      const spr = this.cached(`m:${markerShape(m)}:${m.color}`, () => sprite(SPRITE, (c) => drawMarker(c, m, 0, 0, 1.4, false)));
       ctx.save();
       ctx.translate(x, y);
       ctx.rotate(-heading);

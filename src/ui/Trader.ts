@@ -126,7 +126,7 @@ export function openTill(host: TillHost, s: GameState, opts: TillOpts): Promise<
           </div>
           <p class="till-desc">${esc(desc)}</p>
         </div>
-        <footer><span class="kb"><span class="kbd">Esc</span> leave</span><span class="${over ? 'over' : ''}">CARRY ${s.weight.toFixed(1)} / ${s.carryLimit} KG</span></footer>`;
+        <footer><span class="kb"><span class="kbd">Esc</span> leave</span><span class="${over ? 'over' : ''}">CARRY ${s.weight.toFixed(1)} / ${s.carryLimit} KG${over ? ' · OVERBURDENED' : ''}</span></footer>`;
       panel.querySelectorAll<HTMLElement>('.till-list').forEach((l, i) => (l.scrollTop = scroll[i] ?? 0));
       const x = document.createElement('button');
       x.className = 'btn close-x';
