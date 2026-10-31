@@ -10,6 +10,7 @@ import { TANNER, visibleChoices } from '@/content/dialogue';
 import type { TalkCtx } from '@/content/dialogue';
 import type { GameContext } from '../context';
 import type { LoopHandle } from '@/engine/audio';
+import { keyed } from '@/ui/keyWords';
 
 /** Flags the Garage's own code reads (the runtime derives the rest from content/bunkers/garage.ts). */
 const F = {
@@ -210,14 +211,14 @@ export class Garage extends Bunker<GarageBuilder> {
     if (!near) return '';
     if (s.has(F.vault)) return 'Loot the Runway Room. Water first, then the manifest.';
     if (this.playerInside) {
-      if (!s.has(F.lasers)) return 'Lasers in the hall. Jump the low beams, crouch the high ones, or kill them at the fuse box.';
+      if (!s.has(F.lasers)) return `Lasers in the hall. ${keyed('Jump', 'jump')} the low beams, ${keyed('crouch', 'crouch')} under the high ones, or cut them at the fuse box on the west wall.`;
       if (s.has('social.code')) return 'The vault. He said 1234. The lockpick still works if you don\'t trust him.';
       if (s.has('social.digit')) return 'The vault. The code starts with 12. Or pick the five pins.';
       return 'The vault. Five pins, or a code he thinks is obvious.';
     }
     if (s.has(F.side)) return 'Get inside. SeedBot doesn\'t follow you through the door.';
     if (this.playerOnGrounds) return 'Side door is on the east wall. The intercom inside the gate still reaches Tanner.';
-    if (s.has(F.gate) || s.has(F.gap)) return 'You\'re through the fence. The drone goes for light and noise, so keep both down.';
+    if (s.has(F.gate) || s.has(F.gap)) return `You're through the fence. SeedBot hunts light and noise: ${keyed('crouch', 'crouch')} and keep the torch off.`;
     const gap = s.has(F.intelGap) ? ', use the loose panel on the north-east fence,' : '';
     return `Get past the fence: pick the gate${gap} or hail Tanner on the intercom beside it.`;
   }

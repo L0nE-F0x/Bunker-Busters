@@ -1,6 +1,7 @@
 import type { AudioEngine } from '@/engine/audio';
 import { isTouch } from '@/engine/device';
 import { dirOf, padGlyph } from '@/engine/bindings';
+import { moveCap } from './keyWords';
 
 /** Oscilloscope "signal match": tune amplitude + frequency to the target trace and hold it. */
 export class CircuitGame {
@@ -37,7 +38,7 @@ export class CircuitGame {
         <footer>${isTouch ? `
           <span>Drag on the scope: up/down is amplitude, left/right is frequency. Match the green trace and hold it.</span>
           <button class="btn back">Abort</button>` : `
-          <span class="kbh">Move the mouse (or <span class="kbd">W</span><span class="kbd">S</span> amplitude, <span class="kbd">A</span><span class="kbd">D</span> frequency) to match the green trace</span>
+          <span class="kbh">Move the mouse (or ${moveCap('forward')}${moveCap('back')} amplitude, ${moveCap('left')}${moveCap('right')} frequency) to match the green trace</span>
           <span class="kbh"><span class="kbd">Esc</span> — abort</span>
           <span class="padh">Left stick: up/down amplitude, left/right frequency · ${padGlyph('P1')} abort</span>`}
         </footer>
@@ -193,7 +194,7 @@ export class KeypadGame {
         <div class="screen">····</div>
         <div class="keys">${keys.map((k) => `<button class="btn" data-k="${k}">${k}</button>`).join('')}</div>
         <div class="hint">${opts.hint}</div>
-        ${isTouch ? '<button class="btn leave">Leave</button>' : '<div class="hint">Type digits · <span class="kbd">Enter</span> submit · <span class="kbd">Esc</span> leave</div>'}
+        ${isTouch ? '<button class="btn leave">Leave</button>' : `<div class="hint"><span class="kbh">Type digits · <span class="kbd">Enter</span> submit · <span class="kbd">Esc</span> leave</span><span class="padh">D-pad picks a key · ${padGlyph('P0')} presses it · ${padGlyph('P1')} leave</span></div>`}
       </div>`;
     this.screen = this.root.querySelector('.screen')!;
     this.root.querySelectorAll('button[data-k]').forEach((b) => b.addEventListener('click', () => this.press((b as HTMLButtonElement).dataset.k!)));

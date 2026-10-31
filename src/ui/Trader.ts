@@ -2,6 +2,7 @@ import { ITEMS, canteenSips, CANTEEN_SIPS } from '@/content/items';
 import { TILL_STOCK, TILL_QUIPS, rollStock, sellable, sellPrice, buyPrice } from '@/content/trade';
 import type { GameState } from '@/game/State';
 import { ICONS } from './icons';
+import { padGlyph } from '@/engine/bindings';
 
 /**
  * The Till: Inez's shop as one DOM panel. Her shelf on the left (today's stock, her price), your pack on
@@ -126,7 +127,7 @@ export function openTill(host: TillHost, s: GameState, opts: TillOpts): Promise<
           </div>
           <p class="till-desc">${esc(desc)}</p>
         </div>
-        <footer><span class="kb"><span class="kbd">Esc</span> leave</span><span class="${over ? 'over' : ''}">CARRY ${s.weight.toFixed(1)} / ${s.carryLimit} KG</span></footer>`;
+        <footer><span class="kb kbh"><span class="kbd">Esc</span> leave</span><span class="kb padh">${padGlyph('P1')} leave</span><span class="${over ? 'over' : ''}">CARRY ${s.weight.toFixed(1)} / ${s.carryLimit} KG</span></footer>`;
       panel.querySelectorAll<HTMLElement>('.till-list').forEach((l, i) => (l.scrollTop = scroll[i] ?? 0));
       const x = document.createElement('button');
       x.className = 'btn close-x';

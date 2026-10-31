@@ -50,7 +50,7 @@ const defs: ItemDef[] = [
   },
   {
     id: 'rifle', name: 'Lever .30-30', category: 'weapon', weight: 2, stack: 1, value: 140, icon: 'rifle',
-    description: 'Seven rounds through the loading gate, and iron sights good enough to reach across the flats. Hold right-click and breathe out.',
+    description: 'Seven rounds through the loading gate, and iron sights good enough to reach across the flats. Hold aim (RMB) and breathe out.',
     flavor: 'Somebody carved a tally into the forend and then, later, crossed it out.',
   },
   {
