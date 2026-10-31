@@ -49,6 +49,9 @@ type BackendChoice = 'webgpu-high' | 'webgpu-low' | 'webgl';
 const CHAIN: BackendChoice[] = ['webgpu-high', 'webgpu-low', 'webgl'];
 
 function storedChoice(): BackendChoice {
+  // a demote with storage blocked carries its choice in the address instead (see demote)
+  const carried = new URLSearchParams(location.search).get('bbgpu') as BackendChoice | null;
+  if (carried && CHAIN.includes(carried)) return carried;
   try {
     const v = localStorage.getItem(BACKEND_KEY) as BackendChoice | null;
     return v && CHAIN.includes(v) ? v : 'webgpu-high';
@@ -61,8 +64,14 @@ function storedChoice(): BackendChoice {
 function demote(from: BackendChoice, reason: string) {
   const next = CHAIN[Math.min(CHAIN.length - 1, CHAIN.indexOf(from) + 1)];
   console.warn(`[BunkerBusters] ${from} failed (${reason}) — switching to ${next}.`);
-  try { localStorage.setItem(BACKEND_KEY, next); } catch { /* ignore */ }
-  location.reload();
+  let kept = false;
+  try { localStorage.setItem(BACKEND_KEY, next); kept = localStorage.getItem(BACKEND_KEY) === next; } catch { /* blocked */ }
+  if (kept) { location.reload(); return; }
+  // storage blocked (private window, site data off): without this the failing backend came back on
+  // every reload, forever
+  // (by hand, so the other flags keep their exact spelling: `?webgl`, not `?webgl=`)
+  const rest = location.search.slice(1).split('&').filter((kv) => kv && kv.split('=')[0] !== 'bbgpu');
+  location.replace(`${location.pathname}?${[...rest, `bbgpu=${next}`].join('&')}${location.hash}`);
 }
 
 /**
