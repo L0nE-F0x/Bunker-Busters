@@ -54,7 +54,7 @@ import { buildSites, Errands, type Site } from './sites';
 import { Stories } from './sites/stories';
 import { Player } from './player/Player';
 import { FirstPersonCamera } from './player/FirstPersonCamera';
-import { Hands, HAND_LOOKS, torchLight, releaseTree } from './player/Hands';
+import { Hands, HAND_LOOKS, torchLight, retire, releaseRetired, hasRetired } from './player/Hands';
 import { GameState, saveGame, loadGame, readSave, storageStatus, loadSettings, saveSettings, clearSave, START_DAY, type Settings } from './State';
 import type { GameContext, Interactable, UIBridge } from './context';
 import { UI, type HudFrame } from '@/ui/UI';
@@ -1585,8 +1585,8 @@ export class Game {
     this.cam.aimK = 0;
     if (this.player) {
       this.scene.remove(this.player.model.root);
-      // the body (its one merged shadow caster) is built per run: free it with the run
-      releaseTree(this.player.model.root);
+      // the body (its one merged shadow caster) is built per run: free it once the next run's is drawn
+      retire(this.player.model.root);
       this.player.dispose(this.physics.world);
       this.player = null;
     }
@@ -2433,6 +2433,8 @@ export class Game {
       if (inner) this.interiorFrames++;
       this.interiorName = inner?.name ?? '';
       if (this.renderScale) this.autoScale(now);
+      // the last run's hands and body, now this run's have been drawn (see Hands.releaseRetired)
+      if (this.mode === 'playing' && hasRetired()) releaseRetired();
     }
     if (BENCH) { this.benchUpd += tPhys - now; this.benchPhys += tRender - tPhys; this.benchRen += performance.now() - tRender; }
     this.input.endFrame();

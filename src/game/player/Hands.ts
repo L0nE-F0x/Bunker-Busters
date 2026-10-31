@@ -974,9 +974,26 @@ export class Hands {
     this.flashlight.intensity = 0; // the light itself stays on the camera (see torchLight)
     // every run (and every character-select card) builds new hands, items and guns: free this set, or
     // each Quit to title + Continue left ~40 geometries, ~260 GL buffers and ~20 MB behind for good
-    releaseTree(this.root, ...Object.values(this.items));
+    retire(this.root, ...Object.values(this.items));
   }
 }
+
+/** Meshes gone for good (old hands, an old body), waiting for a run's replacements to be drawn. */
+const retired: THREE.Object3D[][] = [];
+export function retire(...roots: THREE.Object3D[]) {
+  retired.push(roots);
+}
+/**
+ * Release what was retired, once a run has drawn its own hands and body (Game calls it after a
+ * frame in play). Released any earlier (at Quit, or between character cards), a pipeline's last
+ * render object goes with them: three r186 then drops the pipeline from its cache without deleting
+ * its GL program, and the next run compiles it again (+12 programs and their compiles at every
+ * Quit to title + Continue).
+ */
+export function releaseRetired() {
+  for (const roots of retired.splice(0)) releaseTree(...roots);
+}
+export const hasRetired = () => retired.length > 0;
 
 /**
  * Let the renderer forget meshes that are gone for good: each object's render objects (their uniform
