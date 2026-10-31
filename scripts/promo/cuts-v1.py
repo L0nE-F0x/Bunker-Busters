@@ -93,7 +93,7 @@ def trailer(fmt='1080'):
     # ---- cold open: the Panopticon's lamp comes round onto you; Ezra on the PA
     c.sound('sfx/drone', 0.0, gain=-11, fade_in=1.5, dur=24, fade_out=3)
     t = S(c, 'pan-sweep', 5.0, src=1.2, gain=-5, fade_in=0.5)
-    c.vo('ezra-cameras', t + 0.25, sub='sub-ezra-cameras')
+    c.vo('ezra-cameras', t + 0.1, sub='sub-ezra-cameras', sub_pad=0.0)  # (clears the first card)
     card(c, 'card-built', 1.6)
     # ---- the world, under the main theme
     t = S(c, 'apex-rocket', 4.2, src=0.6, gain=-6)
@@ -110,18 +110,18 @@ def trailer(fmt='1080'):
     c.sound('music-tension', c.t, src=TENSION_DOWN, dur=36.0, gain=-3, fade_in=0.6, fade_out=0.8, bus='music')
     t = S(c, 'garage-night', 3.0, src=2.0, gain=-6)
     label(c, 'garage', t, 2.6)
-    c.vo('tanner-runway', t + 0.1, sub='sub-tanner-runway')
+    c.vo('tanner-runway', t + 0.1, sub='sub-tanner-runway', sub_pad=0.05)
     S(c, 'h-lockpick', 2.4, src=2.6, gain=-3, zoom=(1.72, 1.8))
     t = S(c, 'apex-crane', 2.8, src=2.6, gain=-6, cx=0.62)
     label(c, 'apex', t, 2.5)
-    c.vo('vesper-live', t + 0.1, sub='sub-vesper-live')
+    c.vo('vesper-live', t + 0.0, sub='sub-vesper-live', sub_pad=0.05)
     t = S(c, 'pan-valley', 2.8, src=3.0, gain=-6)
     label(c, 'panopticon', t, 2.5)
     S(c, 'p-ezra', 2.2, src=2.0, gain=-6, cx=0.5)
     t = S(c, 'spire-court', 2.8, src=2.0, gain=-6)
     label(c, 'spire', t, 2.5)
     t = S(c, 'h-sentinel', 2.8, src=1.6, gain=-2, cx=0.52, look=DUSK)
-    c.vo('sentinel-apology', t, sub='sub-sentinel-apology')
+    c.vo('sentinel-apology', t - 0.3, sub='sub-sentinel-apology', sub_pad=0.02)
     t = S(c, 'dome-night', 2.8, src=2.4, gain=-6)
     label(c, 'dome', t, 2.5)
     t = S(c, 'dome-inside', 2.6, src=3.0, gain=-5)
@@ -130,10 +130,10 @@ def trailer(fmt='1080'):
     t = S(c, 'cath-tower2', 2.8, src=2.5, gain=-6, cx=0.45)
     label(c, 'cathedral', t, 2.5)
     t = S(c, 'h-swarm', 3.2, src=3.6, gain=-2)
-    c.vo('drone-hold', t, sub='sub-drone-hold')
+    c.vo('drone-hold', t - 0.3, sub='sub-drone-hold', sub_pad=0.02)  # (gone before Kit speaks)
     t = S(c, 'fort-crane', 2.6, src=2.0, gain=-6)
     label(c, 'fortress', t, 2.4)
-    c.vo('kit-queue', t + 0.1, sub='sub-kit-queue')
+    c.vo('kit-queue', t + 0.15, sub='sub-kit-queue')
     S(c, 'fort-bridge-down', 2.6, src=0.0, gain=-4, cx=0.6, look=DUSK)
     c.sound('sfx/riser-2.5', c.t - 2.5, gain=-6)
     # ---- the fight, on the fight stem's beat
@@ -145,7 +145,7 @@ def trailer(fmt='1080'):
     t = S(c, 'contractor-close', 2 * BEAT, src=5.05, gain=-2)
     c.vo('kade-asset', t + 0.1, sub='sub-kade-asset')
     t = S(c, 'rifle-c', 4 * BEAT, src=3.0, gain=0)
-    c.vo('kade-waiver', t + 1.0, sub='sub-kade-waiver')
+    c.vo('kade-waiver', t + 1.4, sub='sub-kade-waiver', sub_pad=0.05)  # (after the asset caption)
     S(c, 'wolves-charge', 3 * BEAT, src=1.1, gain=0, look=WOLF, cx=0.62)
     t = S(c, 'blast-tp', 3 * BEAT, src=0.0, gain=-4)  # (its bark covers the blast: silent, a boom instead)
     c.vo('kade-fire', t - 0.15, sub='sub-kade-fire', sub_pad=0.02)  # (its caption must clear the cut to black)
@@ -175,7 +175,7 @@ def teaser15(fmt='1080'):
     c.sound('sfx/drone', 0, gain=-12, fade_in=0.8, dur=15, fade_out=1.5)
     c.sound('music-tension', 0.2, src=TENSION_DOWN, dur=10.4, gain=-3, fade_in=0.6, fade_out=0.4, bus='music')
     t = S(c, 'h-lockpick', 2.7, src=1.8, gain=-3, zoom=(1.72, 1.8), zv=None)
-    c.vo('tanner-hold', t + 0.1, sub='sub-tanner-hold-top' if fmt == 'v' else 'sub-tanner-hold')  # (9:16: the lock fills the middle)
+    c.vo('tanner-hold', t + 0.1, sub='sub-tanner-hold-top' if fmt == 'v' else 'sub-tanner-hold', sub_pad=0.0)  # (9:16: the lock fills the middle)
     t = S(c, 'apex-rocket', 2.6, src=1.0, gain=-6, cx=0.55)
     c.vo('vesper-live', t + 0.05, sub='sub-vesper-live')
     S(c, 'h-swarm', 1.6, src=4.2, gain=-2, cx=0.5)
@@ -196,7 +196,7 @@ def teaser30(fmt='1080'):
     c = new('teaser-30s-16x9' if fmt != 'v' else 'teaser-30s-9x16', fmt)
     c.sound('sfx/drone', 0, gain=-11, fade_in=1.0, dur=12, fade_out=2)
     t = S(c, 'pan-sweep', 5.0, src=1.2, gain=-5, fade_in=0.4, cx=0.5)
-    c.vo('ezra-cameras', t + 0.2, sub='sub-ezra-cameras')
+    c.vo('ezra-cameras', t + 0.1, sub='sub-ezra-cameras', sub_pad=0.0)
     card(c, 'card-built', 1.4)
     c.sound('music-tension', c.t, src=TENSION_DOWN, dur=17.2, gain=-3, fade_in=0.4, fade_out=0.6, bus='music')
     t = S(c, 'apex-rocket', 2.7, src=1.0, gain=-6, cx=0.55)
@@ -260,12 +260,35 @@ CUTS = {
     'teaser30-v': lambda: teaser30('v'),
 }
 
+CHECK = '--check' in WANT  # build the cuts, render nothing: report captions that collide
+WANT.discard('--check')
 if 'loops' in WANT:
     WANT |= set(LOOPS)
+if CHECK and len(WANT) == 0:
+    WANT = set(CUTS)
+
+
+def collisions(c):
+    """Captions on screen together, or over a card or the end card (the same spot on screen)."""
+    ov = [(Path(o['png']).stem, o['at'], o['at'] + o['dur']) for o in c.overlays if 'png' in o]
+    subs = [x for x in ov if x[0].startswith('sub-')]
+    big = [x for x in ov if x[0].startswith(('card-', 'end'))]
+    out = []
+    for i, a in enumerate(subs):
+        for b in subs[i + 1:] + big:
+            lap = min(a[2], b[2]) - max(a[1], b[1])
+            if lap > 0.04:
+                out.append(f'{a[0]} / {b[0]}: {lap:.2f} s at {max(a[1], b[1]):.2f}')
+    return out
+
+
 for name, fn in CUTS.items():
     if name in WANT:
         c = fn()
-        if name == 'trailer-1440':
+        if CHECK:
+            bad = collisions(c)
+            print(f'{name}: {c.t:.2f} s, ' + ('captions clear' if not bad else f'{len(bad)} collision(s):\n  ' + '\n  '.join(bad)))
+        elif name == 'trailer-1440':
             c.render(OUT, crf=14, maxrate='60M')
         else:
             c.render(OUT)
