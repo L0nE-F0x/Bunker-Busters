@@ -309,10 +309,29 @@ if (want('safety')) {
   // the Spire's laser stairwell is a no-climb zone
   const ladMod = await ev(`(() => { const o = game.spire.b.origin; return [game.noMantle.has({ x: o.x + 1, y: o.y + 2, z: o.z }), game.noMantle.has({ x: o.x + 30, y: o.y + 2, z: o.z })]; })()`);
   check('Spire: the stairwell is a no-climb zone (and outside isn\'t)', ladMod[0] === true && ladMod[1] === false, JSON.stringify(ladMod));
+  // the Dome's outfall still lets you in under the fence, crouched, once its grate is open (last: inside
+  // the Dome's grounds its Helpers come for you)
+  await ev(`(() => { const D = game.dome; D.setDoor(D.b.doors.grate, true, true); const p = D.b.points.culvert, q = D.b.points.culvertIn; game.player.teleport(new V(p.x, game.hf.heightAt(p.x, p.z) + 0.1, p.z)); game.cam.snap(Math.atan2(p.x - q.x, p.z - q.z), 0); })()`);
+  await wait(400);
+  await ev(`press('crouch')`);
+  await wait(300);
+  await ev(`press('forward')`);
+  await wait(4000);
+  await ev(`releaseAll()`);
+  await wait(300);
+  const rc = await ev(`(() => { const o = game.dome.b.origin, p = game.player.position; return Math.hypot(p.x - o.x, p.z - o.z); })()`);
+  check('Dome: the open culvert still takes you under the fence', rc < 39.4, `r ${rc.toFixed(2)}`);
+  await shot('trav-dome-culvert.png');
+  await ev(`(() => { const D = game.dome; D.setDoor(D.b.doors.grate, false, true); D.alarm = 0; })()`);
+  // (a Helper's catch walks you back out with a fade: let it land before anything else)
+  await ev(`atLadder('camp-roof', 3)`);
+  await wait(3500);
 }
 
 // ---------------------------------------------------------------- a controller and the touch stick climb too
 if (want('input')) {
+  await ev(`atLadder('camp-roof', 1.0)`);
+  await wait(400);
   await ev(`atLadder('camp-roof', 1.0)`);
   await ev(`window.__pad.on = true`);
   await wait(500);
