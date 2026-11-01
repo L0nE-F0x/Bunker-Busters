@@ -4,7 +4,7 @@ Each `## vX.Y.Z` section becomes the GitHub release notes and the "what's new" l
 update notice (the first few bullets). `scripts/release.sh` refuses to release a version without one.
 
 ## v1.1.3
-- **The people at the camp fire move like people.** Mara, Hollis, Pip and Dez now sit on real motion capture, recorded on chairs: they rest their hands on their knees, look round, rub an arm against the cold, laugh, and talk with their hands. Before, they played a clip made for sitting on the floor leaning back on your hands, and on a log its hands swung forward to the ground with the elbows locked backwards
+- **Everyone moves like people.** Every character in the game now idles, talks and gestures on real motion capture. At the camp fire, Mara, Hollis, Pip and Dez sit as people do on a log: hands on their knees, looking round, rubbing an arm against the cold, laughing, talking with their hands. Before, they played a clip made for sitting on the floor leaning back on your hands, and on a log its hands swung forward to the ground with the elbows locked backwards. Sol and Ren sit up at Dry Creek's fire too. The people on their feet shift their weight, look about, nod, shrug and talk naturally, and the people at desks type, write and talk across the desk
 - **The logs are at sitting height** (47 cm; they were 62), and everyone sitting has their boots flat on the ground instead of their toes in the sand
 - **Smoother people and animals.** Every character model shaded like a cut gem, each patch of triangles catching the light on its own; they're smooth now, and the townsfolk have their cloth folds, seams and faces back
 - **Smaller campfire sparks.** They rose as big glowing dots far into the sky; now they're small and die out within a metre or two
