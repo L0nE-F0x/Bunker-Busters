@@ -177,6 +177,9 @@ export class SolarSite extends Site {
     k.col(hx + Wd / 2, cy, hz, 0.06, H / 2, L / 2, 0);
     k.col(hx, cy, hz - L / 2, Wd / 2, H / 2, 0.06, 0);
     k.col(hx + Wd / 4, cy, hz + L / 2, Wd / 4, H / 2, 0.06, 0);
+    // its roof and floor are solid too (the roof is in reach from the spares cabinet)
+    k.col(hx, cy + H / 2 + 0.02, hz, Wd / 2 + 0.03, 0.04, L / 2 + 0.03, 0);
+    k.col(hx, y + 0.13, hz, Wd / 2, 0.13, L / 2, 0);
     // the hazard board on its flank and the farm's lamp over the door
     this.prints.add(artQuad('ppHut', 2.6, 0.74, mat4(hx - Wd / 2 - 0.035, cy + 0.45, hz, 0, -Math.PI / 2)));
     k.b.add(M.post, xf(new THREE.BoxGeometry(0.3, 0.08, 0.3), mat4(hx - 0.2, cy + H / 2 + 0.12, hz + L / 2 + 0.25)));

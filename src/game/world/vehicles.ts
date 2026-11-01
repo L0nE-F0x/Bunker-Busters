@@ -46,6 +46,10 @@ export interface CarResult {
   center: THREE.Vector3;
   /** a coarse hull for the shadow pass (already transformed by `m`) */
   shadow: THREE.BufferGeometry;
+  /** Height of the hood and trunk lid (car frame, settled): where you stand on it. */
+  hood: number;
+  /** The cabin along the car (x, car frame) and its roof's height; null for a convertible. */
+  cabin: { x0: number; x1: number; roof: number } | null;
 }
 
 interface Spec {
@@ -808,5 +812,7 @@ export function buildCar(sink: CarSink, m: THREE.Matrix4, o: CarOpts): CarResult
   if (s.bedX !== undefined) hull.push(norm(bx(-L / 2 - s.bedX, s.belt - 0.42, W, (s.bedX - L / 2) / 2, (s.belt + 0.42) / 2, 0)));
   for (const [wx, sd] of axles) hull.push(norm(cy(R, R, 0.2, 8, wx, R, sd * (B.hw(wx) - 0.2), Math.PI / 2)));
   const shadow = merge(hull).applyMatrix4(M);
-  return { half, center, shadow };
+  const settled = d.reduce((a, b) => a + b, 0) / 4 + (o.blocks ? 0.12 : 0);
+  const hoodY = settled + (s.nose + s.cowl + s.deck + s.tail) / 4;
+  return { half, center, shadow, hood: hoodY, cabin: convertible ? null : { x0: xc, x1: xa, roof: settled + roof } };
 }

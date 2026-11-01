@@ -486,7 +486,12 @@ export function buildCut(S: Site, H: Hooks, physics: Physics, f: Frame): CaveOut
     const x = -4.25 + (i % 3) * 0.33 + (Math.floor(i / 3) % 2) * 0.16, y = fy(-4.0, 2.9) + Math.floor(i / 3) * 0.37, z = 2.9 + (i % 2) * 0.05;
     P.box(plainStandard('#2a5d8f', 0.45, 0), 0.3, 0.36, 0.26, x, y + 0.18, z, 0.1 * (i % 3)).cyl(plainStandard('#d8d0b8', 0.5), 0.035, 0.035, 0.05, x + 0.06, y + 0.38, z, 6);
   }
-  P.col(-3.95, 0.55, 2.9, 0.55, 0.55, 0.2);
+  // two rows and one on top, each solid to its own height (from the floor under them)
+  {
+    const y0 = fy(-4.0, 2.9);
+    P.col(-3.84, (y0 + 0.73) / 2, 2.92, 0.56, (y0 + 0.73) / 2, 0.17);
+    P.col(-4.25, y0 + 0.74 + 0.18, 2.9, 0.15, 0.18, 0.13);
+  }
   for (let r = 0; r < 3; r++) for (let i = 0; i < 6 - r; i++) P.cyl(wood('#5a3e28'), 0.07, 0.07, 0.65, -0.6 + i * 0.15 + r * 0.075, fy(0, 8.9) + 0.07 + r * 0.13, 8.9, 6, 0, 0.1, Math.PI / 2);
   P.col(-0.2, 0.25, 8.9, 0.5, 0.25, 0.35);
   sack(P, 1.6, fy(1.6, 8.6), 8.6, 0.4);

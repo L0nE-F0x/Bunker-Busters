@@ -671,6 +671,7 @@ export class JetSite extends Site {
     sec.add(k.black, xf(new THREE.CylinderGeometry(0.14, 0.12, 1.05, 12), mat4(-0.9, FY + 0.5, 2.6, 0.25, 0, 0.35)));
     for (let i = 0; i < 4; i++) sec.add(k.chrome, cyl(0.02, 0.02, 0.25, -0.98 + i * 0.05, FY + 1.05, 2.72, 6, 0.3, 0, 0.35));
     sec.add(atlasSolid(), xf(atlasMap('crate', new THREE.BoxGeometry(0.7, 0.45, 0.45)), mat4(0.95, FY + 0.23, 2.7, 0, 0.1, 0)));
+    sec.col(0.95, FY + 0.225, 2.7, 0.35, 0.225, 0.225, 0, 0.1, 0);
     sec.add(k.silverCase, box(0.5, 0.32, 0.7, -0.05, FY + 0.16, 2.8, 0.2));
 
     // lav (left): partition, door ajar, gold sink, "OCCUPIED" still lit; wardrobe (right)

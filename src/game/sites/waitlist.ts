@@ -915,10 +915,12 @@ function cooler(k: SiteKit, M: Mats, x: number, y: number, z: number, yaw: numbe
   const m = mat4(x, y, z, 0, yaw);
   k.b.add(M.coolerBody, xf(new THREE.BoxGeometry(0.6, 0.36, 0.38).translate(0, 0.18, 0), m));
   k.b.add(r() < 0.5 ? M.coolerLid : M.coolerRed, xf(new THREE.BoxGeometry(0.62, 0.07, 0.4).translate(0, 0.39, 0), m));
+  k.col(x, y + 0.21, z, 0.31, 0.21, 0.2, yaw);
 }
 function crate(k: SiteKit, M: Mats, x: number, y: number, z: number, yaw: number, r: R) {
   const s = 0.5 + r() * 0.15;
   k.b.add(M.crate, xf(new THREE.BoxGeometry(s, s, s).translate(0, s / 2, 0), mat4(x, y, z, 0, yaw)));
+  k.col(x, y + s / 2, z, s / 2, s / 2, s / 2, yaw);
 }
 function bedroll(k: SiteKit, M: Mats, x: number, y: number, z: number, yaw: number, r: R) {
   const m = mat4(x, y, z, 0, yaw);
@@ -1005,6 +1007,10 @@ function shack(k: SiteKit, M: Mats, x: number, y: number, z: number, yaw: number
   k.b.add(M.tin, P(new THREE.BoxGeometry(Wd + 0.5, 0.04, D + 0.6).rotateX(0.12).translate(0, H + 0.12, 0)));
   k.b.add(M.clothB, P(new THREE.PlaneGeometry(Wd * 0.4, H * 0.9, 1, 3).translate(0, H * 0.45, D / 2 + 0.02)));
   k.b.add(M.crate, P(new THREE.BoxGeometry(0.5, 0.5, 0.5).translate(Wd / 2 + 0.4, 0.25, D / 2 - 0.2)));
+  {
+    const lx = Wd / 2 + 0.4, lz = D / 2 - 0.2, c = Math.cos(yaw), s = Math.sin(yaw);
+    k.col(x + lx * c + lz * s, y + 0.25, z - lx * s + lz * c, 0.25, 0.25, 0.25, yaw);
+  }
 }
 
 /** A rope or belt sagging between two points, as a thin tube. */

@@ -4,6 +4,7 @@ import type { GameContext, Action } from '../context';
 import type { Landmarks } from '../world/Landmarks';
 import { Site } from './Site';
 import { box, cyl, beam, wire, norm, MeshBatch } from '../world/kit';
+import { ladders, localLadder } from '../world/ladders';
 import { rustyMetal, concrete, corrugated, plainStandard, fabric, wood, type GlowSlot } from '../world/materials';
 import { VirtualLight } from '../world/lights';
 import { GlowSprites } from '../world/effects';
@@ -203,12 +204,26 @@ export class DriveInSite extends Site {
         b.add(k.steel, beam(v3(xa, ya, z - 0.85), v3(xb, yb, z - 0.85), 0.05, 4));
       }
     }
-    // catwalk with railing along the bottom edge, ladder at the right column
-    b.add(k.steel, box(x1 - x0 + 1, 0.06, 0.9, 0, y0 - 0.15, z - 1.75));
+    // catwalk with railing along the bottom edge (and across its west end), the ladder up its east
+    // end. You can climb it (world/ladders.ts) and walk the catwalk: it's solid, and so is its rail.
+    const cwY = y0 - 0.12, cwZ = z - 1.75;
+    b.add(k.steel, box(x1 - x0 + 1, 0.06, 0.9, 0, y0 - 0.15, cwZ));
     for (let x = x0 - 0.4; x <= x1 + 0.4; x += 2.5) b.add(k.steel, box(0.05, 1.0, 0.05, x, y0 + 0.35, z - 2.15));
     b.add(k.steel, box(x1 - x0 + 1, 0.05, 0.05, 0, y0 + 0.85, z - 2.15));
-    for (const s of [-0.25, 0.25]) b.add(k.steel, box(0.05, y0, 0.05, 16.4 + s, y0 / 2, z - 1.8));
-    for (let y = 0.4; y < y0; y += 0.35) b.add(k.steel, box(0.55, 0.035, 0.035, 16.4, y, z - 1.8));
+    b.add(k.steel, box(0.05, 1.0, 0.05, x0 - 0.5, y0 + 0.35, z - 1.35), box(0.05, 0.05, 0.85, x0 - 0.5, y0 + 0.85, cwZ));
+    this.kit.col(0, cwY - 0.1, cwZ, (x1 - x0 + 1) / 2, 0.1, 0.45);
+    this.kit.col(0, y0 + 0.4, z - 2.15, (x1 - x0 + 1) / 2, 0.5, 0.04);
+    this.kit.col(x0 - 0.5, y0 + 0.4, cwZ, 0.04, 0.5, 0.45);
+    {
+      const lx = x1 + 0.75, g = this.kit.ground(lx, cwZ), r0 = g + 0.35, pitch = 0.35;
+      const n = Math.floor((cwY - 0.1 - r0) / pitch) + 1, railTop = y0 + 1.0;
+      for (const s of [-0.25, 0.25]) {
+        b.add(k.steel, box(0.05, railTop - g, 0.05, lx, (g + railTop) / 2, cwZ + s));
+        b.add(k.steel, box(0.3, 0.05, 0.05, lx - 0.15, y0 - 0.2, cwZ + s)); // bolted to the catwalk's end
+      }
+      for (let i = 0; i < n; i++) b.add(k.steel, box(0.035, 0.035, 0.55, lx, r0 + i * pitch, cwZ));
+      ladders.add(localLadder(this.frame.m, 'drivein-screen', [lx, g, cwZ], [lx, cwY, cwZ], [1, 0], [x1 - 0.1, cwY + 0.02, cwZ], { half: 0.25, first: 0.35, pitch, count: n, rail: railTop - g }));
+    }
     // the dead lamp on top of the screen
     b.add(k.dark, box(0.5, 0.35, 0.5, -15, y1 + 1.4, z - 1.0), box(0.5, 0.35, 0.5, 15, y1 + 1.4, z - 1.0));
     // panels that came down, at the foot of the screen

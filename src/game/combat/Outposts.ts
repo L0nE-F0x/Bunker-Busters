@@ -9,6 +9,7 @@ import { Fire } from '../world/effects';
 import type { Physics } from '@/engine/physics';
 import type { Heightfield } from '../world/Heightfield';
 import type { OutpostDef } from '@/content/recovery';
+import { ladders } from '../world/ladders';
 
 /**
  * A Kade Recovery outpost on the ground: tents, sandbag walls and crate stacks (all solid: they are
@@ -195,12 +196,15 @@ export function buildOutpost(def: OutpostDef, physics: Physics, hf: Heightfield)
   const crates = (cx: number, cz: number, yaw: number, n = 3) => {
     for (let i = 0; i < n; i++) {
       const s = 0.7 + (i % 2) * 0.1;
-      const x = cx + (i % 2) * 0.8 - 0.4, z = cz + (i > 1 ? 0.75 : 0);
-      const y = i === 2 && n > 3 ? 0.75 : 0;
+      // (the third of four rides on the first)
+      const up = i === 2 && n > 3;
+      const x = cx + (i % 2) * 0.8 - 0.4, z = cz + (i > 1 && !up ? 0.75 : 0);
+      const y = up ? 0.7 : 0;
       mb.add(crate, place(new THREE.BoxGeometry(s, s, s), x, s / 2 + y, z, yaw + i * 0.2));
       mb.add(steel, place(new THREE.BoxGeometry(s + 0.02, 0.05, s + 0.02), x, s * 0.85 + y, z, yaw + i * 0.2));
+      // each crate solid to its own top: you can climb onto them (player/Traversal.ts)
+      solid(x, y + s / 2, z, s / 2, s / 2, s / 2, yaw + i * 0.2);
     }
-    solid(cx, 0.5, cz + 0.3, 0.9, 0.5, 0.75, yaw);
     for (const a of [0, Math.PI / 2, Math.PI, -Math.PI / 2]) {
       const d = V(Math.sin(a + yaw), 0, Math.cos(a + yaw));
       const p = f.p(cx - d.x * 1.4, 0, cz + 0.3 - d.z * 1.4);
@@ -225,14 +229,16 @@ export function buildOutpost(def: OutpostDef, physics: Physics, hf: Heightfield)
     mb.add(pallet, place(new THREE.BoxGeometry(1.2, 0.14, 1.0), cx, 0.07, cz, yaw));
     for (let r = 0; r < rows; r++) for (let i = 0; i < 4; i++) for (let j = 0; j < 3; j++) {
       if (r > 0 && Math.random() < 0.3) continue;
-      const lx = (i - 1.5) * 0.28, lz = (j - 1) * 0.3;
-      const c = Math.cos(def.rot + yaw), s = Math.sin(def.rot + yaw);
-      void c; void s;
+      const ox = (i - 1.5) * 0.28, oz = (j - 1) * 0.3;
+      // (on the pallet, turned with it)
+      const c = Math.cos(yaw), s = Math.sin(yaw);
+      const lx = ox * c + oz * s, lz = -ox * s + oz * c;
       const g = new THREE.CylinderGeometry(0.13, 0.13, 0.38, 12);
       mb.add(jug, place(g, cx + lx, 0.33 + r * 0.4, cz + lz, yaw));
       mb.add(jugCap, place(new THREE.CylinderGeometry(0.045, 0.05, 0.06, 8), cx + lx, 0.55 + r * 0.4, cz + lz, yaw));
     }
-    solid(cx, 0.45, cz, 0.6, 0.45, 0.5, yaw);
+    const top = 0.14 + rows * 0.4;
+    solid(cx, top / 2, cz, 0.6, top / 2, 0.5, yaw);
   };
 
   // --- common layout (local): a walled yard with tents at the back, water, banner, tower
@@ -267,6 +273,7 @@ export function buildOutpost(def: OutpostDef, physics: Physics, hf: Heightfield)
   locker.y = hf.heightAt(locker.x, locker.z) + 0.25;
   mb.add(kadeRed, place(new THREE.BoxGeometry(0.9, 0.42, 0.5), -1.5, 0.21, -4.2, 0.1));
   mb.add(steel, place(new THREE.BoxGeometry(0.92, 0.05, 0.52), -1.5, 0.4, -4.2, 0.1));
+  solid(-1.5, 0.21, -4.2, 0.46, 0.21, 0.26, 0.1);
   // field terminal: a folding table by the generator, a rugged laptop cabled to it, a whip antenna
   const TX = -5.7, TZ = 1.0, TY = Math.PI / 2 + 0.25;
   const tp = (g: THREE.BufferGeometry, ox: number, oy: number, oz: number) => {
@@ -476,11 +483,18 @@ export function buildOutpost(def: OutpostDef, physics: Physics, hf: Heightfield)
         mb.add((i + course + 1) % 3 ? bag : bagDark, at(g, sx * 0.85, y, 0.3 - i * 0.5));
       }
     }
-    // rails round the back, a ladder up the back
-    mb.add(steel, at(new THREE.CylinderGeometry(0.03, 0.03, 1.9, 6).rotateZ(Math.PI / 2), 0, D + 1.0, -0.95));
+    // rails round the back (open where the ladder comes up), and the ladder: leaning in to the deck's
+    // back edge, its rails standing on up past the deck to hold. Climbable (world/ladders.ts).
+    for (const s of [-1, 1]) mb.add(steel, at(new THREE.CylinderGeometry(0.03, 0.03, 0.62, 6).rotateZ(Math.PI / 2), s * 0.64, D + 1.0, -0.95));
     for (const s of [-1, 1]) mb.add(steel, at(new THREE.CylinderGeometry(0.03, 0.03, 1.0, 6).rotateX(Math.PI / 2), s * 0.95, D + 1.0, -0.45));
-    for (const s of [-1, 1]) mb.add(steel, at(new THREE.CylinderGeometry(0.025, 0.025, D + 0.9, 6), s * 0.24, (D + 0.9) / 2, -1.22, -0.12, 0));
-    for (let i = 1; i < 9; i++) mb.add(steel, at(new THREE.CylinderGeometry(0.018, 0.018, 0.5, 5).rotateZ(Math.PI / 2), 0, i * 0.32, -1.21 + i * 0.32 * 0.12));
+    const LZ0 = -1.5, LZ1 = -1.12, lean = (LZ1 - LZ0) / D, ltilt = Math.atan(lean);
+    const legLen = Math.hypot(D, LZ1 - LZ0);
+    for (const s of [-1, 1]) {
+      mb.add(steel, at(new THREE.CylinderGeometry(0.025, 0.025, legLen, 6), s * 0.24, D / 2, (LZ0 + LZ1) / 2, ltilt, 0));
+      mb.add(steel, at(new THREE.CylinderGeometry(0.025, 0.025, 0.95, 6), s * 0.24, D + 0.475, LZ1));
+      mb.add(steel, at(new THREE.BoxGeometry(0.05, 0.05, 0.12), s * 0.24, D - 0.04, LZ1 + 0.06)); // the bolt to the deck
+    }
+    for (let i = 1; i < 9; i++) mb.add(steel, at(new THREE.CylinderGeometry(0.018, 0.018, 0.5, 5).rotateZ(Math.PI / 2), 0, i * 0.32, LZ0 + i * 0.32 * lean));
     // Kade red on the parapet front: a stencilled board
     mb.add(kadeRed, at(new THREE.BoxGeometry(1.0, 0.3, 0.03), 0, D - 0.3, 1.0));
     const ptAt = (tx: number, tz: number) => f.p(px + tx * c + tz * sn, 0, pz - tx * sn + tz * c);
@@ -495,6 +509,15 @@ export function buildOutpost(def: OutpostDef, physics: Physics, hf: Heightfield)
     const top = ptAt(0, 0.15);
     top.y = hf.heightAt(top.x, top.z) + D + 0.03;
     perch = { pos: top, yaw: def.rot + pyaw };
+    {
+      const deckY = hf.heightAt(...xz(ptAt(0, 0))) + D + 0.02;
+      const foot = ptAt(0, LZ0), head = ptAt(0, LZ1), exit = ptAt(0, -0.45), back = ptAt(0, -2);
+      foot.y = hf.heightAt(foot.x, foot.z);
+      head.y = deckY;
+      exit.y = deckY;
+      const out = back.sub(ptAt(0, 0)).setY(0).normalize();
+      ladders.add({ id: `outpost:${def.id}`, base: foot, top: head, out, exit, half: 0.24, first: 0.32, pitch: 0.32, count: 8, rail: deckY + 0.95 - foot.y });
+    }
   }
 
   const far = mb.buildFar(`outpost:${def.id}:far`, { minSize: 0.6 });

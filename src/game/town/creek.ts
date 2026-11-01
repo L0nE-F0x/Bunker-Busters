@@ -328,7 +328,7 @@ function diner(S: Site, H: Hooks) {
   drum(P, -13.0, zB - 0.6, M.drumBlue(), 0.2, false, 0, true);
   drum(P, -13.65, zB - 0.5, M.drumRed(), 1.2, false, 0, true);
   crate(P, -20.5, 0, zB - 0.6, 0.8, 0.6, 0.6, 0.15, M.woodPale(), true);
-  crate(P, -20.4, 0.6, zB - 0.6, 0.6, 0.45, 0.5, -0.2);
+  crate(P, -20.4, 0.6, zB - 0.6, 0.6, 0.45, 0.5, -0.2, M.woodPale(), true);
   P.box(M.woodGrey(), 1.1, 2.1, 0.06, -17.0, 1.05, zB - 0.03).box(M.brass(), 0.05, 0.05, 0.08, -16.6, 1.05, zB - 0.06);
   P.box(M.found(), 1.4, 0.15, 0.8, -17.0, 0.075, zB - 0.4);
 }
@@ -594,7 +594,7 @@ function till(S: Site, H: Hooks) {
   P.put(M.woodPale(), new THREE.CylinderGeometry(0.3, 0.3, 0.04, 14), 14.3, FY + 0.9, zF + 0.5);
   for (let i = 0; i < 6; i++) P.cyl(M.bottleA(), 0.06, 0.06, 0.1, 14.3 + Math.cos(i) * 0.15, FY + 0.97, zF + 0.5 + Math.sin(i) * 0.15, 6);
   crate(P, 19.6, FY, zF + 0.45, 0.6, 0.5, 0.5, 0.2, M.woodPale(), true);
-  crate(P, 19.6, FY + 0.5, zF + 0.45, 0.5, 0.4, 0.45, -0.25);
+  crate(P, 19.6, FY + 0.5, zF + 0.45, 0.5, 0.4, 0.45, -0.25, M.woodPale(), true);
   P.cyl(M.woodPale(), 0.015, 0.015, 1.3, 15.0, FY + 0.7, zF + 0.12, 5, 0.12, 0, 0.1).put(M.burlap(), new THREE.ConeGeometry(0.12, 0.3, 8), 15.07, FY + 0.12, zF + 0.04, 0.12, 0, Math.PI + 0.1);
   drum(P, x1 + 0.55, zF - 0.6, M.drumBlue(), 0.3, false, 0, true);
   P.beam(M.galv(), V(x1 + 0.2, 5.6, zB - 0.42), V(x1 + 0.55, 1.2, zF - 0.6), 0.03, 6);
@@ -700,7 +700,7 @@ function till(S: Site, H: Hooks) {
 
   // ---- back room: crates, sacks, a workbench, one bare bulb
   for (const [x, z, w, h, r] of [[19.8, -14.9, 0.9, 0.7, 0.1], [19.9, -14.0, 0.7, 0.6, -0.2], [17.6, -15.0, 0.8, 0.6, 0.3], [19.8, -12.0, 0.8, 0.7, 0]] as const) crate(P, x, FY, z, w, h, w * 0.85, r, M.woodPale(), true);
-  crate(P, 19.85, FY + 0.7, -14.9, 0.6, 0.45, 0.5, 0.4);
+  crate(P, 19.85, FY + 0.7, -14.9, 0.6, 0.45, 0.5, 0.4, M.woodPale(), true);
   for (let i = 0; i < 4; i++) sack(P, 16.2 + (i % 2) * 0.5, FY, -15.2 + Math.floor(i / 2) * 0.45, i);
   P.col(16.45, FY + 0.25, -15.0, 0.55, 0.25, 0.45);
   table(P, 15.4, -11.0, 1.6, 0.6, 0.85, 0, FY, M.wood(), M.woodDark(), true);
@@ -740,7 +740,7 @@ function till(S: Site, H: Hooks) {
     L.box(M.paper(), 0.2, 0.012, 0.16, 16.62, B.ys[2] + 0.035, zF - t - 0.17, -0.1);
     trunk(L, 14.4, -13.6, 0.4);
     crate(L, 19.9, 0, -14.6, 0.8, 0.6, 0.7, 0.2, M.woodPale(), true);
-    crate(L, 19.9, 0.6, -14.6, 0.6, 0.45, 0.5, -0.1);
+    crate(L, 19.9, 0.6, -14.6, 0.6, 0.45, 0.5, -0.1, M.woodPale(), true);
     for (let i = 0; i < 7; i++) L.box(trim, 0.08, 0.14, zF - zB, x0 + 0.6 + i * 1.6, 2.62, (zF + zB) / 2, 0, -0.055);
   }
   H.spot('loft', 17.4, LOFT + 0.18, -7.4);

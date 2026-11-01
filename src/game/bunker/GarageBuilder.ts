@@ -563,7 +563,10 @@ export class GarageBuilder implements BunkerShell {
     // crates of meal shakes
     const crateMat = wood('#8a6a40');
     b.add(crateMat, box(1.1, 0.9, 1.1, 13, 0.45, 8, 0.2), box(1.1, 0.9, 1.1, 14.2, 0.45, 7.6, -0.1), box(1.0, 0.8, 1.0, 13.6, 1.3, 7.8, 0.4));
-    this.col(13.6, 0.8, 7.8, 1.3, 0.8, 0.7);
+    // (each crate to its own top: you can climb the stack)
+    this.col(13, 0.45, 8, 0.55, 0.45, 0.55, 0.2);
+    this.col(14.2, 0.45, 7.6, 0.55, 0.45, 0.55, -0.1);
+    this.col(13.6, 1.3, 7.8, 0.5, 0.4, 0.5, 0.4);
     // tarp-covered "wedge truck"
     const tarp = fabric('#4a5a6a', 0.9);
     const tg = new THREE.BoxGeometry(5, 1.8, 2.3, 8, 3, 3);

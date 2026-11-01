@@ -375,7 +375,14 @@ export class Props {
       bb.setFromBufferAttribute(res.shadow.clone().applyMatrix4(inv).attributes.position as THREE.BufferAttribute);
       const c = bb.getCenter(new THREE.Vector3()), h = bb.getSize(new THREE.Vector3()).multiplyScalar(0.5);
       const cw = new THREE.Vector3(c.x, 0, c.z).applyAxisAngle(new THREE.Vector3(0, 1, 0), yaw);
-      this.physics.addBox({ x: x + cw.x, y: c.y, z: z + cw.z }, { x: h.x, y: h.y, z: h.z }, yaw);
+      // an upright car is two boxes: the body to its hood and trunk (you can stand on the hood) and the
+      // cabin to its roof. One box to the roof left you standing in the air over the hood.
+      const hoodY = place.elements[13] + res.hood, bottom = c.y - h.y, top = c.y + h.y;
+      if (!flipped && !onSide && res.cabin && hoodY > bottom + 0.3 && top > hoodY + 0.2) {
+        this.physics.addBox({ x: x + cw.x, y: (bottom + hoodY) / 2, z: z + cw.z }, { x: h.x, y: (hoodY - bottom) / 2, z: h.z }, yaw);
+        const cc = new THREE.Vector3((res.cabin.x0 + res.cabin.x1) / 2, 0, c.z).applyAxisAngle(new THREE.Vector3(0, 1, 0), yaw);
+        this.physics.addBox({ x: x + cc.x, y: (hoodY + top) / 2, z: z + cc.z }, { x: (res.cabin.x1 - res.cabin.x0) / 2 + 0.03, y: (top - hoodY) / 2, z: Math.max(0.3, h.z - 0.12) }, yaw);
+      } else this.physics.addBox({ x: x + cw.x, y: c.y, z: z + cw.z }, { x: h.x, y: h.y, z: h.z }, yaw);
       this.wrecks.push(new THREE.Vector3(x + cw.x, c.y, z + cw.z));
       this.wreckBoxes.push({ pos: new THREE.Vector3(x + cw.x, c.y, z + cw.z), yaw, half: h.clone(), upright: !flipped && !onSide, kind });
       if (!flipped && !onSide) this.perches.push(new THREE.Vector3(x + cw.x, c.y + h.y + 0.02, z + cw.z));

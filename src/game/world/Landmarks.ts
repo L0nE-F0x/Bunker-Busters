@@ -23,6 +23,7 @@ import { decalMat, glowDecalMat, uSiteNight, uSiteFlicker } from '../sites/jetKi
 import { printMaterial } from './printAtlas';
 import { ridgeTent } from './tent';
 import { comfort } from '@/engine/comfort';
+import { ladders, localLadder } from './ladders';
 
 export interface Flicker { set: (v: number) => void; phase: number; speed: number; broken: number }
 
@@ -48,6 +49,12 @@ export class Landmarks {
   private frame(lm: LandmarkDef) {
     const [x, , z] = lm.position;
     return new Frame(x, this.hf.heightAt(x, z), z, lm.rotation);
+  }
+
+  /** The terrain's height at a local point, in the frame's own y. */
+  private groundLocal(f: Frame, lx: number, lz: number) {
+    const w = f.p(lx, 0, lz);
+    return this.hf.heightAt(w.x, w.z) - f.y;
   }
 
   private collider(f: Frame, lx: number, ly: number, lz: number, hx: number, hy: number, hz: number) {
@@ -167,6 +174,10 @@ export class Landmarks {
     this.collider(f, campX - 1, 1, campZ + 6, 1.3, 1, 1.6);
     const crateMat = wood('#7a5a36');
     b.add(crateMat, box(1, 0.8, 1, campX + 3, 0.55, campZ + 3, 0.2), box(0.8, 0.6, 0.8, campX + 3.2, 1.25, campZ + 3, 0.6), box(1, 0.8, 1, campX - 5, 0.55, campZ - 2, -0.3));
+    // solid, each its own box: you can climb the stack by the fire
+    for (const [x, y, z, h, w, ry] of [[campX + 3, 0.55, campZ + 3, 0.4, 0.5, 0.2], [campX + 3.2, 1.25, campZ + 3, 0.3, 0.4, 0.6], [campX - 5, 0.55, campZ - 2, 0.4, 0.5, -0.3]]) {
+      this.physics.addBox(f.p(x, y, z), { x: w, y: h, z: w }, f.yaw + ry);
+    }
     // log benches
     const logMat = wood('#4a3424');
     b.add(logMat, cyl(0.22, 0.22, 2.4, campX, 0.4, campZ + 2.4, 8, 0, 0.2, Math.PI / 2), cyl(0.22, 0.22, 2.4, campX + 2.2, 0.4, campZ, 8, 0, 1.6, Math.PI / 2));
@@ -296,8 +307,25 @@ export class Landmarks {
       b.add(white, cyl(0.15, 0.15, 0.55, cx + px, 0.55, cz + pz, 10), cyl(0.1, 0.15, 0.1, cx + px, 0.88, cz + pz, 10));
     }
     this.collider(f, cx, 1.0, cz, 0.55, 1.0, 0.85);
-    for (const lz of [-0.25, 0.25]) b.add(metal, box(0.05, 4.9, 0.05, wx - 0.12, 2.45, sz - 1.8 + lz));
-    for (let y = 0.4; y < 4.8; y += 0.32) b.add(metal, box(0.03, 0.03, 0.5, wx - 0.12, y, sz - 1.8));
+    // the roof ladder: stood off the wall past the eave on four brackets, its rails running on up over
+    // the edge and down onto the roof (a goose-neck you can hold stepping off). Climbable (ladders.ts).
+    {
+      const ry0 = 4.475; // the roof's top
+      const lx = wx - 0.42, lz = sz - 1.8, g0 = this.groundLocal(f, lx, lz);
+      const railTop = ry0 + 1.0, inX = wx + 0.45;
+      for (const dz of [-0.25, 0.25]) {
+        const z = lz + dz;
+        b.add(metal, box(0.05, railTop - g0, 0.05, lx, (g0 + railTop) / 2, z));
+        b.add(metal, beam(new THREE.Vector3(lx, railTop, z), new THREE.Vector3(lx + 0.18, railTop + 0.08, z), 0.026, 6));
+        b.add(metal, beam(new THREE.Vector3(lx + 0.18, railTop + 0.08, z), new THREE.Vector3(inX - 0.12, railTop + 0.04, z), 0.026, 6));
+        b.add(metal, beam(new THREE.Vector3(inX - 0.12, railTop + 0.04, z), new THREE.Vector3(inX, railTop - 0.12, z), 0.026, 6));
+        b.add(metal, box(0.05, railTop - 0.12 - ry0, 0.05, inX, (railTop - 0.12 + ry0) / 2, z));
+        b.add(metal, box(0.1, 0.02, 0.1, inX, ry0 + 0.01, z));
+        for (const by of [1.3, 3.4]) b.add(metal, box(0.42, 0.04, 0.04, (lx + wx) / 2, by, z));
+      }
+      for (let i = 0; i < 14; i++) b.add(metal, place(new THREE.CylinderGeometry(0.016, 0.016, 0.5, 6), lx, 0.36 + i * 0.3, lz, Math.PI / 2, 0, 0));
+      ladders.add(localLadder(f.m, 'camp-roof', [lx, g0, lz], [lx, ry0, lz], [-1, 0], [wx + 0.8, ry0 + 0.02, lz], { half: 0.25, first: 0.36 - g0, pitch: 0.3, count: 14, rail: railTop - g0 }));
+    }
 
     // back (−z face): door, meter + conduit, condenser, dumpster and bags, tyres, pallets, plywood sign
     const bz = sz - D;
@@ -318,12 +346,19 @@ export class Landmarks {
     b.add(rubber, tyre(sx + 6.3, 0.42, bz - 0.6, 0.1, 0.25));
     this.collider(f, sx + 5.3, 0.5, bz - 1.4, 0.45, 0.5, 0.45);
     for (let i = 0; i < 3; i++) b.add(crate, box(1.2, 0.13, 1.0, sx + 3.4, 0.07 + i * 0.15, bz - 2.3, i * 0.06));
+    this.collider(f, sx + 3.4, 0.22, bz - 2.3, 0.6, 0.22, 0.5);
     b.add(crate, box(1.2, 1.0, 0.13, sx + 4.6, 0.55, bz - 0.3, 0, 0.22));
     b.add(ply, box(1.7, 0.95, 0.03, sx - 5.8, 0.6, bz - 0.25, 0, 0.18));
     faces.push(place(signRect(310, 850, 520, 300, 1.66, 0.92), sx - 5.8, 0.6, bz - 0.27, 0.18, Math.PI, 0));
 
-    // roof: two A/C units, vent stacks, a dish turned at the sky
+    // roof: two A/C units, vent stacks, a dish turned at the sky. The ladder goes up here, so it's
+    // solid underfoot (the roof deck, not the walls' top) and so is everything standing on it
     const ry = 4.47;
+    this.collider(f, sx, 4.35, sz, 7.3, 0.125, 3.8);
+    this.collider(f, sx - 3.2, ry + 0.43, sz - 1.0, 0.75, 0.43, 0.58);
+    this.collider(f, sx + 2.6, ry + 0.38, sz + 0.6, 0.65, 0.38, 0.53);
+    this.collider(f, -0.5, 4.95, fz - 0.12, 4.1, 0.55, 0.06);
+    for (const [px, pz] of [[sx + 5.2, sz - 2], [sx - 5.4, sz + 1.8], [sx + 5.6, sz + 2.2]]) this.physics.addCylinder(f.p(px, ry + 0.4, pz), 0.4, 0.09);
     b.add(steel, box(1.5, 0.85, 1.15, sx - 3.2, ry + 0.43, sz - 1.0), box(1.3, 0.75, 1.05, sx + 2.6, ry + 0.38, sz + 0.6));
     b.add(dark, box(1.0, 0.04, 0.8, sx - 3.2, ry + 0.87, sz - 1.0));
     b.add(metal, cyl(0.08, 0.08, 0.8, sx + 5.2, ry + 0.4, sz - 2, 8), cyl(0.06, 0.06, 0.6, sx - 5.4, ry + 0.3, sz + 1.8, 8));
@@ -388,6 +423,12 @@ export class Landmarks {
     b.add(corrugated('#6b6156', 0.8), box(4.4, 0.15, 3.6, shackX, 2.7, shackZ, 0, 0, 0.08));
     b.add(warmWindow('#9fe8ff', 1.4), box(1.2, 0.6, 0.06, shackX + 0.6, 1.6, shackZ + 1.62));
     this.collider(f, shackX, 1.3, shackZ, 2, 1.3, 1.6);
+    // the roof slopes up toward the generator: solid along its slope (it's in reach from the generator)
+    {
+      const rp = f.p(shackX, 2.7, shackZ);
+      const q = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), f.yaw).multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), 0.08));
+      this.physics.addBoxRot(rp, { x: 2.2, y: 0.075, z: 1.8 }, q);
+    }
     const gen = rustyMetal({ base: '#c79a2a', rust: 0.5 });
     b.add(gen, box(1.4, 0.9, 0.9, shackX + 3.2, 0.55, shackZ - 1));
     this.collider(f, shackX + 3.2, 0.55, shackZ - 1, 0.7, 0.45, 0.45);

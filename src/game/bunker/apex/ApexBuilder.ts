@@ -572,9 +572,8 @@ export class ApexBuilder implements BunkerShell {
     this.col(-1.8, 1, 9.5, 1.1, 1, 1.6);
     for (const [x, z, s] of [[-20.6, 0.5, 1.1], [-19.4, 0.4, 0.8], [-20.4, 1.7, 0.7], [-6.5, -4.8, 1], [-5.3, -4.9, 0.9]] as V3[]) {
       b.add(m.crate, box(s, s * 0.8, s, x, s * 0.4, z));
+      this.col(x, s * 0.4, z, s / 2, s * 0.4, s / 2);
     }
-    this.col(-20.2, 0.5, 0.9, 1, 0.5, 1);
-    this.col(-5.9, 0.45, -4.85, 1.1, 0.45, 0.55);
     const posters: [string, number, number][] = [['pFree', -19, 0], ['pPart', -16.2, 0], ['pHard', -6.4, 0], ['pPoll', -3, 0], ['pStonks', 0.4, 0]];
     this.meme = new LiveScreen(256, 384, () => {});
     this.meme.glow.value = 1.1;
@@ -596,7 +595,8 @@ export class ApexBuilder implements BunkerShell {
       const layers = px === -17.4 ? 2 : 3;
       for (let l = 0; l < layers; l++) for (let i = 0; i < 3; i++) for (let k = 0; k < 2; k++) b.add(jug, cyl(0.17, 0.17, 0.46, px - 0.38 + i * 0.38, 0.52 + l * 0.48, pz - 0.22 + k * 0.44, 10));
       b.add(m.tarp, box(1.24, 0.04, 1.04, px, 0.28 + layers * 0.48, pz));
-      this.col(px, 0.75, pz, 0.6, 0.75, 0.5);
+      const top = 0.3 + layers * 0.48;
+      this.col(px, top / 2, pz, 0.62, top / 2, 0.52);
     }
     b.add(m.print, apexPrint('pFree', 0.7, 1.05, M(-18.5, 1.5, 7.05)));
     const nx = -13.5, nz = 2.6;
