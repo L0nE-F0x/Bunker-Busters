@@ -2002,3 +2002,68 @@ The owner answered the production pass's questions, then: "SHIP IT."
 - **Story slips:** Hunter's jet heads south-west (the wreck is SSW of the drive-in; the hot mic, ARIA, the CVR and the toast said north-west; ARIA's beacon is south of the drive-in now). Pip is 12 and wrote the capsule letter at 9 (the letter, Mara's line, the envelope's flavour; AGE 23 in 2046 still works). Kit's drained moat: "three million litres" (π(30.5²−24²)·3.4 ≈ 3.8 million litres when full). Fixed day stamps: Waitlist City's sign says IN LINE SINCE DAY 3, Gil's whiteboard has an extension number, the Fortress heat log runs Mon–Thu, the title shows the saved run's day (the Dome and Spire boards already redraw with the live day). Re-voiced 4 lines (1,374 clips), each checked with whisper.
 - `gh` on this machine's PATH is a mise wrapper (`~/.local/bin/gh` runs `mise use -g gh` first) and hangs; the real binary under `~/.local/share/mise/installs/gh/2.102.0/…/bin/gh` works (it's also git's credential helper).
 - **Smoke, first runs (after v1.1.0):** the owner only cares about Omarchy/Arch (and Windows for reach), so Ubuntu 22.04 left the matrix (it sat in the shader warm-up under llvmpipe for 10 minutes) and an **Arch job** (archlinux container, the tarball with install.sh, WebKitGTK 2.54.2 + Mesa 26.2) joined: title in 133 s. The AppImage needed the runner to have libEGL (it leaves GL to the system). Windows sat at the game's software-rendering notice (WebView2 names the Basic Render Driver; `--enable-automation` via WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS didn't set navigator.webdriver): the BB_SMOKE probe now presses Continue on Low (`#bootfail[data-kind]`). With `source=build` on main, everything passes: Windows 11 reached the title in 54 s (screenshot in the run's artifacts). v1.1.0's own Windows binary still fails Smoke at that notice; the fix rides the next release.
+
+## 2026-11-01: ladders, mantling and crates
+The owner sent a screenshot of the roof ladder at Last Chance: "could we make it so these ladders are climbable, also boxes should be jump onto able etc etc". Ladders were scenery and the standing jump is 0.55 m, so nothing waist-high could be climbed.
+- **How it works.** `player/Traversal.ts` (owned by `Player`, `player.trav`) moves the body along its own path while you're on a ladder or pulling up. The character controller is off for that stretch, so the path is checked before it starts. `world/ladders.ts` is the registry: each builder that draws a climbable ladder adds `{ base, top, out, half, first, pitch, count, rail, exit }` in world space (`localLadder(frame.m, …)` converts from a site's frame). It also holds `noMantle`, the bunkers' no-climb zones. Game adds a Use prompt at each foot ("Climb the ladder") and each landing ("Climb down the ladder"). While you hold on, the HUD shows the jump key ("Let go"); the prompt key `JUMP` maps to the jump action, and on phones it reads JUMP.
+- **Ladders.** You grab a ladder by walking into it (facing it within about 57°, pushing forward) or with Use. On the ladder:
+  - forward climbs at 1.55 m/s (sprint ×1.4); back descends at 1.9 m/s, and so does forward while looking more than 24° down; crouch on the way down slides at 4.4 m/s;
+  - jump lets go, pushing off backwards; at the foot you step off;
+  - at the top you step over onto `exit` (0.62 s, up then in);
+  - walking off a landing at a ladder's top turns you round onto it (0.72 s);
+  - the view is held within ±77° of facing the ladder.
+  The body hangs 0.55 m off the rung line. The gun is put away on the grab (`PlayerArms.handsFull`) and comes back out at the other end (`Game.climbStowed`). Hands go hand over hand: the right takes the even rungs, the left the odd ones, then the rails above the last rung. They're placed in world space with a world-space spring (no lag while gripping) and turned into view-space poses each frame (`Hands.poseFromWorld` + `placeHand`, which undoes the viewmodel's FOV squash). Foley: a boot on a steel rung (`'rung'`, a hollow ring) and a gloved grip (`'grip'`).
+- **Mantling.** Jump into an edge, or hold jump in the air against one, and you pull up onto it. Rules:
+  - The top must be 0.42–1.7 m above the ground you last stood on, and you need room to stand there (crouched if that's all there is).
+  - The first ray is horizontal, the obstacle's face, and it can't be the terrain. Then down onto the top just past the edge. The edge must be **solid under its top**, so a floor beyond a thin wall, a rail or glass that rises out of reach never counts. A stand point 0.49 m in must be within 0.25 m of the top, which rules out fence and wall tops.
+  - A slim crouched capsule is swept **straight up, then in over the edge**, and the end must be clear for the capsule.
+  - Not while frozen, carrying the Spire's core (`heavy`), riding a tote (`forceCrouch`) or with input disabled.
+  - It takes 0.3–0.5 s: hands land at 14%, then the pull (slow, fast, slow), and the move in starts once the eye is past the top. The view dips toward the hands, more on low ledges, where the hands also go further in so you see them. The gun only drops (`arms.lower`) for a mantle.
+  - During a mantle `grounded` is false, as in a jump, so tin-can and IR tripwires don't count it (jumping already clears them). Laser volumes do.
+- **Climbable:**
+  - **The camp roof** (`Landmarks.gasDressing`): rebuilt 0.42 m off the wall, past the eave, on brackets, with a goose-neck over the edge. The roof deck, both A/C units, the vents and the MARKET board are solid now (the store's collider stopped 27 cm under the roof).
+  - **The Kade overwatch towers** at Pipeline Camp 3 and the Wellhead (`Outposts`). Their rails leaned out while the rungs leaned in, about 0.4 m apart at the top; it's now one leaning ladder bolted to the deck's edge, with a gap in the back rail where it arrives.
+  - **The drive-in screen's catwalk** (`drivein`): the ladder moved to the catwalk's east end, and the catwalk, its back rail and a new end rail are solid.
+  - **Dry Creek's water tower** (`creek.ts tower()`): its deck was a 12 cm ledge round the tank, and the ladder ran up a leg and through the deck. Now it's a 4.7 m balcony on edge beams and knee braces, with a rail open on the east side, a straight ladder up to the opening, and the deck, tank and rail solid.
+- **Left as scenery:**
+  - **The tube's pylon ladders:** they end under the tube's saddle, with 0.5 m of headroom.
+  - **ColdStorage's two water tanks:** 14 and 10 m. The hall's roof, 3.5 m away and 7.6 m up, has no collider, so a drop from a tank top could fall through it into the sealed hall.
+  - **Apex's cistern ladder** (inside the vault): a domed top under the ceiling.
+  - **Bunker Zero's cistern ladder:** a tank top in a closed hall, nowhere to go.
+  - **Bunker Zero's manway:** still the faded `ctx.climb`.
+- **What you can stand on.** One collider per box, to its own top:
+  - **Last Chance:** the camp crates by the fire (none before), the pallets behind the store, and the radio-tower shack's sloping roof (it sank 35 cm).
+  - **Kade outposts:** crates (one box used to cover a stack 20–30 cm high, and the fourth crate floated; it now sits on the first), the water pallets (row height; the jugs now turn with their pallet), the footlocker.
+  - **Dry Creek:** the four stacked crates that had `col=false`.
+  - **The Garage yard:** the meal-shake stack and the carton stack.
+  - **Apex's hangar:** crates and jug pallets.
+  - **Waitlist City:** `crate()`, `cooler()` and every shack's crate.
+  - **Elsewhere:** the Cut's jug stack, the jet's hold crate, ColdStorage's camp crate, the tube cart (20 cm high), the solar hut's roof and floor.
+  - **Upright wrecks** (`Props`, `buildCar` returns `hood`/`cabin`) are two boxes: the body to its hood line and the cabin to its roof. One box to the roof left you in the air over the hood.
+- **The bunkers stay shut** (the audit: every bunker's barriers against a 1.7 m mantle):
+  - **The Dome's stem wall** (1.2 m, the glass above had no collider) now has a collider up to 3.2 m.
+  - **The Dome's fence was open before this:** its colliders were turned `am + π/2`, fins across the fence with about 2.8 m gaps. They now run along it, and the panels split at the outfall's mouth so only the culvert opens under the fence. The culvert flag was never true before.
+  - **The Spire's drum** is a no-climb zone (the stair lasers, flight 1's open side, the office's glass box).
+  - The audit's other spots (lintels with open slots above doors, the Spire's road rails, the Apex crates by the airlock) are covered by the rules above: thin tops and solid-edge.
+- **Tests.** `scripts/dev/traversal-test.mjs [all|ladders|mantle|safety|input]`:
+  - **ladders:** every ladder up and onto its landing; the camp one also down from the top, let go with jump, and grabbed with Use; the prompts; the gun away and back.
+  - **mantle:** a camp crate, the stacked crates, a wreck's hood then its roof; no mantle up a 4 m wall, with the core or while frozen.
+  - **safety:** the Dome's stem wall and fence, both Spire road rails, the Spire zone.
+  - **input:** a fake pad's stick and A, the touch stick.
+  - The render pipeline count before and after: 216 → 216.
+  Results:
+  - `traversal-test all`: 40/40, no page errors. The safety section also walks the Dome's open culvert under the fence crouched.
+  - Regressions on the worktree's server: `garage-test all` 36/36, `apex-test all` 21/21, `dome-test both` 54/54, `spire-test both` 42/42, `pad-test all` 52/52, `first-hour/walkthrough` 28/28 (0 stalls to the Garage and to Dry Creek).
+  - `controls-test all` 51/52: the one failure is stale. It expects "A game by Lone Fox", and the Credits say L0nE-F0x since 1082192.
+  - `walk-probe 150`: 33 stalls against 32 on main with the same seed. The extra one is a Kade crate that's solid now: the old stack collider wasn't turned with the crates, so that visible crate had no collider.
+- **Worktree agents:** `vite.config.ts` ignores `**/.claude/**` for watching, and that's every agent worktree. A worktree's own server keeps serving the first version of each file it loaded, so edits never reach the page (two of this pass's probes ran stale code before it showed). Run it with a local override that drops that pattern (`vite --config <override>` spreading the base config).
+- **Ask the owner:**
+  - how climbing feels (speeds, the view held on the ladder, the slide);
+  - whether the hands on the rungs read (they're the FP 1.3× hands at 0.5 m);
+  - whether the water tower's new balcony and the camp ladder's goose-neck look right.
+- **Left from the crate audit (lower value):**
+  - small mismatches inside bunkers: the Garage vault's loot crates and safe, the tool chest, the cash pallet; Apex's tank lockers; the Cathedral's pick stations and returns table; the Dome's stage speakers;
+  - the store's front bench and bin;
+  - Dry Creek's propane tank, clinic generator, woodpile and tyre stack (colliders 10–27 cm off);
+  - props that only appear on a flag (the stories' crates and jug pyramid, the after-ending props, Zero's share crate) and the roadside stash props, which have no physics.
+  - Other `buildCar` users (drive-in, town, Apex, Cathedral) still use one box.
