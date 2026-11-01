@@ -194,10 +194,8 @@ jobs:
           $env:BB_SMOKE = $report
           $env:BB_SMOKE_TIMEOUT = '600'
           $env:BB_SMOKE_HOLD = '8'
-          # No GPU here, so WebView2 draws with the Basic Render Driver and the game would wait at its
-          # "running without your graphics card" notice for a click. Under automation (navigator.webdriver)
-          # it skips that notice, as in the headless tests (src/main.ts).
-          $env:WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS = '--enable-automation --enable-blink-features=AutomationControlled'
+          # (no GPU here: the game shows its "running without your graphics card" notice, and from v1.1.1
+          # the BB_SMOKE probe presses Continue on Low; v1.1.0 waits there and fails)
           $app = Start-Process $exe -PassThru -RedirectStandardOutput "$art\stdout.txt" -RedirectStandardError "$art\stderr.txt"
           $null = $app.Handle # keep the handle, or the exit code is lost
           $deadline = (Get-Date).AddMinutes(12)

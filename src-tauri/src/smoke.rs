@@ -15,7 +15,12 @@ use tauri::{AppHandle, Manager};
 
 /// What the page reports. `window.game` is set in src/main.ts once the renderer exists; its mode goes
 /// loading → title. `frame` is three's frame counter, so two reads apart show whether it still draws.
+/// A runner has no GPU, so on Windows (WebView2 names the Basic Render Driver) the game stops at its
+/// "running without your graphics card" notice: the probe presses Continue on Low, as a player would,
+/// and the report says so (`softwareNotice`).
 const PROBE: &str = r#"(() => { try {
+  const sw = document.querySelector('#bootfail[data-kind="software"] .bf-actions .btn.primary');
+  if (sw) { sw.click(); window.__bbSmokeSoftware = true; }
   const g = window.game, info = g && g.renderer && g.renderer.info, c = document.getElementById('game');
   return {
     href: location.href,
@@ -26,6 +31,7 @@ const PROBE: &str = r#"(() => { try {
     draws: info && info.render ? info.render.drawCalls : null,
     triangles: info && info.render ? info.render.triangles : null,
     canvas: c ? [c.width, c.height] : null,
+    softwareNotice: !!window.__bbSmokeSoftware,
     text: g && g.mode === 'title' ? null : (document.body ? document.body.innerText.slice(0, 600) : null),
   };
 } catch (e) { return { error: String(e) }; } })()"#;

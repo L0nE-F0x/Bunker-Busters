@@ -76,6 +76,7 @@ export function failScreen(o: { kind: FailKind; title: string; body: string; ste
   document.getElementById('loading')?.classList.add('behind');
   const el = document.createElement('div');
   el.id = 'bootfail';
+  el.dataset.kind = o.kind; // (the desktop install test, src-tauri/src/smoke.rs, looks for 'software')
   el.setAttribute('role', 'alertdialog');
   el.setAttribute('aria-labelledby', 'bootfail-title');
   el.innerHTML = `
