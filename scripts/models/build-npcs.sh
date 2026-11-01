@@ -52,7 +52,7 @@ on inez && build inez ${DC}Inez_Rigged.glb \
 
 # --- Dry Creek, seated (Sol and Ren side by side at the fire, Wick in his cave)
 on sol && build sol ${DC}Sol_Rigged.glb \
-  --clips ${TI}:Sit_Cross_Legged=idle,Sit_Hands_on_Head_Lean_Back=ins_stretch \
+  --clips ${TI}:Sit_Cross_Legged=idle \
   --clips ${DC}Sol_Animations.glb:Talk_with_Hands_Open=near_up \
   --mirror ${TI}:Sit_Cross_Legged=idle_m
 on ren && build ren ${DC}Ren_Rigged.glb \
@@ -63,20 +63,20 @@ on wick && build wick ${DC}Wick_Rigged.glb \
   --clips ${TI}:Sit_Cross_Legged=idle2
 
 # --- the camp's four on two logs: Mara and Pip on one, Hollis and Dez on the other
+# (no Sit_Hands_on_Head_Lean_Back for anyone on a log: it lies back 37° against a chair back that isn't
+# there; the owner, 2026-11-01: "still looks terrible". Ada keeps hers, in Doc's chair)
 # (Pip doesn't drink: Sit_and_Drink, made on a grown-up, takes her mug to her forehead. She holds it)
 on mara && build mara ${CP}Mara_Rigged.glb \
-  --clips ${TI}:Sit_Cross_Legged=idle,Sit_Hands_on_Head_Lean_Back=ins_stretch \
+  --clips ${TI}:Sit_Cross_Legged=idle \
   --clips ${CP}Mara_Animations.glb:Talk_with_Hands_Open=near_up \
   --mirror ${TI}:Sit_Cross_Legged=idle_m
 on pip && build pip ${CP}Pip_Rigged.glb \
-  --clips ${TI}:Sit_Hands_on_Head_Lean_Back=ins_stretch \
   --mirror ${TI}:Sit_Cross_Legged=idle_m
 on hollis && build hollis ${CP}Hollis_Rigged.glb \
   --clips ${TI}:Sit_Cross_Legged=idle \
   --clips ${DC}Wick_Animations.glb:Sit_and_Doze_Off=idle2 \
   --clips ${CP}Hollis_Animations.glb:Talk_with_Right_Hand_Open=near_up
 on dez && build dez ${CP}Dez_Rigged.glb \
-  --clips ${TI}:Sit_Hands_on_Head_Lean_Back=ins_stretch \
   --mirror ${TI}:Sit_Cross_Legged=idle_m \
   --clips ${CP}Dez_Animations.glb:Talk_with_Hands_Open=near_up
 

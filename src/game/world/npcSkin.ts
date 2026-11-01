@@ -73,7 +73,13 @@ const UPPER: Record<string, number> = {
  */
 const FOOT_UP = 0.3;
 /** How far the feet may slide forward to reach the ground from a high seat (m), and the reach used (× leg length). */
-const SEAT_SLIDE = 0.15, SEAT_REACH = 0.97;
+const SEAT_SLIDE = 0.06, SEAT_REACH = 0.97;
+/**
+ * On a seat with no back (a log, a crate, a stool) the trunk leans back at most this much (rad). The
+ * library's seated loop (Sit_Cross_Legged) reclines 13-23° all through, as in a chair with a back; on
+ * the camp's logs that read as people falling off them.
+ */
+const BACKLESS_LEAN = (3 * Math.PI) / 180;
 /** Share of a hand's roll about the forearm that the forearm takes, and what the hand may keep (°). */
 const TWIST = { k: 0.55, twist: 50, swing: 70 };
 
@@ -189,9 +195,10 @@ export class NpcModels {
   }
 
   /** A posed, animated copy of `id`. `seated`: lower the hips onto `hipY` (the game's seat). */
-  make(id: string, seated: boolean, hipY: number) {
+  /** `backless`: seated on a log, crate or stool (the trunk stays upright: BACKLESS_LEAN). */
+  make(id: string, seated: boolean, hipY: number, backless = false) {
     const T = this.t.get(id);
-    return T ? new NpcActor(T, seated, hipY) : null;
+    return T ? new NpcActor(T, seated, hipY, backless) : null;
   }
 }
 
@@ -379,6 +386,7 @@ function legTo(up: THREE.Bone, knee: THREE.Bone, foot: THREE.Bone, target: THREE
 const LEGS = [['LeftUpLeg', 'LeftLeg', 'LeftFoot'], ['RightUpLeg', 'RightLeg', 'RightFoot']] as const;
 const _sr = new THREE.Vector3(), _sh = new THREE.Vector3(), _sf = new THREE.Vector3(), _sq = new THREE.Quaternion();
 const _sT = [new THREE.Vector3(), new THREE.Vector3()], _sK = [new THREE.Vector3(), new THREE.Vector3()], _sA = new THREE.Vector3();
+const _sN = new THREE.Vector3(), _sX = new THREE.Vector3(), _sQ = new THREE.Quaternion(), _sL = [new THREE.Quaternion(), new THREE.Quaternion()];
 
 export class NpcActor {
   readonly root = new THREE.Group();
@@ -425,7 +433,7 @@ export class NpcActor {
   private breath = { w: (2 * Math.PI) / rand(3.5, 5), a: rand(1.2, 2) * (Math.PI / 180), ph: rand(0, 7) };
   private shift: { w: number; a: number; ph: number } | null;
 
-  constructor(private T: Template, seated: boolean, hipY: number) {
+  constructor(private T: Template, seated: boolean, hipY: number, private backless = false) {
     this.model = cloneSkinned(T.scene);
     this.root.add(this.model);
     this.model.traverse((o) => {
@@ -711,12 +719,28 @@ export class NpcActor {
     hips.getWorldPosition(_sh);
     this.model.position.y += root.y + this.anchor.y - _sh.y;
     this.model.updateMatrixWorld(true);
-    const drop = this.lift + this.model.position.y; // the clip's floor over the ground
-    if (Math.abs(drop) < 0.01) return;
-    const floor = root.y + this.model.position.y;
     const fwd = _sf.set(0, 0, 1).applyQuaternion(this.root.getWorldQuaternion(_sq));
     fwd.y = 0;
     fwd.normalize();
+    // no back to lean on: the trunk sits up (tipped forward about the hips; the thighs stay where they were)
+    const top = B.neck ?? B.Spine;
+    if (this.backless && top && B.LeftUpLeg && B.RightUpLeg) {
+      hips.getWorldPosition(_sh);
+      const trunk = top.getWorldPosition(_sN).sub(_sh);
+      const back = Math.atan2(-trunk.dot(fwd), trunk.y);
+      if (back > BACKLESS_LEAN) {
+        B.LeftUpLeg.getWorldQuaternion(_sL[0]);
+        B.RightUpLeg.getWorldQuaternion(_sL[1]);
+        _sX.set(0, 1, 0).cross(fwd).normalize(); // turning about up × forward tips the top forward
+        hips.getWorldQuaternion(_sQ).premultiply(_jp.setFromAxisAngle(_sX, back - BACKLESS_LEAN));
+        setWorldQuat(hips, _sQ);
+        setWorldQuat(B.LeftUpLeg, _sL[0]);
+        setWorldQuat(B.RightUpLeg, _sL[1]);
+      }
+    }
+    const drop = this.lift + this.model.position.y; // the clip's floor over the ground
+    if (Math.abs(drop) < 0.01) return;
+    const floor = root.y + this.model.position.y;
     const up = [false, false];
     for (let i = 0; i < 2; i++) {
       const foot = B[LEGS[i][2]];

@@ -210,7 +210,7 @@ const BUILDERS: Record<string, () => THREE.Object3D> = {
     const g = new THREE.Group();
     const seat = qs.has('seat') ? num('seat', 0.44) : null;
     npcIds.forEach((id, i) => {
-      const a = npcModels?.make(id, seat !== null, (seat ?? 0) + 0.1);
+      const a = npcModels?.make(id, seat !== null, (seat ?? 0) + 0.1, qs.has('backless')); // &backless: a log or crate (sits up)
       if (!a) return console.warn('[lab] no model for', id);
       a.raw = qs.has('raw'); // &raw: the clips as built (no wrist spreading, no hand fixes)
       a.root.position.x = (i - (npcIds.length - 1) / 2) * num('gap', 1.1);

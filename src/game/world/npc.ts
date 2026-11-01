@@ -65,6 +65,8 @@ export interface NpcDef {
   yaw: number;
   /** seated poses: seat height above the feet */
   seat?: number;
+  /** seated on a chair with a back (the model may lean back as its clips do); default: a log, crate or stool */
+  backrest?: boolean;
   /** counter/tend poses: work-surface height above the feet */
   surface?: number;
   /** how far (m) the figure notices you */
@@ -483,7 +485,7 @@ export class NpcCrowd {
         tYaw: 0, tNod: 0, sacT: 0, sacY: 0, sacN: 0, nb: [], lastSrc: '', lastT: -99, present: true,
       };
       if (modelled) {
-        const actor = models!.make(def.id, seated, hipY)!;
+        const actor = models!.make(def.id, seated, hipY, seated && !def.backrest)!;
         actor.root.position.add(new THREE.Vector3(def.x, def.y, def.z));
         actor.root.rotation.y = def.yaw;
         actor.root.name = `${name}-${def.id}`;

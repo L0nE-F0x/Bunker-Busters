@@ -3,6 +3,9 @@
 Each `## vX.Y.Z` section becomes the GitHub release notes and the "what's new" list in the in-app
 update notice (the first few bullets). `scripts/release.sh` refuses to release a version without one.
 
+## v1.1.2
+- **People at the fires sit up.** On a log or a crate nobody leans back any more as if there were a chair back behind them, and nobody stretches out with their hands behind their head; they sit upright with their feet on the ground. Ada, in Doc's desk chair, still leans back
+
 ## v1.1.1
 - **People sit properly.** Everyone sitting by a fire or at a desk now has their feet on the ground and stays on the seat; on the camp's logs their legs used to hang in the air. Round the fires, people talk with their hands instead of throwing their arms wide and leaning back off the log
 - **Ladders you can climb.** The roof ladder at Last Chance, the Kade overwatch towers, the drive-in screen's catwalk and Dry Creek's water tower, which now has a balcony round its tank. Walk into a ladder or press Use, push forward to climb, and jump to let go. At the top you step off onto the roof. Your gun goes away while you climb and comes back out at the top. A controller's stick and the phone's move stick climb too
