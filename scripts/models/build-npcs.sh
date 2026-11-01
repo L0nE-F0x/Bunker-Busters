@@ -10,7 +10,9 @@
 # 2026-10-28.
 #
 # Roles (world/npcSkin.ts): idle* loop (each person drifts between them), near* loop while you're
-# within talking range, ins* play once now and then. `--mirror` adds a mirror image (`_m`): neighbours
+# within talking range, ins* play once now and then. `*_up`: only the arms and head play, over the
+# seated loop underneath (the people round the fires talk with their own standing talk loop, since
+# the library's one seated talk, Sitting_Answering_Questions, throws the arms wide and leans back). `--mirror` adds a mirror image (`_m`): neighbours
 # get opposite versions, so the camp's pairs never show one pose. Seated people with no clip of their
 # own borrow from a Dry Creek rig (retargeted, rest-aligned: build-glb.mjs). Textures 1024², colour only.
 set -euo pipefail
@@ -51,31 +53,32 @@ on inez && build inez ${DC}Inez_Rigged.glb \
 # --- Dry Creek, seated (Sol and Ren side by side at the fire, Wick in his cave)
 on sol && build sol ${DC}Sol_Rigged.glb \
   --clips ${TI}:Sit_Cross_Legged=idle,Sit_Hands_on_Head_Lean_Back=ins_stretch \
-  --clips ${DC}Sol_Animations.glb:Sitting_Answering_Questions=near \
+  --clips ${DC}Sol_Animations.glb:Talk_with_Hands_Open=near_up \
   --mirror ${TI}:Sit_Cross_Legged=idle_m
 on ren && build ren ${DC}Ren_Rigged.glb \
   --clips ${TI}:Sit_Cross_Legged=idle \
   --clips ${DC}Ren_Animations.glb:Sit_and_Drink=idle2
 on wick && build wick ${DC}Wick_Rigged.glb \
-  --clips ${DC}Wick_Animations.glb:Sit_and_Doze_Off=idle,Sitting_Answering_Questions=near \
+  --clips ${DC}Wick_Animations.glb:Sit_and_Doze_Off=idle,Talk_with_Hands_Open=near_up \
   --clips ${TI}:Sit_Cross_Legged=idle2
 
 # --- the camp's four on two logs: Mara and Pip on one, Hollis and Dez on the other
 # (Pip doesn't drink: Sit_and_Drink, made on a grown-up, takes her mug to her forehead. She holds it)
 on mara && build mara ${CP}Mara_Rigged.glb \
   --clips ${TI}:Sit_Cross_Legged=idle,Sit_Hands_on_Head_Lean_Back=ins_stretch \
-  --clips ${DC}Sol_Animations.glb:Sitting_Answering_Questions=near \
+  --clips ${CP}Mara_Animations.glb:Talk_with_Hands_Open=near_up \
   --mirror ${TI}:Sit_Cross_Legged=idle_m
 on pip && build pip ${CP}Pip_Rigged.glb \
   --clips ${TI}:Sit_Hands_on_Head_Lean_Back=ins_stretch \
   --mirror ${TI}:Sit_Cross_Legged=idle_m
 on hollis && build hollis ${CP}Hollis_Rigged.glb \
   --clips ${TI}:Sit_Cross_Legged=idle \
-  --clips ${DC}Wick_Animations.glb:Sit_and_Doze_Off=idle2,Sitting_Answering_Questions=near
+  --clips ${DC}Wick_Animations.glb:Sit_and_Doze_Off=idle2 \
+  --clips ${CP}Hollis_Animations.glb:Talk_with_Right_Hand_Open=near_up
 on dez && build dez ${CP}Dez_Rigged.glb \
   --clips ${TI}:Sit_Hands_on_Head_Lean_Back=ins_stretch \
   --mirror ${TI}:Sit_Cross_Legged=idle_m \
-  --mirror ${DC}Wick_Animations.glb:Sitting_Answering_Questions=near_m
+  --clips ${CP}Dez_Animations.glb:Talk_with_Hands_Open=near_up
 
 # --- the Panopticon: Ezra on his feet at the monitor wall; Ada and two reviewers at their desks
 # (Ezra borrows Sol's standing idle and talk loops; the reviewers borrow Sol's and Ada's seated clips)

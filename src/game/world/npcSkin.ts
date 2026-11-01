@@ -56,6 +56,24 @@ const HAND_FIX: Record<string, Record<string, { L?: [number, number, number, num
  * someone about to fall off.
  */
 const SEATED_TALK = 0.55;
+/**
+ * A `*_up` clip (a standing talk loop, played seated) moves only these bones, at these shares, over
+ * the seated loop under it: the arms gesture fully (a half-blended arm hangs in mid-air), the head
+ * nods along, and the hips, spine and legs stay seated.
+ */
+const UPPER: Record<string, number> = {
+  LeftShoulder: 1, LeftArm: 1, LeftForeArm: 1, LeftHand: 1,
+  RightShoulder: 1, RightArm: 1, RightForeArm: 1, RightHand: 1,
+  neck: 0.5, Head: 0.5,
+};
+/**
+ * Seated, the library's clips were made on a ~45 cm chair and the game's seats differ (the camp's logs
+ * are 62 cm): the feet are put back on the ground by leg IK. A foot this high over the clip's floor
+ * (ankle, m) is up on the other knee and rides with it instead.
+ */
+const FOOT_UP = 0.3;
+/** How far the feet may slide forward to reach the ground from a high seat (m), and the reach used (× leg length). */
+const SEAT_SLIDE = 0.15, SEAT_REACH = 0.97;
 /** Share of a hand's roll about the forearm that the forearm takes, and what the hand may keep (°). */
 const TWIST = { k: 0.55, twist: 50, swing: 70 };
 
@@ -71,6 +89,8 @@ interface Clip {
   once: boolean;
   tracks: Track[];
   hips: THREE.Vector3;
+  /** Arms and head only, over the seated loop under it (`*_up`: UPPER). */
+  up: boolean;
   /**
    * The clip's mean turn of the hips off the bind pose's facing (radians, about up). Library clips
    * carry one (the talk loops face ~15° aside); standing people cancel it, so they face where the
@@ -205,7 +225,7 @@ function template(id: string, scene: THREE.Object3D, anims: THREE.AnimationClip[
     // where the hips sit at the clip's first frame (model space): seated clips differ by ~0.3 m
     const clip: Clip = {
       name: a.name, src: (a.userData?.src as string | undefined) ?? a.name, i: list.length, dur: a.duration || 1,
-      once: /^(ins|alt)/.test(a.name), tracks, hips: new THREE.Vector3(), yaw: 0,
+      once: /^(ins|alt)/.test(a.name), up: /_up$/.test(a.name), tracks, hips: new THREE.Vector3(), yaw: 0,
     };
     // the hips' mean facing over the clip, against the bind pose's
     if (bones.Hips) {
@@ -300,16 +320,65 @@ function heldProp(id: string, scene: THREE.Object3D, bones: Record<string, THREE
   return { bone: hand.name, obj };
 }
 
-/** Blend `clip` at time `t` into the bones with weight `w` (`reset`: start from the bind pose). */
-function sample(B: Record<string, THREE.Bone>, bind: Template['bind'], clip: Clip, t: number, w: number, reset: boolean) {
+/**
+ * Blend `clip` at time `t` into the bones with weight `w` (`reset`: start from the bind pose).
+ * `mask`: only these bones, each at its share of `w` (and no hips travel).
+ */
+function sample(B: Record<string, THREE.Bone>, bind: Template['bind'], clip: Clip, t: number, w: number, reset: boolean, mask?: Record<string, number>) {
   if (reset) for (const [n, b] of Object.entries(B)) { const k = bind.get(n); if (k) { b.quaternion.copy(k.q); b.position.copy(k.p); } }
   for (const tr of clip.tracks) {
     const b = B[tr.bone];
     if (!b) continue;
-    if (tr.rot) b.quaternion.slerp(_q.fromArray(tr.rot.evaluate(t) as unknown as number[]), w);
-    if (tr.pos) b.position.lerp(_v.fromArray(tr.pos.evaluate(t) as unknown as number[]), w);
+    const k = mask ? (mask[tr.bone] ?? 0) * w : w;
+    if (k <= 0) continue;
+    if (tr.rot) b.quaternion.slerp(_q.fromArray(tr.rot.evaluate(t) as unknown as number[]), k);
+    if (tr.pos && !mask) b.position.lerp(_v.fromArray(tr.pos.evaluate(t) as unknown as number[]), k);
   }
 }
+
+const _ja = new THREE.Vector3(), _jb = new THREE.Vector3(), _jc = new THREE.Vector3(), _jq = new THREE.Quaternion(), _jp = new THREE.Quaternion();
+/** Turn `bone` about its own joint so that its joint→`from` direction points at `to` (world points). */
+function aim(bone: THREE.Bone, from: THREE.Vector3, to: THREE.Vector3) {
+  bone.getWorldPosition(_jc);
+  _ja.subVectors(from, _jc).normalize();
+  _jb.subVectors(to, _jc).normalize();
+  bone.getWorldQuaternion(_jq).premultiply(_jp.setFromUnitVectors(_ja, _jb));
+  setWorldQuat(bone, _jq);
+}
+function setWorldQuat(bone: THREE.Bone, q: THREE.Quaternion) {
+  bone.parent!.getWorldQuaternion(_jp);
+  bone.quaternion.copy(_jp.invert().multiply(q));
+  bone.updateMatrixWorld(true);
+}
+
+const _la = new THREE.Vector3(), _lk = new THREE.Vector3(), _lc = new THREE.Vector3(), _ld = new THREE.Vector3(), _lp = new THREE.Vector3(), _lt = new THREE.Vector3(), _lq = new THREE.Quaternion();
+/**
+ * Two-bone IK: put `foot`'s joint on `target`, the knee bending the way the clip bent it, the sole
+ * kept as the clip held it. Writes the knee's move into `kneeMove`.
+ */
+function legTo(up: THREE.Bone, knee: THREE.Bone, foot: THREE.Bone, target: THREE.Vector3, fwd: THREE.Vector3, kneeMove: THREE.Vector3) {
+  const A = up.getWorldPosition(_la), K = knee.getWorldPosition(_lk), C = foot.getWorldPosition(_lc);
+  const a = A.distanceTo(K), b = K.distanceTo(C);
+  foot.getWorldQuaternion(_lq);
+  const dir = _ld.subVectors(target, A);
+  const d = THREE.MathUtils.clamp(dir.length(), Math.abs(a - b) + 1e-3, (a + b) * 0.999);
+  dir.normalize();
+  const pole = _lp.subVectors(K, A);
+  pole.addScaledVector(dir, -pole.dot(dir));
+  if (pole.lengthSq() < 1e-8) pole.copy(fwd).addScaledVector(dir, -fwd.dot(dir));
+  pole.normalize();
+  const cos = THREE.MathUtils.clamp((a * a + d * d - b * b) / (2 * a * d), -1, 1);
+  const knee2 = _lt.copy(A).addScaledVector(dir, a * cos).addScaledVector(pole, a * Math.sqrt(1 - cos * cos));
+  kneeMove.subVectors(knee2, K);
+  aim(up, K, knee2);
+  knee.getWorldPosition(_lk);
+  foot.getWorldPosition(_lc);
+  aim(knee, _lc, _lt.copy(A).addScaledVector(dir, d));
+  setWorldQuat(foot, _lq);
+}
+const LEGS = [['LeftUpLeg', 'LeftLeg', 'LeftFoot'], ['RightUpLeg', 'RightLeg', 'RightFoot']] as const;
+const _sr = new THREE.Vector3(), _sh = new THREE.Vector3(), _sf = new THREE.Vector3(), _sq = new THREE.Quaternion();
+const _sT = [new THREE.Vector3(), new THREE.Vector3()], _sK = [new THREE.Vector3(), new THREE.Vector3()], _sA = new THREE.Vector3();
 
 export class NpcActor {
   readonly root = new THREE.Group();
@@ -346,6 +415,8 @@ export class NpcActor {
   private chat: boolean;
   private seated: boolean;
   private anchor: THREE.Vector3;
+  /** Seated: how far the root was raised (lowered) to put the clip's hips on the game's seat. */
+  private lift = 0;
   /** The prop lab's frozen pose (no clocks, no switching, no breathing). */
   private pinned = false;
   /** The prop lab: the clips exactly as built (no wrist spreading, no hand fixes). */
@@ -374,7 +445,7 @@ export class NpcActor {
     // ~0.44 m in front): put the model's hips there, not its feet, or it sits behind its log
     if (seated) { this.anchor.x = 0; this.anchor.z = 0; }
     // (a short person on a high seat sits up on it with their feet off the ground, like Pip on the log)
-    if (seated) this.root.position.y = THREE.MathUtils.clamp(hipY - this.anchor.y, -0.16, 0.32);
+    if (seated) this.root.position.y = this.lift = THREE.MathUtils.clamp(hipY - this.anchor.y, -0.16, 0.32);
   }
 
   /** The idle loops in use (the template's, or a set swapped in by `setIdle`). */
@@ -548,21 +619,25 @@ export class NpcActor {
     // seated and talking: the calm loop underneath, the talk loop over it at SEATED_TALK
     const talk = (c: Clip) => c.name.startsWith('near');
     const calm = this.seated && this.calm && (talk(this.cur) || (this.prev && f < 1 && talk(this.prev))) ? this.calm : null;
-    const w = (c: Clip) => (calm && talk(c) ? SEATED_TALK : 1);
+    // (a `*_up` talk loop moves the arms and head only, fully, over the seated loop)
+    const w = (c: Clip) => (calm && talk(c) && !c.up ? SEATED_TALK : 1);
+    const m = (c: Clip) => (calm && c.up ? UPPER : undefined);
     if (calm) sample(this.B, this.T.bind, calm, this.clock[calm.i], 1, true);
     if (this.prev && f < 1) {
-      sample(this.B, this.T.bind, this.prev, this.clock[this.prev.i], w(this.prev), !calm);
-      sample(this.B, this.T.bind, this.cur, this.clock[this.cur.i], f * w(this.cur), false);
+      sample(this.B, this.T.bind, this.prev, this.clock[this.prev.i], w(this.prev), !calm, m(this.prev));
+      sample(this.B, this.T.bind, this.cur, this.clock[this.cur.i], f * w(this.cur), false, m(this.cur));
     } else {
       this.prev = null;
-      sample(this.B, this.T.bind, this.cur, this.clock[this.cur.i], w(this.cur), !calm);
+      sample(this.B, this.T.bind, this.cur, this.clock[this.cur.i], w(this.cur), !calm, m(this.cur));
     }
     // the wrists: the clip's forearm roll spread into the forearm (no twist bones), then any fix
     if (!this.raw) this.wrists();
     // keep the hips over the same spot whatever the clip (seated clips sit in different places);
     // standing, turn the body back by the clip's own mean turn, about the hips
-    const off = _v2.copy(this.anchor).sub(this.cur.hips);
-    if (this.prev && f < 1) off.lerp(_v.copy(this.anchor).sub(this.prev.hips), 1 - f);
+    // (an arms-only clip keeps the seated loop's hips)
+    const hipsOf = (c: Clip) => (c.up && this.calm ? this.calm.hips : c.hips);
+    const off = _v2.copy(this.anchor).sub(hipsOf(this.cur));
+    if (this.prev && f < 1) off.lerp(_v.copy(this.anchor).sub(hipsOf(this.prev)), 1 - f);
     let yaw = 0;
     if (!this.seated) {
       yaw = this.cur.yaw;
@@ -575,6 +650,7 @@ export class NpcActor {
     this.model.rotation.y = -yaw;
     this.model.position.set(off.x, 0, off.z);
     this.root.updateMatrixWorld(true);
+    if (this.seated && !this.raw) this.sit();
     // everything below turns bones about world axes from the body (the rig's bone axes differ)
     this.root.getWorldQuaternion(_q2);
     const lat = _v.set(-1, 0, 0).applyQuaternion(_q2); // + lifts the chin
@@ -618,6 +694,59 @@ export class NpcActor {
     if (hips) {
       _c.setFromMatrixPosition(hips.matrixWorld);
       for (const sk of this.skinned) boundSkinned(sk, _c, 1.3);
+    }
+  }
+
+  /**
+   * Seated: the hips stay on the seat (a stretch or talk clip lifts them off it by up to 10 cm), and
+   * the feet go back on the ground. The clips were made on a ~45 cm chair; on the camp's 62 cm logs
+   * the feet hung 15-25 cm in the air. Both feet move by the same amount, so a crossed pair stays
+   * crossed; a foot up on the other knee moves with that knee. Too high a seat for the legs (Pip on
+   * the log), and the feet stretch forward a little, then hang.
+   */
+  private sit() {
+    const B = this.B, hips = B.Hips;
+    if (!hips) return;
+    const root = this.root.getWorldPosition(_sr);
+    hips.getWorldPosition(_sh);
+    this.model.position.y += root.y + this.anchor.y - _sh.y;
+    this.model.updateMatrixWorld(true);
+    const drop = this.lift + this.model.position.y; // the clip's floor over the ground
+    if (Math.abs(drop) < 0.01) return;
+    const floor = root.y + this.model.position.y;
+    const fwd = _sf.set(0, 0, 1).applyQuaternion(this.root.getWorldQuaternion(_sq));
+    fwd.y = 0;
+    fwd.normalize();
+    const up = [false, false];
+    for (let i = 0; i < 2; i++) {
+      const foot = B[LEGS[i][2]];
+      if (!foot || !B[LEGS[i][0]] || !B[LEGS[i][1]]) return;
+      foot.getWorldPosition(_sT[i]);
+      up[i] = _sT[i].y - floor > FOOT_UP;
+      if (!up[i]) _sT[i].y -= drop;
+    }
+    // from a high seat the feet slide forward to reach the ground (the same for both)
+    const reach = (i: number, s: number) => {
+      const U = B[LEGS[i][0]], K = B[LEGS[i][1]], F = B[LEGS[i][2]];
+      const len = U.getWorldPosition(_sA).distanceTo(K.getWorldPosition(_lk)) + _lk.distanceTo(F.getWorldPosition(_lc));
+      return _sA.distanceTo(_lt.copy(_sT[i]).addScaledVector(fwd, s)) <= len * SEAT_REACH;
+    };
+    let slide = 0;
+    for (const s of [0, 0.05, 0.1, SEAT_SLIDE]) {
+      slide = s;
+      if ((up[0] || reach(0, s)) && (up[1] || reach(1, s))) break;
+    }
+    for (let i = 0; i < 2; i++) {
+      _sK[i].set(0, 0, 0);
+      if (up[i]) continue;
+      _sT[i].addScaledVector(fwd, slide);
+      legTo(B[LEGS[i][0]], B[LEGS[i][1]], B[LEGS[i][2]], _sT[i], fwd, _sK[i]);
+    }
+    // a foot up on the other knee rides with that knee
+    for (let i = 0; i < 2; i++) {
+      if (!up[i] || up[1 - i]) continue;
+      _sT[i].add(_sK[1 - i]);
+      legTo(B[LEGS[i][0]], B[LEGS[i][1]], B[LEGS[i][2]], _sT[i], fwd, _sK[i]);
     }
   }
 
