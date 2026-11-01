@@ -1,6 +1,6 @@
 import * as THREE from 'three/webgpu';
 import {
-  Fn, vec2, vec3, vec4, float, uniform, instanceIndex, hash, time, cameraPosition, fract, uv, length, smoothstep, mix, max,
+  Fn, vec2, vec3, vec4, float, uniform, instanceIndex, hash, time, cameraPosition, fract, uv, length, smoothstep, mix, max, min,
   pow, dot, normalize, sin, positionLocal, positionWorld, texture, color, clamp,
   normalWorld, abs, viewportLinearDepth, linearDepth, cameraNear, cameraFar, exp,
   cameraViewMatrix, atan, renderGroup, step, instancedBufferAttribute, uniformArray, varying, select, floor,
@@ -529,18 +529,27 @@ export class Fire {
     }
     this.flame = new THREE.Mesh(mergeGeometries(cards, false)!, mat);
     this.group.add(this.flame);
-    // embers
+    // embers: small sparks that live a second or two and mostly die within a couple of metres (they
+    // were 4 cm, lived ~3 s, climbed 4 m and were bright enough for the bloom to make glowing orbs of
+    // them: a column of lanterns into the sky)
     const em = new THREE.SpriteNodeMaterial({ transparent: true, depthWrite: false, blending: THREE.AdditiveBlending });
     // scale as a uniform: a literal per fire size compiled one ember program per fire
     const uS = uniform(scale);
-    const life = fract(time.mul(0.35).add(hash(instanceIndex)));
-    const ex = sin(time.mul(1.3).add(hash(instanceIndex.add(5)).mul(20))).mul(0.4).mul(life);
-    const ez = sin(time.mul(1.1).add(hash(instanceIndex.add(9)).mul(20))).mul(0.4).mul(life);
-    em.positionNode = vec3(ex.add(hash(instanceIndex.add(1)).sub(0.5).mul(0.6)), life.mul(uS.mul(4)), ez);
-    em.scaleNode = vec2(uS.mul(0.04), uS.mul(0.04));
+    const h0 = hash(instanceIndex), h1 = hash(instanceIndex.add(1)), h2 = hash(instanceIndex.add(2));
+    const life = fract(time.mul(h1.mul(0.4).add(0.5)).add(h0));
+    // fast off the fire, slowing as it cools; most stop short of 2 m, a few ride the heat higher
+    const rise = float(1).sub(pow(float(1).sub(life), 2)).mul(uS).mul(h2.mul(h2).mul(2.2).add(0.9));
+    const ex = sin(time.mul(2.3).add(h0.mul(20))).mul(0.18).mul(life);
+    const ez = sin(time.mul(1.9).add(h1.mul(20))).mul(0.18).mul(life);
+    em.positionNode = vec3(ex.add(h1.sub(0.5).mul(0.5).mul(uS)), rise.add(uS.mul(0.25)), ez.add(h2.sub(0.5).mul(0.5).mul(uS)));
+    const size = uS.mul(h0.mul(0.008).add(0.01)).mul(float(1).sub(life.mul(0.6)));
+    em.scaleNode = vec2(size, size);
     // a soft round spark: without the disc each ember drew as a hard square (big ones near the eye)
     const disc = smoothstep(1, 0.15, length(uv().sub(0.5)).mul(2));
-    em.colorNode = vec4(vec3(1.0, 0.45, 0.1).mul(float(8).mul(float(1).sub(life))), smoothstep(1, 0.6, life).mul(disc));
+    // white-orange when it leaves the fire, dull red as it dies (each its own lifetime: h0 > 0.6 burn out early)
+    const age = life.mul(h0.mul(0.9).add(1));
+    const hot = mix(vec3(1.0, 0.3, 0.05), vec3(1.0, 0.75, 0.35), smoothstep(0.5, 0.0, age));
+    em.colorNode = vec4(hot.mul(float(3.2).mul(float(1).sub(min(age, 1)))), smoothstep(1, 0.55, age).mul(smoothstep(0, 0.05, life)).mul(disc));
     const embers = new THREE.Sprite(em);
     embers.count = 60;
     this.group.add(embers);
