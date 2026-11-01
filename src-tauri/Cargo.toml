@@ -2,7 +2,8 @@
 name = "bunker-busters"
 version = "1.0.3"
 description = "Bunker Busters: a first-person heist game (desktop app)"
-authors = ["Lone Fox"]
+authors = ["L0nE-F0x"]
+license = "MIT"
 homepage = "https://bunker-busters.netlify.app/"
 repository = "https://github.com/L0nE-F0x/Bunker-Busters"
 edition = "2021"

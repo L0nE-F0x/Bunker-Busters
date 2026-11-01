@@ -302,7 +302,7 @@ export const CUES: Cue[] = [
   { at: 43, speaker: 'HUNTER VALE', text: 'No questions? Great. Great energy. Thank you.' },
   // (capital H: the voice extractor skips a line that opens on a lowercase stage direction)
   { at: 48, speaker: 'HUNTER VALE', text: '(Hot mic) Is the jet fuelled?' },
-  { at: 50.5, speaker: 'ASSISTANT', text: 'Wheels up at eleven, from the lot. North-west, like you said.' },
+  { at: 50.5, speaker: 'ASSISTANT', text: 'Wheels up at eleven, from the lot. South-west, like you said.' },
   { at: 53, speaker: 'HUNTER VALE', text: 'Just me. Seats were always zero. It\'s a waitlist. Kill the—' },
 ];
 /** When the hot mic has said enough. */

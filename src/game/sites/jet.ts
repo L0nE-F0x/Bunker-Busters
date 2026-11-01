@@ -18,7 +18,7 @@ import { comfort } from '@/engine/comfort';
 
 /**
  * The Exit Strategy: Hunter Vale's jet (Ascend, "evacuation as a service"). He left early, by
- * parachute, and let the autopilot fly on. It came down in the dunes north-west of everything and
+ * parachute, and let the autopilot fly on. It came down in the dunes south-west of the drive-in and
  * broke in three: the nose dug into a sand berm, the cabin, and the tail with the baggage hold.
  * The right wing stands tip-down in the sand like a monument. Nobody was aboard.
  *
@@ -1333,7 +1333,7 @@ export class JetSite extends Site {
     }
     const lines: Record<string, { speaker: string; text: string; next?: string; label: string }> = {
       a: { speaker: 'CVR · final four minutes', text: '[Wind. Seatbelt chime, twice.] EXITPILOT: "Mr. Vale, fuel is at nine percent. I recommend landing." VALE: "I recommend growth. Climb."', next: 'b', label: 'Keep listening' },
-      b: { speaker: 'EXITPILOT', text: '"Cabin door open. Parachute bracket reports empty." VALE: "It\'s a soft launch. Hold the heading, north-west. The seats are a waitlist anyway. Nobody\'s coming."', next: 'c', label: 'Keep listening' },
+      b: { speaker: 'EXITPILOT', text: '"Cabin door open. Parachute bracket reports empty." VALE: "It\'s a soft launch. Hold the heading, south-west. The seats are a waitlist anyway. Nobody\'s coming."', next: 'c', label: 'Keep listening' },
       c: { speaker: 'HUNTER VALE', text: '(The wind roars. He\'s shouting from the open door.) "Tell the board I exited! And the hold code is four zeros, like the returns. Don\'t let anyone touch my—" (Then only the wind.)', next: 'd', label: 'Keep listening' },
       d: { speaker: 'EXITPILOT', text: '"Understood. Passengers: zero. Crew: zero." [Long pause.] "Thank you for flying Ascend." [Forty-one seconds of wind and sand. Recording ends.]', label: 'Unplug it' },
     };
@@ -1405,7 +1405,7 @@ export class JetSite extends Site {
         if (id === 'where2') {
           return {
             speaker: 'ARIA · Ascend Concierge',
-            text: '"Your parachute beacon pinged once, east of the drive-in, and then you turned it off for focus time. The aircraft continued north-west with ExitPilot. You said that was \'the vibe\'."',
+            text: '"Your parachute beacon pinged once, south of the drive-in, and then you turned it off for focus time. The aircraft continued south-west with ExitPilot. You said that was \'the vibe\'."',
             choices: [{ id: 'back', label: '"Right. The vibe."', next: 'hunter' }],
           };
         }

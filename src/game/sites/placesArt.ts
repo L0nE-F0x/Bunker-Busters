@@ -337,8 +337,8 @@ artPaint('wlStart', 448, 256, (c, w, h, r) => {
 });
 artPaint('wlDay', 384, 288, (c, w, h, r) => {
   cardboard(c, w, h, r);
-  scrawl(c, 'DAY 1,284', w / 2, 70, 58, -0.03);
-  scrawl(c, 'IN LINE', w / 2, 120, 40, 0.02);
+  scrawl(c, 'IN LINE', w / 2, 70, 58, -0.03);
+  scrawl(c, 'SINCE DAY 3', w / 2, 120, 40, 0.02);
   scrawl(c, 'NO CUTTING', w / 2, 180, 44, -0.02, '#8e1b12');
   scrawl(c, 'NO SAVING SPOTS', w / 2, 222, 30, 0.03);
   scrawl(c, 'LINE MONITOR: #0003', w / 2, 266, 24, -0.01);

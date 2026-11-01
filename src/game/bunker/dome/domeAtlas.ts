@@ -169,7 +169,7 @@ const DRAW: Record<string, [number, number, Draw]> = {
     fit(c, 'handover: ________', 24, 100, `400 26px ${MONO}`, '#1f4fa8', w - 48, 'left');
     lines(c, ['- approve everything (policy)', '- review window: use ALL of it', '- noodles: aisle 7, row 2', '- do NOT tell it about the hut'], 24, 156, 40, `400 24px ${MONO}`, '#2b2b2b', w - 48);
     c.fillStyle = '#c0392b';
-    fit(c, 'day 1,284', w - 24, h - 30, `700 30px ${MONO}`, '#c0392b', 220, 'right');
+    fit(c, 'ext. 4410', w - 24, h - 30, `700 30px ${MONO}`, '#c0392b', 220, 'right');
     grime(c, w, h, 0.25, Math.floor(r() * 99));
   }],
   clusterTag: [256, 192, (c, w, h) => {

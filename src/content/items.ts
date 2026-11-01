@@ -294,7 +294,7 @@ const defs: ItemDef[] = [
   {
     id: 'pip_letter', name: 'Pip\'s Envelope', category: 'intel', weight: 0, stack: 1, value: 0, icon: 'intel',
     description: 'From the Kade Kids time capsule: TO PIP OKAFOR, AGE 23. DO NOT OPEN UNTIL 2046. The flap is only tucked in.',
-    flavor: 'Eleven-year-olds don\'t lick envelopes.',
+    flavor: 'Nine-year-olds don\'t lick envelopes.',
   },
   // --- Sites: The Exit Strategy, Starlite Drive-In ---
   {

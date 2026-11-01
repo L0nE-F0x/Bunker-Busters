@@ -6,10 +6,10 @@
   <name>Bunker Busters</name>
   <summary>First-person heist game: break into the tech elite's doomsday bunkers</summary>
   <developer id="io.github.l0ne-f0x">
-    <name>Lone Fox</name>
+    <name>L0nE-F0x</name>
   </developer>
   <metadata_license>CC0-1.0</metadata_license>
-  <project_license>LicenseRef-proprietary</project_license>
+  <project_license>MIT AND LicenseRef-proprietary</project_license>
   <description>
     <p>
       They built bunkers. You brought lockpicks. Bunker Busters is a free first-person heist game set in

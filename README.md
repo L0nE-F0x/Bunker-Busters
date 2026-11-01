@@ -50,6 +50,8 @@ Saves stay on your computer: in the browser's storage for the browser version, a
 
 ## Licences
 
+The game's code is under the [MIT licence](LICENSE). The character and animal models (`public/models/`, `Assets/`) and the voice clips (`public/voice/`) aren't covered by it: all rights reserved.
+
 Bunker Busters uses open-source libraries, fonts and tools: [`public/licenses.txt`](public/licenses.txt) lists them all with their licences (also at [bunker-busters.netlify.app/licenses.txt](https://bunker-busters.netlify.app/licenses.txt) and next to the installed app).
 
 ---

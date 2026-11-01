@@ -133,7 +133,7 @@ export class UI implements UIBridge {
 
   // ------------------------------------------------------------------ title
   /** `notice`: a line under the menu about the save (unreadable, or a browser that can't keep one). */
-  showTitle(opts: { canContinue: boolean; backend: string; notice?: string; onContinue: () => void; onNew: () => void; onSettings: () => void; settings?: Settings; onChange?: (s: Settings) => void }) {
+  showTitle(opts: { canContinue: boolean; day?: number; backend: string; notice?: string; onContinue: () => void; onNew: () => void; onSettings: () => void; settings?: Settings; onChange?: (s: Settings) => void }) {
     const el = h('div', '', `
       <div class="logo">
         <span class="l1">BUNKER</span><span class="l2">BUSTERS</span>
@@ -141,7 +141,7 @@ export class UI implements UIBridge {
       </div>
       <div class="tagline">They locked the future. <b>The camps are still thirsty.</b></div>
       <div class="menu interactive"></div>
-      <div class="title-foot"><span>v${__APP_VERSION__} · DAY 1,284 · ${opts.backend.toUpperCase()}<span class="offline-status">${offlineLabel()}</span></span><span class="press">STAY OUTSIDE</span></div>`);
+      <div class="title-foot"><span>v${__APP_VERSION__} · DAY ${(opts.day ?? 1284).toLocaleString('en-US')} · ${opts.backend.toUpperCase()}<span class="offline-status">${offlineLabel()}</span></span><span class="press">STAY OUTSIDE</span></div>`);
     el.id = 'title';
     const menu = el.querySelector('.menu')!;
     const add = (label: string, fn: () => void, primary = false, disabled = false) => {

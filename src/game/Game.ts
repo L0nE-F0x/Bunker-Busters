@@ -1332,6 +1332,8 @@ export class Game {
       : storageStatus() !== 'ok' ? 'Saving is off in this browser (a private window, or site data blocked).' : '';
     this.ui.showTitle({
       canContinue: !!save,
+      // the saved run's day (a new run starts on Day 1,284)
+      day: START_DAY + (save?.days ?? 0),
       backend: this.backendLabel,
       notice,
       // read again on the click: another tab may have saved since this title came up

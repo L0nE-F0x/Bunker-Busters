@@ -14,11 +14,11 @@ update notice (the first few bullets). `scripts/release.sh` refuses to release a
 - **Smaller fixes.** Bunker owners no longer greet you again at bunkers you've already busted, holding a controller button works at low frame rates, and alt-tabbing mid-lift no longer bends your lockpick
 - **When something goes wrong.** If the game can't start, or the graphics driver resets, it says what happened and what to try. Credits and Report a bug are in the title and pause menus
 - **Apex's corridor.** The chevrons painted on the floor lie on the floor again; they stood on their edges and looked like dark shards over the laser beams. The forecast on Prudence's desk lies flat too
-- **The words match the map.** Directions, distances and years in a dozen spoken lines and many notes now agree with the valley, People entries no longer give later acts away, and Mara says "Act Four", not "Act Iv"
+- **The words match the map.** Directions, distances and years in a dozen spoken lines and many notes now agree with the valley (Hunter's jet heads south-west, where it came down), Pip's age adds up, Kit knows how much her moat holds, the title shows your run's day, People entries no longer give later acts away, and Mara says "Act Four", not "Act Iv"
 - **Desktop.** A failed update says why in one line and leaves your game as it was, downloads are about 30 MB smaller and carry their licences, Linux launchers group properly in the dock, and the Windows installer has the game's icon
 - **Colour isn't the only cue.** The minimap, the lockpick, hit markers and food and water warnings no longer rely on colour alone
 - **Phones and small things.** The Kit always has its close button, takedowns get a prompt, toasts no longer slide under the objective, the clock calls night night, and a new run starts standing even if you quit while crouched
-- **The website.** A press kit and a privacy page, and a much lighter first view (8 MB down to under 0.5 MB)
+- **The website.** A press kit and a privacy page, and a much lighter first view (8 MB down to under 0.5 MB). The game's code is now open source under the MIT licence
 
 ## v1.0.3
 - **People round the fires sit up.** Everyone at Last Chance and Dry Creek's street fire used to share one hunched, chin-on-hand pose, staring into their shirts. They sit upright and cross-legged now, neighbours crossing opposite legs, and Hollis and Wick still nod off now and then

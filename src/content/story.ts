@@ -119,7 +119,7 @@ export function campRadio(v: StoryView): { pages: StoryPage[]; flags: string[] }
   if (v.has('q.capsule.mara') && !v.has('mara.capsule')) {
     return {
       pages: [
-        { speaker: 'Mara Voss', text: 'She hoped she\'d have a pool. That\'s what was in it. I signed away a creek and an eleven-year-old hoped for a pool.' },
+        { speaker: 'Mara Voss', text: 'She hoped she\'d have a pool. That\'s what was in it. I signed away a creek and a nine-year-old hoped for a pool.' },
         { speaker: 'Mara Voss', text: 'I held the chalk. That\'s all I\'m going to say about it on an open channel. Thank you for letting me be the one. Mara, out.' },
       ],
       flags: ['mara.capsule'],

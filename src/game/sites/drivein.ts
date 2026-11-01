@@ -1101,7 +1101,7 @@ export class DriveInSite extends Site {
       if (s && near && this.kt >= REVEAL_AT && !s.has('site.drivein.done')) {
         s.set('site.drivein.done');
         s.addXP(60, 'The hot mic');
-        this.toast('The keynote ends on a hot mic: a jet, wheels up at eleven, north-west. One passenger.', 'good');
+        this.toast('The keynote ends on a hot mic: a jet, wheels up at eleven, south-west. One passenger.', 'good');
       }
     }
     const k = running ? 1 : 0;

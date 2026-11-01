@@ -419,7 +419,7 @@ export class Stories {
     if (peek === 'read' && s.set('q.capsule.read')) {
       await this.ctx.ui.choose({
         speaker: 'Pip\'s letter',
-        text: 'Dear future me,\nI hope you have a pool. I hope Mara is still on the radio. I hope the creek comes back because the man from Kade said it would come back better. If it didn\'t I\'m sorry I believed him. I was 11.\nLove, Pip\nP.S. count everything',
+        text: 'Dear future me,\nI hope you have a pool. I hope Mara is still on the radio. I hope the creek comes back because the man from Kade said it would come back better. If it didn\'t I\'m sorry I believed him. I was 9.\nLove, Pip\nP.S. count everything',
         choices: [{ id: 'ok', label: 'Fold it back up the way it was.' }],
       });
     }

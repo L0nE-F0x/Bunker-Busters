@@ -140,7 +140,7 @@ const DRAW: Record<string, [number, number, Draw, number?]> = {
   heatLog: [384, 512, (c, w, h, r) => {
     c.fillStyle = '#eceae4'; c.fillRect(0, 0, w, h);
     fit(c, 'HEAT LOG', 24, 50, `700 40px ${UI}`, '#1b3f8a', w - 48, 'left');
-    lines(c, ['1 unit / person / day', 'Day 1,281: 5 units', 'Day 1,282: 5 units', 'Day 1,283: 5 units', 'Day 1,284: 5 units', '', 'Ida\'s fingers: Doc?', 'Ask K. for a 6th unit'], 24, 110, 44, `400 28px ${UI}`, '#22242a', w - 48);
+    lines(c, ['1 unit / person / day', 'Mon: 5 units', 'Tue: 5 units', 'Wed: 5 units', 'Thu: 5 units', '', 'Ida\'s fingers: Doc?', 'Ask K. for a 6th unit'], 24, 110, 44, `400 28px ${UI}`, '#22242a', w - 48);
     c.strokeStyle = '#b8261b'; c.lineWidth = 3;
     c.beginPath(); c.moveTo(20, 450); c.lineTo(w - 30, 445); c.stroke();
     grime(c, w, h, 0.5, Math.floor(r() * 99));

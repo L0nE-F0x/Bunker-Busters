@@ -610,13 +610,13 @@
   "where": "src/game/sites/jet.ts"
  },
  {
-  "key": "08l30cj",
+  "key": "0yt7863",
   "voice": "af_aoede",
   "fx": "pa",
   "speed": 1,
   "speaker": "ARIA",
-  "words": "Your parachute beacon pinged once, east of the drive-in, and then you turned it off for focus time. The aircraft continued north-west with ExitPilot. You said that was 'the vibe'.",
-  "tts": "Your parachute beacon pinged once, east of the drive-in, and then you turned it off for focus time. The aircraft continued north-west with ExitPilot. You said that was 'the vibe'.",
+  "words": "Your parachute beacon pinged once, south of the drive-in, and then you turned it off for focus time. The aircraft continued south-west with ExitPilot. You said that was 'the vibe'.",
+  "tts": "Your parachute beacon pinged once, south of the drive-in, and then you turned it off for focus time. The aircraft continued south-west with ExitPilot. You said that was 'the vibe'.",
   "where": "src/game/sites/jet.ts"
  },
  {
@@ -740,13 +740,13 @@
   "where": "src/content/bunkers/dome.ts"
  },
  {
-  "key": "0ioozk2",
+  "key": "0qauyns",
   "voice": "af_jessica",
   "fx": "pa",
   "speed": 1,
   "speaker": "ASSISTANT",
-  "words": "Wheels up at eleven, from the lot. North-west, like you said.",
-  "tts": "Wheels up at eleven, from the lot. North-west, like you said.",
+  "words": "Wheels up at eleven, from the lot. South-west, like you said.",
+  "tts": "Wheels up at eleven, from the lot. South-west, like you said.",
   "where": "src/game/sites/driveinArt.ts"
  },
  {
@@ -8130,13 +8130,13 @@
   "where": "src/content/bunkers/fortress.ts"
  },
  {
-  "key": "15eqzec",
+  "key": "06fkk2e",
   "voice": "af_nova",
   "fx": "pa",
   "speed": 0.98,
   "speaker": "Kit Szabo",
-  "words": "Who drained my moat? That was nine thousand litres of coolant at list price.",
-  "tts": "Who drained my moat? That was nine thousand litres of coolant at list price.",
+  "words": "Who drained my moat? That was three million litres of coolant at list price.",
+  "tts": "Who drained my moat? That was three million litres of coolant at list price.",
   "where": "src/content/bunkers/fortress.ts"
  },
  {
@@ -9450,13 +9450,13 @@
   "where": "src/game/Game.ts"
  },
  {
-  "key": "1co69op",
+  "key": "01mkga4",
   "voice": "af_sarah",
   "fx": "radio",
   "speed": 0.97,
   "speaker": "Mara Voss",
-  "words": "She hoped she'd have a pool. That's what was in it. I signed away a creek and an eleven-year-old hoped for a pool.",
-  "tts": "She hoped she'd have a pool. That's what was in it. I signed away a creek and an eleven-year-old hoped for a pool.",
+  "words": "She hoped she'd have a pool. That's what was in it. I signed away a creek and a nine-year-old hoped for a pool.",
+  "tts": "She hoped she'd have a pool. That's what was in it. I signed away a creek and a nine-year-old hoped for a pool.",
   "where": "src/content/story.ts"
  },
  {

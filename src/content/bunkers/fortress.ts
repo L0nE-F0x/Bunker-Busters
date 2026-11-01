@@ -41,7 +41,7 @@ export const KIT_LINES = {
   keep: { speaker: KIT, text: 'You\'re in the keep. Please don\'t touch anything. Everything in here is spoken for.' },
   keepLoud: { speaker: KIT, text: 'That door was on back order for a year. I\'m adding it to your account.' },
   chillers: { speaker: KIT, text: 'The chillers are off. Marek, the chillers are off. The stock can\'t take heat.' },
-  drained: { speaker: KIT, text: 'Who drained my moat? That was nine thousand litres of coolant at list price.' },
+  drained: { speaker: KIT, text: 'Who drained my moat? That was three million litres of coolant at list price.' },
   vault: { speaker: KIT, text: 'Fine. Come in. Mind the racks. Every box in here is worth more than you.' },
   vaultLoud: { speaker: KIT, text: 'You blew the vault door. I can\'t even be angry. I\'m impressed by the demand.' },
   caught: { speaker: KIT, text: 'Back of the queue. That\'s where everybody goes.' },

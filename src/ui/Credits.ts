@@ -5,10 +5,9 @@ import { openExternal, licensesUrl, isDesktopApp, SITE_URL } from './links';
 /**
  * Who made the game, and the open-source work it stands on. Opened from the title and pause menus.
  *
- * OWNER DECISION: the name the game is credited to. "Lone Fox" is the owner's git name (GitHub
- * L0nE-F0x); the website names no developer yet. Change it here and nowhere else.
+ * The name the game is credited to (the owner's GitHub name; the website's comes from .env).
  */
-export const DEVELOPER = 'Lone Fox';
+export const DEVELOPER = 'L0nE-F0x';
 
 interface Credit { name: string; what: string; licence: string; by?: string }
 
@@ -17,7 +16,8 @@ const BUILT_WITH: Credit[] = [
   { name: 'three.js', what: '3D rendering and the shader language', licence: 'MIT', by: 'the three.js authors' },
   { name: 'Rapier', what: 'physics', licence: 'Apache-2.0', by: 'Dimforge' },
   { name: 'Tauri', what: 'the desktop app', licence: 'MIT or Apache-2.0', by: 'Tauri Apps contributors' },
-  { name: 'Kokoro-82M', what: 'the voices, rendered ahead of time', licence: 'Apache-2.0', by: 'hexgrad; run with kokoro-onnx (MIT)' },
+  { name: 'Kokoro-82M', what: 'the voices: AI text-to-speech, rendered ahead of time', licence: 'Apache-2.0', by: 'hexgrad; run with kokoro-onnx (MIT)' },
+  { name: 'Meshy', what: 'the people and large animals: 3D models generated with AI', licence: 'Pro plan, commercial use', by: 'Meshy' },
 ];
 
 const TYPE: Credit[] = [
