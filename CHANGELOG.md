@@ -3,6 +3,11 @@
 Each `## vX.Y.Z` section becomes the GitHub release notes and the "what's new" list in the in-app
 update notice (the first few bullets). `scripts/release.sh` refuses to release a version without one.
 
+## v1.1.1
+- **Ladders you can climb.** The roof ladder at Last Chance, the Kade overwatch towers, the drive-in screen's catwalk and Dry Creek's water tower, which now has a balcony round its tank. Walk into a ladder or press Use, push forward to climb, and jump to let go. At the top you step off onto the roof. Your gun goes away while you climb and comes back out at the top. A controller's stick and the phone's move stick climb too
+- **Climb onto things.** Jump into a crate, a car's hood, a low wall or a rock up to about chest height and you pull yourself up onto it. Holding jump in the air catches an edge. Crates, pallets, coolers and cars are now solid up to their real tops, so you stand on them instead of sinking into them
+- **The Dome's fence holds.** It had gaps you could walk through anywhere. Now the outfall culvert is the only way under it
+
 ## v1.1.0
 - **Starts sooner in the browser.** A third less to download before the title screen, the later bunkers' people load while you're on it, and the loading screen shows real progress, time left and a few tips
 - **Settings for everyone.** Five tabs (Gameplay, Video, Audio, Controls, Accessibility) with voice volume, brightness, subtitle size and background, camera shake, Reduce flashing, and hold or toggle for crouch, sprint and aim. Menus also work with the arrow keys and Enter

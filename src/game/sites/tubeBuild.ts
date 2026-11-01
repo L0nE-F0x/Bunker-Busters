@@ -561,7 +561,7 @@ export class TubeBuild {
     for (let x = ix0 + 6; x < ix1; x += 12) this.chase.halo(new THREE.Vector3(x, PY + R - 0.3, TZ), Math.abs(x) / 240, 0.45);
     b.add(M.yellow(), box(1.2, 0.5, 0.6, -30, fl + 0.45, TZ - 0.78));
     b.add(M.rubber(), cyl(0.12, 0.12, 0.08, -30.5, fl + 0.12, TZ - 1.05, 10, Math.PI / 2), cyl(0.12, 0.12, 0.08, -29.5, fl + 0.12, TZ - 1.05, 10, Math.PI / 2));
-    this.col(-30, fl + 0.45, TZ - 0.78, 0.6, 0.45, 0.3);
+    this.col(-30, fl + 0.35, TZ - 0.78, 0.6, 0.35, 0.3);
     d.add(A.decal(), A.floor('oil', 1.4, 1.2, -22, fl + 0.02, TZ), A.floor('dirt', 1.8, 1.4, -40, fl + 0.02, TZ));
     this.b.indoor = false;
     this.pts.inner = new THREE.Vector3(-20, fl, TZ);

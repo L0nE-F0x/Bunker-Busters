@@ -2,6 +2,7 @@ import * as THREE from 'three/webgpu';
 import type { Physics } from '@/engine/physics';
 import { box, cyl, beam, place, norm, MeshBatch, DistanceLod, shadowProxy } from '../../world/kit';
 import { surfaces } from '@/engine/surface';
+import { noMantle } from '../../world/ladders';
 import { concrete, plainStandard, rustyMetal, GlowPalette, carGlass, fabric, wood, desertRock } from '../../world/materials';
 import { GlowSprites } from '../../world/effects';
 import { VirtualLight } from '../../world/lights';
@@ -339,6 +340,9 @@ export class SpireBuilder implements BunkerShell {
     b.add(m.dark, place(new THREE.RingGeometry(R, R + 0.12, 64), 0, 0.45, 0, -Math.PI / 2));
     // walls (colliders): all round, the front passage open
     this.ringCol(R - 0.2, 0.45, 0, DRUM, N + gap, N - gap + TAU, 40);
+    // no climbing inside: the stairs' lasers (flight 1's open side, the eval floor's edge) and the
+    // office's glass box are walked past, not pulled over (player/Traversal.ts)
+    noMantle.add(this.w(0, DRUM / 2, 0), { x: RI, y: DRUM / 2 + 0.5, z: RI });
     this.col(0, GATE_H + (DRUM - GATE_H) / 2, -(R - 0.2), GATE + 0.2, (DRUM - GATE_H) / 2, 0.22);
     // the window band: glass between steel mullions, a sill and a head
     this.skin(b, m.glass, R - 0.18, wy0, wy1, w0, w1, true, 96);

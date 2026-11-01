@@ -4,6 +4,7 @@ import type { Physics } from '@/engine/physics';
 import type { Flicker } from '@/game/world/Landmarks';
 import type { NpcDef } from '@/game/world/npc';
 import { box, merge, wire } from '@/game/world/kit';
+import { ladders, localLadder } from '@/game/world/ladders';
 import { glow, wood, plainStandard } from '@/game/world/materials';
 import type { VirtualLight } from '@/game/world/lights';
 import { Site, Pen, V, HALO, wall, floor, deck, sheetRoof, gutter, post, railing, bulb, type Hole } from './townKit';
@@ -328,7 +329,7 @@ function diner(S: Site, H: Hooks) {
   drum(P, -13.0, zB - 0.6, M.drumBlue(), 0.2, false, 0, true);
   drum(P, -13.65, zB - 0.5, M.drumRed(), 1.2, false, 0, true);
   crate(P, -20.5, 0, zB - 0.6, 0.8, 0.6, 0.6, 0.15, M.woodPale(), true);
-  crate(P, -20.4, 0.6, zB - 0.6, 0.6, 0.45, 0.5, -0.2);
+  crate(P, -20.4, 0.6, zB - 0.6, 0.6, 0.45, 0.5, -0.2, M.woodPale(), true);
   P.box(M.woodGrey(), 1.1, 2.1, 0.06, -17.0, 1.05, zB - 0.03).box(M.brass(), 0.05, 0.05, 0.08, -16.6, 1.05, zB - 0.06);
   P.box(M.found(), 1.4, 0.15, 0.8, -17.0, 0.075, zB - 0.4);
 }
@@ -594,7 +595,7 @@ function till(S: Site, H: Hooks) {
   P.put(M.woodPale(), new THREE.CylinderGeometry(0.3, 0.3, 0.04, 14), 14.3, FY + 0.9, zF + 0.5);
   for (let i = 0; i < 6; i++) P.cyl(M.bottleA(), 0.06, 0.06, 0.1, 14.3 + Math.cos(i) * 0.15, FY + 0.97, zF + 0.5 + Math.sin(i) * 0.15, 6);
   crate(P, 19.6, FY, zF + 0.45, 0.6, 0.5, 0.5, 0.2, M.woodPale(), true);
-  crate(P, 19.6, FY + 0.5, zF + 0.45, 0.5, 0.4, 0.45, -0.25);
+  crate(P, 19.6, FY + 0.5, zF + 0.45, 0.5, 0.4, 0.45, -0.25, M.woodPale(), true);
   P.cyl(M.woodPale(), 0.015, 0.015, 1.3, 15.0, FY + 0.7, zF + 0.12, 5, 0.12, 0, 0.1).put(M.burlap(), new THREE.ConeGeometry(0.12, 0.3, 8), 15.07, FY + 0.12, zF + 0.04, 0.12, 0, Math.PI + 0.1);
   drum(P, x1 + 0.55, zF - 0.6, M.drumBlue(), 0.3, false, 0, true);
   P.beam(M.galv(), V(x1 + 0.2, 5.6, zB - 0.42), V(x1 + 0.55, 1.2, zF - 0.6), 0.03, 6);
@@ -700,7 +701,7 @@ function till(S: Site, H: Hooks) {
 
   // ---- back room: crates, sacks, a workbench, one bare bulb
   for (const [x, z, w, h, r] of [[19.8, -14.9, 0.9, 0.7, 0.1], [19.9, -14.0, 0.7, 0.6, -0.2], [17.6, -15.0, 0.8, 0.6, 0.3], [19.8, -12.0, 0.8, 0.7, 0]] as const) crate(P, x, FY, z, w, h, w * 0.85, r, M.woodPale(), true);
-  crate(P, 19.85, FY + 0.7, -14.9, 0.6, 0.45, 0.5, 0.4);
+  crate(P, 19.85, FY + 0.7, -14.9, 0.6, 0.45, 0.5, 0.4, M.woodPale(), true);
   for (let i = 0; i < 4; i++) sack(P, 16.2 + (i % 2) * 0.5, FY, -15.2 + Math.floor(i / 2) * 0.45, i);
   P.col(16.45, FY + 0.25, -15.0, 0.55, 0.25, 0.45);
   table(P, 15.4, -11.0, 1.6, 0.6, 0.85, 0, FY, M.wood(), M.woodDark(), true);
@@ -740,7 +741,7 @@ function till(S: Site, H: Hooks) {
     L.box(M.paper(), 0.2, 0.012, 0.16, 16.62, B.ys[2] + 0.035, zF - t - 0.17, -0.1);
     trunk(L, 14.4, -13.6, 0.4);
     crate(L, 19.9, 0, -14.6, 0.8, 0.6, 0.7, 0.2, M.woodPale(), true);
-    crate(L, 19.9, 0.6, -14.6, 0.6, 0.45, 0.5, -0.1);
+    crate(L, 19.9, 0.6, -14.6, 0.6, 0.45, 0.5, -0.1, M.woodPale(), true);
     for (let i = 0; i < 7; i++) L.box(trim, 0.08, 0.14, zF - zB, x0 + 0.6 + i * 1.6, 2.62, (zF + zB) / 2, 0, -0.055);
   }
   H.spot('loft', 17.4, LOFT + 0.18, -7.4);
@@ -968,11 +969,31 @@ function tower(S: Site, H: Hooks) {
       }
     }
   }
-  // deck, rail, the tank (staves + hoops), the roof
-  P.box(M.woodGrey(), 3.4, 0.1, 3.4, 0, deckY + 0.05, 0);
-  for (const [a, b] of [[[-1.7, -1.7], [1.7, -1.7]], [[1.7, -1.7], [1.7, 1.7]], [[1.7, 1.7], [-1.7, 1.7]], [[-1.7, 1.7], [-1.7, -1.7]]] as const) {
-    P.beam(M.galv(), V(a[0], deckY + 1.0, a[1]), V(b[0], deckY + 1.0, b[1]), 0.02, 4);
-    for (let i = 0; i <= 4; i++) { const t = i / 4; P.cyl(M.galv(), 0.015, 0.015, 1.0, a[0] + (b[0] - a[0]) * t, deckY + 0.5, a[1] + (b[1] - a[1]) * t, 4); }
+  // deck, rail, the tank (staves + hoops), the roof. The deck is a balcony round the tank (wide
+  // enough to walk), carried on edge beams and a knee brace from each leg; the ladder comes up the
+  // east side through a gap in the rail. Deck, tank and rail are solid: you can climb up (ladders.ts).
+  const DH = 2.35;
+  P.box(M.woodGrey(), DH * 2, 0.1, DH * 2, 0, deckY + 0.05, 0);
+  for (const sg of [-1, 1]) {
+    P.box(steel, DH * 2, 0.12, 0.1, 0, deckY - 0.06, sg * (DH - 0.05)).box(steel, 0.1, 0.12, DH * 2, sg * (DH - 0.05), deckY - 0.06, 0);
+  }
+  for (const [dx, dz] of [[-1, -1], [1, -1], [-1, 1], [1, 1]] as const) P.beam(steel, V(dx * 0.99, deckY - 1.5, dz * 0.99), V(dx * (DH - 0.08), deckY - 0.08, dz * (DH - 0.08)), 0.045, 5);
+  P.col(0, deckY + 0.05, 0, DH, 0.05, DH);
+  {
+    const c = P.p(0, deckY + 1.35, 0);
+    S.physics.addCylinder(S.f.p(c.x, c.y, c.z), 1.25, 1.6);
+  }
+  // the rail: posts every 1.175 m, the east side open from z 0 to 1.175 for the ladder
+  const LZ = 0.59;
+  for (const [a, b, gap] of [[[-DH, -DH], [DH, -DH], false], [[DH, -DH], [DH, DH], true], [[DH, DH], [-DH, DH], false], [[-DH, DH], [-DH, -DH], false]] as const) {
+    const pieces: [number, number][] = gap ? [[0, 0.5], [0.75, 1]] : [[0, 1]];
+    for (const [t0, t1] of pieces) {
+      const ax = a[0] + (b[0] - a[0]) * t0, az = a[1] + (b[1] - a[1]) * t0, bx = a[0] + (b[0] - a[0]) * t1, bz = a[1] + (b[1] - a[1]) * t1;
+      P.beam(M.galv(), V(ax, deckY + 1.0, az), V(bx, deckY + 1.0, bz), 0.02, 4);
+      P.beam(M.galv(), V(ax, deckY + 0.55, az), V(bx, deckY + 0.55, bz), 0.012, 4);
+      P.col((ax + bx) / 2, deckY + 0.6, (az + bz) / 2, Math.max(0.04, Math.abs(bx - ax) / 2), 0.5, Math.max(0.04, Math.abs(bz - az) / 2));
+    }
+    for (let i = 0; i <= 4; i++) { const t = i / 4; P.cyl(M.galv(), 0.015, 0.015, 1.0, a[0] + (b[0] - a[0]) * t, deckY + 0.6, a[1] + (b[1] - a[1]) * t, 4); }
   }
   const tankW = wood('#6e5236');
   for (let i = 0; i < 26; i++) {
@@ -982,9 +1003,19 @@ function tower(S: Site, H: Hooks) {
   for (const y of [0.35, 1.0, 1.65, 2.3]) P.put(M.galv(), new THREE.TorusGeometry(1.56, 0.022, 4, 28), 0, deckY + 0.1 + y, 0, Math.PI / 2, 0, 0);
   P.put(M.roofGrey(), new THREE.ConeGeometry(1.8, 0.95, 20, 1, false), 0, deckY + 3.05, 0);
   P.cyl(M.galv(), 0.04, 0.06, 0.4, 0, deckY + 3.7, 0, 6);
-  // ladder up a leg, a downpipe with a valve and spout
-  for (const s of [-0.22, 0.22]) P.beam(M.galv(), V(1.25 + s, 0, 1.25 - s), V(1.05 + s, deckY + 1.0, 1.05 - s), 0.018, 4);
-  for (let i = 1; i < 22; i++) { const t = i / 22, k = 1.25 - t * 0.2; P.beam(M.galv(), V(k - 0.22, t * (deckY + 1), k + 0.22), V(k + 0.22, t * (deckY + 1), k - 0.22), 0.012, 4); }
+  // the ladder up the east side to the gap in the rail (tied back to a leg twice on the way), a
+  // downpipe with a valve and spout
+  {
+    const LX = DH + 0.15, n = 19;
+    for (const sz of [-0.25, 0.25]) {
+      P.beam(M.galv(), V(LX, 0, LZ + sz), V(LX, deckY + 1.0, LZ + sz), 0.022, 5);
+      P.beam(M.galv(), V(LX, deckY - 0.3, LZ + sz), V(DH - 0.05, deckY - 0.3, LZ + sz), 0.018, 4);
+    }
+    for (const ty of [1.7, 3.8]) P.beam(M.galv(), V(LX, ty, LZ + 0.25), V(1.11, ty, 1.11), 0.016, 4);
+    for (let i = 0; i < n; i++) P.beam(M.galv(), V(LX, 0.3 + i * 0.3, LZ - 0.25), V(LX, 0.3 + i * 0.3, LZ + 0.25), 0.014, 4);
+    const m = new THREE.Matrix4().multiplyMatrices(S.f.m, P.m);
+    ladders.add(localLadder(m, 'creek-tower', [LX, 0, LZ], [LX, deckY + 0.1, LZ], [1, 0], [DH - 0.42, deckY + 0.12, LZ], { half: 0.25, first: 0.3, pitch: 0.3, count: n, rail: deckY + 1.0 }));
+  }
   P.cyl(M.galv(), 0.1, 0.1, deckY - 2.2, 0, 2.2 + (deckY - 2.2) / 2, 0, 8).put(M.galv(), new THREE.TorusGeometry(0.16, 0.025, 4, 8), 0, 2.6, 0, Math.PI / 2, 0, 0);
   P.beam(M.galv(), V(0, 2.25, 0), V(0.35, 2.0, 0.6), 0.08, 8).box(M.drumRed(), 0.2, 0.04, 0.04, 0, 2.6, 0.18);
   S.floorDecal('stain', 2.6, 2.6, tx + 0.3, 0.025, tz + 0.7, 0.4);

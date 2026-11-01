@@ -244,7 +244,9 @@ export class DomeBuilder implements BunkerShell {
     for (let i = 0; i < 48; i++) {
       const a = Math.PI + gap + (i + 0.5) * ((Math.PI * 2 - gap * 2) / 48), half = (R + 0.1) * Math.tan((Math.PI * 2 - gap * 2) / 96) + 0.05;
       const p = P(R + 0.1, a);
-      this.col(p.x, WALL / 2, p.z, half, WALL / 2, 0.2, a);
+      // (up into the glass's first course too: the glass has no collider of its own, and a 1.2 m wall
+      // with the floor behind it is a step you could climb over)
+      this.col(p.x, 1.6, p.z, half, 1.6, 0.2, a);
     }
     // the floor: dark epoxy, a lighter walkway ring, and painted aisle lines
     b.add(m.floor, place(new THREE.CircleGeometry(R - 0.05, 72), 0, 0.02, 0, -Math.PI / 2));
@@ -762,18 +764,26 @@ export class DomeBuilder implements BunkerShell {
     const { FENCE: F, GATE_W } = DM;
     const H = 3.0;
     const gateA = Math.asin(GATE_W / F);
-    // the culvert at θ = 90° (east): a 1.6 m gap whose fence starts 1.45 m up, closed by a grate
-    const culA = 1.0 / F;
+    // the culvert at θ = 90° (east): over the outfall's mouth (between its cheeks, 1.12 m either side)
+    // the fence starts 1.45 m up, and the grate closes the gap under it
+    const culA = 1.12 / F;
     const panels: THREE.BufferGeometry[] = [];
     const N = 84;
+    // the panels, split where the mouth begins and ends (two of them meet right over it)
+    const segs: [number, number][] = [];
     for (let i = 0; i < N; i++) {
       const a0 = (i / N) * Math.PI * 2, a1 = ((i + 1) / N) * Math.PI * 2;
-      const am = (a0 + a1) / 2;
       // gate opening (north)
-      if (Math.abs(am - Math.PI) < gateA) continue;
+      if (Math.abs((a0 + a1) / 2 - Math.PI) < gateA) continue;
+      let s0 = a0;
+      for (const c of [Math.PI / 2 - culA, Math.PI / 2 + culA]) if (c > a0 + 1e-4 && c < a1 - 1e-4) { segs.push([s0, c]); s0 = c; }
+      segs.push([s0, a1]);
+    }
+    for (const [a0, a1] of segs) {
+      const am = (a0 + a1) / 2;
       const p0 = P(F, a0), p1 = P(F, a1);
       const g0 = this.local(this.origin.x + p0.x, this.origin.z + p0.z).y, g1 = this.local(this.origin.x + p1.x, this.origin.z + p1.z).y;
-      const culvert = Math.abs(am - Math.PI / 2) < culA * 1.2;
+      const culvert = Math.abs(am - Math.PI / 2) < culA;
       const lo = culvert ? 1.45 : 0.05;
       const len = p0.distanceTo(p1);
       const g = new THREE.PlaneGeometry(len, H - lo);
@@ -784,10 +794,11 @@ export class DomeBuilder implements BunkerShell {
       panels.push(norm(g));
       b.add(m.post, cyl(0.05, 0.05, H + 0.35, p0.x, g0 + (H + 0.35) / 2, p0.z, 6));
       b.add(m.post, beam(V(p0.x, g0 + H, p0.z), V(p1.x, g1 + H, p1.z), 0.03, 4));
-      // (one collider per panel, from the panel's foot; the culvert's starts above the gap)
+      // (one collider per panel, from the panel's foot, along it; the culvert's starts above the gap.
+      // It was turned a quarter round (`am + π/2`): a fin across the fence, with ~2.8 m open between fins)
       const mid = p0.clone().add(p1).multiplyScalar(0.5);
       const gy = (g0 + g1) / 2;
-      this.col(mid.x, gy + lo + (H + 0.6 - lo) / 2, mid.z, len / 2 + 0.03, (H + 0.6 - lo) / 2, 0.08, am + Math.PI / 2);
+      this.col(mid.x, gy + lo + (H + 0.6 - lo) / 2, mid.z, len / 2 + 0.03, (H + 0.6 - lo) / 2, 0.08, am);
       // barbed wire on outward arms
       const out0 = P(F + 0.35, a0), out1 = P(F + 0.35, a1);
       b.add(m.post, beam(V(p0.x, g0 + H, p0.z), V(out0.x, g0 + H + 0.4, out0.z), 0.02, 3));

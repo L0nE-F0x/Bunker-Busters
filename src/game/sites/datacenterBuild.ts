@@ -601,6 +601,7 @@ export class ColdStorageBuild {
     b.add(plainStandard('#7c3a2a', 0.9), box(0.7, 0.14, 0.55, cx - 0.55, FY + 0.55, cz));
     this.col(cx, FY + 0.25, cz, 0.95, 0.25, 0.38);
     b.add(M.white(), box(0.55, 0.45, 0.45, cx + 1.6, FY + 0.225, cz - 0.4));
+    this.col(cx + 1.6, FY + 0.225, cz - 0.4, 0.275, 0.225, 0.225);
     b.add(M.dark(), box(0.36, 0.015, 0.25, cx + 1.6, FY + 0.46, cz - 0.4), box(0.36, 0.22, 0.012, cx + 1.6, FY + 0.57, cz - 0.52, 0, -0.25));
     this.d.add(this.screenOn.m, A.quad('rackScreen', 0.32, 0.19, cx + 1.6, FY + 0.57, cz - 0.512, -0.25, 0, 0));
     for (let i = 0; i < 9; i++) b.add(M.galv(), cyl(0.033, 0.033, 0.12, cx - 0.6 + r() * 2.6, FY + 0.06, cz + 0.6 + r() * 0.7, 8));
