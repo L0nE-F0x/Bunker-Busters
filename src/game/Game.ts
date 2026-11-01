@@ -57,7 +57,8 @@ import { buildSites, Errands, type Site } from './sites';
 import { Stories } from './sites/stories';
 import { Player } from './player/Player';
 import { FirstPersonCamera } from './player/FirstPersonCamera';
-import { Hands, HAND_LOOKS, torchLight, retire, releaseRetired, hasRetired } from './player/Hands';
+import { Hands, HAND_LOOKS, torchLight, retire, releaseRetired, hasRetired, poseFromWorld, clonePose, DOWN } from './player/Hands';
+import { ladders, ladderAt, ladderYaw, noMantle } from './world/ladders';
 import { GameState, saveGame, loadGame, readSave, storageStatus, loadSettings, saveSettings, clearSave, START_DAY, type Settings } from './State';
 import type { GameContext, Interactable, UIBridge } from './context';
 import { UI, type HudFrame } from '@/ui/UI';
@@ -244,6 +245,11 @@ export class Game {
   private markerAt = 0;
   private readonly _fwd = new THREE.Vector3();
   private readonly _to = new THREE.Vector3();
+  private readonly _safe = new THREE.Vector3();
+  /** The hands' poses on a ladder or a mantle's edge (Traversal's holds → view space). */
+  private readonly _holdPose = [clonePose(DOWN), clonePose(DOWN)];
+  /** The gun you had up when you took hold of a ladder: it comes back out at the other end. */
+  private climbStowed: WeaponId | null = null;
   private loops: LoopHandle[] = [];
   private loopsStarted = false;
   private t = 0;
@@ -500,6 +506,7 @@ export class Game {
     this.interactables.push(...this.spireTaps.interactables);
     this.fortressAfter = new FortressAfter(this.ctx, this.landmarks, (x, z) => this.clearSpot(x, z));
     this.interactables.push(...this.fortressAfter.interactables);
+    this.ladderInteractables();
     // the bunkers' people (lateCast.ts): in the desktop app (local files) and with ?latecast=boot they
     // join now, before the warm-up, as they always did; in the browser, during the title
     this.late = new LateCast({
@@ -1484,6 +1491,22 @@ export class Game {
     this.player.onJump = () => {
       if (this.player) this.audio.footstep(this.acoustics?.surfaceAt(this.player.position) ?? 'sand', 0.6, { kind: 'jump' });
     };
+    this.climbStowed = null;
+    const trav = this.player.trav;
+    trav.onRung = (foot, k) => this.audio.footstep('metal', k, { kind: foot ? 'rung' : 'grip' });
+    trav.onLadder = (on) => {
+      // both hands on the rungs: the gun goes away, and comes back out at the other end
+      if (on) { this.climbStowed = this.arms?.equipped ?? null; return; }
+      const back = this.climbStowed;
+      this.climbStowed = null;
+      if (back && this.arms && !this.player?.heavy) { this.arms.handsFull = false; this.arms.equip(back); }
+    };
+    trav.onMantle = (phase, at, k) => {
+      const surf = this.acoustics?.surfaceAt(at) ?? 'sand';
+      if (phase === 'start') this.audio.footstep(surf, 0.45 + k * 0.3, { kind: 'jump' });
+      else if (phase === 'plant') { this.audio.footstep(surf, 0.7, { kind: 'grip' }); this.hands?.jolt(0.05); }
+      else { this.audio.footstep(surf, 0.6 + k * 0.3); this.cam.land(1.6 + k * 1.4); }
+    };
     this.cam.snap(state.data.yaw + Math.PI, -0.05);
     this.grantArms(state);
     this.arms = new PlayerArms(state, this.hands, this.cam, this.camera, this.input, this.combat, this.audio, this.player);
@@ -1701,7 +1724,8 @@ export class Game {
     // the run is open in another tab that started after this one: writing now would undo its progress
     if (this.savingElsewhere) { if (!silent) this.ui.toast(SAVE_ELSEWHERE, 'bad'); return; }
     const d = this.state.data;
-    const p = this.player.position;
+    // (halfway up a ladder, the foot or the landing: a Continue would drop you off it)
+    const p = this.player.safeFeet(this._safe);
     // (a position that isn't a number would load as nowhere, every time: keep the last good one)
     if (Number.isFinite(p.x + p.y + p.z)) d.position = [p.x, p.y, p.z];
     if (Number.isFinite(this.player.yaw)) d.yaw = this.player.yaw;
@@ -1875,6 +1899,7 @@ export class Game {
     this.ui.dismissInteraction(); // a lock you were picking when you went down stays at the door
     this.busy = true;
     player.frozen = true;
+    player.trav.cancel(); // off a ladder, out of a mantle: you go down where you are
     this.dying = 0.0001;
     s.data.stats.deaths = (s.data.stats.deaths ?? 0) + 1;
     s.data.poison = 0;
@@ -2128,6 +2153,39 @@ export class Game {
   }
 
   /** First-person targeting: whatever interactable sits closest to the centre of view, within reach. */
+  /** Every climbable ladder (world/ladders.ts), for the test harness. */
+  get ladders() {
+    return ladders.list;
+  }
+  /** The bunkers' no-climb zones (world/ladders.ts), for the test harness. */
+  get noMantle() {
+    return noMantle;
+  }
+
+  /**
+   * Use at a ladder's foot climbs it; at its top (where it has a landing), climbs down. Walking into one
+   * facing it does the same (Traversal.watch): these are for when you'd rather press a key.
+   */
+  private ladderInteractables() {
+    for (const l of ladders.list) {
+      const ok = () => (l.usable && !l.usable() ? 'Not now.' : true);
+      const free = () => !!this.player && !this.player.trav.active && !this.player.heavy;
+      const foot = ladderAt(l, 0, new THREE.Vector3()).addScaledVector(l.out, 0.5);
+      foot.y += 1.1;
+      this.interactables.push({
+        id: `ladder:${l.id}`, pos: foot, radius: 1.25, visible: free,
+        primary: { label: 'Climb the ladder', available: ok, run: () => { const pl = this.player; if (pl) pl.trav.grab(l, pl.position.y - l.base.y, this.cam.yaw); } },
+      });
+      if (!l.exit) continue;
+      const top = l.top.clone().addScaledVector(l.out, -0.45);
+      top.y += 0.9;
+      this.interactables.push({
+        id: `ladder:${l.id}:top`, pos: top, radius: 1.3, visible: free,
+        primary: { label: 'Climb down the ladder', available: ok, run: () => { this.player?.trav.climbDown(l, this.cam.yaw); } },
+      });
+    }
+  }
+
   private pickFocus(): Interactable | null {
     if (!this.player) return null;
     const p = this.player.position;
@@ -2554,10 +2612,17 @@ export class Game {
     const coreOut = s.has('spire.core.carrying');
     if (coreOut) sp *= 0.85;
     player.heavy = coreOut;
-    if (this.arms) this.arms.handsFull = coreOut;
+    const trav = player.trav;
+    // both hands on a ladder: the gun is put away (and comes back at the other end: run start wiring)
+    if (this.arms) this.arms.handsFull = coreOut || trav.onRungs;
     if (this.hands && !this.busy) {
       if (coreOut && this.hands.basePose !== 'carry') this.hands.setBase('carry');
       else if (!coreOut && this.hands.basePose === 'carry') this.hands.setBase('idle');
+    }
+    // climbing or pulling up: the hands are on the world (placed below), a gun drops out of the way
+    if (this.hands) {
+      if (trav.active && this.hands.basePose !== 'climb') this.hands.setBase('climb');
+      else if (!trav.active && this.hands.basePose === 'climb') this.hands.setBase(coreOut ? 'carry' : 'idle');
     }
     player.speedMult = sp;
     player.stealthRank = s.skill('stealth');
@@ -2596,7 +2661,17 @@ export class Game {
       player.flashlight = this.hands.flashlightOn;
       this.audio.play('click');
     }
-    player.update(dt, input, this.cam.yaw, true);
+    player.update(dt, input, this.cam.yaw, true, this.cam.pitch);
+    // a climb that turns you round (onto a ladder from its top); on a ladder the view stays on it
+    if (trav.turnYaw !== null) this.cam.yaw = trav.turnYaw;
+    else if (trav.ladder && (trav.kind === 'ladder' || trav.kind === 'mount')) {
+      const face = ladderYaw(trav.ladder);
+      let d = this.cam.yaw - face;
+      while (d > Math.PI) d -= Math.PI * 2;
+      while (d < -Math.PI) d += Math.PI * 2;
+      const lim = 1.35;
+      if (Math.abs(d) > lim) this.cam.yaw = face + Math.sign(d) * lim;
+    }
     if (!this.ui.modalOpen) for (const b of this.bunkers) b.update(dt);
     // what hostiles can perceive of you this frame
     const tg = this.combat.target;
@@ -2623,8 +2698,15 @@ export class Game {
     tg.height = player.height;
 
     const strafe = blocked ? 0 : (input.act('right') ? 1 : 0) - (input.act('left') ? 1 : 0) + input.moveX + input.padX;
-    const hs = Math.hypot(player.velocity.x, player.velocity.z);
-    this.cam.update(dt, input, { feet: player.position, crouch: player.crouching, sprint: player.sprinting, speed: hs, grounded: player.grounded, strafe, exertion: player.exertion });
+    const hs = trav.active ? 0 : Math.hypot(player.velocity.x, player.velocity.z);
+    this.cam.update(dt, input, { feet: player.position, crouch: player.crouching, sprint: player.sprinting, speed: hs, grounded: player.grounded, strafe: trav.active ? 0 : strafe, exertion: player.exertion });
+    // the climb's own motion: a mantle's pull and nod, the rhythm of hand over hand
+    if (trav.active) {
+      const o = trav.camOff, bob = this.cam.bob;
+      this.camera.position.y += o.y * (trav.kind === 'ladder' ? bob : 1);
+      this.camera.rotation.x += o.pitch;
+      this.camera.rotation.z += o.roll * bob;
+    }
     // going down: the view sags to the ground and rolls
     if (this.dying > 0) {
       this.dying = Math.min(1, this.dying + dt / 1.1);
@@ -2639,9 +2721,22 @@ export class Game {
     tg.eye.copy(this.camera.position);
     if (this.arms) {
       this.arms.validate();
-      this.wantAds = this.arms.update(dt, blocked || this.busy || !!this.gear?.viewing, !!this.hands?.busy).wantAds;
+      this.wantAds = this.arms.update(dt, blocked || this.busy || !!this.gear?.viewing, !!this.hands?.busy || trav.active).wantAds;
     }
-    this.gear?.update(dt, blocked || this.busy);
+    this.gear?.update(dt, blocked || this.busy || trav.active);
+    // hands on a rung or an edge: placed exactly where Traversal holds them
+    if (this.hands && trav.active) {
+      const depth = this.hands.root.scale.z / Hands.VIEW_SCALE;
+      for (let i = 0; i < 2; i++) {
+        const hd = trav.holds[i];
+        if (!hd.on) continue;
+        const pose = poseFromWorld(this._holdPose[i], i === 0 ? 1 : -1, this.camera, hd.p, hd.fingers, hd.back, depth, trav.kind === 'mantle');
+        const c = pose.curl;
+        c[0] = hd.curl * 0.92; c[1] = hd.curl; c[2] = Math.min(1, hd.curl * 1.04 + 0.02); c[3] = Math.min(1, hd.curl * 1.08 + 0.04);
+        pose.thumb = hd.thumb; pose.oppose = hd.oppose; pose.spread = hd.spread;
+        this.hands.placeHand(i as 0 | 1, pose);
+      }
+    }
     this.audio.breathe(dt, player.exertion);
     if (player.winded && !this.windedHint) {
       this.windedHint = true;
@@ -2650,8 +2745,9 @@ export class Game {
     this.hands?.update(dt, { speed: hs, grounded: player.grounded, crouch: player.crouching, sprint: player.sprinting, bobPhase: this.cam.bobPhase, lookDX: input.mouseDX, lookDY: input.mouseDY, vy: player.velocity.y, ads: this.wantAds, steady: s.focus('firearms') === 'marksman' || !!this.gear?.focused });
 
     // interaction
-    this.focus = blocked ? null : this.pickFocus();
+    this.focus = blocked || trav.active ? null : this.pickFocus();
     const prompt: HudFrame['prompt'] = [];
+    if (trav.kind === 'ladder' && !blocked) prompt.push({ key: 'JUMP', label: 'Let go' });
     if (this.focus) {
       const f = this.focus;
       const pa = f.primary.available();
@@ -2672,7 +2768,8 @@ export class Game {
       if (this.hands?.busy) {
         // hands already doing something: wait for them
       } else if (input.actPressed('interact')) {
-        if (pa === true) { if (this.hands) this.hands.reach(() => void f.primary.run()); else void f.primary.run(); } else this.audio.play('deny');
+        // (a ladder takes both hands itself: no reach first)
+        if (pa === true) { if (this.hands && !f.id.startsWith('ladder:')) this.hands.reach(() => void f.primary.run()); else void f.primary.run(); } else this.audio.play('deny');
       } else if (input.actPressed('alt') && f.secondary) {
         const sec = f.secondary;
         if (sec.available() === true) { if (this.hands) this.hands.press(() => void sec.run()); else void sec.run(); } else this.audio.play('deny');

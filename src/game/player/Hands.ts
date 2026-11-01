@@ -755,6 +755,9 @@ export class Hands {
   readonly flashlight: THREE.SpotLight;
   /** The weapon in hand (models + viewmodel animation). */
   readonly arms = new Arms();
+  /** Hands placed from outside for this frame (a ladder's rungs, a mantle's edge): right, left. */
+  private placed = [clonePose(DOWN), clonePose(DOWN)];
+  private placedOn = [false, false];
 
   constructor(look: HandLook) {
     this.right = new HandRig(1, look, this.accent);
@@ -787,6 +790,16 @@ export class Hands {
 
   setBase(pose: string) {
     this.base = pose;
+  }
+
+  /**
+   * Put one hand exactly at `pose` this frame (0 right, 1 left; a pose as POSES writes it: the left
+   * mirrored). No spring and no sway: it's holding something in the world. Once it stops being
+   * placed, the spring carries it from there back to its own pose.
+   */
+  placeHand(i: 0 | 1, pose: HandPose) {
+    copyPose(this.placed[i], pose);
+    this.placedOn[i] = true;
   }
 
   get busy() {
@@ -897,6 +910,10 @@ export class Hands {
     };
     if (gripR) grab(this.right, 1, arms.rightRoot, true, arms.rCurl);
     if (gripL) grab(this.left, -1, arms.leftRoot, false, arms.lCurl);
+    const placedR = this.placedOn[0] && !gripR, placedL = this.placedOn[1] && !gripL;
+    if (placedR) { copyPose(this.right.cur, this.placed[0]); this.right.vel.fill(0); }
+    if (placedL) { copyPose(this.left.cur, this.placed[1]); this.left.vel.fill(0); }
+    this.placedOn[0] = this.placedOn[1] = false;
 
     // items in hands
     const want = { r: gripR ? undefined : def.items?.r, l: gripL ? undefined : def.items?.l ?? (torchGrip ? 'flashlight' : undefined) };
@@ -929,7 +946,7 @@ export class Hands {
     const apply = (rig: HandRig, phase: number) => {
       const p = _pose;
       copyPose(p, rig.cur);
-      if (rig === this.right ? gripR : gripL) {
+      if (rig === this.right ? gripR || placedR : gripL || placedL) {
         rig.apply(p);
         rig.root.visible = rig.upper.visible = p.pos.y > -0.55;
         return;
@@ -1029,6 +1046,38 @@ export function torchLight() {
 
 const _sway = new THREE.Vector2();
 const _pose = clonePose(DOWN);
+
+// the palm's grip anchor (HandRig.grip) and the middle of the palm, in a right hand's wrist space (× its 1.3)
+const GRIP_AT = new THREE.Vector3(-0.004, -0.03, -0.062).multiplyScalar(1.3);
+const PALM_AT = new THREE.Vector3(0, -0.019, -0.048).multiplyScalar(1.3);
+const _cInv = new THREE.Matrix4(), _cRot = new THREE.Matrix4(), _hb = new THREE.Matrix4();
+const _hp = new THREE.Vector3(), _hf = new THREE.Vector3(), _hk = new THREE.Vector3();
+const _hx = new THREE.Vector3(), _hy = new THREE.Vector3(), _hz = new THREE.Vector3();
+
+/**
+ * A hand holding something in the world → its pose (view space, as POSES writes it). `p` is where the
+ * grip (or with `palm`, the middle of the palm) goes; `fingers` the way the fingers point and `back`
+ * the way the back of the hand faces, all world space. `depth` is the viewmodel's z squash
+ * (Hands.root.scale.z / VIEW_SCALE): undone here, so the hand lands on the thing at any field of view.
+ */
+export function poseFromWorld(out: HandPose, side: 1 | -1, camera: THREE.Camera, p: THREE.Vector3, fingers: THREE.Vector3, back: THREE.Vector3, depth: number, palm = false) {
+  _cInv.copy(camera.matrixWorld).invert();
+  _cRot.extractRotation(_cInv);
+  const c = _hp.copy(p).applyMatrix4(_cInv);
+  const f = _hf.copy(fingers).applyMatrix4(_cRot);
+  const k = _hk.copy(back).applyMatrix4(_cRot);
+  // poses are authored as right hands: the left one is the mirror image
+  if (side < 0) { c.x = -c.x; f.x = -f.x; k.x = -k.x; }
+  // the hand's −z runs along the fingers, +y out of its back
+  const z = _hz.copy(f).negate().normalize();
+  const x = _hx.crossVectors(k, z).normalize();
+  const y = _hy.crossVectors(z, x);
+  _hb.makeBasis(x, y, z);
+  out.rot.setFromRotationMatrix(_hb, 'YXZ');
+  const off = _hf.copy(palm ? PALM_AT : GRIP_AT).applyMatrix4(_hb);
+  out.pos.set(c.x - off.x, c.y - off.y, (c.z - off.z) / depth);
+  return out;
+}
 export function copyPose(dst: HandPose, src: HandPose) {
   dst.pos.copy(src.pos);
   dst.rot.copy(src.rot);

@@ -36,8 +36,10 @@ import { proseKeys } from './keyWords';
 const device = () => (isTouch ? 'touch' : document.documentElement.classList.contains('pad') ? 'pad' : 'kbm');
 /** An action's first key as a keycap, for the static help lines in footers. */
 const kk = (a: Action) => kbdGlyph(binds.keys(a)[0] ?? '');
-/** HUD prompt keys (Game sends 'E', 'F', 'LMB') → the action they stand for. */
-const PROMPT_ACT: Record<string, Action> = { E: 'interact', F: 'alt', LMB: 'fire' };
+/** HUD prompt keys (Game sends 'E', 'F', 'LMB', 'JUMP') → the action they stand for. */
+const PROMPT_ACT: Record<string, Action> = { E: 'interact', F: 'alt', LMB: 'fire', JUMP: 'jump' };
+/** The same keys' labels on the touch build's prompt buttons. */
+const PROMPT_TOUCH: Record<string, string> = { E: 'USE', F: 'ALT', LMB: 'FIRE', JUMP: 'JUMP' };
 
 const esc = (s: string) => s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]!));
 
@@ -543,7 +545,7 @@ export class UI implements UIBridge {
     // on touch the prompts are buttons themselves (data-key → TouchControls)
     const dev = device();
     const html = f.prompt.map((p) => isTouch
-      ? `<div class="p ${p.na ? 'na' : ''}" data-key="act:${PROMPT_ACT[p.key] ?? p.key}"><span class="kbd">${p.key === 'E' ? 'USE' : p.key === 'F' ? 'ALT' : 'FIRE'}</span>${p.label}${p.na ? `<small>${proseKeys(p.na)}</small>` : ''}</div>`
+      ? `<div class="p ${p.na ? 'na' : ''}" data-key="act:${PROMPT_ACT[p.key] ?? p.key}"><span class="kbd">${PROMPT_TOUCH[p.key] ?? 'FIRE'}</span>${p.label}${p.na ? `<small>${proseKeys(p.na)}</small>` : ''}</div>`
       : `<div class="p ${p.na ? 'na' : ''}">${PROMPT_ACT[p.key] ? actionGlyph(PROMPT_ACT[p.key], dev) : `<span class="kbd">${p.key}</span>`}${p.label}${p.na ? `<small>${proseKeys(p.na)}</small>` : ''}</div>`).join('');
     if (pr.dataset.html !== html) { pr.innerHTML = html; pr.dataset.html = html; }
     // stance

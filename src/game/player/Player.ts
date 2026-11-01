@@ -3,6 +3,7 @@ import type { Physics } from '@/engine/physics';
 import type { Input } from '@/engine/input';
 import { CharacterModel, LOOKS } from './CharacterModel';
 import { damp, dampAngle } from '@/engine/noise';
+import { Traversal } from './Traversal';
 
 const STAND_HALF = 0.5;
 const CROUCH_HALF = 0.2;
@@ -66,6 +67,8 @@ export class Player {
   /** Mid-air tuck/untuck moved the feet by `dy` while the head stayed put. */
   onTuck: ((dy: number) => void) | null = null;
   onJump: (() => void) | null = null;
+  /** Ladders and mantling (Traversal.ts): while it's active it moves the body instead. */
+  readonly trav: Traversal;
 
   constructor(private physics: Physics, archetype: string, spawn: THREE.Vector3) {
     this.model = new CharacterModel(LOOKS[archetype] ?? LOOKS.infiltrator);
@@ -81,6 +84,29 @@ export class Player {
     this.controller.setMaxSlopeClimbAngle(MAX_CLIMB);
     this.controller.setMinSlopeSlideAngle((60 * Math.PI) / 180);
     this.controller.setApplyImpulsesToDynamicBodies(false);
+    this.trav = new Traversal(physics, this);
+    this.trav.lastGroundY = spawn.y;
+  }
+
+  /** Feet to `p` with no collision (a climb's path, checked before it started). */
+  placeFeet(p: THREE.Vector3) {
+    this.position.copy(p);
+    this.body.setNextKinematicTranslation({ x: p.x, y: p.y + RADIUS + this.halfHeight, z: p.z });
+  }
+
+  /** Crouch or stand on the spot, no headroom test (a mantle onto a ledge that only fits you crouched). */
+  crouchNow(c: boolean) {
+    if (c === this.crouching) return;
+    this.crouching = c;
+    this.halfHeight = c ? CROUCH_HALF : STAND_HALF;
+    this.collider.setHalfHeight(this.halfHeight);
+    const p = this.position;
+    this.body.setNextKinematicTranslation({ x: p.x, y: p.y + RADIUS + this.halfHeight, z: p.z });
+  }
+
+  /** Where to save the run: never halfway up a ladder (a Continue would drop you off it). */
+  safeFeet(out: THREE.Vector3) {
+    return this.trav.active ? this.trav.safeFeet(out) : out.copy(this.position);
   }
 
   get height() {
@@ -93,6 +119,8 @@ export class Player {
   }
 
   teleport(p: THREE.Vector3) {
+    this.trav.cancel();
+    this.trav.lastGroundY = p.y;
     this.position.copy(p);
     this.velocity.set(0, 0, 0);
     this.body.setTranslation({ x: p.x, y: p.y + RADIUS + this.halfHeight + 0.05, z: p.z }, true);
@@ -128,8 +156,8 @@ export class Player {
     if (tuck) this.onTuck?.(2 * dy);
   }
 
-  /** `faceCamera`: first person — the body always faces the view heading. */
-  update(dt: number, input: Input, camYaw: number, faceCamera = false) {
+  /** `faceCamera`: first person — the body always faces the view heading. `camPitch`: up/down on a ladder. */
+  update(dt: number, input: Input, camYaw: number, faceCamera = false, camPitch = 0) {
     let mx = 0, mz = 0;
     if (!this.frozen) {
       if (input.act('forward')) mz += 1;
@@ -140,6 +168,17 @@ export class Player {
       // keys and a stick together never go faster than full
       const m = Math.hypot(mx, mz);
       if (m > 1) { mx /= m; mz /= m; }
+    }
+    // on a ladder, or pulling up onto something: the climb moves the body along its own path
+    const noClimb = this.frozen || this.heavy || this.forceCrouch || !input.enabled;
+    const trav = this.trav;
+    if (trav.update(dt, camYaw, camPitch, { fwd: mz, jump: !noClimb && input.actPressed('jump'), sprint: input.act('sprint'), crouch: input.act('crouch') }, this.frozen)) {
+      this.grounded = false;
+      this.sprinting = false;
+      this.coyote = 0;
+      this.jumpBuffer = 0;
+      this.pose(dt, camYaw, faceCamera, false);
+      return;
     }
     const wantCrouch = this.forceCrouch || (!this.frozen && input.act('crouch'));
     this.setCrouch(wantCrouch);
@@ -191,6 +230,13 @@ export class Player {
     if (this.stamina <= 0) this.winded = true;
     else if (this.winded && this.stamina > 0.4) this.winded = false;
     this.exertion = damp(this.exertion, THREE.MathUtils.clamp((0.92 - this.stamina) * 1.4 + (this.sprinting ? 0.15 : 0), 0, 1), this.exertion < 0.1 ? 0.8 : 1.6, dt);
+    // jump into something you can climb onto: pull yourself up instead (also from a crouch)
+    if (this.jumpBuffer > 0 && this.coyote > 0 && this.recover <= 0 && !noClimb && trav.tryMantle(camYaw, false)) {
+      this.jumpBuffer = 0;
+      this.coyote = 0;
+      this.pose(dt, camYaw, faceCamera, false);
+      return;
+    }
     if (this.jumpBuffer > 0 && this.coyote > 0 && !this.crouching && this.recover <= 0) {
       this.stamina = Math.max(0, this.stamina - 0.03);
       this.velocity.y = JUMP_SPEED * (1 - this.stumble * 0.5) * (this.winded ? 0.85 : 1);
@@ -200,6 +246,12 @@ export class Player {
       this.snapping = false;
       jumped = true;
       this.onJump?.();
+    }
+    // in the air with jump held (or just pressed) against an edge in reach: catch it and pull up
+    if (!this.grounded && !jumped && !noClimb && (input.act('jump') || this.jumpBuffer > 0) && this.velocity.y > -6 && mz > -0.2 && trav.tryMantle(camYaw, true)) {
+      this.jumpBuffer = 0;
+      this.pose(dt, camYaw, faceCamera, false);
+      return;
     }
     // walking off an edge: the fall starts from rest, not at the ground-snap velocity
     if (!this.grounded && this.snapping) { this.velocity.y = 0; this.snapping = false; }
@@ -264,7 +316,14 @@ export class Player {
       if (impact > 2.5) this.onLand?.(Math.min(1, impact / 14), impact);
     }
     this.position.set(next.x, next.y - this.halfHeight - RADIUS, next.z);
+    // a ladder you walk into (or off the top of) takes you from the next frame
+    trav.watch(dt, camYaw, camPitch, mz, noClimb);
+    this.pose(dt, camYaw, faceCamera, moving);
+  }
 
+  /** Body facing and the shadow body's pose (every frame, climbing or not). */
+  private pose(dt: number, camYaw: number, faceCamera: boolean, moving: boolean) {
+    const climbing = this.trav.active;
     // face movement direction (or camera when interacting)
     const hs = Math.hypot(this.velocity.x, this.velocity.z);
     if (faceCamera) this.yaw = camYaw + Math.PI;
@@ -283,11 +342,11 @@ export class Player {
     while (look < -Math.PI) look += Math.PI * 2;
     this.model.update(dt, {
       speed: hs,
-      grounded: this.grounded,
+      grounded: this.grounded || climbing,
       crouch: this.crouching ? 1 : 0,
-      vy: this.velocity.y,
+      vy: climbing ? 0 : this.velocity.y,
       turn: this.turnRate,
-      interact: this.interactPose,
+      interact: climbing ? 1 : this.interactPose,
       aimPitch: 0,
       lookYaw: faceCamera ? 0 : Math.abs(look) < 1.6 ? look : 0,
     });

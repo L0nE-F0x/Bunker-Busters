@@ -7,7 +7,7 @@ import type { Surface } from './surface';
  * steps match. Crouched steps roll the foot: slower attack, darker, no scuff. Landings put both
  * feet down hard, a beat apart.
  */
-export type StepKind = 'step' | 'jump' | 'land';
+export type StepKind = 'step' | 'jump' | 'land' | 'rung' | 'grip';
 export interface StepOpts { kind?: StepKind; crouch?: boolean; sprint?: boolean }
 
 interface Env { ctx: AudioContext; noise: AudioBuffer; dest: AudioNode }
@@ -80,6 +80,25 @@ export function footstep(e: Env, surface: Surface, k: number, o: StepOpts = {}) 
   const bright = crouch ? 0.6 : 1;
   const scuff = jump ? 1.8 : crouch ? 0 : o.sprint ? 1.3 : 1;
   const heel = jump ? 0.5 : 1;
+  if (o.kind === 'rung') {
+    // a boot on a round steel rung: a dull knock, then the tube rings (a hollow, higher note than a
+    // plate) and the rails hum along with it
+    noise(e, t, 'lowpass', 260, 1.2, 0.2 * k, 0.002, 0.05);
+    noise(e, t, 'bandpass', 1900, 2.5, 0.07 * k, 0.001, 0.03);
+    const f0 = rand(620, 780);
+    ring(e, t, f0, 0.02 * k, 0.26);
+    ring(e, t, f0 * rand(2.7, 2.85), 0.009 * k, 0.17);
+    ring(e, t + 0.004, rand(180, 230), 0.012 * k, 0.32, 'triangle');
+    if (surface !== 'metal') noise(e, t + 0.015, 'highpass', 3800, 0.6, 0.02 * k, 0.006, 0.04);
+    return;
+  }
+  if (o.kind === 'grip') {
+    // a gloved hand taking hold: a soft slap, and on steel a faint tick
+    noise(e, t, 'lowpass', 520, 0.9, 0.12 * k, 0.002, 0.045);
+    noise(e, t, 'bandpass', 2400, 1.2, 0.035 * k, 0.002, 0.03);
+    if (surface === 'metal') ring(e, t, rand(900, 1150), 0.006 * k, 0.09);
+    return;
+  }
   switch (surface) {
     case 'sand':
       noise(e, t, 'lowpass', 160, 1, 0.2 * k * heel, 0.006 * atk, 0.07);
