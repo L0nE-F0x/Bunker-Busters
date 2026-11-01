@@ -3,7 +3,7 @@
 //
 //   node scripts/models/build-glb.mjs public/models/x.glb Assets/X_Rigged.glb \
 //        [--clips Assets/X_Animations.glb[:Idle,Talk_with_Hands_Open]] [--clips Assets/X_Walking_Basic.glb:walking_man=Walk]
-//        [--mirror Assets/Y_Animations.glb:Chair_Sit_Idle_M=idle_m] [--size 1024] [--q 4] [--maps base|all]
+//        [--mirror Assets/Y_Animations.glb:Chair_Sit_Idle_M=idle_m] [--size 1024] [--q 4] [--maps base|normal|all] [--nsize 1024] [--nq 2] [--smooth 60]
 //   A `!` after a clip's new name (`Carry_Heavy_Object_Walk=carry!`) makes it walk in place: the
 //   hips' drift across the ground over the clip is taken out (the game moves the character itself).
 //
@@ -17,10 +17,11 @@
 //     `retargetRotations` below.
 //   - drops every `.scale` channel and every translation channel except the Hips' (Meshy bakes
 //     constant ones on all 24 joints) — about half the animation payload.
-//   - `--maps base` (default) keeps only the colour map; `all` keeps normal + metal/rough too.
+//   - `--maps base` (default) keeps only the colour map; `normal` adds the normal map; `all` keeps normal + metal/rough too.
 //   - strips emissive and material extensions (Meshy wires the colour map into emission on some
 //     exports), re-encodes images to JPEG at `--size`², and repacks only what's still referenced.
-//   - finally slim-glb.mjs: no tangents, quantized weights/UVs/normals/rotations (--no-slim skips it)
+//   - finally slim-glb.mjs: no tangents, quantized weights/UVs/normals/rotations (--no-slim skips it);
+//     `--smooth 60` smooths the normals across Meshy's splits first (slim-glb.mjs smoothNormals)
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -30,9 +31,11 @@ import { readGlb, accessorBytes, qmul, qinv, qslerp, rigInfo, mittFrame, mittQua
 
 const args = process.argv.slice(2);
 const [dst, baseFile] = args;
-if (!dst || !baseFile) { console.log('usage: build-glb.mjs <out.glb> <base.glb> [--clips f[:a,b=c]]… [--mirror f:a=b]… [--size N] [--q 2..8] [--maps base|all]'); process.exit(1); }
+if (!dst || !baseFile) { console.log('usage: build-glb.mjs <out.glb> <base.glb> [--clips f[:a,b=c]]… [--mirror f:a=b]… [--size N] [--q 2..8] [--maps base|normal|all]'); process.exit(1); }
 const opt = (k, d) => { const i = args.indexOf(k); return i >= 0 ? args[i + 1] : d; };
 const size = Number(opt('--size', 2048)), q = Number(opt('--q', 4)), maps = opt('--maps', 'base');
+// the normal and roughness maps (--maps all): their own size, and finer JPEG steps (blocks in a normal map read as lumps)
+const nsize = Number(opt('--nsize', size)), nq = Number(opt('--nq', 2));
 const clipSpecs = args.flatMap((a, i) => (a === '--clips' || a === '--mirror' ? [{ spec: args[i + 1], mirror: a === '--mirror' }] : []));
 
 const base = readGlb(baseFile);
@@ -76,7 +79,8 @@ for (const s of J.skins ?? []) if (s.inverseBindMatrices !== undefined) s.invers
 // materials: colour map only (default), no emission, no extensions
 for (const m of J.materials ?? []) {
   delete m.emissiveTexture; delete m.emissiveFactor; delete m.extensions;
-  if (maps === 'base') { delete m.normalTexture; delete m.occlusionTexture; if (m.pbrMetallicRoughness) delete m.pbrMetallicRoughness.metallicRoughnessTexture; }
+  if (maps !== 'all') { delete m.occlusionTexture; if (m.pbrMetallicRoughness) delete m.pbrMetallicRoughness.metallicRoughnessTexture; }
+  if (maps === 'base') delete m.normalTexture;
   m.pbrMetallicRoughness = { ...m.pbrMetallicRoughness, metallicFactor: 0, roughnessFactor: 0.9 };
 }
 delete J.extensionsUsed; delete J.extensionsRequired;
@@ -90,13 +94,15 @@ const texMap = new Map(), imgMap = new Map(), newTex = [];
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'glb-'));
 for (const ti of [...usedTex].sort((a, b) => a - b)) {
   const t = J.textures[ti];
+  const detail = (J.materials ?? []).some((m) => m.normalTexture?.index === ti || m.pbrMetallicRoughness?.metallicRoughnessTexture?.index === ti);
   if (!imgMap.has(t.source)) {
     const im = J.images[t.source];
     const v = J.bufferViews[im.bufferView];
     const raw = base.bin.subarray(v.byteOffset ?? 0, (v.byteOffset ?? 0) + v.byteLength);
     const inF = path.join(tmp, `i${t.source}`), outF = path.join(tmp, `o${t.source}.jpg`);
     fs.writeFileSync(inF, raw);
-    execFileSync('ffmpeg', ['-loglevel', 'error', '-y', '-i', inF, '-vf', `scale=${size}:${size}:flags=lanczos`, '-q:v', String(q), outF]);
+    const S = detail ? nsize : size;
+    execFileSync('ffmpeg', ['-loglevel', 'error', '-y', '-i', inF, '-vf', `scale=${S}:${S}:flags=lanczos`, '-q:v', String(detail ? nq : q), outF]);
     out.images.push({ mimeType: 'image/jpeg', bufferView: addView(fs.readFileSync(outF)) });
     imgMap.set(t.source, out.images.length - 1);
   }
@@ -333,5 +339,5 @@ header.writeUInt32LE(0x46546c67, 0); header.writeUInt32LE(2, 4); header.writeUIn
 const jh = Buffer.alloc(8); jh.writeUInt32LE(js.length, 0); jh.writeUInt32LE(0x4e4f534a, 4);
 const bh = Buffer.alloc(8); bh.writeUInt32LE(bodyPad.length, 0); bh.writeUInt32LE(0x004e4942, 4);
 fs.mkdirSync(path.dirname(dst), { recursive: true });
-fs.writeFileSync(dst, args.includes('--no-slim') ? Buffer.concat([header, jh, js, bh, bodyPad]) : slimGlb(Buffer.concat([header, jh, js, bh, bodyPad])));
+fs.writeFileSync(dst, args.includes('--no-slim') ? Buffer.concat([header, jh, js, bh, bodyPad]) : slimGlb(Buffer.concat([header, jh, js, bh, bodyPad]), { smooth: Number(opt('--smooth', 0)) }));
 console.log(`${dst}: ${(fs.statSync(dst).size / 1e6).toFixed(2)} MB, ${J.animations?.length ?? 0} clips${J.animations ? ' (' + J.animations.map((x) => x.name).join(', ') + ')' : ''}`);

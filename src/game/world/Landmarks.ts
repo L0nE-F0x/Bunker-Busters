@@ -4,6 +4,8 @@ import { NpcCrowd, type NpcDef, type NpcLook } from './npc';
 /** Placeholder look for the camp people (their procedural figure is only posed, never drawn). */
 const CAMP_LOOK: NpcLook = { skin: '#a87a5c', hair: '#2a1a12', hairStyle: 'short', shirt: '#6a5a46', pants: '#3c362e' };
 /** Routine seats at Last Chance, camp space [x, z, yaw]: the night watch and the lookout sit past either end of the store, facing the highway behind it (−z); Pip faces her pool. */
+/** The camp's log benches: their tops over the frame (the hips sit on them). */
+const LOG_TOP = 0.47;
 const CAMP_SEATS = {
   watch: [-9.6, -10.0, Math.PI - 0.45],
   lookout: [9.6, -10.2, Math.PI + 0.45],
@@ -178,9 +180,10 @@ export class Landmarks {
     for (const [x, y, z, h, w, ry] of [[campX + 3, 0.55, campZ + 3, 0.4, 0.5, 0.2], [campX + 3.2, 1.25, campZ + 3, 0.3, 0.4, 0.6], [campX - 5, 0.55, campZ - 2, 0.4, 0.5, -0.3]]) {
       this.physics.addBox(f.p(x, y, z), { x: w, y: h, z: w }, f.yaw + ry);
     }
-    // log benches
+    // log benches: settled a little into the sand, tops at sitting height (0.47; they were 0.62, and
+    // every seated clip, made on a ~45 cm chair, had to be stretched down to the ground off them)
     const logMat = wood('#4a3424');
-    b.add(logMat, cyl(0.22, 0.22, 2.4, campX, 0.4, campZ + 2.4, 8, 0, 0.2, Math.PI / 2), cyl(0.22, 0.22, 2.4, campX + 2.2, 0.4, campZ, 8, 0, 1.6, Math.PI / 2));
+    b.add(logMat, cyl(0.23, 0.23, 2.4, campX, 0.24, campZ + 2.4, 16, 0, 0.2, Math.PI / 2), cyl(0.23, 0.23, 2.4, campX + 2.2, 0.24, campZ, 16, 0, 1.6, Math.PI / 2));
     // barrels
     const barrelMat = rustyMetal({ base: '#2f4a5c', rust: 0.65, metalness: 0.5 });
     for (const [bx, bz] of [[-13, -7], [-12.2, -7.6], [-13.4, -8.4], [13, -9]]) {
@@ -509,13 +512,13 @@ export class Landmarks {
     // they notice you from the far side of the fire (and from where you kneel in character select)
     const seat = (id: string, x: number, z: number, notice = 7): NpcDef => {
       const yaw = Math.atan2(fire.x - x, fire.z - z);
-      return { id, look: CAMP_LOOK, pose: 'warm', x, y: 0, z, yaw, seat: 0.62, notice };
+      return { id, look: CAMP_LOOK, pose: 'warm', x, y: 0, z, yaw, seat: LOG_TOP, notice };
     };
     // routines (content/routines.ts): Hollis keeps the night watch on a crate at the road edge of the
     // slab, Pip spends midday by her chalk pool once she has it, Ren keeps the lookout crate after the
-    // drive-in. Crates: sites/stories.ts. A crate's top is 0.62 over the frame, like the logs.
+    // drive-in. Crates: sites/stories.ts. A crate's top is 0.62 over the frame (the logs' is LOG_TOP).
     const at = (d: NpcDef, x: number, z: number, yaw: number, station: string, extra: Partial<NpcDef> = {}): NpcDef =>
-      ({ ...d, x, z, yaw, station, alt: true, ...extra });
+      ({ ...d, x, z, yaw, station, alt: true, seat: 0.62, ...extra });
     const defs = [
       seat('mara', -9.5, 6.5, 7.5),
       { ...seat('pip', -8.3, 6.25), station: 'pip.log' },

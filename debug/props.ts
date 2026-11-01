@@ -217,6 +217,8 @@ const BUILDERS: Record<string, () => THREE.Object3D> = {
       const clips = (qs.get('clip') ?? 'idle').split(',');
       const clip = clips[Math.min(i, clips.length - 1)]; // &clip=near,near_m: one per id
       g.add(a.root);
+      // &plain: flat grey, no maps (to judge the shading of the mesh itself)
+      if (qs.has('plain')) a.root.traverse((o) => { if ((o as THREE.Mesh).isMesh) (o as THREE.Mesh).material = new THREE.MeshStandardNodeMaterial({ color: '#b0a89e', roughness: 0.8 }); });
       g.updateMatrixWorld(true);
       // &axes: the mitts' frames, measured at bind (red: wrist → fingers, green: out of the palm) and
       // each forearm's line (yellow: elbow → wrist joint). clip=bind leaves the rig in its bind pose.

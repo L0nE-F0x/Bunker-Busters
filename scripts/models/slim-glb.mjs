@@ -5,10 +5,12 @@
 //   - NORMAL → normalized int8, 4-byte stride (KHR_mesh_quantization, which three's GLTFLoader reads)
 //   - rotation keyframes → normalized int16
 // Positions, indices, inverse bind matrices, keyframe times and textures pass through untouched.
-// It's idempotent: only float accessors are converted. prep-glb.mjs and build-glb.mjs call it last.
+// It's idempotent: only float accessors are converted (and normals, when --smooth asks: built files too).
+// prep-glb.mjs and build-glb.mjs call it last.
 //
 //   node scripts/models/slim-glb.mjs public/models/*.glb          (in place)
-//   node scripts/models/slim-glb.mjs in.glb --out out.glb [--normals 8|16|float]
+//   node scripts/models/slim-glb.mjs in.glb --out out.glb [--normals 8|16|float] [--smooth 60]
+// --smooth N: smooth normals across the mesh's splits, creases sharper than N° kept (smoothNormals)
 import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
@@ -47,6 +49,18 @@ function floats(json, bin, a) {
   return out;
 }
 
+/** Values of any accessor as floats (normalized integers scaled back to −1..1 / 0..1), tightly packed. */
+function numbers(json, bin, a) {
+  if (a.componentType === 5126) return floats(json, bin, a);
+  const v = json.bufferViews[a.bufferView], n = NUM[a.type], sz = COMP[a.componentType];
+  const stride = v.byteStride || n * sz, start = (v.byteOffset ?? 0) + (a.byteOffset ?? 0);
+  const read = { 5120: 'readInt8', 5121: 'readUInt8', 5122: 'readInt16LE', 5123: 'readUInt16LE', 5125: 'readUInt32LE' }[a.componentType];
+  const max = a.normalized ? { 5120: 127, 5121: 255, 5122: 32767, 5123: 65535 }[a.componentType] : 1;
+  const out = new Float32Array(a.count * n);
+  for (let i = 0; i < a.count; i++) for (let c = 0; c < n; c++) out[i * n + c] = Math.max(-1, bin[read](start + i * stride + c * sz) / max);
+  return out;
+}
+
 /** Raw bytes of any accessor, tightly packed. */
 function rawBytes(json, bin, a) {
   const v = json.bufferViews[a.bufferView];
@@ -65,9 +79,61 @@ function maxIndex(u32) {
   return m;
 }
 
-export function slimGlb(input, { normals = 8, weightBits = 16 } = {}) {
+/**
+ * Smooth normals across the mesh's splits. Meshy's exports split nearly every vertex (a UV seam or a
+ * hard edge at ~98% of positions, each side with its own normal), so a 12k-triangle body shades as
+ * facets, like a cut gem. Every vertex at one position takes the area-weighted mean of the faces round
+ * that position that lie within `deg` of its own normal; creases sharper than that stay sharp.
+ */
+function smoothNormals(json, bin, prim, deg) {
+  const P = floats(json, bin, json.accessors[prim.attributes.POSITION]);
+  const N = numbers(json, bin, json.accessors[prim.attributes.NORMAL]);
+  const ia = json.accessors[prim.indices];
+  const I = ia.componentType === 5126 ? null : (() => {
+    const raw = rawBytes(json, bin, ia), sz = COMP[ia.componentType], out = new Uint32Array(ia.count);
+    for (let k = 0; k < ia.count; k++) out[k] = sz === 4 ? raw.readUInt32LE(k * 4) : sz === 2 ? raw.readUInt16LE(k * 2) : raw[k];
+    return out;
+  })();
+  if (!I) return null;
+  const nv = P.length / 3, nf = I.length / 3;
+  const F = new Float32Array(nf * 3);
+  for (let t = 0; t < nf; t++) {
+    const a = I[t * 3] * 3, b = I[t * 3 + 1] * 3, c = I[t * 3 + 2] * 3;
+    const ux = P[b] - P[a], uy = P[b + 1] - P[a + 1], uz = P[b + 2] - P[a + 2];
+    const vx = P[c] - P[a], vy = P[c + 1] - P[a + 1], vz = P[c + 2] - P[a + 2];
+    F[t * 3] = uy * vz - uz * vy; F[t * 3 + 1] = uz * vx - ux * vz; F[t * 3 + 2] = ux * vy - uy * vx; // length = 2 × area
+  }
+  const key = (v) => `${Math.round(P[v * 3] * 1e5)},${Math.round(P[v * 3 + 1] * 1e5)},${Math.round(P[v * 3 + 2] * 1e5)}`;
+  const group = new Map(), gOf = new Int32Array(nv);
+  for (let v = 0; v < nv; v++) { const k = key(v); let g = group.get(k); if (g === undefined) { g = group.size; group.set(k, g); } gOf[v] = g; }
+  const faces = Array.from({ length: group.size }, () => []);
+  for (let t = 0; t < nf; t++) for (let k = 0; k < 3; k++) { const g = gOf[I[t * 3 + k]], f = faces[g]; if (f[f.length - 1] !== t) f.push(t); }
+  const cos = Math.cos((deg * Math.PI) / 180), out = new Float32Array(N.length);
+  for (let v = 0; v < nv; v++) {
+    const nx = N[v * 3], ny = N[v * 3 + 1], nz = N[v * 3 + 2], nl = Math.hypot(nx, ny, nz) || 1;
+    let sx = 0, sy = 0, sz = 0;
+    for (const t of faces[gOf[v]]) {
+      const fx = F[t * 3], fy = F[t * 3 + 1], fz = F[t * 3 + 2], fl = Math.hypot(fx, fy, fz);
+      if (!fl || (fx * nx + fy * ny + fz * nz) / (fl * nl) < cos) continue;
+      sx += fx; sy += fy; sz += fz;
+    }
+    const l = Math.hypot(sx, sy, sz);
+    if (l) { out[v * 3] = sx / l; out[v * 3 + 1] = sy / l; out[v * 3 + 2] = sz / l; } else { out[v * 3] = nx / nl; out[v * 3 + 1] = ny / nl; out[v * 3 + 2] = nz / nl; }
+  }
+  return out;
+}
+
+export function slimGlb(input, { normals = 8, weightBits = 16, smooth = 0 } = {}) {
   const { json, bin } = readGlb(input);
   if ((json.accessors ?? []).some((a) => a.sparse)) throw new Error('sparse accessors are not supported');
+  // smoothed normals by accessor (the tangents no longer match them: three derives its own)
+  const smoothed = new Map();
+  if (smooth) for (const m of json.meshes ?? []) for (const p of m.primitives) {
+    const ai = p.attributes.NORMAL;
+    if (ai == null || p.indices == null || smoothed.has(ai)) continue;
+    const n = smoothNormals(json, bin, p, smooth);
+    if (n) { smoothed.set(ai, n); delete p.attributes.TANGENT; }
+  }
   const normalMapped = new Set((json.materials ?? []).map((m, i) => (m.normalTexture ? i : -1)).filter((i) => i >= 0));
   // what each accessor is for
   const role = new Map();
@@ -140,8 +206,11 @@ export function slimGlb(input, { normals = 8, weightBits = 16 } = {}) {
       Object.assign(na, { componentType: 5123, normalized: true });
       delete na.min; delete na.max;
       extra.target = ARRAY_BUFFER;
-    } else if (isFloat && r === 'NORMAL' && normals !== 'float') {
-      const f = floats(json, bin, a);
+    } else if (isFloat && r === 'NORMAL' && normals === 'float' && smoothed.has(ai)) {
+      data = Buffer.from(smoothed.get(ai).buffer);
+      extra.target = ARRAY_BUFFER;
+    } else if ((isFloat || smoothed.has(ai)) && r === 'NORMAL' && normals !== 'float') {
+      const f = smoothed.get(ai) ?? floats(json, bin, a);
       const bits = Number(normals), bytes = bits / 8, stride = bits === 8 ? 4 : 8, max = bits === 8 ? 127 : 32767;
       data = Buffer.alloc(a.count * stride);
       for (let i = 0; i < a.count; i++) {
@@ -216,11 +285,12 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const opt = (k) => { const i = args.indexOf(k); if (i < 0) return null; const v = args[i + 1]; args.splice(i, 2); return v; };
   const out = opt('--out');
   const normals = opt('--normals') ?? 8;
+  const smooth = Number(opt('--smooth') ?? 0);
   const weightBits = Number(opt('--weights') ?? 16);
   if (!args.length) { console.log('usage: slim-glb.mjs <in.glb>… [--out out.glb] [--normals 8|16|float]'); process.exit(1); }
   for (const f of args) {
     const src = fs.readFileSync(f);
-    const dst = slimGlb(src, { normals: normals === 'float' ? 'float' : Number(normals), weightBits });
+    const dst = slimGlb(src, { normals: normals === 'float' ? 'float' : Number(normals), weightBits, smooth });
     fs.writeFileSync(out ?? f, dst);
     console.log(`${out ?? f}: ${(src.length / 1024).toFixed(0)} KB → ${(dst.length / 1024).toFixed(0)} KB`);
   }

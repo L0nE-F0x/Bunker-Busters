@@ -4,6 +4,7 @@ import { clone as cloneSkinned } from 'three/addons/utils/SkeletonUtils.js';
 import { boundSkinned } from './kit';
 import { WristTwist, mittFrame } from './limbTwist';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
+import { isMobile } from '@/engine/device';
 
 /**
  * The named townsfolk as Meshy models (scripts/models/build-npcs.sh → build-glb.mjs: rig + clips
@@ -72,6 +73,8 @@ const UPPER: Record<string, number> = {
  * (ankle, m) is up on the other knee and rides with it instead.
  */
 const FOOT_UP = 0.3;
+/** A planted boot is levelled (heel and toe at one height) by at most this much (rad). */
+const FLAT_MAX = (25 * Math.PI) / 180;
 /** How far the feet may slide forward to reach the ground from a high seat (m), and the reach used (× leg length). */
 const SEAT_SLIDE = 0.06, SEAT_REACH = 0.97;
 /**
@@ -117,6 +120,8 @@ interface Template {
   wrist: { side: 'Left' | 'Right'; w: WristTwist }[];
   /** Each mitt's palm normal (Hand-bone space, measured at bind), for the relaxed arms. */
   palm: Partial<Record<'Left' | 'Right', THREE.Vector3>>;
+  /** Each boot's sole (measured at bind): heel in the Foot bone's space, toe tip in `tipBone`'s. */
+  sole: Partial<Record<'Left' | 'Right', Sole>>;
   prop?: THREE.Object3D;
   /** Held in a hand (on that Hand bone, in its space). */
   held?: { bone: string; obj: THREE.Object3D };
@@ -209,7 +214,13 @@ function template(id: string, scene: THREE.Object3D, anims: THREE.AnimationClip[
     const m = o as THREE.SkinnedMesh;
     if (!m.isSkinnedMesh) return;
     const old = m.material as THREE.MeshStandardMaterial;
-    mat ??= new THREE.MeshStandardNodeMaterial({ map: old.map, roughness: 0.88, metalness: 0 });
+    // the normal map carries the folds, seams and the shape of the face that 12k triangles can't
+    // (GLTFLoader already flipped normalScale.y for a mesh without tangents); roughness from the
+    // model's own map where it has one. Metalness stays 0: with no environment map metal reads black.
+    mat ??= new THREE.MeshStandardNodeMaterial({
+      map: old.map, normalMap: isMobile ? null : old.normalMap, normalScale: old.normalScale?.clone(), // (phones: memory)
+      roughnessMap: old.roughnessMap, roughness: old.roughnessMap ? 1 : 0.88, metalness: 0,
+    });
     m.material = mat;
     m.castShadow = true;
     m.receiveShadow = true;
@@ -273,7 +284,54 @@ function template(id: string, scene: THREE.Object3D, anims: THREE.AnimationClip[
     const m = body && bones[sd + 'Hand'] ? mittFrame(body, bones[sd + 'Hand'], new THREE.Vector3(0, 1, 0.3)) : null;
     if (m) palm[sd] = m.palm;
   }
-  return { id, scene, clips, list, idle, near, ins: list.filter((c) => c.once), bind, wrist, palm, held: heldProp(id, scene, bones) };
+  const sole: Template['sole'] = {};
+  for (const sd of ['Left', 'Right'] as const) {
+    const m = body ? soleOf(body, bones[sd + 'Foot'], bones[sd + 'ToeBase']) : null;
+    if (m) sole[sd] = m;
+  }
+  return { id, scene, clips, list, idle, near, ins: list.filter((c) => c.once), bind, wrist, palm, sole, held: heldProp(id, scene, bones) };
+}
+
+interface Sole { heel: THREE.Vector3; tip: THREE.Vector3; tipBone: string }
+/**
+ * Where a boot meets the ground, measured on the mesh at bind (standing, soles flat): of the vertices
+ * the foot and toe bones carry, the ones within 2 cm of the lowest, and of those the rearmost (the heel,
+ * kept in the Foot bone's space) and the foremost (the toe, in the toe bone's).
+ */
+function soleOf(mesh: THREE.SkinnedMesh, foot?: THREE.Bone, toe?: THREE.Bone): Sole | null {
+  if (!foot) return null;
+  const fi = mesh.skeleton.bones.indexOf(foot), ti = toe ? mesh.skeleton.bones.indexOf(toe) : -1;
+  if (fi < 0) return null;
+  const g = mesh.geometry;
+  const pos = g.attributes.position as THREE.BufferAttribute, si = g.attributes.skinIndex as THREE.BufferAttribute, sw = g.attributes.skinWeight as THREE.BufferAttribute;
+  const pts: THREE.Vector3[] = [];
+  for (let i = 0; i < pos.count; i++) {
+    let w = 0;
+    for (let k = 0; k < 4; k++) { const b = si.getComponent(i, k); if (b === fi || b === ti) w += sw.getComponent(i, k); }
+    if (w < 0.5) continue;
+    const p = new THREE.Vector3().fromBufferAttribute(pos, i);
+    mesh.applyBoneTransform(i, p);
+    pts.push(p.applyMatrix4(mesh.matrixWorld));
+  }
+  if (pts.length < 10) return null;
+  const low = Math.min(...pts.map((p) => p.y));
+  const ankle = foot.getWorldPosition(new THREE.Vector3());
+  const tipAt = (toe ?? foot).getWorldPosition(new THREE.Vector3());
+  const along = tipAt.clone().sub(ankle).setY(0).normalize();
+  let heel: THREE.Vector3 | null = null, tip: THREE.Vector3 | null = null;
+  for (const p of pts) {
+    if (p.y > low + 0.02) continue;
+    const d = p.clone().sub(ankle).dot(along);
+    if (!heel || d < heel.clone().sub(ankle).dot(along)) heel = p;
+    if (!tip || d > tip.clone().sub(ankle).dot(along)) tip = p;
+  }
+  if (!heel || !tip) return null;
+  const inv = new THREE.Matrix4();
+  return {
+    heel: heel.clone().applyMatrix4(inv.copy(foot.matrixWorld).invert()),
+    tip: tip.clone().applyMatrix4(inv.copy((toe ?? foot).matrixWorld).invert()),
+    tipBone: (toe ?? foot).name,
+  };
 }
 
 let _heldMat: THREE.MeshStandardNodeMaterial | null = null;
@@ -387,6 +445,7 @@ const LEGS = [['LeftUpLeg', 'LeftLeg', 'LeftFoot'], ['RightUpLeg', 'RightLeg', '
 const _sr = new THREE.Vector3(), _sh = new THREE.Vector3(), _sf = new THREE.Vector3(), _sq = new THREE.Quaternion();
 const _sT = [new THREE.Vector3(), new THREE.Vector3()], _sK = [new THREE.Vector3(), new THREE.Vector3()], _sA = new THREE.Vector3();
 const _sN = new THREE.Vector3(), _sX = new THREE.Vector3(), _sQ = new THREE.Quaternion(), _sL = [new THREE.Quaternion(), new THREE.Quaternion()];
+const _pH = new THREE.Vector3(), _pT = new THREE.Vector3(), _pD = new THREE.Vector3(), _pA = new THREE.Vector3(), _pK = new THREE.Vector3(), _pQ = new THREE.Quaternion(), _pR = new THREE.Quaternion();
 
 export class NpcActor {
   readonly root = new THREE.Group();
@@ -708,9 +767,9 @@ export class NpcActor {
   /**
    * Seated: the hips stay on the seat (a stretch or talk clip lifts them off it by up to 10 cm), and
    * the feet go back on the ground. The clips were made on a ~45 cm chair; on the camp's 62 cm logs
-   * the feet hung 15-25 cm in the air. Both feet move by the same amount, so a crossed pair stays
-   * crossed; a foot up on the other knee moves with that knee. Too high a seat for the legs (Pip on
-   * the log), and the feet stretch forward a little, then hang.
+   * the feet hung 15-25 cm in the air. Each planted boot is levelled and its sole (measured at bind:
+   * `soleOf`) put on the ground; a foot up on the other knee moves with that knee. Too high a seat for
+   * the legs (Pip on the log), and the feet stretch forward a little, then hang.
    */
   private sit() {
     const B = this.B, hips = B.Hips;
@@ -739,15 +798,18 @@ export class NpcActor {
       }
     }
     const drop = this.lift + this.model.position.y; // the clip's floor over the ground
-    if (Math.abs(drop) < 0.01) return;
-    const floor = root.y + this.model.position.y;
+    const floor = root.y + this.model.position.y, ground = root.y - this.lift;
     const up = [false, false];
     for (let i = 0; i < 2; i++) {
       const foot = B[LEGS[i][2]];
       if (!foot || !B[LEGS[i][0]] || !B[LEGS[i][1]]) return;
       foot.getWorldPosition(_sT[i]);
       up[i] = _sT[i].y - floor > FOOT_UP;
-      if (!up[i]) _sT[i].y -= drop;
+      if (up[i]) continue;
+      // the boot flat and its sole on the ground (not the ankle at the clip's height: the toes dug in)
+      const low = this.plant(i);
+      if (low === null) _sT[i].y -= drop;
+      else _sT[i].y = ground - low + 0.003;
     }
     // from a high seat the feet slide forward to reach the ground (the same for both)
     const reach = (i: number, s: number) => {
@@ -772,6 +834,28 @@ export class NpcActor {
       _sT[i].add(_sK[1 - i]);
       legTo(B[LEGS[i][0]], B[LEGS[i][1]], B[LEGS[i][2]], _sT[i], fwd, _sK[i]);
     }
+  }
+
+  /**
+   * A planted boot: level it (heel and toe at one height, turning it up to FLAT_MAX about the ankle) and
+   * return how far its sole's lowest point is below the ankle (m, negative), or null with no sole measured.
+   */
+  private plant(i: number): number | null {
+    const S = this.T.sole[i ? 'Right' : 'Left'], foot = this.B[LEGS[i][2]], tipB = S && this.B[S.tipBone];
+    if (!S || !foot || !tipB) return null;
+    const heel = _pH.copy(S.heel).applyMatrix4(foot.matrixWorld), tip = _pT.copy(S.tip).applyMatrix4(tipB.matrixWorld);
+    const dir = _pD.subVectors(tip, heel), h = Math.hypot(dir.x, dir.z);
+    if (h > 0.03) {
+      const turn = THREE.MathUtils.clamp(-Math.atan2(dir.y, h), -FLAT_MAX, FLAT_MAX);
+      if (Math.abs(turn) > 0.005) {
+        _pA.set(dir.x, 0, dir.z).normalize().cross(UP).normalize(); // turning about (toe-ward × up) lifts the toe
+        foot.getWorldQuaternion(_pQ).premultiply(_pR.setFromAxisAngle(_pA, turn));
+        setWorldQuat(foot, _pQ);
+        heel.copy(S.heel).applyMatrix4(foot.matrixWorld);
+        tip.copy(S.tip).applyMatrix4(tipB.matrixWorld);
+      }
+    }
+    return Math.min(heel.y, tip.y) - foot.getWorldPosition(_pK).y;
   }
 
   /** What to play next: talk when you're close, drift between idles (and gestures) otherwise. */

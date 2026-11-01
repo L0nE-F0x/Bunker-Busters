@@ -14,7 +14,7 @@
 # seated loop underneath (the people round the fires talk with their own standing talk loop, since
 # the library's one seated talk, Sitting_Answering_Questions, throws the arms wide and leans back). `--mirror` adds a mirror image (`_m`): neighbours
 # get opposite versions, so the camp's pairs never show one pose. Seated people with no clip of their
-# own borrow from a Dry Creek rig (retargeted, rest-aligned: build-glb.mjs). Textures 1024², colour only.
+# own borrow from a Dry Creek rig (retargeted, rest-aligned: build-glb.mjs). Textures 1024², colour + normal.
 set -euo pipefail
 cd "$(dirname "$0")/../.."
 A=Assets/Meshy_AI_
@@ -29,7 +29,10 @@ FT=${A}Fortress_
 # Short_Breathe_and_Look_Around, Sit_Hands_on_Head_Lean_Back (Sit_on_Chair_Arms_Crossed and Idle_9 are
 # in the file but unused: the crossed arms came out as an X held off the chest; Idle_9 loops every 2 s)
 TI=${A}Town_Idles_Animations.glb
-build() { local id=$1; shift; node scripts/models/build-glb.mjs "public/models/$id.glb" "$@" --size 1024; }
+# Normals smoothed across Meshy's splits (it shades every patch of triangles on its own, like a cut gem)
+# and the normal map kept (the folds, seams and the shape of the face): owner, 2026-11-01, "all the
+# models look terrible … weird and blocky".
+build() { local id=$1; shift; node scripts/models/build-glb.mjs "public/models/$id.glb" "$@" --size 1024 --maps normal --nsize 1024 --smooth 89; }
 
 ids=("$@")
 on() { [ ${#ids[@]} -eq 0 ] && return 0; for i in "${ids[@]}"; do [ "$i" = "$1" ] && return 0; done; return 1; }

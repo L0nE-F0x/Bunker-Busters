@@ -229,7 +229,7 @@ export class Stories {
 
       // the routine seats (content/routines.ts, Landmarks.CAMP_SEATS): Hollis's watch crate and Ren's
       // lookout crate at the road edge of the slab, Pip's crate by her pool; a jerrycan by the watch,
-      // a mug on the lookout's crate lid. Their tops are 0.62 over the frame, like the logs.
+      // a mug on the lookout's crate lid. Their tops are 0.62 over the frame (the logs are lower, 0.47).
       const fy = Math.atan2(ax.x, ax.z) - Math.PI / 2; // camp space's yaw in the world
       const cb = new MeshBatch();
       const slats = wood('#8a6a44');
