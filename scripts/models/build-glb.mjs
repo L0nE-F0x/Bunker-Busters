@@ -3,7 +3,7 @@
 //
 //   node scripts/models/build-glb.mjs public/models/x.glb Assets/X_Rigged.glb \
 //        [--clips Assets/X_Animations.glb[:Idle,Talk_with_Hands_Open]] [--clips Assets/X_Walking_Basic.glb:walking_man=Walk]
-//        [--mirror Assets/Y_Animations.glb:Chair_Sit_Idle_M=idle_m] [--size 1024] [--q 4] [--maps base|normal|all] [--nsize 1024] [--nq 2] [--smooth 60]
+//        [--mirror Assets/Y_Animations.glb:Chair_Sit_Idle_M=idle_m] [--size 1024] [--q 4] [--maps base|normal|all] [--nsize 1024] [--nq 2] [--smooth 60] [--palm 0,1,0.3]
 //   A `!` after a clip's new name (`Carry_Heavy_Object_Walk=carry!`) makes it walk in place: the
 //   hips' drift across the ground over the clip is taken out (the game moves the character itself).
 //
@@ -36,6 +36,8 @@ const opt = (k, d) => { const i = args.indexOf(k); return i >= 0 ? args[i + 1] :
 const size = Number(opt('--size', 2048)), q = Number(opt('--q', 4)), maps = opt('--maps', 'base');
 // the normal and roughness maps (--maps all): their own size, and finer JPEG steps (blocks in a normal map read as lumps)
 const nsize = Number(opt('--nsize', size)), nq = Number(opt('--nq', 2));
+// which way this model's palms face at rest (a mitt's shape can't tell palm from back), for clips from a mesh-less source
+const PALM = opt('--palm', '0,1,0.3').split(',').map(Number);
 const clipSpecs = args.flatMap((a, i) => (a === '--clips' || a === '--mirror' ? [{ spec: args[i + 1], mirror: a === '--mirror' }] : []));
 
 const base = readGlb(baseFile);
@@ -161,6 +163,20 @@ function restDiffers(a, b) {
 }
 const deg = (q) => (2 * Math.acos(Math.min(1, Math.abs(q[3]))) * 180) / Math.PI;
 /**
+ * A hand's frame from its finger bones (a Mixamo skeleton, no mesh): `long` wrist → middle knuckle,
+ * `palm` square to it and to the index → pinky line, on the palm side (Mixamo's T-pose: down).
+ */
+function fingerFrame(rig, hand) {
+  const at = (n) => rig.byName.get(hand + n);
+  const w = rig.byName.get(hand), m = at('Middle1'), i = at('Index1'), k = at('Pinky1');
+  if ([w, m, i, k].some((x) => x === undefined)) return null;
+  const long = vnorm(vsub(rig.restPos[m], rig.restPos[w]));
+  const across = vnorm(vsub(rig.restPos[i], rig.restPos[k]));
+  let palm = vnorm([long[1] * across[2] - long[2] * across[1], long[2] * across[0] - long[0] * across[2], long[0] * across[1] - long[1] * across[0]]);
+  if (palm[1] > 0) palm = palm.map((x) => -x);
+  return { long, palm };
+}
+/**
  * World rotations (per target node) that turn the target's rest onto the source's (mirrored if
  * `mirror`): limbs by direction, hands by mitt frame, the rest as they are.
  */
@@ -173,10 +189,16 @@ function restAlign(g, src, dst, mirror) {
     if (si === undefined) continue;
     const part = name.replace(/^(Left|Right)/, '');
     if (part === 'Hand') {
-      const ms = mittFrame(g, src, sname);
+      // a source with a mesh (a Meshy rig): its mitt; without one (a Mixamo motion file): its finger bones
+      const meshed = !!g.json.meshes?.length;
+      const ms = meshed ? mittFrame(g, src, sname) : fingerFrame(src, sname);
+      if (!ms) continue;
       const s = mirror ? { long: mirrorV(ms.long), palm: mirrorV(ms.palm) } : ms;
       s.side = [s.long[1] * s.palm[2] - s.long[2] * s.palm[1], s.long[2] * s.palm[0] - s.long[0] * s.palm[2], s.long[0] * s.palm[1] - s.long[1] * s.palm[0]];
-      const mt = mittFrame(base0, rigInfo(base0.json), name, s.palm);
+      // (which face of the target's mitt is its palm: the source's says, if it's a Meshy rig too;
+      // Mixamo's T-pose holds the palms down, Meshy's A-pose up and a little forward)
+      // (`--palm x,y,z` overrides the last: Dez rests his palms down, fingers curled under)
+      const mt = mittFrame(base0, rigInfo(base0.json), name, meshed ? s.palm : PALM);
       const q = qmul(mittQuat(s), qinv(mittQuat(mt)));
       S.set(ti, q);
       log.push(`${name} ${deg(q).toFixed(0)}°`);

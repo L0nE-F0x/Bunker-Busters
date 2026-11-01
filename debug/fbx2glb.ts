@@ -31,6 +31,8 @@ async function convert(skin: string, clips: [string, string][], height: number) 
   root.updateMatrixWorld(true);
   const box = new THREE.Box3();
   root.traverse((o) => { if ((o as THREE.SkinnedMesh).isSkinnedMesh) { const m = o as THREE.SkinnedMesh; m.geometry.computeBoundingBox(); box.union(m.geometry.boundingBox!.clone().applyMatrix4(m.matrixWorld)); } });
+  // no mesh (a motion downloaded without its body): the skeleton's own extent, head top to toe tip
+  if (box.isEmpty()) root.traverse((o) => { if ((o as THREE.Bone).isBone) box.expandByPoint(o.getWorldPosition(new THREE.Vector3())); });
   const k = height / (box.max.y - box.min.y);
   root.scale.multiplyScalar(k);
   // the export keeps only skinned meshes and the rig (no FBX helper nodes' cameras/lights)

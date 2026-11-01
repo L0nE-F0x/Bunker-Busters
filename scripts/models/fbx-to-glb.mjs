@@ -18,7 +18,7 @@ try {
   p.on('pageerror', (e) => console.error('page error:', e.message));
   await p.goto(`${ORIGIN}/debug/fbx2glb.html`, { waitUntil: 'load' });
   await p.waitForFunction(() => document.title === 'ready', { timeout: 60000 });
-  const r = await p.evaluate((s, c, h) => window.convert(s, c, h), url(skin), clips, Number(height));
+  const r = await p.evaluate(({ s, c, h }) => window.convert(s, c, h), { s: url(skin), c: clips, h: Number(height) });
   fs.writeFileSync(dst, Buffer.from(r.b64, 'base64'));
   console.log(`${dst}: ${(fs.statSync(dst).size / 1e6).toFixed(2)} MB, ${r.bones.length} bones, scale ×${r.scale.toFixed(4)} (measured ${r.measured.toFixed(2)})`);
   for (const c of r.clips) console.log('  ' + c);

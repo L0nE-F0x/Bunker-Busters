@@ -12,3 +12,5 @@ src-tauri/gen
 Assets/*.glb
 Assets/*.png
 Assets/meshy-tasks.json
+# Mixamo downloads (Adobe licence: use in the game, never redistribute the raw files)
+Assets/mixamo/

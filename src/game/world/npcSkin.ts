@@ -687,7 +687,8 @@ export class NpcActor {
     const talk = (c: Clip) => c.name.startsWith('near');
     const calm = this.seated && this.calm && (talk(this.cur) || (this.prev && f < 1 && talk(this.prev))) ? this.calm : null;
     // (a `*_up` talk loop moves the arms and head only, fully, over the seated loop)
-    const w = (c: Clip) => (calm && talk(c) && !c.up ? SEATED_TALK : 1);
+    // (only the Meshy library's seated talk is held down: Mixamo's seated talks were recorded seated)
+    const w = (c: Clip) => (calm && talk(c) && !c.up && c.src === 'Sitting_Answering_Questions' ? SEATED_TALK : 1);
     const m = (c: Clip) => (calm && c.up ? UPPER : undefined);
     if (calm) sample(this.B, this.T.bind, calm, this.clock[calm.i], 1, true);
     if (this.prev && f < 1) {

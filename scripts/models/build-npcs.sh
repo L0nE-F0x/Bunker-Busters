@@ -69,19 +69,25 @@ on wick && build wick ${DC}Wick_Rigged.glb \
 # (no Sit_Hands_on_Head_Lean_Back for anyone on a log: it lies back 37° against a chair back that isn't
 # there; the owner, 2026-11-01: "still looks terrible". Ada keeps hers, in Doc's chair)
 # (Pip doesn't drink: Sit_and_Drink, made on a grown-up, takes her mug to her forehead. She holds it)
+# The camp four sit on Mixamo's motion capture, recorded on chairs (owner, 2026-11-01: "they do all
+# these really unnatural, weird movements"; Sit_Cross_Legged is a floor sit leaning back on the hands,
+# and on a log its hands swung forward to the ground with the elbows locked backwards). MX is built by
+# scripts/models/fbx-to-glb.mjs from Assets/mixamo/*.fbx (git-ignored: Adobe's licence allows them in
+# the game, not as raw files); retargeted onto each Meshy rig by build-glb.mjs.
+MX=Assets/mixamo/sit.glb
 on mara && build mara ${CP}Mara_Rigged.glb \
-  --clips ${TI}:Sit_Cross_Legged=idle \
-  --clips ${CP}Mara_Animations.glb:Talk_with_Hands_Open=near_up \
-  --mirror ${TI}:Sit_Cross_Legged=idle_m
+  --clips ${MX}:sit_breathe=idle,sit_thighs=idle2,talk_a=near,laugh=ins_laugh,rub_arm=ins_rub \
+  --mirror ${MX}:sit_breathe=idle_m
 on pip && build pip ${CP}Pip_Rigged.glb \
-  --mirror ${TI}:Sit_Cross_Legged=idle_m
+  --clips ${MX}:sit_thighs=idle,girl_swing=idle2,fidget_feet=idle3,talk_b=near,laugh=ins_laugh \
+  --mirror ${MX}:sit_thighs=idle_m
 on hollis && build hollis ${CP}Hollis_Rigged.glb \
-  --clips ${TI}:Sit_Cross_Legged=idle \
-  --clips ${DC}Wick_Animations.glb:Sit_and_Doze_Off=idle2 \
-  --clips ${CP}Hollis_Animations.glb:Talk_with_Right_Hand_Open=near_up
-on dez && build dez ${CP}Dez_Rigged.glb \
-  --mirror ${TI}:Sit_Cross_Legged=idle_m \
-  --clips ${CP}Dez_Animations.glb:Talk_with_Hands_Open=near_up
+  --clips ${MX}:sit_still=idle,sit_thighs=idle2,look_around=idle3,talk_b=near,disapproval=ins_finger \
+  --mirror ${MX}:sit_still=idle_m
+# (Dez rests his palms down, unlike the others: --palm; a mitt can't give a thumbs-up, so no Sitting Thumbs Up)
+on dez && build dez ${CP}Dez_Rigged.glb --palm 0,-1,0 \
+  --clips ${MX}:waiting=idle,look_around=idle2,sit_breathe=idle3,talk_a=near,laugh=ins_laugh,rub_arm=ins_rub \
+  --mirror ${MX}:waiting=idle_m
 
 # --- the Panopticon: Ezra on his feet at the monitor wall; Ada and two reviewers at their desks
 # (Ezra borrows Sol's standing idle and talk loops; the reviewers borrow Sol's and Ada's seated clips)

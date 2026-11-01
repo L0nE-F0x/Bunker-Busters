@@ -1,12 +1,12 @@
 // A rigged GLB's mesh, posed at bind, as OBJ + MTL + its colour map in one zip: what Mixamo's auto-rigger
 // takes (it doesn't read GLB). The skinning is applied (Σ w · joint world · inverse bind), so the result is
-// the A-pose the model was rigged in, in metres, +Y up, facing +Z.
+// the model re-posed with its arms straight out and 40° down (below), in centimetres, +Y up, facing +Z.
 //   node scripts/models/glb-to-obj.mjs Assets/Meshy_AI_Camp_Mara_Rigged.glb out/mara.zip
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
-import { readGlb, accessorNumbers } from './rig.mjs';
+import { readGlb, accessorNumbers, qmul, qinv, qFromUnitVectors, vsub, vnorm } from './rig.mjs';
 
 const [src, dst] = process.argv.slice(2);
 if (!src || !dst) { console.log('usage: glb-to-obj.mjs <in.glb> <out.zip>'); process.exit(1); }
@@ -23,10 +23,33 @@ const trs = (n) => {
 const parent = new Map();
 J.nodes.forEach((n, i) => (n.children ?? []).forEach((c) => parent.set(c, i)));
 const world = (i) => (parent.has(i) ? mul(world(parent.get(i)), trs(J.nodes[i])) : trs(J.nodes[i]));
+
+// Re-pose the arms straight, out to the sides and 40° down, before skinning. Meshy's rest pose holds the
+// forearms forward with the palms up (a shrug): seen from the front, as Mixamo's auto-rigger sees it,
+// the forearms all but vanish, and it fails ("Unknown error while generating motion").
+const qOf = (i) => J.nodes[i].rotation ?? [0, 0, 0, 1];
+const worldQ = (i) => (parent.has(i) ? qmul(worldQ(parent.get(i)), qOf(i)) : qOf(i));
+const pos = (i) => { const m = world(i); return [m[12], m[13], m[14]]; };
+const byName = new Map(J.nodes.map((n, i) => [n.name, i]));
+const DOWN = (40 * Math.PI) / 180;
+for (const [side, sx] of [['Left', 1], ['Right', -1]]) {
+  for (const [bone, child] of [[side + 'Arm', side + 'ForeArm'], [side + 'ForeArm', side + 'Hand']]) {
+    const b = byName.get(bone), c = byName.get(child);
+    if (b == null || c == null) continue;
+    const cur = vnorm(vsub(pos(c), pos(b))), want = [sx * Math.cos(DOWN), -Math.sin(DOWN), 0];
+    const wq = qmul(qFromUnitVectors(cur, want), worldQ(b));
+    J.nodes[b].rotation = parent.has(b) ? qmul(qinv(worldQ(parent.get(b))), wq) : wq;
+  }
+}
 const xf = (m, v, w = 1) => [0, 1, 2].map((r) => m[r] * v[0] + m[4 + r] * v[1] + m[8 + r] * v[2] + m[12 + r] * w);
 
+// positions are welded (one `v` per point in space; UVs and normals keep their own indices), so the body
+// is one connected surface: Meshy cuts it at every UV seam, and as ~17k loose fragments Mixamo's
+// auto-rigger fails ("Unknown error while generating motion")
 const lines = ['mtllib model.mtl'], tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'obj-'));
+const vLines = [], vtLines = [], vnLines = [], fLines = [], weld = new Map();
 let base = 1, texFile = null;
+const posOf = [];
 J.nodes.forEach((node, ni) => {
   if (node.mesh == null) return;
   const skin = node.skin != null ? J.skins[node.skin] : null;
@@ -47,11 +70,20 @@ J.nodes.forEach((node, ni) => {
         }
       } else { op = xf(nodeM, pos); on = xf(nodeM, nor, 0); }
       const l = Math.hypot(...on) || 1;
-      lines.push(`v ${op.map((x) => x.toFixed(5)).join(' ')}`, `vn ${on.map((x) => (x / l).toFixed(4)).join(' ')}`, `vt ${UV[v * 2].toFixed(5)} ${(1 - UV[v * 2 + 1]).toFixed(5)}`);
+      const key = op.map((x) => Math.round(x * 1e4)).join();
+      // in centimetres: an OBJ has no units and Mixamo reads it as cm (a 1.7 cm person fails to rig)
+      if (!weld.has(key)) { weld.set(key, vLines.length + 1); vLines.push(`v ${op.map((x) => (x * 100).toFixed(3)).join(' ')}`); }
+      posOf[base + v] = weld.get(key);
+      vnLines.push(`vn ${on.map((x) => (x / l).toFixed(4)).join(' ')}`);
+      vtLines.push(`vt ${UV[v * 2].toFixed(5)} ${(1 - UV[v * 2 + 1]).toFixed(5)}`);
     }
     const I = accessorNumbers(g, p.indices);
-    lines.push('usemtl skin');
-    for (let t = 0; t < I.length; t += 3) lines.push(`f ${[0, 1, 2].map((k) => { const i = I[t + k] + base; return `${i}/${i}/${i}`; }).join(' ')}`);
+    fLines.push('usemtl skin');
+    for (let t = 0; t < I.length; t += 3) {
+      const c = [0, 1, 2].map((k) => I[t + k] + base);
+      if (new Set(c.map((i) => posOf[i])).size < 3) continue; // collapsed by the weld
+      fLines.push(`f ${c.map((i) => `${posOf[i]}/${i}/${i}`).join(' ')}`);
+    }
     base += n;
     const tex = J.materials?.[p.material]?.pbrMetallicRoughness?.baseColorTexture;
     if (tex && !texFile) {
@@ -61,6 +93,7 @@ J.nodes.forEach((node, ni) => {
     }
   }
 });
+lines.push(...vLines, ...vtLines, ...vnLines, ...fLines);
 fs.writeFileSync(path.join(tmp, 'model.obj'), lines.join('\n') + '\n');
 fs.writeFileSync(path.join(tmp, 'model.mtl'), `newmtl skin\nKd 1 1 1\n${texFile ? `map_Kd ${texFile}\n` : ''}`);
 const out = path.resolve(dst);
@@ -68,5 +101,5 @@ fs.mkdirSync(path.dirname(out), { recursive: true });
 fs.rmSync(out, { force: true });
 execFileSync('zip', ['-q', '-j', out, ...fs.readdirSync(tmp).map((f) => path.join(tmp, f))]);
 fs.rmSync(tmp, { recursive: true, force: true });
-const ys = lines.filter((l) => l.startsWith('v ')).map((l) => +l.split(' ')[2]);
-console.log(`${out}: ${base - 1} vertices, height ${(Math.max(...ys) - Math.min(...ys)).toFixed(2)} m, ${(fs.statSync(out).size / 1e6).toFixed(1)} MB`);
+const ys = vLines.map((l) => +l.split(' ')[2] / 100);
+console.log(`${out}: ${vLines.length} points (${base - 1} vertices), height ${(Math.max(...ys) - Math.min(...ys)).toFixed(2)} m, ${(fs.statSync(out).size / 1e6).toFixed(1)} MB`);

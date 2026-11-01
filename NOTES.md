@@ -2078,3 +2078,17 @@ The owner, with a screenshot of the camp's fire: "the way the characters are rig
   - **No hands-on-head stretch** for anyone on a log (Sol, Mara, Pip, Dez rebuilt).
   - **Feet:** they slide at most 6 cm forward (`SEAT_SLIDE`, was 15).
   - **Checked:** every clip of the fire sitters is ≤ 3° back at every sample. Feet reach at most 0.48 m ahead of the hips. Night shots from the owner's camera over 30 s (`camp-night-before-after.png` in that session's scratchpad). Prop-lab side views (`&backless`).
+
+## 2026-11-01 (night): the models looked blocky and moved wrong (unreleased, for v1.1.3)
+
+The owner, with a night shot of the camp fire on v1.1.2: "look at how the arms on the guy are bending … his elbows are bending in the opposite directions … the feet are still going into the ground … all the models look terrible … the way they move isn't organic and natural … body shapes … weird and blocky."
+
+What was wrong, measured:
+- **Faceted shading on every model.** Meshy's exports split ~98% of vertex positions (Mara: 17,764 vertices at 6,104 positions), each side with its own normal, so a body shaded patch by patch like a cut gem. `slim-glb.mjs --smooth 89` averages the normals of the faces round each position (creases over 89° kept); it also works on built files (contractor, wolf, hats, snake, scorpion were re-slimmed in place). The townsfolk build also kept dropping the normal map; `build-glb.mjs --maps normal` keeps it (1K, JPEG q2; phones don't use it: `npcSkin` `isMobile`).
+- **The seated clip was a floor sit.** `Sit_Cross_Legged` leans back on the hands; put on a 62 cm log and bent by IK and the 3° lean clamp, the hand that rested on the floor swung forward to the ground with the elbow locked straight (the "backwards elbow"). Meshy's library has ~6 seated clips, none right. The camp four now play **Mixamo** motion capture recorded on chairs (`Assets/mixamo/*.fbx`, git-ignored; `fbx-to-glb.mjs` + `debug/fbx2glb.ts` → `Assets/mixamo/sit.glb`, bones renamed to Meshy's), retargeted by `build-glb.mjs` (Mixamo motion files have no mesh: the hand's rest frame comes from the finger bones, `fingerFrame`; Dez rests his palms down: `--palm 0,-1,0`). Seated talk plays in full (SEATED_TALK only damps the old Meshy talk).
+- **Logs too high, toes in the sand.** The camp's logs are 47 cm (`LOG_TOP`; crates stay 0.62). A seated boot is levelled (≤25°) and its sole, measured on the mesh at bind (`soleOf`: heel and toe), put 3 mm over the ground.
+- Campfire sparks were 4 cm sprites climbing 4 m, bright enough for bloom to make orbs: now 1–2 cm, 1–2 s, mostly under 2 m.
+
+Mixamo, for next time: the account is the owner's (signed in in their Chrome). Its **auto-rigger fails for everything** right now ("ERROR occured on rig: Unknown error while generating motion"), even a box figure, so no finger bones yet. Motions export fine through its API from the page (`/api/v1/products/<id>?character_id=…` → `gms_hash`, `POST /api/v1/animations/export`, poll `/api/v1/characters/<id>/monitor`) on the stock X Bot (`2dee24f8-…`), skin off; the signed download link can't leave the page, so each file is saved by a click on a button in the page (Chrome saves to ~/Downloads even with the tab in the background).
+
+Open: Dez's hands hover a little over his thighs (his thighs are bulkier than X Bot's); Dry Creek's seated (Sol, Ren, Wick) and standing townsfolk still play Meshy clips, waiting on the owner's verdict on the camp four.
