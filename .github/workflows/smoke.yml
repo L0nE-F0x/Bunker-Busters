@@ -10,6 +10,8 @@
 #     source = build     builds the chosen branch first (unsigned, no updater files): test main before
 #                        you ship. On main this also leaves Rust/npm caches the Release builds can use.
 #
+# Where: Windows (the NSIS installer), Arch in a container (the tarball: Omarchy/Arch players), and
+# Ubuntu 24.04 (the .deb, the AppImage, and the tarball on another distro's WebKitGTK).
 # The runners have no GPU, so the game renders in software (WARP on Windows, llvmpipe on Linux) and
 # boots slowly: timings here say nothing about performance. Releases before v1.0.4 don't have the
 # BB_SMOKE hook and fail with "never reported". Screenshots, reports and logs are in each run's
@@ -192,6 +194,10 @@ jobs:
           $env:BB_SMOKE = $report
           $env:BB_SMOKE_TIMEOUT = '600'
           $env:BB_SMOKE_HOLD = '8'
+          # No GPU here, so WebView2 draws with the Basic Render Driver and the game would wait at its
+          # "running without your graphics card" notice for a click. Under automation (navigator.webdriver)
+          # it skips that notice, as in the headless tests (src/main.ts).
+          $env:WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS = '--enable-automation --enable-blink-features=AutomationControlled'
           $app = Start-Process $exe -PassThru -RedirectStandardOutput "$art\stdout.txt" -RedirectStandardError "$art\stderr.txt"
           $null = $app.Handle # keep the handle, or the exit code is lost
           $deadline = (Get-Date).AddMinutes(12)
@@ -243,7 +249,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-22.04, ubuntu-24.04]
+        os: [ubuntu-24.04]
         install: [tarball, deb, appimage]
     env:
       INSTALL: ${{ matrix.install }}
@@ -279,6 +285,8 @@ jobs:
           sudo apt-get install -y -q xvfb imagemagick desktop-file-utils appstream
           # the tarball uses the system WebKitGTK (install.sh asks for it); the .deb must pull it in itself
           if [ "$INSTALL" = tarball ]; then sudo apt-get install -y -q libwebkit2gtk-4.1-0; fi
+          # the AppImage leaves the GL/EGL loaders to the system (every desktop has them; a bare runner doesn't)
+          if [ "$INSTALL" = appimage ]; then sudo apt-get install -y -q libegl1 libgl1 libgles2 libgbm1; fi
       - name: Install, launch, quit, uninstall
         run: |
           set -euo pipefail
@@ -375,6 +383,102 @@ jobs:
         with:
           name: smoke-${{ matrix.os }}-${{ matrix.install }}
           path: ${{ runner.temp }}/smoke/
+          retention-days: 14
+
+  # Omarchy/Arch: the tarball against Arch's own WebKitGTK, installed with install.sh as the site says.
+  arch:
+    needs: build-linux
+    if: ${{ !cancelled() && needs.build-linux.result != 'failure' && (github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success') }}
+    runs-on: ubuntu-24.04
+    container: archlinux:latest
+    timeout-minutes: 40
+    steps:
+      - name: Arch packages
+        run: |
+          pacman -Sy --noconfirm --needed archlinux-keyring
+          pacman -Su --noconfirm --needed git github-cli nodejs webkit2gtk-4.1 mesa xorg-server-xvfb imagemagick desktop-file-utils
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: scripts
+      - uses: actions/download-artifact@v4
+        if: env.SOURCE == 'build'
+        with:
+          name: build-linux
+          path: dl
+      - name: Get the tarball
+        run: |
+          set -euo pipefail
+          git config --global --add safe.directory "$PWD"
+          asset=BunkerBusters-linux-x86_64.tar.gz
+          mkdir -p dl
+          if [ "$SOURCE" = build ]; then
+            echo "EXPECT_VERSION=$(node -p "require('./package.json').version")" >> "$GITHUB_ENV"
+          else
+            gh release download ${TAG:+"$TAG"} --repo "$GITHUB_REPOSITORY" --pattern "$asset" --dir dl
+            echo "EXPECT_VERSION=${TAG#v}" >> "$GITHUB_ENV"
+          fi
+          echo "ASSET=$PWD/dl/$asset" >> "$GITHUB_ENV"
+          ls -la dl
+      - name: Install, launch, quit, uninstall
+        run: |
+          set -euo pipefail
+          art="$GITHUB_WORKSPACE/smoke-out"; mkdir -p "$art"   # (in a container, runner.temp is the host's path)
+          data="$HOME/.local/share/dev.bunkerbusters.game"
+          pacman -Q webkit2gtk-4.1 mesa | tee "$art/packages.txt"
+          tar -xzf "$ASSET" -C "$RUNNER_TEMP"
+          pkg="$RUNNER_TEMP/bunker-busters"
+          test -f "$pkg/licenses.txt" || { echo "::error::no licenses.txt in the tarball"; exit 1; }
+          "$pkg/install.sh"
+          bin="$HOME/.local/bin/bunker-busters"
+          desktop-file-validate "$HOME/.local/share/applications/bunker-busters.desktop"
+
+          # a container can't make the namespaces WebKitGTK's sandbox wants (a desktop can)
+          export WEBKIT_DISABLE_SANDBOX_THIS_IS_DANGEROUS=1 WEBKIT_FORCE_SANDBOX=0
+          Xvfb :99 -screen 0 1600x900x24 -nolisten tcp & xvfb=$!
+          export DISPLAY=:99 LIBGL_ALWAYS_SOFTWARE=1 WEBKIT_DISABLE_DMABUF_RENDERER=1
+          export BB_SMOKE="$art/report.json" BB_SMOKE_TIMEOUT=600 BB_SMOKE_HOLD=8
+          sleep 2
+          shot() { magick import -display :99 -window root "$art/$1.png" 2>/dev/null || import -display :99 -window root "$art/$1.png" || true; }
+          "$bin" > "$art/stdout.txt" 2>&1 & app=$!
+          done_shot=0
+          for _ in $(seq 360); do
+            if ! kill -0 "$app" 2>/dev/null; then break; fi
+            if [ "$done_shot" = 0 ] && [ -f "$BB_SMOKE" ]; then sleep 2; shot title; done_shot=1; fi
+            sleep 2
+          done
+          if kill -0 "$app" 2>/dev/null; then
+            shot stuck; kill -9 "$app"
+            echo "::error::the game was still running after 12 minutes and never reported"
+            tail -n 40 "$art/stdout.txt"; exit 1
+          fi
+          code=0; wait "$app" || code=$?
+          kill "$xvfb" || true
+          echo "Game exit code: $code"
+          grep -E "BunkerBusters\]|bunker-busters\]|\[smoke\]" "$art/stdout.txt" | sed 's#^.*CONSOLE [A-Z]* ##' | tail -n 30 || true
+          test -f "$BB_SMOKE" || { echo "::error::the game quit without a report"; tail -n 40 "$art/stdout.txt"; exit 1; }
+          node -e '
+            const r = JSON.parse(require("fs").readFileSync(process.env.BB_SMOKE, "utf8"));
+            console.log(JSON.stringify(r, null, 2));
+            const fail = (m) => { console.log(`::error::${m}`); process.exit(1); };
+            if (!r.ok) fail(`the game did not come up: ${r.result}`);
+            if (r.installer !== "binary") fail(`install type ${r.installer}, expected binary (the updater picks its download by this)`);
+            if (process.env.EXPECT_VERSION && r.version !== process.env.EXPECT_VERSION) fail(`version ${r.version}, expected ${process.env.EXPECT_VERSION}`);
+            console.log(`came up in ${r.seconds} s on ${r.page.backend}`);
+          '
+          [ "$code" = 0 ] || { echo "::error::the game exited with $code"; exit 1; }
+          test -d "$data" || { echo "::error::no game data folder at $data after a run"; exit 1; }
+
+          "$pkg/install.sh" --uninstall
+          for f in "$HOME/.local/bin/bunker-busters" "$HOME/.local/share/applications/bunker-busters.desktop"; do
+            test ! -e "$f" || { echo "::error::uninstall left $f"; exit 1; }
+          done
+          test -d "$data" || { echo "::error::uninstalling deleted the saves"; exit 1; }
+          echo "tarball on Arch: installed, came up, quit, uninstalled; saves kept."
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: smoke-arch-tarball
+          path: smoke-out/
           retention-days: 14
 
   # ---- licences ---------------------------------------------------------------------------------
