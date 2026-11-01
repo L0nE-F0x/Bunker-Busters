@@ -1499,7 +1499,8 @@ export class Game {
       if (on) { this.climbStowed = this.arms?.equipped ?? null; return; }
       const back = this.climbStowed;
       this.climbStowed = null;
-      if (back && this.arms && !this.player?.heavy) { this.arms.handsFull = false; this.arms.equip(back); }
+      // (not when you went down on the ladder: a death drops you off it)
+      if (back && this.arms && !this.player?.heavy && (this.state?.data.health ?? 0) > 0) { this.arms.handsFull = false; this.arms.equip(back); }
     };
     trav.onMantle = (phase, at, k) => {
       const surf = this.acoustics?.surfaceAt(at) ?? 'sand';

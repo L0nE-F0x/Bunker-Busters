@@ -69,6 +69,7 @@ export class Player {
   onJump: (() => void) | null = null;
   /** Ladders and mantling (Traversal.ts): while it's active it moves the body instead. */
   readonly trav: Traversal;
+  private travIn = { fwd: 0, jump: false, sprint: false, crouch: false };
 
   constructor(private physics: Physics, archetype: string, spawn: THREE.Vector3) {
     this.model = new CharacterModel(LOOKS[archetype] ?? LOOKS.infiltrator);
@@ -172,7 +173,9 @@ export class Player {
     // on a ladder, or pulling up onto something: the climb moves the body along its own path
     const noClimb = this.frozen || this.heavy || this.forceCrouch || !input.enabled;
     const trav = this.trav;
-    if (trav.update(dt, camYaw, camPitch, { fwd: mz, jump: !noClimb && input.actPressed('jump'), sprint: input.act('sprint'), crouch: input.act('crouch') }, this.frozen)) {
+    const ti = this.travIn;
+    ti.fwd = mz; ti.jump = !noClimb && input.actPressed('jump'); ti.sprint = input.act('sprint'); ti.crouch = input.act('crouch');
+    if (trav.update(dt, camYaw, camPitch, ti, this.frozen)) {
       this.grounded = false;
       this.sprinting = false;
       this.coyote = 0;
