@@ -224,7 +224,7 @@ if (only === 'all' || only === 'settings') {
   await p.click('#title .menu-minor button:has-text("Credits")');
   await wait(400);
   const cr = await ev(`document.querySelector('.cr')?.textContent || ''`);
-  check('Credits: the developer and the licences', /A game by Lone Fox/i.test(cr) && /three\.js/.test(cr) && /Rapier/.test(cr) && /Apache-2\.0/.test(cr) && /OFL-1\.1/.test(cr) && /Kokoro/.test(cr), cr.replace(/\s+/g, ' ').slice(0, 80));
+  check('Credits: the developer and the licences', /A game by L0nE-F0x/i.test(cr) && /three\.js/.test(cr) && /Rapier/.test(cr) && /Apache-2\.0/.test(cr) && /OFL-1\.1/.test(cr) && /Kokoro/.test(cr), cr.replace(/\s+/g, ' ').slice(0, 80));
   await p.screenshot({ path: `${OUT}/settings-credits.png` });
   await ev(`window.__opened = []; window.open = (u) => { window.__opened.push(u); return {}; }`);
   await p.click('.cr button[data-go="licences"]');

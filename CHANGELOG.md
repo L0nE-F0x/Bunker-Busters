@@ -4,6 +4,7 @@ Each `## vX.Y.Z` section becomes the GitHub release notes and the "what's new" l
 update notice (the first few bullets). `scripts/release.sh` refuses to release a version without one.
 
 ## v1.1.1
+- **People sit properly.** Everyone sitting by a fire or at a desk now has their feet on the ground and stays on the seat; on the camp's logs their legs used to hang in the air. Round the fires, people talk with their hands instead of throwing their arms wide and leaning back off the log
 - **Ladders you can climb.** The roof ladder at Last Chance, the Kade overwatch towers, the drive-in screen's catwalk and Dry Creek's water tower, which now has a balcony round its tank. Walk into a ladder or press Use, push forward to climb, and jump to let go. At the top you step off onto the roof. Your gun goes away while you climb and comes back out at the top. A controller's stick and the phone's move stick climb too
 - **Climb onto things.** Jump into a crate, a car's hood, a low wall or a rock up to about chest height and you pull yourself up onto it. Holding jump in the air catches an edge. Crates, pallets, coolers and cars are now solid up to their real tops, so you stand on them instead of sinking into them
 - **The Dome's fence holds.** It had gaps you could walk through anywhere. Now the outfall culvert is the only way under it
