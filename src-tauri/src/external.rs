@@ -2,13 +2,14 @@
 //! the licences) in the player's browser, and `guard()` keeps the game window on the game, so a link
 //! to an outside page never replaces the game with no way back.
 //!
-//! Only two places are ever opened: the GitHub repository (issues, releases) and the website.
+//! Only three places are ever opened: the GitHub repository (issues, releases), the website, and the
+//! owner's studio page (ApexForge, the "Built by" link on the title screen and in the credits).
 
 use std::process::{Command, Stdio};
 use tauri::Url;
 
-/// The URL, normalised, if it's one of ours: https, no credentials or port, and either
-/// github.com/L0nE-F0x/Bunker-Busters[/…] or bunker-busters.netlify.app. Parsing first (rather than
+/// The URL, normalised, if it's one of ours: https, no credentials or port, and one of
+/// github.com/L0nE-F0x/Bunker-Busters[/…], bunker-busters.netlify.app or ame-apexforge.org. Parsing first (rather than
 /// comparing prefixes) is what stops `https://bunker-busters.netlify.app.evil.example`,
 /// `https://bunker-busters.netlify.app@evil.example` and `…/Bunker-Busters/../../elsewhere`.
 pub fn allowed(raw: &str) -> Option<Url> {
@@ -20,7 +21,7 @@ pub fn allowed(raw: &str) -> Option<Url> {
         return None;
     }
     match url.host_str()? {
-        "bunker-busters.netlify.app" => Some(url),
+        "bunker-busters.netlify.app" | "ame-apexforge.org" | "www.ame-apexforge.org" => Some(url),
         "github.com" => {
             let path = url.path();
             (path == "/L0nE-F0x/Bunker-Busters" || path.starts_with("/L0nE-F0x/Bunker-Busters/")).then_some(url)
@@ -29,7 +30,8 @@ pub fn allowed(raw: &str) -> Option<Url> {
     }
 }
 
-/// Opens one of our pages in the system browser (the game's "Report a bug", credits and licences).
+/// Opens one of our pages in the system browser (the game's "Report a bug", credits, licences and
+/// "Built by ApexForge").
 /// Anything else is refused. Returns once the browser launcher has started; it doesn't wait for it.
 #[tauri::command]
 pub fn open_external(url: String) -> Result<(), String> {
@@ -199,6 +201,8 @@ mod tests {
             "https://bunker-busters.netlify.app",
             "https://bunker-busters.netlify.app/licenses.txt",
             "https://bunker-busters.netlify.app/#get",
+            "https://ame-apexforge.org/",
+            "https://www.ame-apexforge.org/",
             "HTTPS://GitHub.com/L0nE-F0x/Bunker-Busters/issues",
             "https://github.com:443/L0nE-F0x/Bunker-Busters",
         ] {
@@ -207,6 +211,9 @@ mod tests {
         for bad in [
             "http://bunker-busters.netlify.app/",
             "https://bunker-busters.netlify.app.evil.example/",
+            "http://ame-apexforge.org/",
+            "https://ame-apexforge.org.evil.example/",
+            "https://evil.ame-apexforge.org/",
             "https://bunker-busters.netlify.app@evil.example/",
             "https://user:pw@bunker-busters.netlify.app/",
             "https://bunker-busters.netlify.app:8443/",

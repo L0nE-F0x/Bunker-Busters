@@ -7,6 +7,9 @@
 
 export const REPO_URL = 'https://github.com/L0nE-F0x/Bunker-Busters';
 export const SITE_URL = 'https://bunker-busters.netlify.app';
+/** The owner's studio page: "Built by ApexForge" under the title menu and in the credits (and every site footer, from .env). */
+export const BUILT_BY = 'ApexForge';
+export const BUILT_BY_URL = 'https://ame-apexforge.org/';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 type Ipc = { invoke: (cmd: string, args?: object) => Promise<unknown> };

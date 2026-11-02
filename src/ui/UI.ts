@@ -29,7 +29,7 @@ import { openControls } from './ControlsView';
 import { LoadingScreen, WorldWait } from './loading';
 import { openSettingsPanel, needsFlashNotice, openFlashNotice } from './SettingsView';
 import { openCredits } from './Credits';
-import { openExternal, bugReportUrl, type BugInfo } from './links';
+import { openExternal, bugReportUrl, BUILT_BY, BUILT_BY_URL, type BugInfo } from './links';
 import { proseKeys } from './keyWords';
 
 /** Which device's glyphs to show (html.pad is set by Input when a controller was used last). */
@@ -162,6 +162,16 @@ export class UI implements UIBridge {
     // phones in the browser: put the game on the home screen (full screen, plays offline)
     if (isTouch && isPhone && !isInstalledApp()) add('Install app', () => openInstallSheet({ onGamePage: true }));
     menu.appendChild(this.minorRow());
+    // "Built by ApexForge": a real link (hover shows where it goes), opened through openExternal so the
+    // desktop app sends it to the system browser; [data-pad] lets a controller reach it
+    const by = h('a', 'title-by', `Built by <b>${esc(BUILT_BY)}</b>`) as HTMLAnchorElement;
+    by.href = BUILT_BY_URL;
+    by.target = '_blank';
+    by.rel = 'noopener';
+    by.dataset.pad = '';
+    by.onmouseenter = () => this.audio.play('uiHover');
+    by.onclick = (e) => { e.preventDefault(); this.audio.start(); this.audio.play('ui'); void openExternal(BUILT_BY_URL); };
+    menu.appendChild(by);
     if (opts.notice) menu.after(h('div', 'title-notice', esc(opts.notice)));
     this.root.appendChild(el);
     void mountUpdateNotice(el, () => { this.audio.start(); this.audio.play('uiConfirm'); });

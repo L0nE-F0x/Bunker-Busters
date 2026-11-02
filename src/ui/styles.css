@@ -907,6 +907,8 @@ html:not(.touch) .banner .sub { max-width: clamp(380px, calc(100vw - 872px), 900
   .menu { gap: 6px; width: min(300px, 70vw); }
   .menu .btn { padding: 9px 18px; font-size: 13px; }
   .title-foot { bottom: 12px; font-size: 9px; }
+  /* no room under the menu here: "Built by" sits beside its last row instead */
+  .title-by { position: absolute; left: calc(100% + 12px); bottom: 0; margin: 0; padding: 8px 6px; font-size: 10px; white-space: nowrap; }
   .update-card { bottom: 36px; }
   #loading .logo-sm { font-size: 44px; }
   #loading .tip { bottom: 16px; font-size: 11px; }

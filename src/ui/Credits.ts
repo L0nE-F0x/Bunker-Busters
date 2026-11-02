@@ -1,6 +1,6 @@
 import './settings.css';
 import type { AudioEngine } from '@/engine/audio';
-import { openExternal, licensesUrl, isDesktopApp, SITE_URL } from './links';
+import { openExternal, licensesUrl, isDesktopApp, SITE_URL, BUILT_BY, BUILT_BY_URL } from './links';
 
 /**
  * Who made the game, and the open-source work it stands on. Opened from the title and pause menus.
@@ -37,7 +37,7 @@ export function openCredits(root: HTMLElement, audio: AudioEngine, opts: { onBug
     <div class="panel cr interactive"><div class="scan"></div>
       <div class="kicker">Credits</div>
       <div class="big">Bunker Busters</div>
-      <div class="by">A game by ${esc(DEVELOPER)}</div>
+      <div class="by">A game by ${esc(DEVELOPER)} · <a class="cr-built" href="${esc(BUILT_BY_URL)}" target="_blank" rel="noopener" data-go="builtby" data-pad>Built by ${esc(BUILT_BY)}</a></div>
       <div class="rule"></div>
       <div class="cr-cols">
         <div><h4>Built with</h4><ul>${BUILT_WITH.map(item).join('')}</ul></div>
@@ -66,11 +66,13 @@ export function openCredits(root: HTMLElement, audio: AudioEngine, opts: { onBug
   ov.querySelectorAll<HTMLButtonElement>('button').forEach((b) => { b.onmouseenter = () => audio.play('uiHover'); });
   (ov.querySelector('.back') as HTMLElement).onclick = () => { audio.play('ui'); close(); };
   ov.querySelectorAll<HTMLElement>('[data-go]').forEach((b) => {
-    b.onclick = () => {
+    b.onclick = (e) => {
+      e.preventDefault();
       audio.play('ui');
       const go = b.dataset.go;
       if (go === 'licences') void openExternal(licensesUrl());
       else if (go === 'site') void openExternal(SITE_URL);
+      else if (go === 'builtby') void openExternal(BUILT_BY_URL);
       else opts.onBug();
     };
   });

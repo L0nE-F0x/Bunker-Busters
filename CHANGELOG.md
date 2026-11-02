@@ -3,6 +3,9 @@
 Each `## vX.Y.Z` section becomes the GitHub release notes and the "what's new" list in the in-app
 update notice (the first few bullets). `scripts/release.sh` refuses to release a version without one.
 
+## v1.1.4
+- **Built by ApexForge.** A small link under the title menu and in the credits goes to ApexForge's page; in the desktop app it opens in your browser. Every page of the website has it in the footer too
+
 ## v1.1.3
 - **Everyone moves like people.** Every character in the game now idles, talks and gestures on real motion capture. At the camp fire, Mara, Hollis, Pip and Dez sit as people do on a log: hands on their knees, looking round, rubbing an arm against the cold, laughing, talking with their hands. Before, they played a clip made for sitting on the floor leaning back on your hands, and on a log its hands swung forward to the ground with the elbows locked backwards. Sol and Ren sit up at Dry Creek's fire too. The people on their feet shift their weight, look about, nod, shrug and talk naturally, and the people at desks type, write and talk across the desk
 - **The logs are at sitting height** (47 cm; they were 62), and everyone sitting has their boots flat on the ground instead of their toes in the sand
