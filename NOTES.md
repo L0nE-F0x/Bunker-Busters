@@ -2095,7 +2095,7 @@ Then (owner: "yes for all the people in the game") **every townsperson and bunke
 
 Open: Dez's hands hover a little over his thighs (bulkier than X Bot); Orrin's general-conversation loop leans him back a little; no finger bones while Mixamo's auto-rigger is down.
 
-## 2026-11-02: three.js r187 (unreleased, for v1.1.5)
+## 2026-11-02: three.js r187 (shipped as v1.1.5)
 
 The owner asked whether the new three.js was worth taking (r187, npm 0.187.0, out 2026-10-30), and whether their threejsassets.com subscription had anything for the game. **Assets: no** (owner: "forget about the threejsassets.com ones"). Every pack but Wasteland is flat toy-style low-poly; Wasteland (chunky textured props and wrecks) is 5k-60k triangles a prop, and the licence forbids the files in "source-available repositories", which is where `public/models` lives. Don't bring it up again unless they do. **r187: taken**, in a worktree, A/B against r186 on two dev servers (5190/5191).
 
