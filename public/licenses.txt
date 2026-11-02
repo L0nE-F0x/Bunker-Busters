@@ -515,7 +515,7 @@ DAMAGES, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
 FROM, OUT OF THE USE OR INABILITY TO USE THE FONT SOFTWARE OR FROM
 OTHER DEALINGS IN THE FONT SOFTWARE.
 
-three 0.186.1 (MIT)  https://threejs.org/
+three 0.187.0 (MIT)  https://threejs.org/
 ------------------------------------------------------------------------------
 
 The MIT License

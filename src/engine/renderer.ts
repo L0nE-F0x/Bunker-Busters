@@ -1,5 +1,5 @@
 import * as THREE from 'three/webgpu';
-import { int, textureSize } from 'three/tsl';
+import { bool, int, textureSize } from 'three/tsl';
 import { isMobile } from './device';
 
 export type QualityLevel = 'low' | 'medium' | 'high' | 'ultra';
@@ -162,41 +162,48 @@ function coalesceUniformUploads(renderer: THREE.WebGPURenderer) {
 
 /**
  * WebGL2: no per-draw flip-Y uniform where the answer is settled. On WebGL three gives every
- * texture sample a `flipY` uniform (true for render targets, depth textures and flipped
- * ImageBitmaps) and a per-object update that refreshes it, and the texture's UV matrix, on every
- * draw: ~2,700 calls and as many uniform compares a frame at Dry Creek (the shadow map's PCF taps
- * and the PMREM's in every lit material, mostly), plus a select in the shader. A render target or
- * depth texture is always flipped and a plain image, canvas or data array never is, which is known
- * when the material is built (models and canvases load before the warm-up): those samples are built
- * with the flip baked in, the node never updates and its object uniforms shrink. Anything else
- * (flipped ImageBitmaps, a plain texture without an image yet) keeps three's path.
- * Also: a node that doesn't use the UV matrix no longer recomputes it (sin/cos) on every draw.
+ * sampled texture a `flipY` uniform (true for render targets, depth textures and flipped
+ * ImageBitmaps), refreshed for every object it draws: ~2,700 refreshes a frame at Dry Creek (the
+ * shadow map's PCF taps and the environment map in every lit material, mostly), plus a select in the
+ * shader. A render target or depth texture is always flipped and a plain image, canvas or data array
+ * never is, which is known when the material is built (models and canvases load before the
+ * warm-up). For those the texture's base node gets a constant `true`/`false` in place of the
+ * uniform: the flip is baked into the UV, and texture gathers (r187 passes them the flag to mirror
+ * their offsets and texel order; they read `false` without it, which darkened every shadowed
+ * interior) get the same constant. Anything else (flipped ImageBitmaps, a plain texture without an
+ * image yet) keeps three's uniform. Also: the UV matrix (offset/repeat/rotation, refreshed per draw
+ * for nodes that use it) is only rebuilt when one of those changed.
  */
 function settleTextureFlips() {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const TN = (THREE as any).TextureNode?.prototype;
-  if (!TN || typeof TN.setupUV !== 'function' || typeof TN.update !== 'function') return;
+  if (!TN || typeof TN.setupUV !== 'function' || typeof TN.getBase !== 'function' || !('_flipYUniform' in new (THREE as any).TextureNode())) return;
   const setupUV = TN.setupUV;
   const hasBitmap = typeof ImageBitmap !== 'undefined';
+  const FLIPPED = bool(true), PLAIN = bool(false);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   TN.setupUV = function (builder: any, uvNode: any) {
-    if (this._flipYUniform !== null || !builder.isFlipY?.()) return setupUV.call(this, builder, uvNode);
-    const t = this.value as (THREE.Texture & { isRenderTargetTexture?: boolean; isFramebufferTexture?: boolean; isDepthTexture?: boolean }) | null;
-    if (!t || !t.isTexture || (t as unknown as THREE.CubeTexture).isCubeTexture) return setupUV.call(this, builder, uvNode);
-    const img = t.image as unknown;
-    // render targets and depth (the post stack, the shadow map, the PMREM): always flipped. Their
-    // nodes only ever swap one target for another (PMREM's placeholder is marked a target too).
-    if (t.isRenderTargetTexture || t.isFramebufferTexture || t.isDepthTexture) {
+    if (!builder.isFlipY?.()) return setupUV.call(this, builder, uvNode);
+    const base = this.getBase();
+    if (base._flipYUniform === null) {
+      const t = base.value as (THREE.Texture & { isRenderTargetTexture?: boolean; isFramebufferTexture?: boolean; isDepthTexture?: boolean; isCubeTexture?: boolean }) | null;
+      if (t && t.isTexture && !t.isCubeTexture) {
+        const img = t.image as unknown;
+        // render targets and depth (the post stack, the shadow map): always flipped; their nodes only
+        // ever swap one target for another. Plain images, canvases and data: never (an unflipped
+        // ImageBitmap included).
+        if (t.isRenderTargetTexture || t.isFramebufferTexture || t.isDepthTexture) base._flipYUniform = FLIPPED;
+        else if (img != null && !(hasBitmap && img instanceof ImageBitmap && t.flipY === true)) base._flipYUniform = PLAIN;
+      }
+    }
+    if (base._flipYUniform === PLAIN) return uvNode;
+    if (base._flipYUniform === FLIPPED) {
       const v = uvNode.toVar();
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      return this.sampler ? v.flipY() : v.setY(int((textureSize(this, this.levelNode) as any).y).sub(v.y).sub(1));
+      return this.sampler ? v.flipY() : v.setY(int((textureSize(this, this.levelNode) as any).y).sub(int(v.y)).sub(1));
     }
-    // plain images, canvases and data: never flipped (an unflipped ImageBitmap included)
-    if (img != null && !(hasBitmap && img instanceof ImageBitmap && t.flipY === true)) return uvNode;
     return setupUV.call(this, builder, uvNode);
   };
-  // the UV matrix only changes with offset/repeat/rotation/center, and almost none ever move: skip
-  // the sin/cos rebuild while they're unchanged
   const TX = THREE.Texture.prototype as THREE.Texture & { updateMatrix(): void };
   const updateMatrix = TX.updateMatrix;
   TX.updateMatrix = function (this: THREE.Texture & { _uvKey?: Float64Array }) {
@@ -206,71 +213,6 @@ function settleTextureFlips() {
     k ??= this._uvKey = new Float64Array(7);
     k[0] = o.x; k[1] = o.y; k[2] = r.x; k[3] = r.y; k[4] = this.rotation; k[5] = c.x; k[6] = c.y;
     updateMatrix.call(this);
-  };
-  TN.update = function () {
-    const texture = this.value;
-    const matrixUniform = this._matrixUniform;
-    if (matrixUniform !== null) {
-      matrixUniform.value = texture.matrix;
-      if (texture.matrixAutoUpdate === true) texture.updateMatrix();
-    }
-    const flipYUniform = this._flipYUniform;
-    if (flipYUniform !== null) {
-      flipYUniform.value = ((hasBitmap && texture.image instanceof ImageBitmap && texture.flipY === true) || texture.isRenderTargetTexture === true || texture.isFramebufferTexture === true || texture.isDepthTexture === true);
-    }
-  };
-}
-
-/**
- * WebGL2: uniform-buffer names that don't make every program unique. Three names each buffer node's
- * uniform block after the node's id (`NodeBuffer_217926 { mat4 buffer217926[33]; }`), so two
- * materials with the same graph and an equally sized buffer (two glow-halo sets, two rigs with the
- * same skeleton, two instanced batches of one size) still get different GLSL and a program each:
- * ~45 of the 242 programs at boot differed only by those numbers. The block is renamed after its
- * type and size (`NodeBuffer_vec4x24_0`), the index only climbing when one program holds two
- * alike. The block's binding point comes from its place in the bind group, not its name, so
- * programs shared this way bind each material's own buffer. Names are per build (each build makes
- * its own buffer binding: three's "shared" buffer data is never stored), and the block is emitted at
- * the end of the same build, so a node's name in one program never leaks into another.
- */
-function stableBufferNames(renderer: THREE.WebGPURenderer) {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const be = (renderer as any).backend;
-  if (!be?.isWebGLBackend || typeof be.createNodeBuilder !== 'function') return;
-  const create = be.createNodeBuilder;
-  let patched = false;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  be.createNodeBuilder = function (...args: any[]) {
-    const builder = create.apply(this, args);
-    if (!patched) {
-      patched = true;
-      const proto = Object.getPrototypeOf(builder);
-      const own = proto.getUniformFromNode;
-      if (typeof own === 'function' && typeof proto.getDataFromNode === 'function') {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        proto.getUniformFromNode = function (node: any, type: string, shaderStage: string, name: string | null = null) {
-          const uniformNode = own.call(this, node, type, shaderStage, name);
-          if (type !== 'buffer') return uniformNode;
-          const buf = this.getDataFromNode(node, shaderStage, this.globalCache).uniformGPU;
-          if (!buf || typeof node.name !== 'string' || !/^NodeBuffer_/.test(node.name)) return uniformNode;
-          // this builder's name for the node (both stages, every call: three resets it each time)
-          const names: Map<unknown, string> = (this._bbNames ??= new Map<unknown, string>());
-          let nm = names.get(node);
-          if (nm === undefined) {
-            const key = `NodeBuffer_${String(node.bufferType).replace(/[^A-Za-z0-9]/g, '')}x${node.bufferCount | 0}_`;
-            const taken = new Set(names.values());
-            let k = 0;
-            while (taken.has(key + k)) k++;
-            nm = key + k;
-            names.set(node, nm);
-          }
-          node.name = buf.name = nm;
-          uniformNode.name = `nb${nm.slice(10)}`; // the array inside the block, unique with it
-          return uniformNode;
-        };
-      }
-    }
-    return builder;
   };
 }
 
@@ -297,34 +239,6 @@ function frameCacheKeys(renderer: THREE.WebGPURenderer) {
     if (e) { e.f = f; e.k = k; } else m.set(lightsNode, { f, k });
     return k;
   };
-}
-
-/**
- * Runs `fn` (a warm-up render) with every new WebGL program linking in the background
- * (KHR_parallel_shader_compile) instead of three's synchronous path, where the link status query
- * right after each link stalls the page until the driver is done (~3 s of the boot headless, most of
- * a cold-cache boot in the desktop app). The render builds every node graph and starts every link,
- * and objects whose program isn't linked yet just aren't drawn that frame; the promise settles when
- * all of them are ready. Without the extension (or on WebGPU) `fn` runs as usual and it resolves at once.
- */
-export function compileInParallel(renderer: THREE.WebGPURenderer, fn: () => void): Promise<void> {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const be = (renderer as any).backend;
-  if (!be?.isWebGLBackend || !be.parallel || typeof be.createRenderPipeline !== 'function') { fn(); return Promise.resolve(); }
-  const own = be.createRenderPipeline;
-  const linking: Promise<void>[] = [];
-  be.createRenderPipeline = function (renderObject: unknown, promises: Promise<void>[] | null) {
-    return own.call(this, renderObject, promises ?? linking);
-  };
-  try { fn(); } finally { be.createRenderPipeline = own; }
-  return Promise.all(linking).then(() => undefined);
-}
-
-/** True when WebGL programs can link in the background (see compileInParallel). */
-export function canCompileInParallel(renderer: THREE.WebGPURenderer) {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const be = (renderer as any).backend;
-  return !!(be?.isWebGLBackend && be.parallel);
 }
 
 /** Neither WebGPU nor WebGL 2 could be started in this browser (ui/bootFail.ts explains). */
@@ -409,10 +323,9 @@ export async function createRenderer(canvas: HTMLCanvasElement) {
     throw err;
   }
   quietShadowAlphaTest(renderer);
-  coalesceUniformUploads(renderer);
+  if (!qs.has('nocoalesce')) coalesceUniformUploads(renderer); // (?nocoalesce: A/B)
   if (!qs.has('noflipfix')) settleTextureFlips(); // (?noflipfix: A/B)
   if (!qs.has('nokeymemo')) frameCacheKeys(renderer); // (?nokeymemo: A/B)
-  if (!qs.has('nobufnames')) stableBufferNames(renderer); // (?nobufnames: A/B)
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFShadowMap;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;

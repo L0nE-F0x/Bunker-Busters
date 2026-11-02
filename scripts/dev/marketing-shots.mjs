@@ -2,6 +2,7 @@
 //   node scripts/dev/marketing-shots.mjs            # all
 //   node scripts/dev/marketing-shots.mjs night camp # some
 //   BB_MEDIA_OUT=/tmp/media/ node scripts/dev/marketing-shots.mjs  # preview somewhere else first
+//   BB_MEDIA_OUT=/tmp/a/ BB_EXTRA="&noflipfix" node scripts/dev/marketing-shots.mjs interior  # A/B: extra game URL flags
 // After changing hero.jpg, also regenerate the share card: node scripts/dev/og-card.mjs
 import { fileURLToPath } from 'node:url';
 import { launch, waitForGame } from './browser.mjs';
@@ -103,9 +104,9 @@ async function session(url, steps) {
   await p.close();
 }
 const cineShots = CINE.filter(([n]) => want(n));
-if (cineShots.length) await session(ORIGIN + '/play/?webgl&q=ultra&skip=ui', cineShots);
+if (cineShots.length) await session(ORIGIN + '/play/?webgl&q=ultra&skip=ui' + (process.env.BB_EXTRA || ''), cineShots);
 const world = WORLD.filter(([n]) => want(n));
-if (world.length) await session(ORIGIN + '/play/?webgl&q=ultra&skip=ui&autostart', world);
+if (world.length) await session(ORIGIN + '/play/?webgl&q=ultra&skip=ui&autostart' + (process.env.BB_EXTRA || ''), world);
 if (want('lockpick')) {
   await session(ORIGIN + '/play/?webgl&q=ultra&autostart', [[
     'lockpick',

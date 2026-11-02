@@ -1,8 +1,8 @@
 import * as THREE from 'three/webgpu';
 import { Fn, vec4, vec3, uv, length, smoothstep, time, sin, float, color } from 'three/tsl';
 import type { QualitySettings } from '@/engine/renderer';
-import { makeQuality, fitCanvas, compileInParallel, canCompileInParallel } from '@/engine/renderer';
-import { isTouch, isWebKit, isMobile } from '@/engine/device';
+import { makeQuality, fitCanvas } from '@/engine/renderer';
+import { isTouch, isMobile } from '@/engine/device';
 import { AUTOQ_OVERRIDE, GpuTimer, RenderScale, gpuName, isDesktopApp, learn, startPreset } from '@/engine/autoQuality';
 import { TouchControls } from '@/ui/TouchControls';
 import { PostFX } from '@/engine/postfx';
@@ -567,33 +567,17 @@ export class Game {
     const batches = 10, per = Math.ceil(drawn.length / batches);
     let warmMs = 0;
     const tWarm = performance.now();
-    // First pass (WebGL with KHR_parallel_shader_compile): each batch builds its node graphs and
-    // starts its links in the background, so the driver links one batch while the next one builds;
-    // nothing waits on a link status until they're all in. Chromium links in parallel for real
-    // (headless: 10.1 -> 6.7 s); WebKitGTK doesn't, and the second pass only cost it (13-20 s ->
-    // 15-33 s in the desktop app), so it keeps the single pass. ?serialwarm / ?parallelwarm A/B it.
-    const qw = new URLSearchParams(location.search);
-    const parallel = canCompileInParallel(this.renderer) && !qw.has('serialwarm') && (!isWebKit || qw.has('parallelwarm'));
-    if (parallel) {
-      const linking: Promise<void>[] = [];
-      for (let i = 0; i < batches; i++) {
-        linking.push(compileInParallel(this.renderer, () => { warmMs += this.warmShaders(...drawn.slice(i * per, (i + 1) * per)); }));
-        this.ui.progress(0.8 + (0.1 * (i + 1)) / batches, 'Compiling shaders');
-        this.ui.loading.setShaders(i + 1, batches * 2);
-        for (let f = 0; f < 2; f++) await new Promise((r) => requestAnimationFrame(r)); // a fresh frame for the scene pass
-      }
-      await Promise.all(linking);
-    }
-    // the real frames: everything drawn once through the post stack (anything the first pass didn't
-    // cover compiles here, as before)
-    const p0 = parallel ? 0.9 : 0.8;
+    // Every object drawn once through the post stack, a batch a frame. (Until r187 Chromium linked a
+    // first pass in the background with KHR_parallel_shader_compile, 9.2 -> 6.3 s headless; r187
+    // deletes a program when a cached one replaces it, which left such a link waiting forever, and its
+    // faster node builds brought this pass to 5.9 s on its own. WebKitGTK never linked in parallel.)
     for (let i = 0; i < batches; i++) {
       warmMs += this.warmShaders(...drawn.slice(i * per, (i + 1) * per));
-      this.ui.progress(p0 + ((0.95 - p0) * (i + 1)) / batches, 'Compiling shaders');
-      this.ui.loading.setShaders((parallel ? batches : 0) + i + 1, parallel ? batches * 2 : batches);
+      this.ui.progress(0.8 + (0.15 * (i + 1)) / batches, 'Compiling shaders');
+      this.ui.loading.setShaders(i + 1, batches);
       for (let f = 0; f < 2; f++) await new Promise((r) => requestAnimationFrame(r)); // a fresh frame for the scene pass
     }
-    console.log(`[BunkerBusters] shader warm-up: ${drawn.length} objects in ${batches} frames, ${warmMs.toFixed(0)} ms (${(performance.now() - tWarm).toFixed(0)} ms wall${parallel ? ', parallel links' : ''})`);
+    console.log(`[BunkerBusters] shader warm-up: ${drawn.length} objects in ${batches} frames, ${warmMs.toFixed(0)} ms (${(performance.now() - tWarm).toFixed(0)} ms wall)`);
     unstageMenuHands();
     menuHands.dispose();
     // everything static is on the GPU now: drop the CPU copies of its vertex data (the rest goes at its

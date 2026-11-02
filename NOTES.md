@@ -2094,3 +2094,33 @@ Mixamo, for next time: the account is the owner's (signed in in their Chrome). I
 Then (owner: "yes for all the people in the game") **every townsperson and bunker character** moved onto Mixamo for idling, talk and gestures: 23 more motions in `Assets/mixamo/stand.glb` (standing idles, look-round, four talks, arguing, shrug, think, nods, a phone call for Orrin; seated talk, writing, typing and desk meetings for Ada, the reviewers, Gil, Kit and Noor). Scripted clips stay Meshy: walks, falls, the associates' pick and carry, Noor's sleep/wake, the stand-ups, Hunter's slump, Wick's doze, Ren's drink, and a few character gestures (Ezra's hand rub, Prudence's headache, Inez's till). All bunker playthroughs, the first hour and the campaign's NPC roles pass. The Kade contractors are unchanged (procedural upper body, Meshy leg mocap).
 
 Open: Dez's hands hover a little over his thighs (bulkier than X Bot); Orrin's general-conversation loop leans him back a little; no finger bones while Mixamo's auto-rigger is down.
+
+## 2026-11-02: three.js r187 (unreleased, for v1.1.5)
+
+The owner asked whether the new three.js was worth taking (r187, npm 0.187.0, out 2026-10-30), and whether their threejsassets.com subscription had anything for the game. **Assets: no** (owner: "forget about the threejsassets.com ones"). Every pack but Wasteland is flat toy-style low-poly; Wasteland (chunky textured props and wrecks) is 5k-60k triangles a prop, and the licence forbids the files in "source-available repositories", which is where `public/models` lives. Don't bring it up again unless they do. **r187: taken**, in a worktree, A/B against r186 on two dev servers (5190/5191).
+
+**What broke, both in our own patches to three (`engine/renderer.ts`):**
+- **Chrome/WebGL boot hung at "Compiling shaders, step 8 of 9"** (WebGL warning "getProgramParameter: attempt to use a deleted object"). r187 deletes a program when a cached one replaces it (#34601, #34821), and our background link pass (`compileInParallel`, KHR_parallel_shader_compile) waited on one forever. r187's faster node builds made the plain serial warm-up as quick as the parallel one was, so **the parallel pass is gone** (`compileInParallel`, `canCompileInParallel`, `?serialwarm`, `?parallelwarm`). WebKitGTK and WebGPU never used it.
+- **Every shadowed interior went darker on WebGL** (the Garage marketing shot: mean 58 → 45). r187 moved the flip-Y uniform onto the texture's base node (`getBase()._flipYUniform`, refreshed by `onObjectUpdate`) and now passes it to texture gathers (`tsl_textureGather*`: a flipped texture mirrors the tap offset and the texel order). `settleTextureFlips` baked the flip into the UV and left no uniform, so gathers (the shadow map's soft filtering) read `false`. **Rewritten:** a settled texture's base node gets a constant `bool(true)` / `bool(false)` in the uniform's place: the UV flip is baked as before and gathers get the same constant. The `TextureNode.update` override went (r187's TextureNode has none); the UV-matrix memo stays. Still worth it: headless fight, JS 5.8-6.1 ms a frame with it, 7.4-8.1 with `?noflipfix`.
+- **`stableBufferNames` removed:** r187 names WebGL uniform blocks by their place in the bind group (`NodeBuffer_<group>_<i>`, the array `nodeUniform<n>`), the same fix upstream. 212 pipelines at boot with or without it (`?nobufnames` is gone).
+- **`coalesceUniformUploads` kept:** r187 still uploads each changed range separately, merging only neighbours. Without it (`?nocoalesce`, now a standing A/B flag) a fight frame costs 8.4-8.8 ms of JS instead of ~6. `frameCacheKeys` is unchanged.
+
+**Numbers** (r186 → r187):
+
+| | r186 | r187 |
+|---|---|---|
+| Desktop app, "Compiling shaders" (WebKitGTK, cold: `__GL_SHADER_DISK_CACHE=0`, 2 runs) | 40.0 / 39.8 s | 27.9 / 27.3 s |
+| Desktop app, fight on High (936×1138, 2 runs, after the first 10 s) | ~47.7 fps, JS 10.2-10.8 ms | ~49.0 fps, JS 9.6-10.6 ms |
+| Headless Chrome WebGL warm-up | 6.3-6.9 s (parallel), 9.2 s serial | 5.9-6.3 s |
+| Headless fight, 1600×900 High (60 fps cap) | JS 6.1-6.8 ms | JS 5.8-6.1 ms |
+| WebGPU warm-up (headless gets SwiftShader only) | 70-75 s | 46-50 s |
+| Pipelines / vertex / fragment programs at boot | 216 / 187 / 199 | 212 / 180 / 199 |
+| `play-*.js` | 7.90 MB (2.84 gzip) | 7.84 MB (2.82 gzip) |
+
+The desktop numbers come from `main`'s v1.1.4 release shell pointed at each dev server (`BB_START_URL`, `XDG_*_HOME` in the scratchpad so autostart can't touch the owner's save).
+
+**Looks:** all 18 marketing shots A/B (`BB_EXTRA` now passes extra flags to `marketing-shots.mjs`). Outdoors within ±0.3 of mean brightness; the Garage 57.7 / 58.3; Bunker Zero 44.3 on both, three runs each (one early pair read 54.8 / 41.6: noise). The camp and hero shots move run to run with the canopy panels' designed flicker and the fire (r186 65.6-72.1, r187 63.6-69.0). On WebGPU (SwiftShader) the Garage and Apex shots match too. r187 also fixes the ACES Filmic fit (`postfx.ts grade()` uses it) and the physical model's specular; neither shows in the A/B.
+
+**Tests (r187, `BB_PORT=5191`):** every suite passes: garage, apex, panopticon, early-break, spire, dome, cathedral, fortress, zero, traversal (no new pipelines from climbing), hostile, controls: 487 checks; the whole campaign in one run 192/192 and the first-hour walkthrough 28/28, no page errors. One garage `[talk]` run logged three "GLTFLoader: Couldn't load texture blob:…" errors while the machine was under heavy load; two repeats and every other suite were clean. r187's loaders now pass fetch `priority`/`cache` options; if it shows up again, look there first.
+
+**Not taken, for later** (each would change the look; ask first): the lens-dirt TSL function (desert glare), `ClusteredLighting` (many spot/point lights, WebGL2 fallback), `LightProbeGrid`/`LightMapper`/VXGI (baked bounce light for the bunker interiors), `compileAsync`'s parallel pipelines. EON diffuse is MeshPhysical-only (the game has none).

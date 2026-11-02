@@ -58,7 +58,7 @@ Bunker Busters uses open-source libraries, fonts and tools: [`public/licenses.tx
 
 ## For developers
 
-Three.js r186 (WebGPU/WebGL2, TSL shaders), Rapier physics, Vite and TypeScript, with a Tauri 2 desktop shell. The world, the buildings and the props are generated in code; the people and animals are rigged models, and the voices are pre-rendered.
+Three.js r187 (WebGPU/WebGL2, TSL shaders), Rapier physics, Vite and TypeScript, with a Tauri 2 desktop shell. The world, the buildings and the props are generated in code; the people and animals are rigged models, and the voices are pre-rendered.
 
 ### Play in the browser (dev)
 

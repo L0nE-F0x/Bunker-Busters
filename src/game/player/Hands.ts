@@ -1003,9 +1003,9 @@ export function retire(...roots: THREE.Object3D[]) {
 /**
  * Release what was retired, once a run has drawn its own hands and body (Game calls it after a
  * frame in play). Released any earlier (at Quit, or between character cards), a pipeline's last
- * render object goes with them: three r186 then drops the pipeline from its cache without deleting
- * its GL program, and the next run compiles it again (+12 programs and their compiles at every
- * Quit to title + Continue).
+ * render object goes with them: three then drops the pipeline from its cache (r186 leaked its GL
+ * programs, r187 deletes them), and the next run compiles it again (+12 programs and their compiles
+ * at every Quit to title + Continue).
  */
 export function releaseRetired() {
   for (const roots of retired.splice(0)) releaseTree(...roots);

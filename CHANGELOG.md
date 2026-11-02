@@ -3,6 +3,10 @@
 Each `## vX.Y.Z` section becomes the GitHub release notes and the "what's new" list in the in-app
 update notice (the first few bullets). `scripts/release.sh` refuses to release a version without one.
 
+## v1.1.5
+- **Loads faster.** The game now runs on a newer version of its 3D engine (three.js r187), and the "Compiling shaders" step of the loading screen takes about a third less time. In the desktop app here, the first start after an update went from 40 seconds to 28
+- **A little less work each frame**, about 5% in a firefight, so fights run slightly smoother
+
 ## v1.1.4
 - **Built by ApexForge.** A small link under the title menu and in the credits goes to ApexForge's page; in the desktop app it opens in your browser. Every page of the website has it in the footer too
 
