@@ -1,6 +1,6 @@
 [package]
 name = "bunker-busters"
-version = "1.1.4"
+version = "1.1.5"
 description = "Bunker Busters: a first-person heist game (desktop app)"
 authors = ["L0nE-F0x"]
 license = "MIT"
