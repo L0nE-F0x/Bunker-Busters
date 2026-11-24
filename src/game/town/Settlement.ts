@@ -1552,9 +1552,9 @@ export class Settlement {
     b.collider.setEnabled(there);
   }
 
-  update(dt: number, cam?: THREE.Vector3) {
+  update(dt: number, cam?: THREE.Vector3, speech?: { speaker: string | null; level: number }) {
     if (cam) for (const l of this.lods) l.update(cam);
-    if (cam) for (const c of this.crowds) c.update(dt, cam);
+    if (cam) for (const c of this.crowds) c.update(dt, cam, speech);
     if (cam) this.barks.update(dt, cam);
     this.followRoutines(dt);
     const s = this.ctx.state;

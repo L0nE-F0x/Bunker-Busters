@@ -16,7 +16,7 @@ import type { Heightfield } from './Heightfield';
 import type { Physics } from '@/engine/physics';
 import { LANDMARKS } from '@/content/world';
 import type { LandmarkDef } from '@/content/types';
-import { box, cyl, beam, place, merge, MeshBatch, DistanceLod, Frame, canvasTexture, grime, wire, shadowProxy } from './kit';
+import { box, cyl, beam, place, merge, MeshBatch, DistanceLod, Frame, canvasTexture, grime, wire, shadowProxy, hewnLog } from './kit';
 import { rustyMetal, concrete, corrugated, neon, plainStandard, fabric, wood, glow, warmWindow, chainLink, uDaylight } from './materials';
 import { Fire, lightCone, GlowSprites } from './effects';
 import { VirtualLight } from './lights';
@@ -76,14 +76,28 @@ export class Landmarks {
     const roofMetal = corrugated('#8b8a84', 0.7);
     const darkGlass = plainStandard('#0a0d10', 0.1, 0.5);
 
-    // forecourt slab
+    // forecourt slab + oil/crack concrete wear patches
     b.add(conc, box(30, 0.3, 22, 0, 0.05, 0));
-    // canopy: 4 pillars + roof slab with red fascia
+    const stainMat = concrete('#756c60', { stains: 0.95 });
+    const greaseMat = plainStandard('#1a1714', 0.85);
+    b.add(stainMat, box(3.2, 0.01, 2.4, -3.1, 0.205, 1.5, 0.4), box(2.6, 0.01, 3.0, 2.9, 0.205, -2.0, -0.3));
+    b.add(greaseMat, place(new THREE.CircleGeometry(0.65, 12), -3.0, 0.212, -2.1, -Math.PI / 2), place(new THREE.CircleGeometry(0.5, 10), 3.1, 0.212, 2.0, -Math.PI / 2));
+    // canopy: 4 pillars on steel baseplates + bumper collars + roof slab + steel ceiling stringers
     for (const [px, pz] of [[-6, -4], [6, -4], [-6, 4], [6, 4]]) {
       b.add(paintWhite, box(0.6, 5.2, 0.6, px, 2.6, pz));
+      b.add(conc, box(0.86, 0.22, 0.86, px, 0.3, pz));
+      b.add(metal, box(0.76, 0.04, 0.76, px, 0.43, pz));
+      b.add(paintRed, box(0.64, 0.28, 0.64, px, 1.15, pz));
       this.collider(f, px, 2.6, pz, 0.3, 2.6, 0.3);
     }
     b.add(metal, box(16, 0.35, 12, 0, 5.4, 0));
+    // ceiling structural I-beams and electrical conduit runs
+    b.add(metal,
+      box(12.6, 0.16, 0.22, 0, 5.14, -4), box(12.6, 0.16, 0.22, 0, 5.14, 4),
+      box(0.2, 0.14, 8.6, -6, 5.15, 0), box(0.2, 0.14, 8.6, 6, 5.15, 0),
+      cyl(0.025, 0.025, 11.5, 0, 5.21, -2.5, 6, 0, 0, Math.PI / 2),
+      cyl(0.025, 0.025, 11.5, 0, 5.21, 2.5, 6, 0, 0, Math.PI / 2),
+    );
     b.add(paintRed, box(16.4, 0.9, 0.2, 0, 5.4, 6.1), box(16.4, 0.9, 0.2, 0, 5.4, -6.1), box(0.2, 0.9, 12.4, 8.1, 5.4, 0), box(0.2, 0.9, 12.4, -8.1, 5.4, 0));
     // canopy light panels (some dead)
     const lightPanels: THREE.BufferGeometry[] = [];
@@ -96,15 +110,34 @@ export class Landmarks {
     b.add(panelGlow.material, ...lightPanels);
     b.add(plainStandard('#2a2a28', 0.4), ...deadPanels);
     this.flickers.push({ set: (v) => (panelGlow.intensity.value = 3.5 * v), phase: 0, speed: 1, broken: 0.25 });
-    // pump islands
+    // vintage fuel pump islands: curb + steel protective bollards + stepped dispenser cabinets + price registers + hoses/nozzles
+    const rubber = plainStandard('#151311', 0.92);
+    const dialGlow = glow('#ffd28a', 1.25);
     for (const px of [-3, 3]) {
-      b.add(conc, box(1.4, 0.3, 5, px, 0.3, 0));
-      for (const pz of [-1.2, 1.2]) {
-        b.add(paintRed, box(0.8, 1.7, 0.5, px, 1.3, pz));
-        b.add(darkGlass, box(0.82, 0.4, 0.3, px, 1.75, pz));
-        b.add(metal, box(0.12, 0.5, 0.12, px + 0.45, 1.1, pz));
+      b.add(conc, box(1.5, 0.26, 5.2, px, 0.28, 0));
+      b.add(metal, box(1.54, 0.04, 5.24, px, 0.4, 0));
+      for (const ez of [-2.35, 2.35]) {
+        b.add(paintRed, cyl(0.065, 0.075, 0.85, px, 0.83, ez, 10));
+        b.add(paintWhite, cyl(0.067, 0.067, 0.14, px, 1.15, ez, 10));
       }
-      this.collider(f, px, 1, 0, 0.7, 1, 2.5);
+      for (const pz of [-1.2, 1.2]) {
+        b.add(metal, box(0.92, 0.14, 0.62, px, 0.48, pz), box(0.86, 0.16, 0.56, px, 0.63, pz));
+        b.add(paintRed, box(0.8, 0.48, 0.48, px, 0.95, pz), box(0.8, 0.62, 0.48, px, 1.66, pz));
+        b.add(paintWhite, box(0.83, 0.26, 0.51, px, 1.28, pz));
+        b.add(metal, box(0.84, 0.04, 0.52, px, 1.42, pz), box(0.84, 0.04, 0.52, px, 1.98, pz));
+        // register glass bezel + subtle warm dial readout + selector chrome tabs
+        b.add(metal, box(0.84, 0.42, 0.34, px, 1.7, pz), box(0.86, 0.03, 0.3, px, 1.48, pz));
+        b.add(darkGlass, box(0.86, 0.34, 0.28, px, 1.72, pz));
+        b.add(dialGlow.material, box(0.87, 0.09, 0.22, px, 1.78, pz));
+        // top vintage globe cap
+        b.add(metal, cyl(0.06, 0.08, 0.1, px, 2.04, pz, 10));
+        b.add(paintWhite, cyl(0.2, 0.2, 0.09, px, 2.24, pz, 16, 0, 0, Math.PI / 2));
+        b.add(paintRed, place(new THREE.TorusGeometry(0.2, 0.025, 8, 20), px, 2.24, pz, 0, Math.PI / 2));
+        // holster, nozzle grip + spout, and looped black fuel hose
+        b.add(metal, box(0.1, 0.36, 0.14, px + 0.43, 1.24, pz), box(0.06, 0.22, 0.06, px + 0.49, 1.32, pz + 0.04, 0, 0, -0.25));
+        b.add(rubber, wire(new THREE.Vector3(px + 0.45, 1.62, pz - 0.12), new THREE.Vector3(px + 0.48, 1.24, pz + 0.04), 0.38, 0.02, 10));
+      }
+      this.collider(f, px, 1, 0, 0.75, 1, 2.6);
     }
     // store building (sun-bleached stucco over a darker plinth)
     const sx = 0, sz = -12;
@@ -164,26 +197,72 @@ export class Landmarks {
     const tentMat = fabric('#6b5a40');
     const tent2 = fabric('#3f5a5a');
     const campX = -9, campZ = 4;
-    // ridge tents: canvas sagging between the poles, guyed out to stakes
+    // ridge tents: canvas sagging between the poles, guyed out to stakes, tarp groundsheet, subtle dusk glow inside
     const ropeMat = plainStandard('#111', 0.6), stakeMat = wood('#3a2a1c');
+    const tentGlow = warmWindow('#ffb26b', 0.9);
     for (const [mat, tx, tz, ry] of [[tentMat, campX - 4, campZ + 2, 0.3], [tent2, campX - 1, campZ + 6, -0.5]] as const) {
       const t = ridgeTent(tx, tz, ry);
       b.add(mat, t.canvas);
-      b.add(ropeMat, ...t.ropes);
+      b.add(ropeMat, ...t.ropes, t.ground);
       b.add(stakeMat, ...t.wood);
+      b.add(tentGlow, box(0.28, 0.24, 0.22, tx + Math.sin(ry) * 0.2, 0.18, tz + Math.cos(ry) * 0.2, ry));
     }
     this.collider(f, campX - 4, 1, campZ + 2, 1.3, 1, 1.6);
     this.collider(f, campX - 1, 1, campZ + 6, 1.3, 1, 1.6);
-    const crateMat = wood('#7a5a36');
-    b.add(crateMat, box(1, 0.8, 1, campX + 3, 0.55, campZ + 3, 0.2), box(0.8, 0.6, 0.8, campX + 3.2, 1.25, campZ + 3, 0.6), box(1, 0.8, 1, campX - 5, 0.55, campZ - 2, -0.3));
+    const crateMat = wood('#7a5a36'), crateTrim = wood('#523b22');
+    const slatCrate = (cx: number, cy: number, cz: number, w: number, h: number, d: number, ry: number) => {
+      b.add(crateMat, box(w * 0.94, h * 0.94, d * 0.94, cx, cy, cz, ry));
+      const c = Math.cos(ry), s = Math.sin(ry);
+      for (const sx of [-1, 1]) for (const sz of [-1, 1]) {
+        b.add(crateTrim, box(0.055, h, 0.055, cx + c * sx * (w / 2 - 0.028) + s * sz * (d / 2 - 0.028), cy, cz - s * sx * (w / 2 - 0.028) + c * sz * (d / 2 - 0.028), ry));
+      }
+      for (const sy of [-h / 2 + 0.035, h / 2 - 0.035]) {
+        b.add(crateTrim, box(w, 0.06, d * 0.98, cx, cy + sy, cz, ry));
+      }
+      b.add(metal, box(w * 0.98, 0.025, d * 1.005, cx, cy, cz, ry));
+    };
+    slatCrate(campX + 3, 0.55, campZ + 3, 1.0, 0.8, 1.0, 0.2);
+    slatCrate(campX + 3.2, 1.25, campZ + 3, 0.8, 0.6, 0.8, 0.6);
+    slatCrate(campX - 5, 0.55, campZ - 2, 1.0, 0.8, 1.0, -0.3);
     // solid, each its own box: you can climb the stack by the fire
     for (const [x, y, z, h, w, ry] of [[campX + 3, 0.55, campZ + 3, 0.4, 0.5, 0.2], [campX + 3.2, 1.25, campZ + 3, 0.3, 0.4, 0.6], [campX - 5, 0.55, campZ - 2, 0.4, 0.5, -0.3]]) {
       this.physics.addBox(f.p(x, y, z), { x: w, y: h, z: w }, f.yaw + ry);
     }
-    // log benches: settled a little into the sand, tops at sitting height (0.47; they were 0.62, and
-    // every seated clip, made on a ~45 cm chair, had to be stretched down to the ground off them)
-    const logMat = wood('#4a3424');
-    b.add(logMat, cyl(0.23, 0.23, 2.4, campX, 0.24, campZ + 2.4, 16, 0, 0.2, Math.PI / 2), cyl(0.23, 0.23, 2.4, campX + 2.2, 0.24, campZ, 16, 0, 1.6, Math.PI / 2));
+    // log benches: organic bark-ridged logs settled slightly into sand with tops at exact LOG_TOP (0.47)
+    const logMat = wood('#4a3424'), logEnd = wood('#9a7a52');
+    b.add(logMat,
+      place(hewnLog(0.23, 2.4, 3), campX, 0.24, campZ + 2.4, 0, 0.2, 0),
+      place(hewnLog(0.23, 2.4, 7), campX + 2.2, 0.24, campZ, 0, 1.6, 0),
+    );
+    for (const [lx, lz, ry] of [[campX, campZ + 2.4, 0.2], [campX + 2.2, campZ, 1.6]] as const) {
+      const c = Math.cos(ry) * 1.2, s = Math.sin(ry) * 1.2;
+      b.add(logEnd,
+        cyl(0.205, 0.205, 0.02, lx + c, 0.24, lz - s, 12, 0, ry, Math.PI / 2),
+        cyl(0.205, 0.205, 0.02, lx - c, 0.24, lz + s, 12, 0, ry, Math.PI / 2),
+      );
+    }
+    // camp life around the crates & stones: field shortwave radio, storm lantern, firewood billets, kettle & enamel mugs
+    {
+      const radioMat = plainStandard('#26292d', 0.45, 0.55);
+      const brass = rustyMetal({ base: '#b58d46', rust: 0.25, metalness: 0.7, roughness: 0.4 });
+      const enamel = rustyMetal({ base: '#c9d4d2', rust: 0.25, metalness: 0.2, roughness: 0.35 });
+      const amber = glow('#ffb85a', 2.0);
+      // shortwave radio atop the upper crate
+      b.add(radioMat, box(0.34, 0.2, 0.22, campX + 3.2, 1.65, campZ + 3, 0.4));
+      b.add(metal, box(0.14, 0.12, 0.23, campX + 3.13, 1.65, campZ + 3, 0.4), cyl(0.005, 0.003, 0.55, campX + 3.3, 1.98, campZ + 2.95, 5));
+      b.add(amber.material, box(0.12, 0.05, 0.225, campX + 3.25, 1.69, campZ + 3, 0.4));
+      // storm lantern atop the side crate
+      b.add(brass, cyl(0.08, 0.1, 0.06, campX - 5, 0.98, campZ - 2, 10), cyl(0.07, 0.05, 0.04, campX - 5, 1.18, campZ - 2, 10));
+      b.add(amber.material, cyl(0.052, 0.052, 0.14, campX - 5, 1.08, campZ - 2, 8));
+      // neatly stacked split firewood beside the side crate
+      for (let row = 0; row < 3; row++) for (let col = 0; col < 4 - row; col++) {
+        b.add(logMat, cyl(0.055, 0.06, 0.55, campX - 3.6 + col * 0.12 + row * 0.06, 0.18 + row * 0.095, campZ - 1.7 + (col % 2) * 0.03, 7, 0, -0.3, Math.PI / 2));
+      }
+      // kettle by the fire ring stones & two enamel mugs by the logs
+      b.add(metal, cyl(0.075, 0.105, 0.17, campX + 0.32, 0.24, campZ + 0.48, 12));
+      b.add(metal, cyl(0.018, 0.014, 0.08, campX + 0.24, 0.27, campZ + 0.48, 6, 0, 0, 1.1));
+      b.add(enamel, cyl(0.042, 0.038, 0.09, campX - 1.1, 0.195, campZ + 2.4, 8), cyl(0.042, 0.038, 0.09, campX + 1.55, 0.195, campZ + 1.65, 8));
+    }
     // barrels
     const barrelMat = rustyMetal({ base: '#2f4a5c', rust: 0.65, metalness: 0.5 });
     for (const [bx, bz] of [[-13, -7], [-12.2, -7.6], [-13.4, -8.4], [13, -9]]) {
@@ -217,7 +296,7 @@ export class Landmarks {
     this.addLod(root, f, 20, near, far);
     this.campNear = near;
 
-    const fire = new Fire(1, 40);
+    const fire = new Fire(1, 24);
     fire.group.position.set(campX + 1, 0.15, campZ + 1);
     root.add(fire.group);
     this.fires.push(fire);
@@ -547,8 +626,8 @@ export class Landmarks {
     return out;
   }
 
-  update(dt: number, t: number, cam?: THREE.Vector3) {
-    if (cam) this.campCrowd?.update(dt, cam);
+  update(dt: number, t: number, cam?: THREE.Vector3, speech?: { speaker: string | null; level: number }) {
+    if (cam) this.campCrowd?.update(dt, cam, speech);
     if (cam) for (const l of this.lods) l.update(cam);
     for (const fire of this.fires) fire.update(dt, cam);
     for (const fl of this.flickers) {

@@ -699,16 +699,72 @@ export class GarageBuilder implements BunkerShell {
     hustle.rotation.y = -Math.PI / 2;
     this.interior.add(hustle);
 
-    // ping-pong table + bean bags (startup culture)
-    const tableMat = plainStandard('#1d4a3a', 0.6);
+    // ping-pong table + grounded sagged beanbags (startup culture)
+    const tableMat = plainStandard('#1d4a3a', 0.52);
+    const lineMat = plainStandard('#e6e2d8', 0.55);
     b.add(tableMat, box(1.5, 0.06, 2.7, 3.5, 0.76, -3.4));
-    b.add(plainStandard('#ddd', 0.6), box(1.5, 0.15, 0.02, 3.5, 0.86, -3.4));
+    // crisp court lines + centre service stripe
+    b.add(lineMat,
+      box(1.48, 0.004, 0.02, 3.5, 0.793, -2.06), box(1.48, 0.004, 0.02, 3.5, 0.793, -4.74),
+      box(0.02, 0.004, 2.68, 2.76, 0.793, -3.4), box(0.02, 0.004, 2.68, 4.24, 0.793, -3.4),
+      box(0.014, 0.004, 2.68, 3.5, 0.793, -3.4),
+    );
+    // clamp net posts + top tape + translucent mesh net (instead of opaque plank)
+    b.add(metal, box(0.04, 0.17, 0.04, 2.72, 0.87, -3.4), box(0.04, 0.17, 0.04, 4.28, 0.87, -3.4));
+    b.add(lineMat, box(1.54, 0.022, 0.016, 3.5, 0.94, -3.4));
+    const netTex = canvasTexture(256, 64, (ctx, w, h) => {
+      ctx.clearRect(0, 0, w, h);
+      ctx.strokeStyle = 'rgba(225,228,232,0.72)';
+      ctx.lineWidth = 2;
+      for (let x = 0; x < w; x += 8) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, h); ctx.stroke(); }
+      for (let y = 0; y < h; y += 8) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke(); }
+    });
+    const netMat = new THREE.MeshBasicNodeMaterial({ map: netTex, transparent: true, alphaTest: 0.15, side: THREE.DoubleSide, depthWrite: false });
+    const netMesh = new THREE.Mesh(new THREE.PlaneGeometry(1.52, 0.13), netMat);
+    netMesh.position.set(3.5, 0.865, -3.4);
+    this.interior.add(netMesh);
+    // two paddles resting on the table + two white balls
+    const paddleRed = plainStandard('#a82e24', 0.45), paddleWood = wood('#7a5430');
+    for (const [px, pz, ry] of [[3.2, -2.55, 0.5], [3.85, -4.15, -0.8]] as const) {
+      b.add(paddleRed, cyl(0.075, 0.075, 0.014, px, 0.8, pz, 12));
+      b.add(paddleWood, box(0.025, 0.016, 0.1, px - Math.sin(ry) * 0.1, 0.8, pz - Math.cos(ry) * 0.1, ry));
+    }
+    b.add(lineMat, place(new THREE.SphereGeometry(0.022, 10, 8), 3.38, 0.812, -2.75), place(new THREE.SphereGeometry(0.022, 10, 8), 2.55, 0.122, -2.35));
     b.add(metal, box(0.06, 0.74, 0.06, 2.9, 0.37, -2.3), box(0.06, 0.74, 0.06, 4.1, 0.37, -2.3), box(0.06, 0.74, 0.06, 2.9, 0.37, -4.5), box(0.06, 0.74, 0.06, 4.1, 0.37, -4.5));
     this.col(3.5, 0.4, -3.4, 0.75, 0.4, 1.35);
+
+    // sagged beanbags flush with the garage slab (0.10 top) and clear of laser_low (z = -1.6)
     const bean = fabric('#c2532f');
-    const bg = new THREE.SphereGeometry(0.55, 14, 10);
-    bg.scale(1, 0.6, 1);
-    b.add(bean, place(bg.clone(), -2.5, 0.33, -1.5), place(bg.clone(), -1.3, 0.33, -1.0, 0, 1));
+    const saggedBeanbag = (seed: number) => {
+      const bg = new THREE.SphereGeometry(0.54, 24, 16);
+      const pos = bg.attributes.position as THREE.BufferAttribute;
+      for (let i = 0; i < pos.count; i++) {
+        const x0 = pos.getX(i), y0 = pos.getY(i), z0 = pos.getZ(i);
+        const t = Math.max(0, Math.min(1, (y0 / 0.54 + 1) * 0.5));
+        const u = Math.max(0, (t - 0.28) / 0.72);
+        const rScale = 1.12 - 0.24 * u * u;
+        const crease = Math.sin(Math.atan2(z0, x0) * 5 + seed) * 0.018 * Math.sin(u * Math.PI);
+        const slump = (Math.max(0, -z0 / 0.54) * 0.09 - Math.exp(-((z0 - 0.14) ** 2) * 8) * 0.06) * u * (1 - 0.25 * u);
+        const yOut = u <= 0 ? 0 : Math.max(0, Math.pow(u, 1.35) * 0.46 + slump);
+        pos.setXYZ(i, x0 * rScale + crease * 0.5, yOut, z0 * rScale + crease * 0.4);
+      }
+      bg.computeVertexNormals();
+      return norm(bg);
+    };
+    b.add(bean, place(saggedBeanbag(1.3), -2.55, 0.1, -2.45, 0, 0.3), place(saggedBeanbag(4.7), -1.35, 0.1, -0.65, 0, 1.2));
+
+    // dark concrete cove baseboard along interior walls + two subtle overhead light-shaft cones
+    const cove = plainStandard('#232527', 0.85);
+    b.add(cove,
+      box(0.05, 0.14, z1 - z0 - 0.6, x0 + 0.25, 0.15, (z0 + z1) / 2),
+      box(0.05, 0.14, z1 - z0 - 0.6, x1 - 0.25, 0.15, (z0 + z1) / 2),
+      box(x1 - x0 - 0.6, 0.14, 0.05, 0, 0.15, z0 + 0.25),
+    );
+    for (const lz of [-3.0, -9.2]) {
+      const shaft = lightCone(3.4, 2.3, '#f0f5ff', 0.14);
+      shaft.mesh.position.set(0, 3.88, lz);
+      this.interior.add(shaft.mesh);
+    }
 
     // server rack with blinking LEDs (vault side)
     const rack = plainStandard('#202326', 0.4, 0.6);

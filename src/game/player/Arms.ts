@@ -109,7 +109,7 @@ function mergeAll(gs: THREE.BufferGeometry[]) {
 
 function revolver(): ArmsModel {
   const root = new THREE.Group();
-  const blued = steelMat('#41454b', 0.3);
+  const blued = steelMat('#4e545e', 0.3);
   const bright = steelMat('#8d9198', 0.28);
   const wood = hardMat('#5b3420', 0.55, 0);
   const woodDark = hardMat('#3b2114', 0.6, 0);
@@ -139,7 +139,7 @@ function revolver(): ArmsModel {
   add(cyl, cylZ(0.0205, 0.0205, 0.04, 18), blued);
   for (let i = 0; i < 6; i++) {
     const a = (i / 6) * Math.PI * 2 + Math.PI / 6;
-    add(cyl, box(0.006, 0.004, 0.03, 0.0015), steelMat('#1c1d20', 0.5), Math.cos(a) * 0.0205, Math.sin(a) * 0.0205, 0, 0, 0, a + Math.PI / 2);
+    add(cyl, box(0.006, 0.004, 0.03, 0.0015), steelMat('#292c32', 0.48), Math.cos(a) * 0.0205, Math.sin(a) * 0.0205, 0, 0, 0, a + Math.PI / 2);
     // case heads at the rear
     add(cyl, cylZ(0.0058, 0.0058, 0.003, 10), steelMat('#b8975a', 0.3), Math.cos(a + Math.PI / 6) * 0.0128, Math.sin(a + Math.PI / 6) * 0.0128, 0.0205);
   }
@@ -149,9 +149,10 @@ function revolver(): ArmsModel {
   add(root, box(0.012, 0.012, 0.09, 0.003), blued, 0, 0.051, -0.105);
   add(root, cylZ(0.0024, 0.0024, 0.085, 8), bright, 0, 0.043, -0.1);
   add(root, cylZ(0.0035, 0.0035, 0.012, 8), bright, 0, 0.043, -0.146);
-  // sights: front blade and the rear groove in the top strap (sight line y = 0.08)
+  // sights: front blade with bright ivory pip and the rear groove in the top strap (sight line y = 0.08)
   add(root, box(0.0035, 0.011, 0.012, 0.001), blued, 0, 0.0745, -0.158);
-  add(root, box(0.007, 0.003, 0.01, 0.0008), steelMat('#121314', 0.6), 0, 0.0862, -0.002);
+  add(root, new THREE.SphereGeometry(0.0014, 8, 6), steelMat('#ece4ce', 0.28), 0, 0.0798, -0.162);
+  add(root, box(0.007, 0.003, 0.01, 0.0008), steelMat('#23262b', 0.56), 0, 0.0862, -0.002);
   // hammer (bone): cocks back about its pivot
   const hammer = new THREE.Group();
   hammer.position.set(0, 0.06, 0.03);
@@ -169,7 +170,7 @@ function revolver(): ArmsModel {
 
 function shotgun(): ArmsModel {
   const root = new THREE.Group();
-  const blued = steelMat('#3a3d42', 0.36);
+  const blued = steelMat('#4a5058', 0.34);
   const bright = steelMat('#7c8086', 0.3);
   const wood = hardMat('#6a3f22', 0.6, 0);
   const rubber = hardMat('#171717', 0.9, 0);
@@ -182,8 +183,8 @@ function shotgun(): ArmsModel {
   add(stock, box(0.042, 0.125, 0.016, 0.004), rubber, 0, -0.02, 0.298, -0.12, 0, 0);
   // receiver
   add(root, box(0.038, 0.056, 0.2, 0.006, 3), blued, 0, 0.047, -0.115);
-  add(root, box(0.039, 0.012, 0.07, 0.003), steelMat('#141516', 0.6), 0.0005, 0.05, -0.11); // ejection port
-  add(root, box(0.026, 0.006, 0.04, 0.002), steelMat('#141516', 0.6), 0, 0.016, -0.095); // loading port
+  add(root, box(0.039, 0.012, 0.07, 0.003), steelMat('#25282c', 0.56), 0.0005, 0.05, -0.11); // ejection port
+  add(root, box(0.026, 0.006, 0.04, 0.002), steelMat('#25282c', 0.56), 0, 0.016, -0.095); // loading port
   // trigger guard + trigger
   add(root, new THREE.TorusGeometry(0.02, 0.0032, 6, 18, Math.PI * 1.15), blued, 0, 0.022, -0.035, 0, Math.PI / 2, -Math.PI * 0.08);
   add(root, box(0.005, 0.024, 0.007, 0.0015), bright, 0, 0.016, -0.04, 0.25, 0, 0);
@@ -198,7 +199,7 @@ function shotgun(): ArmsModel {
   add(root, new THREE.TorusGeometry(0.008, 0.0022, 6, 14), blued, 0, 0.1, -0.04);
   add(root, box(0.006, 0.026, 0.016, 0.001), blued, 0, 0.085, -0.655);
   add(root, new THREE.SphereGeometry(0.0034, 10, 8), steelMat('#e8e0c8', 0.25), 0, 0.099, -0.656);
-  add(root, box(0.008, 0.003, 0.18, 0.001), steelMat('#151617', 0.6), 0, 0.0765, -0.12);
+  add(root, box(0.008, 0.003, 0.18, 0.001), steelMat('#25282c', 0.56), 0, 0.0765, -0.12);
   // pump (bone): slides back along the tube
   const pump = new THREE.Group();
   pump.position.set(0, 0.042, -0.36);
@@ -221,7 +222,7 @@ function shotgun(): ArmsModel {
 
 function rifle(): ArmsModel {
   const root = new THREE.Group();
-  const blued = steelMat('#393c40', 0.34);
+  const blued = steelMat('#494e56', 0.32);
   const case_ = steelMat('#7a6a55', 0.3); // case-hardened receiver
   const bright = steelMat('#8c9096', 0.3);
   const wood = hardMat('#7a4a28', 0.55, 0);
@@ -235,7 +236,7 @@ function rifle(): ArmsModel {
   add(stock, box(0.04, 0.115, 0.01, 0.003), plate, 0, -0.026, 0.312, -0.1, 0, 0);
   // receiver
   add(root, box(0.03, 0.062, 0.15, 0.006, 3), case_, 0, 0.042, -0.09);
-  add(root, box(0.031, 0.01, 0.09, 0.002), steelMat('#121314', 0.6), 0, 0.066, -0.1); // top opening
+  add(root, box(0.031, 0.01, 0.09, 0.002), steelMat('#24272b', 0.56), 0, 0.066, -0.1); // top opening
   // loading gate on the right side
   add(root, box(0.002, 0.016, 0.03, 0.0008), bright, 0.0156, 0.03, -0.12);
   // octagonal barrel + magazine tube + forend
@@ -247,7 +248,7 @@ function rifle(): ArmsModel {
   // sights: a tall buckhorn on the barrel and a blade on a ramp at the muzzle (sight line y = 0.098)
   add(root, box(0.006, 0.026, 0.006, 0.001), blued, 0, 0.078, -0.25);
   add(root, box(0.022, 0.012, 0.004, 0.001), blued, 0, 0.094, -0.25);
-  add(root, box(0.004, 0.009, 0.0045, 0.0008), steelMat('#121314', 0.6), 0, 0.0975, -0.249);
+  add(root, box(0.004, 0.009, 0.0045, 0.0008), steelMat('#202226', 0.58), 0, 0.0975, -0.249);
   add(root, box(0.006, 0.022, 0.02, 0.001), blued, 0, 0.074, -0.652);
   add(root, box(0.0028, 0.012, 0.008, 0.001), steelMat('#d8cfb0', 0.3), 0, 0.093, -0.655);
   // hammer (bone)
@@ -317,7 +318,7 @@ function crowbar(): ArmsModel {
  */
 function pistol22(): ArmsModel {
   const root = new THREE.Group();
-  const black = steelMat('#34373b', 0.4);
+  const black = steelMat('#43474e', 0.38);
   // two-tone: a stainless slide over a black frame (a target pistol, and it reads at a glance)
   const parkerized = steelMat('#a3a8ae', 0.32);
   const bright = steelMat('#8a8e94', 0.3);
@@ -345,7 +346,7 @@ function pistol22(): ArmsModel {
   slide.position.set(0, 0.066, -0.046);
   root.add(slide);
   add(slide, box(0.023, 0.024, 0.128, 0.004, 3), parkerized);
-  add(slide, box(0.0236, 0.006, 0.04, 0.001), steelMat('#121314', 0.6), 0, 0.004, -0.02); // ejection port
+  add(slide, box(0.0236, 0.006, 0.04, 0.001), steelMat('#24272b', 0.56), 0, 0.004, -0.02); // ejection port
   for (let i = 0; i < 6; i++) add(slide, box(0.0238, 0.016, 0.0016, 0.0004), black, 0, -0.002, 0.044 + i * 0.0036); // serrations
   // rear sight (tall, suppressor height) with a square notch; front blade with a white dot
   add(slide, box(0.02, 0.012, 0.007, 0.0015), black, 0, 0.018, 0.058);
@@ -593,6 +594,7 @@ export class Arms {
   private lowered = 0;
   private triggerT = 0;
   private breath = 0;
+  private inspectT = -1;
 
   constructor() {
     this.models = { revolver: revolver(), shotgun: shotgun(), rifle: rifle(), crowbar: crowbar(), pistol22: pistol22() };
@@ -633,6 +635,7 @@ export class Arms {
       this.stateT = 0;
       this.reload = null;
       this.swing = null;
+      this.inspectT = -1;
       return;
     }
     this.next = null;
@@ -644,6 +647,7 @@ export class Arms {
     this.current = id;
     this.reload = null;
     this.swing = null;
+    this.inspectT = -1;
     if (!id) { this.state = 'none'; this.holding = false; return; }
     this.state = 'draw';
     this.stateT = 0;
@@ -656,6 +660,7 @@ export class Arms {
   fire(k = 1) {
     const id = this.current;
     if (!id) return;
+    this.inspectT = -1;
     const m = this.models[id];
     const big = id === 'shotgun' ? 1.6 : id === 'rifle' ? 1.25 : id === 'pistol22' ? 0.42 : 1;
     // back, up and a random twist; aimed shots kick less sideways
@@ -696,7 +701,7 @@ export class Arms {
   }
 
   /** Reload choreography: open (once), then `load()` per round, then `close()`. */
-  reloadOpen(dur: number) { this.reload = { phase: 'open', t: 0, dur }; this.loadCycle = -1; }
+  reloadOpen(dur: number) { this.reload = { phase: 'open', t: 0, dur }; this.loadCycle = -1; this.inspectT = -1; }
   reloadLoad(dur: number) { this.reload = { phase: 'load', t: 0, dur }; this.loadCycle = 0; }
   reloadClose(dur: number) { this.reload = { phase: 'close', t: 0, dur }; }
   reloadCancel() { this.reload = null; }
@@ -707,11 +712,18 @@ export class Arms {
     this.swing = { t: 0, dur, k: 0, hitAt, onHit, hit: false, bash };
     if (!bash) this.swingSide ^= 1;
     this.reload = null;
+    this.inspectT = -1;
+  }
+
+  /** Slowly roll the held weapon through the light so steel, wood and brass read up close. */
+  inspect() {
+    if (this.current && this.state === 'ready' && !this.busy && this.lowered < 0.5) this.inspectT = 0;
   }
 
   /** Hands are busy elsewhere (interacting, eating, a throw): drop the weapon out of view for a moment. */
   lower(on: boolean) {
     this.lowered = on ? 1 : 0;
+    if (on) this.inspectT = -1;
   }
 
   update(f: ArmsFrame, hands: THREE.Object3D) {
@@ -742,6 +754,23 @@ export class Arms {
     for (let i = 0; i < 6; i++) target[i] += (adsFrame[i] - target[i]) * this.ads;
     const runK = f.sprint && f.grounded && !this.swing && !this.reload ? 1 : 0;
     if (runK) for (let i = 0; i < 6; i++) target[i] = h.run[i];
+    if (adsWanted || runK || this.state !== 'ready' || this.reload || this.swing || this.lowered > 0.5) this.inspectT = -1;
+    else if (this.inspectT >= 0) {
+      this.inspectT += dt;
+      const u = this.inspectT / 2.2;
+      if (u >= 1) this.inspectT = -1;
+      else {
+        const env = Math.sin(Math.PI * u);
+        const side = Math.sin(Math.PI * 2 * u);
+        const long = id === 'shotgun' || id === 'rifle' ? 0.65 : 1;
+        target[0] -= 0.065 * env * long;
+        target[1] += 0.035 * env;
+        target[2] += 0.055 * env * long;
+        target[3] += 0.14 * env;
+        target[4] += (0.68 * env + 0.14 * side * env) * long;
+        target[5] += -0.4 * env + 0.36 * side * env;
+      }
+    }
     if (this.state === 'draw' && this.stateT < 0.02) this.pose.set(h.low);
     if (this.state === 'holster' || this.lowered > 0.5) for (let i = 0; i < 6; i++) target[i] = h.low[i];
     if (this.reload) {
@@ -782,7 +811,7 @@ export class Arms {
     }
 
     // --- springs: pose follows the target; the swing drives the frame directly (it is the animation)
-    this.pose.w = this.swing ? 30 : runK ? 9 : this.ads > 0.5 ? 18 : 13;
+    this.pose.w = this.swing ? 30 : runK ? 9 : this.ads > 0.5 ? 18 : this.inspectT >= 0 ? 8 : 13;
     this.pose.step(swingFrame ?? target, dt);
     this.recoil.step([0, 0, 0, 0, 0, 0], dt);
 

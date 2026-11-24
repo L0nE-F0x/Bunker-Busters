@@ -27,17 +27,19 @@ import os from 'node:os';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { slimGlb } from './slim-glb.mjs';
-import { readGlb, accessorBytes, qmul, qinv, qslerp, rigInfo, mittFrame, mittQuat, qFromUnitVectors, vsub, vnorm } from './rig.mjs';
+import { sculptHands } from './sculpt-hands.mjs';
+import { readGlb, accessorBytes, qmul, qinv, qslerp, qrot, rigInfo, mittFrame, mittQuat, qFromUnitVectors, vsub, vdot, vcross, vnorm } from './rig.mjs';
 
 const args = process.argv.slice(2);
 const [dst, baseFile] = args;
-if (!dst || !baseFile) { console.log('usage: build-glb.mjs <out.glb> <base.glb> [--clips f[:a,b=c]]… [--mirror f:a=b]… [--size N] [--q 2..8] [--maps base|normal|all]'); process.exit(1); }
+if (!dst || !baseFile) { console.log('usage: build-glb.mjs <out.glb> <base.glb> [--clips f[:a,b=c]]… [--mirror f:a=b]… [--size N] [--q 2..8] [--maps base|normal|all] [--mrsize N] [--curl-hands none|relax|grip]'); process.exit(1); }
 const opt = (k, d) => { const i = args.indexOf(k); return i >= 0 ? args[i + 1] : d; };
 const size = Number(opt('--size', 2048)), q = Number(opt('--q', 4)), maps = opt('--maps', 'base');
 // the normal and roughness maps (--maps all): their own size, and finer JPEG steps (blocks in a normal map read as lumps)
-const nsize = Number(opt('--nsize', size)), nq = Number(opt('--nq', 2));
+const nsize = Number(opt('--nsize', size)), mrsize = Number(opt('--mrsize', 512)), nq = Number(opt('--nq', 2));
 // which way this model's palms face at rest (a mitt's shape can't tell palm from back), for clips from a mesh-less source
 const PALM = opt('--palm', '0,1,0.3').split(',').map(Number);
+const curlHands = opt('--curl-hands', 'none');
 const clipSpecs = args.flatMap((a, i) => (a === '--clips' || a === '--mirror' ? [{ spec: args[i + 1], mirror: a === '--mirror' }] : []));
 
 const base = readGlb(baseFile);
@@ -83,7 +85,8 @@ for (const m of J.materials ?? []) {
   delete m.emissiveTexture; delete m.emissiveFactor; delete m.extensions;
   if (maps !== 'all') { delete m.occlusionTexture; if (m.pbrMetallicRoughness) delete m.pbrMetallicRoughness.metallicRoughnessTexture; }
   if (maps === 'base') delete m.normalTexture;
-  m.pbrMetallicRoughness = { ...m.pbrMetallicRoughness, metallicFactor: 0, roughnessFactor: 0.9 };
+  const hasMR = maps === 'all' && !!m.pbrMetallicRoughness?.metallicRoughnessTexture;
+  m.pbrMetallicRoughness = { ...m.pbrMetallicRoughness, metallicFactor: hasMR ? 1 : 0, roughnessFactor: hasMR ? 1 : 0.9 };
 }
 delete J.extensionsUsed; delete J.extensionsRequired;
 // textures/images still referenced, re-encoded
@@ -96,14 +99,16 @@ const texMap = new Map(), imgMap = new Map(), newTex = [];
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'glb-'));
 for (const ti of [...usedTex].sort((a, b) => a - b)) {
   const t = J.textures[ti];
-  const detail = (J.materials ?? []).some((m) => m.normalTexture?.index === ti || m.pbrMetallicRoughness?.metallicRoughnessTexture?.index === ti);
+  const isNorm = (J.materials ?? []).some((m) => m.normalTexture?.index === ti);
+  const isMR = (J.materials ?? []).some((m) => m.pbrMetallicRoughness?.metallicRoughnessTexture?.index === ti || m.occlusionTexture?.index === ti);
+  const detail = isNorm || isMR;
   if (!imgMap.has(t.source)) {
     const im = J.images[t.source];
     const v = J.bufferViews[im.bufferView];
     const raw = base.bin.subarray(v.byteOffset ?? 0, (v.byteOffset ?? 0) + v.byteLength);
     const inF = path.join(tmp, `i${t.source}`), outF = path.join(tmp, `o${t.source}.jpg`);
     fs.writeFileSync(inF, raw);
-    const S = detail ? nsize : size;
+    const S = isMR ? mrsize : isNorm ? nsize : size;
     execFileSync('ffmpeg', ['-loglevel', 'error', '-y', '-i', inF, '-vf', `scale=${S}:${S}:flags=lanczos`, '-q:v', String(detail ? nq : q), outF]);
     out.images.push({ mimeType: 'image/jpeg', bufferView: addView(fs.readFileSync(outF)) });
     imgMap.set(t.source, out.images.length - 1);
@@ -142,6 +147,27 @@ const CHILD = { Shoulder: 'Arm', Arm: 'ForeArm', ForeArm: 'Hand', UpLeg: 'Leg', 
 const swapSide = (n) => (n.startsWith('Left') ? 'Right' + n.slice(4) : n.startsWith('Right') ? 'Left' + n.slice(5) : n);
 const mirrorQ = (q) => [q[0], -q[1], -q[2], q[3]];
 const mirrorV = (v) => [-v[0], v[1], v[2]];
+const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+const qAxisAngle = (axis, rad) => { const h = rad * 0.5, s = Math.sin(h); return [axis[0] * s, axis[1] * s, axis[2] * s, Math.cos(h)]; };
+const projPerp = (v, n) => {
+  const d = vdot(v, n);
+  const p = [v[0] - n[0] * d, v[1] - n[1] * d, v[2] - n[2] * d];
+  const l = Math.hypot(...p);
+  return l > 1e-4 ? p.map((x) => x / l) : null;
+};
+// Mixamo ascends Hips→Spine(lumbar)→Spine01→Spine02(chest); Meshy ascends Hips→Spine02(lumbar)→Spine01→Spine(chest).
+const isSpineInverted = (rig) => {
+  const s = rig.byName.get('Spine'), s2 = rig.byName.get('Spine02');
+  return s !== undefined && s2 !== undefined && rig.restPos[s][1] > rig.restPos[s2][1];
+};
+const mapSrcName = (name, mirror, swapSpine) => {
+  let n = mirror ? swapSide(name) : name;
+  if (swapSpine) {
+    if (n === 'Spine') n = 'Spine02';
+    else if (n === 'Spine02') n = 'Spine';
+  }
+  return n;
+};
 function floats(g, ai) { const b = accessorBytes(g, ai); return new Float32Array(b.buffer.slice(b.byteOffset, b.byteOffset + b.length)); }
 function sampler(times, vals, interp) {
   return (t) => {
@@ -152,11 +178,11 @@ function sampler(times, vals, interp) {
     return qslerp(q(i), q(i + 1), (t - times[i]) / (times[i + 1] - times[i]));
   };
 }
-function restDiffers(a, b) {
-  for (const [name, i] of a.byName) {
-    const j = b.byName.get(name);
+function restDiffers(src, dst, swapSpine) {
+  for (const [name, i] of dst.byName) {
+    const j = src.byName.get(mapSrcName(name, false, swapSpine));
     if (j === undefined || !name) continue;
-    const x = a.restLocal[i], y = b.restLocal[j];
+    const x = dst.restLocal[i], y = src.restLocal[j];
     if (Math.abs(x[0] * y[0] + x[1] * y[1] + x[2] * y[2] + x[3] * y[3]) < 0.9998) return true;
   }
   return false;
@@ -178,46 +204,102 @@ function fingerFrame(rig, hand) {
 }
 /**
  * World rotations (per target node) that turn the target's rest onto the source's (mirrored if
- * `mirror`): limbs by direction, hands by mitt frame, the rest as they are.
+ * `mirror`): hands by mitt frame, forearms split-twist aligned to the hand palm, upper arms aligned
+ * to the anatomical elbow hinge, and other limbs by bone direction.
  */
-function restAlign(g, src, dst, mirror) {
+function restAlign(g, src, dst, mirror, swapSpine, srcFile) {
   const S = new Map();
   const log = [];
+  const hands = {};
+  const meshed = !!g.json.meshes?.length;
+  const srcHint = /Helper/.test(srcFile) ? [0, -1, 0] : [0, 1, 0.3];
+  const baseRig0 = rigInfo(base0.json);
+
+  // Pass 1: hands first, so ForeArm can match half the pronation/supination twist.
   for (const [name, ti] of dst.byName) {
-    const sname = mirror ? swapSide(name) : name;
+    const part = name.replace(/^(Left|Right)/, '');
+    if (part !== 'Hand') continue;
+    const sname = mapSrcName(name, mirror, swapSpine);
+    const si = src.byName.get(sname);
+    if (si === undefined) continue;
+    const ms = meshed ? mittFrame(g, src, sname, srcHint) : fingerFrame(src, sname);
+    if (!ms) continue;
+    const s = mirror ? { long: mirrorV(ms.long), palm: mirrorV(ms.palm) } : { ...ms };
+    s.side = [s.long[1] * s.palm[2] - s.long[2] * s.palm[1], s.long[2] * s.palm[0] - s.long[0] * s.palm[2], s.long[0] * s.palm[1] - s.long[1] * s.palm[0]];
+    const mt = mittFrame(base0, baseRig0, name, PALM);
+    const q = qmul(mittQuat(s), qinv(mittQuat(mt)));
+    S.set(ti, q);
+    hands[name.slice(0, name.length - 4)] = { mt, s, q };
+    log.push(`${name} ${deg(q).toFixed(0)}°`);
+  }
+
+  // Pass 2: Arm (elbow-hinge aligned) + Shoulder + Legs.
+  const arms = {};
+  for (const [name, ti] of dst.byName) {
+    const sname = mapSrcName(name, mirror, swapSpine);
     const si = src.byName.get(sname);
     if (si === undefined) continue;
     const part = name.replace(/^(Left|Right)/, '');
-    if (part === 'Hand') {
-      // a source with a mesh (a Meshy rig): its mitt; without one (a Mixamo motion file): its finger bones
-      const meshed = !!g.json.meshes?.length;
-      const ms = meshed ? mittFrame(g, src, sname) : fingerFrame(src, sname);
-      if (!ms) continue;
-      const s = mirror ? { long: mirrorV(ms.long), palm: mirrorV(ms.palm) } : ms;
-      s.side = [s.long[1] * s.palm[2] - s.long[2] * s.palm[1], s.long[2] * s.palm[0] - s.long[0] * s.palm[2], s.long[0] * s.palm[1] - s.long[1] * s.palm[0]];
-      // (which face of the target's mitt is its palm: the source's says, if it's a Meshy rig too;
-      // Mixamo's T-pose holds the palms down, Meshy's A-pose up and a little forward)
-      // (`--palm x,y,z` overrides the last: Dez rests his palms down, fingers curled under)
-      const mt = mittFrame(base0, rigInfo(base0.json), name, meshed ? s.palm : PALM);
-      const q = qmul(mittQuat(s), qinv(mittQuat(mt)));
-      S.set(ti, q);
-      log.push(`${name} ${deg(q).toFixed(0)}°`);
-    } else if (CHILD[part]) {
-      const side = name.slice(0, name.length - part.length);
-      const tc = dst.byName.get(side + CHILD[part]), sc = src.byName.get(sname.slice(0, sname.length - part.length) + CHILD[part]);
-      if (tc === undefined || sc === undefined) continue;
-      const dt = vnorm(vsub(dst.restPos[tc], dst.restPos[ti]));
-      let ds = vnorm(vsub(src.restPos[sc], src.restPos[si]));
-      if (mirror) ds = mirrorV(ds);
-      const q = qFromUnitVectors(dt, ds);
-      S.set(ti, q);
-      if (part !== 'Foot') log.push(`${name} ${deg(q).toFixed(0)}°`);
+    if (part === 'Hand' || part === 'ForeArm' || !CHILD[part]) continue;
+    const side = name.slice(0, name.length - part.length);
+    const sside = sname.slice(0, sname.length - part.length);
+    const tc = dst.byName.get(side + CHILD[part]), sc = src.byName.get(sside + CHILD[part]);
+    if (tc === undefined || sc === undefined) continue;
+    const dt = vnorm(vsub(dst.restPos[tc], dst.restPos[ti]));
+    let ds = vnorm(vsub(src.restPos[sc], src.restPos[si]));
+    if (mirror) ds = mirrorV(ds);
+    let q = qFromUnitVectors(dt, ds);
+    if (part === 'Arm') {
+      const tHand = dst.byName.get(side + 'Hand'), sHand = src.byName.get(sside + 'Hand');
+      if (tHand !== undefined && sHand !== undefined) {
+        const bendT = projPerp(vnorm(vsub(dst.restPos[tHand], dst.restPos[tc])), dt);
+        let dsF = vnorm(vsub(src.restPos[sHand], src.restPos[sc]));
+        if (mirror) dsF = mirrorV(dsF);
+        const bendS = projPerp(dsF, ds) ?? [0, 0, 1];
+        const b0 = bendT ? projPerp(qrot(q, bendT), ds) : null;
+        if (b0) {
+          const ang = clamp(Math.atan2(vdot(vcross(b0, bendS), ds), vdot(b0, bendS)), -0.88, 0.88);
+          q = qmul(qAxisAngle(ds, ang), q);
+        }
+      }
+      arms[side] = q;
     }
+    S.set(ti, q);
+    if (part !== 'Foot') log.push(`${name} ${deg(q).toFixed(0)}°`);
+  }
+
+  // Pass 3: ForeArm — parallel-transport Arm's alignment across the elbow so Arm and ForeArm never
+  // wrap across opposite ±180° branches, then carry ~55% of remaining pronation toward Hand palm.
+  for (const [name, ti] of dst.byName) {
+    const part = name.replace(/^(Left|Right)/, '');
+    if (part !== 'ForeArm') continue;
+    const sname = mapSrcName(name, mirror, swapSpine);
+    const si = src.byName.get(sname);
+    if (si === undefined) continue;
+    const side = name.slice(0, name.length - part.length);
+    const sside = sname.slice(0, sname.length - part.length);
+    const tc = dst.byName.get(side + 'Hand'), sc = src.byName.get(sside + 'Hand');
+    if (tc === undefined || sc === undefined) continue;
+    const dt = vnorm(vsub(dst.restPos[tc], dst.restPos[ti]));
+    let ds = vnorm(vsub(src.restPos[sc], src.restPos[si]));
+    if (mirror) ds = mirrorV(ds);
+    const qA = arms[side], hInfo = hands[side];
+    let q = qA ? qmul(qFromUnitVectors(qrot(qA, dt), ds), qA) : qFromUnitVectors(dt, ds);
+    if (hInfo) {
+      const p0 = projPerp(qrot(q, hInfo.mt.palm), ds);
+      const p1 = projPerp(hInfo.s.palm, ds);
+      if (p0 && p1) {
+        const rem = Math.atan2(vdot(vcross(p0, p1), ds), vdot(p0, p1));
+        q = qmul(qAxisAngle(ds, clamp(rem * 0.25, -0.55, 0.55)), q);
+      }
+    }
+    S.set(ti, q);
+    log.push(`${name} ${deg(q).toFixed(0)}°`);
   }
   return { S, log };
 }
 /** Rotation channels of animation `a` (in file `g`, rig `src`) retargeted (or mirrored) onto the base rig `dst`. */
-function retargetRotations(g, a, src, dst, align, mirror) {
+function retargetRotations(g, a, src, dst, align, mirror, swapSpine) {
   const rot = new Map(); // source node index → sampler fn
   let grid = null;
   for (const c of a.channels) {
@@ -228,7 +310,7 @@ function retargetRotations(g, a, src, dst, align, mirror) {
     if (s.interpolation !== 'STEP' && (!grid || times.length > grid.length)) grid = times;
   }
   if (!grid) return { samplers: [], channels: [] };
-  const srcOf = (ti) => src.byName.get(mirror ? swapSide(J.nodes[ti].name) : J.nodes[ti].name);
+  const srcOf = (ti) => src.byName.get(mapSrcName(J.nodes[ti].name, mirror, swapSpine));
   const bones = [...dst.byName.values()].filter((ti) => { const si = srcOf(ti); return si !== undefined && rot.has(si); });
   const outVals = new Map(bones.map((ti) => [ti, new Float32Array(grid.length * 4)]));
   grid.forEach((t, k) => {
@@ -279,12 +361,13 @@ for (const { spec, mirror } of clipSpecs) {
   const hipRatio = hipsY(J) / hipsY(g.json);
   if (Math.abs(hipRatio - 1) > 0.01) console.log(`  ${path.basename(file)}: hips ×${hipRatio.toFixed(3)}`);
   const srcRig = rigInfo(g.json);
-  const retarget = mirror || restDiffers(srcRig, dstRig);
+  const swapSpine = isSpineInverted(srcRig) !== isSpineInverted(dstRig);
+  const retarget = mirror || restDiffers(srcRig, dstRig, swapSpine);
   let align = new Map();
   if (retarget) {
-    const r = restAlign(g, srcRig, dstRig, mirror);
+    const r = restAlign(g, srcRig, dstRig, mirror, swapSpine, file);
     align = r.S;
-    console.log(`  ${path.basename(file)}: ${mirror ? 'mirrored' : 'retargeted (rest poses differ)'}; rest aligned: ${r.log.join(', ')}`);
+    console.log(`  ${path.basename(file)}: ${mirror ? 'mirrored' : 'retargeted (rest poses differ)'}${swapSpine ? ' [spine-swap]' : ''}; rest aligned: ${r.log.join(', ')}`);
   }
   const want = list ? new Map(list.split(',').map((s) => { const [a, b] = s.split('='); return [a, b ?? a]; })) : null;
   const inPlace = new Set();
@@ -296,7 +379,7 @@ for (const { spec, mirror } of clipSpecs) {
     const name = want ? want.get(key) : short;
     const samplers = [], channels = [];
     if (retarget) {
-      const r = retargetRotations(g, a, srcRig, dstRig, align, mirror);
+      const r = retargetRotations(g, a, srcRig, dstRig, align, mirror, swapSpine);
       samplers.push(...r.samplers);
       channels.push(...r.channels);
     }
@@ -361,5 +444,8 @@ header.writeUInt32LE(0x46546c67, 0); header.writeUInt32LE(2, 4); header.writeUIn
 const jh = Buffer.alloc(8); jh.writeUInt32LE(js.length, 0); jh.writeUInt32LE(0x4e4f534a, 4);
 const bh = Buffer.alloc(8); bh.writeUInt32LE(bodyPad.length, 0); bh.writeUInt32LE(0x004e4942, 4);
 fs.mkdirSync(path.dirname(dst), { recursive: true });
-fs.writeFileSync(dst, args.includes('--no-slim') ? Buffer.concat([header, jh, js, bh, bodyPad]) : slimGlb(Buffer.concat([header, jh, js, bh, bodyPad]), { smooth: Number(opt('--smooth', 0)) }));
+let glb = Buffer.concat([header, jh, js, bh, bodyPad]);
+if (curlHands !== 'none') glb = sculptHands(glb, curlHands, PALM);
+if (!args.includes('--no-slim')) glb = slimGlb(glb, { smooth: Number(opt('--smooth', 0)) });
+fs.writeFileSync(dst, glb);
 console.log(`${dst}: ${(fs.statSync(dst).size / 1e6).toFixed(2)} MB, ${J.animations?.length ?? 0} clips${J.animations ? ' (' + J.animations.map((x) => x.name).join(', ') + ')' : ''}`);

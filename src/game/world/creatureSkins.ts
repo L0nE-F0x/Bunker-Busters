@@ -1,5 +1,6 @@
 import * as THREE from 'three/webgpu';
 import { loadGLB } from '@/engine/models';
+import { isMobile } from '@/engine/device';
 
 /**
  * The rattlesnake and the scorpion as Meshy models (static meshes, scripts/models/build-glb.mjs),
@@ -23,7 +24,16 @@ const SNAKE_K = 0.605, SNAKE_Z = -0.48, SNAKE_Y = 0.01;
 /** Scorpion fit, in the procedural body's root space (which is scaled 1.8): ~0.36 m long in the world. */
 const SCORP_K = 0.36 / (1.8 * 1.9);
 
-async function loadMesh(name: string) {
+interface MeshInfo {
+  geo: THREE.BufferGeometry;
+  map: THREE.Texture | null;
+  normalMap: THREE.Texture | null;
+  normalScale?: THREE.Vector2;
+  roughnessMap: THREE.Texture | null;
+  metalnessMap: THREE.Texture | null;
+}
+
+async function loadMesh(name: string): Promise<MeshInfo> {
   const g = await loadGLB(name);
   let mesh: THREE.Mesh | null = null;
   g.scene.updateMatrixWorld(true);
@@ -31,8 +41,15 @@ async function loadMesh(name: string) {
   if (!mesh) throw new Error(`${name}: no mesh`);
   const m = mesh as THREE.Mesh;
   const geo = (m.geometry as THREE.BufferGeometry).clone().applyMatrix4(m.matrixWorld);
-  const map = (m.material as THREE.MeshStandardMaterial).map ?? null;
-  return { geo, map };
+  const std = m.material as THREE.MeshStandardMaterial;
+  return {
+    geo,
+    map: std.map ?? null,
+    normalMap: isMobile ? null : (std.normalMap ?? null),
+    normalScale: std.normalScale?.clone(),
+    roughnessMap: std.roughnessMap ?? null,
+    metalnessMap: isMobile ? null : (std.metalnessMap ?? null),
+  };
 }
 
 export class SnakeSkins {
@@ -41,16 +58,15 @@ export class SnakeSkins {
 
   static async load(count: number) {
     try {
-      const { geo, map } = await loadMesh('rattlesnake');
-      return new SnakeSkins(geo, map, count);
+      return new SnakeSkins(await loadMesh('rattlesnake'), count);
     } catch (e) {
       console.warn('[fauna] snake model failed to load; keeping the procedural snake', e);
       return null;
     }
   }
 
-  private constructor(src: THREE.BufferGeometry, map: THREE.Texture | null, count: number) {
-    const g0 = src.index ? src.toNonIndexed() : src;
+  private constructor(info: MeshInfo, count: number) {
+    const g0 = info.geo.index ? info.geo.toNonIndexed() : info.geo;
     const P = g0.attributes.position as THREE.BufferAttribute;
     const N = g0.attributes.normal as THREE.BufferAttribute;
     const UV = g0.attributes.uv as THREE.BufferAttribute | undefined;
@@ -99,7 +115,15 @@ export class SnakeSkins {
       this.bones.push(bone);
       inv.push(new THREE.Matrix4().makeTranslation(0, 0, k === SEGS ? 0 : k * SEG_L));
     }
-    this.mesh = new THREE.SkinnedMesh(g, new THREE.MeshStandardNodeMaterial({ map, roughness: 0.75, metalness: 0 }));
+    this.mesh = new THREE.SkinnedMesh(g, new THREE.MeshStandardNodeMaterial({
+      map: info.map,
+      normalMap: info.normalMap,
+      normalScale: info.normalScale,
+      roughnessMap: info.roughnessMap,
+      roughness: info.roughnessMap ? 1 : 0.72,
+      metalnessMap: info.metalnessMap,
+      metalness: info.metalnessMap ? 0.25 : 0,
+    }));
     this.mesh.name = 'snakes';
     this.mesh.frustumCulled = false;
     this.mesh.castShadow = true;
@@ -127,20 +151,28 @@ export class ScorpionSkins {
 
   static async load(count: number) {
     try {
-      const { geo, map } = await loadMesh('scorpion');
-      return new ScorpionSkins(geo, map, count);
+      return new ScorpionSkins(await loadMesh('scorpion'), count);
     } catch (e) {
       console.warn('[fauna] scorpion model failed to load; keeping the procedural scorpion', e);
       return null;
     }
   }
 
-  private constructor(geo: THREE.BufferGeometry, map: THREE.Texture | null, count: number) {
+  private constructor(info: MeshInfo, count: number) {
+    const geo = info.geo;
     geo.computeBoundingBox();
     const minY = geo.boundingBox!.min.y;
     // feet on the procedural body's ground (its root sits 0.025 above the body's belly line)
     this.fit.makeScale(SCORP_K, SCORP_K, SCORP_K).premultiply(new THREE.Matrix4().makeTranslation(0, -minY * SCORP_K - 0.012, 0));
-    this.mesh = new THREE.InstancedMesh(geo, new THREE.MeshStandardNodeMaterial({ map, roughness: 0.55, metalness: 0.05 }), count);
+    this.mesh = new THREE.InstancedMesh(geo, new THREE.MeshStandardNodeMaterial({
+      map: info.map,
+      normalMap: info.normalMap,
+      normalScale: info.normalScale,
+      roughnessMap: info.roughnessMap,
+      roughness: info.roughnessMap ? 1 : 0.55,
+      metalnessMap: info.metalnessMap,
+      metalness: info.metalnessMap ? 0.35 : 0.05,
+    }), count);
     this.mesh.name = 'scorpions';
     this.mesh.frustumCulled = false;
     this.mesh.castShadow = true;

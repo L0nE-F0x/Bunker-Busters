@@ -42,6 +42,36 @@ export const box = (w: number, h: number, d: number, x = 0, y = 0, z = 0, ry = 0
 export const cyl = (rt: number, rb: number, h: number, x = 0, y = 0, z = 0, seg = 10, rx = 0, ry = 0, rz = 0) =>
   place(new THREE.CylinderGeometry(rt, rb, h, seg), x, y, z, rx, ry, rz);
 
+/**
+ * Bark-ridged timber sitting log along local X, flattened softly on the bottom (-Y) and keeping
+ * an accurate top crest at +Y = `r` so NPC hip/seat math matches `LOG_TOP` cleanly.
+ */
+export function hewnLog(r: number, len: number, seed = 1, radial = 16, segLen = 8) {
+  const g = new THREE.CylinderGeometry(r * 0.96, r * 1.04, len, radial, segLen).rotateZ(Math.PI / 2).toNonIndexed();
+  const pos = g.attributes.position as THREE.BufferAttribute;
+  for (let i = 0; i < pos.count; i++) {
+    let x = pos.getX(i), y = pos.getY(i), z = pos.getZ(i);
+    const rr = Math.hypot(y, z);
+    const u = x / (len * 0.5 || 1);
+    if (rr > r * 0.15) {
+      const ang = Math.atan2(z, y);
+      const seatGuard = 1 - 0.88 * Math.exp(-ang * ang * 5);
+      const bark = (Math.sin(ang * 11 + u * 2.3 + seed) * 0.042 + Math.sin(ang * 5 - u * 4.1 + seed * 1.7) * 0.028) * seatGuard;
+      const swell = 1 + 0.04 * Math.sin(u * Math.PI * 1.5 + seed * 0.7) * seatGuard;
+      const k = Math.min(1.06, swell + bark);
+      y *= k;
+      z *= k;
+      if (y > r) y = r;
+      if (y < -r * 0.76) y = -r * 0.76;
+    } else if (Math.abs(u) > 0.98) {
+      x *= 0.988; // subtle sawn/hollowed heartwood face
+    }
+    pos.setXYZ(i, x, y, z);
+  }
+  g.computeVertexNormals();
+  return norm(g);
+}
+
 /** Cylinder spanning two points. */
 export function beam(a: THREE.Vector3, b: THREE.Vector3, r: number, seg = 6) {
   const len = a.distanceTo(b);

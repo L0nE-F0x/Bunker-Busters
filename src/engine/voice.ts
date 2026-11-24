@@ -14,6 +14,7 @@ const TRACE = typeof location !== 'undefined' && new URLSearchParams(location.se
 
 export class VoicePlayer {
   enabled = true;
+  activeSpeaker: string | null = null;
   private buffers = new Map<string, Promise<AudioBuffer | null>>();
   private talk: AudioBufferSourceNode[] = [];
   private token = 0;
@@ -50,7 +51,10 @@ export class VoicePlayer {
       dest = this.panner(opts.pos);
       dest.connect(this.out);
       this.barks++;
-    } else this.talking = true;
+    } else {
+      this.talking = true;
+      this.activeSpeaker = speaker.toLowerCase().split(/[\s·]/)[0];
+    }
     this.mix();
     const srcs: AudioBufferSourceNode[] = [];
     for (const b of bufs) {
@@ -63,10 +67,10 @@ export class VoicePlayer {
       srcs.push(s);
     }
     const last = srcs[srcs.length - 1];
-    if (!last) { if (opts.pos) this.barks--; else this.talking = false; this.mix(); return 0; }
+    if (!last) { if (opts.pos) this.barks--; else { this.talking = false; this.activeSpeaker = null; } this.mix(); return 0; }
     last.onended = () => {
       if (opts.pos) { this.barks--; dest.disconnect(); }
-      else if (this.talk === srcs) { this.talk = []; this.talking = false; }
+      else if (this.talk === srcs) { this.talk = []; this.talking = false; this.activeSpeaker = null; }
       this.mix();
     };
     if (!opts.pos) this.talk = srcs;
@@ -83,6 +87,7 @@ export class VoicePlayer {
   /** Stop the conversation voice (a card closed, the next page). Barks play out. */
   hush() {
     this.token++;
+    this.activeSpeaker = null;
     if (!this.talk.length) return;
     const now = this.ctx.currentTime;
     for (const s of this.talk) { s.onended = null; try { s.stop(now + 0.02); } catch { /* not started */ } }

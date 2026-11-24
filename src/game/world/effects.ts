@@ -3,12 +3,12 @@ import {
   Fn, vec2, vec3, vec4, float, uniform, instanceIndex, hash, time, cameraPosition, fract, uv, length, smoothstep, mix, max, min,
   pow, dot, normalize, sin, positionLocal, positionWorld, texture, color, clamp,
   normalWorld, abs, viewportLinearDepth, linearDepth, cameraNear, cameraFar, exp,
-  cameraViewMatrix, atan, renderGroup, step, instancedBufferAttribute, uniformArray, varying, select, floor,
+  cameraViewMatrix, atan, renderGroup, step, instancedBufferAttribute, uniformArray, varying, select, floor, attribute,
 } from 'three/tsl';
 import type { Atmosphere } from './Atmosphere';
 import type { Heightfield } from './Heightfield';
 import { noise } from '@/engine/noiseTex';
-import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
+import { mergeGeometries, mergeVertices } from 'three/addons/utils/BufferGeometryUtils.js';
 import { VirtualLight } from './lights';
 import { comfort } from '@/engine/comfort';
 import { setGroundHeight } from './materials';
@@ -481,72 +481,99 @@ export class DustPuffs {
   }
 }
 
-/** Crossed-billboard fire with scrolling noise, embers and a flickering point light. */
+let _fireFlameMat: THREE.MeshBasicNodeMaterial | null = null;
+let _fireStoneMat: THREE.MeshStandardNodeMaterial | null = null;
+let _fireCoalMat: THREE.MeshStandardNodeMaterial | null = null;
+let _fireLogMat: THREE.MeshStandardNodeMaterial | null = null;
+
+function fireFlameMat() {
+  if (_fireFlameMat) return _fireFlameMat;
+  const mat = new THREE.MeshBasicNodeMaterial({ transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide, forceSinglePass: true });
+  mat.colorNode = Fn(() => {
+    const p = uv();
+    const card = positionLocal.x.add(positionLocal.z).mul(0.37);
+    const n1 = noise(vec2(p.x.mul(0.7).add(card), p.y.mul(0.5).sub(time.mul(0.85)))).r.sub(0.5);
+    const n2 = noise(vec2(p.x.mul(1.7).add(card.mul(2.3)).add(0.3), p.y.mul(1.2).sub(time.mul(1.6)))).g.sub(0.5);
+    const x = p.x.sub(0.5).add(n1.mul(0.9).add(n2.mul(0.5)).mul(0.2).mul(p.y.add(0.1)));
+    const width = pow(clamp(float(1).sub(p.y), 0, 1), 0.72).mul(0.45).mul(smoothstep(-0.05, 0.14, p.y));
+    const body = smoothstep(width, width.mul(0.12), abs(x));
+    const tongues = smoothstep(0.06, 0.42, n1.mul(1.1).add(n2.mul(0.9)).sub(p.y.mul(0.55)).add(0.55));
+    const flame = body.mul(tongues);
+    const heat = flame.mul(float(1).sub(p.y.mul(0.75))).mul(smoothstep(width, 0.0, abs(x)).mul(0.58).add(0.38));
+    const ramp = mix(
+      mix(vec3(0.55, 0.07, 0.01), vec3(1.0, 0.34, 0.04), smoothstep(0.05, 0.35, heat)),
+      mix(vec3(1.0, 0.62, 0.16), vec3(1.0, 0.9, 0.62), smoothstep(0.66, 0.95, heat)),
+      smoothstep(0.32, 0.68, heat),
+    );
+    return vec4(ramp.mul(heat.mul(1.85).add(0.85)), flame);
+  })();
+  return (_fireFlameMat = mat);
+}
+
+function fireStoneMat() {
+  if (_fireStoneMat) return _fireStoneMat;
+  return (_fireStoneMat = new THREE.MeshStandardNodeMaterial({ vertexColors: true, roughness: 0.94, metalness: 0 }));
+}
+
+function fireCoalMat() {
+  if (_fireCoalMat) return _fireCoalMat;
+  const m = new THREE.MeshStandardNodeMaterial({ vertexColors: true, roughness: 0.96, metalness: 0 });
+  m.emissiveNode = Fn(() => {
+    const c1 = noise(positionWorld.xz.mul(3.4).add(vec2(time.mul(0.05), time.mul(-0.04)))).r;
+    const c2 = noise(positionWorld.xz.mul(9.2).sub(vec2(time.mul(0.07), time.mul(0.05)))).g;
+    const vein = smoothstep(0.38, 0.72, c1.mul(0.65).add(c2.mul(0.55)));
+    const breathe = float(0.65).add(sin(time.mul(2.1).add(c1.mul(6))).mul(0.35));
+    const ashMask = clamp(attribute('color', 'vec3').r, 0, 1);
+    const col = mix(vec3(0.85, 0.14, 0.02), vec3(1.0, 0.56, 0.14), vein);
+    return col.mul(vein).mul(breathe).mul(float(1.45).sub(ashMask.mul(2.6)).clamp(0.12, 1.45)).mul(1.35);
+  })();
+  return (_fireCoalMat = m);
+}
+
+function fireLogMat() {
+  if (_fireLogMat) return _fireLogMat;
+  const m = new THREE.MeshStandardNodeMaterial({ color: '#1b130d', roughness: 0.98, metalness: 0 });
+  const tipHot = clamp(attribute('color', 'vec3').r, 0, 1);
+  const flickerNoise = noise(positionWorld.xz.mul(1.6).add(time.mul(0.15))).r;
+  m.emissiveNode = color('#ff4e12').mul(tipHot).mul(flickerNoise.mul(0.8).add(0.45)).mul(1.9);
+  return (_fireLogMat = m);
+}
+
+/** Crossed-billboard fire with sculpted stones, glowing coal bed, charred split logs, embers and virtual light. */
 export class Fire {
   group = new THREE.Group();
   light: VirtualLight;
   private t = Math.random() * 10;
-  /** Stones, logs and embers: only worth drawing up close. The flame cards carry the fire at range. */
+  /** Stones, coals, logs and embers: only worth drawing up close. The flame cards carry the fire at range. */
   private detail: THREE.Object3D[] = [];
   private flame!: THREE.Object3D;
   private readonly at = new THREE.Vector3();
 
   constructor(scale = 1, lightIntensity = 30) {
-    // additive blending is order-independent, so one pass over both faces looks the same as three's
-    // default back-then-front double pass for transparent DoubleSide (one draw instead of two)
-    const mat = new THREE.MeshBasicNodeMaterial({ transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide, forceSinglePass: true });
-    mat.colorNode = Fn(() => {
-      const p = uv();
-      // each crossed card samples its own patch of turbulence (they overlap from most angles)
-      const card = positionLocal.x.add(positionLocal.z).mul(0.37);
-      const n1 = noise(vec2(p.x.mul(0.7).add(card), p.y.mul(0.5).sub(time.mul(0.85)))).r.sub(0.5);
-      const n2 = noise(vec2(p.x.mul(1.7).add(card.mul(2.3)).add(0.3), p.y.mul(1.2).sub(time.mul(1.6)))).g.sub(0.5);
-      // the flame licks sideways more the higher it gets
-      const x = p.x.sub(0.5).add(n1.mul(0.9).add(n2.mul(0.5)).mul(0.2).mul(p.y.add(0.1)));
-      // teardrop: wide and rounded at the base, drawn up to a ragged tip
-      const width = pow(clamp(float(1).sub(p.y), 0, 1), 0.7).mul(0.46).mul(smoothstep(-0.05, 0.12, p.y));
-      const body = smoothstep(width, width.mul(0.1), abs(x));
-      const tongues = smoothstep(0.05, 0.4, n1.mul(1.1).add(n2.mul(0.9)).sub(p.y.mul(0.55)).add(0.55));
-      const flame = body.mul(tongues);
-      // heat: hottest low in the core, cooling to deep red at the edges and the tips
-      const heat = flame.mul(float(1).sub(p.y.mul(0.75))).mul(smoothstep(width, 0.0, abs(x)).mul(0.6).add(0.4));
-      const ramp = mix(
-        mix(vec3(0.55, 0.06, 0.01), vec3(1.0, 0.32, 0.04), smoothstep(0.05, 0.35, heat)),
-        mix(vec3(1.0, 0.62, 0.18), vec3(1.0, 0.9, 0.65), smoothstep(0.65, 0.95, heat)),
-        smoothstep(0.3, 0.65, heat),
-      );
-      // (additive with src alpha: the colour is scaled by alpha once more on the way out)
-      return vec4(ramp.mul(heat.mul(2.6).add(1.0)), flame);
-    })();
-    // the three crossed flame cards, stones and logs are each one merged mesh (static relative to the fire)
-    const at = (g: THREE.BufferGeometry, x: number, y: number, z: number, rx: number, ry: number) =>
-      g.applyMatrix4(new THREE.Matrix4().compose(new THREE.Vector3(x, y, z), new THREE.Quaternion().setFromEuler(new THREE.Euler(rx, ry, 0)), new THREE.Vector3(1, 1, 1)));
+    const mat = fireFlameMat();
+    const at = (g: THREE.BufferGeometry, x: number, y: number, z: number, rx: number, ry: number, rz = 0) =>
+      g.applyMatrix4(new THREE.Matrix4().compose(new THREE.Vector3(x, y, z), new THREE.Quaternion().setFromEuler(new THREE.Euler(rx, ry, rz)), new THREE.Vector3(1, 1, 1)));
     const cards: THREE.BufferGeometry[] = [];
     for (let i = 0; i < 3; i++) {
-      const geo = new THREE.PlaneGeometry(1.1 * scale, 1.6 * scale);
-      geo.translate(0, 0.8 * scale, 0);
+      const geo = new THREE.PlaneGeometry(1.1 * scale, 1.55 * scale);
+      geo.translate(0, 0.78 * scale, 0);
       cards.push(at(geo, 0, 0, 0, 0, (i / 3) * Math.PI));
     }
     this.flame = new THREE.Mesh(mergeGeometries(cards, false)!, mat);
     this.group.add(this.flame);
-    // embers: small sparks that live a second or two and mostly die within a couple of metres (they
-    // were 4 cm, lived ~3 s, climbed 4 m and were bright enough for the bloom to make glowing orbs of
-    // them: a column of lanterns into the sky)
+
+    // embers
     const em = new THREE.SpriteNodeMaterial({ transparent: true, depthWrite: false, blending: THREE.AdditiveBlending });
-    // scale as a uniform: a literal per fire size compiled one ember program per fire
     const uS = uniform(scale);
     const h0 = hash(instanceIndex), h1 = hash(instanceIndex.add(1)), h2 = hash(instanceIndex.add(2));
     const life = fract(time.mul(h1.mul(0.4).add(0.5)).add(h0));
-    // fast off the fire, slowing as it cools; most stop short of 2 m, a few ride the heat higher
     const rise = float(1).sub(pow(float(1).sub(life), 2)).mul(uS).mul(h2.mul(h2).mul(2.2).add(0.9));
     const ex = sin(time.mul(2.3).add(h0.mul(20))).mul(0.18).mul(life);
     const ez = sin(time.mul(1.9).add(h1.mul(20))).mul(0.18).mul(life);
     em.positionNode = vec3(ex.add(h1.sub(0.5).mul(0.5).mul(uS)), rise.add(uS.mul(0.25)), ez.add(h2.sub(0.5).mul(0.5).mul(uS)));
     const size = uS.mul(h0.mul(0.008).add(0.01)).mul(float(1).sub(life.mul(0.6)));
     em.scaleNode = vec2(size, size);
-    // a soft round spark: without the disc each ember drew as a hard square (big ones near the eye)
     const disc = smoothstep(1, 0.15, length(uv().sub(0.5)).mul(2));
-    // white-orange when it leaves the fire, dull red as it dies (each its own lifetime: h0 > 0.6 burn out early)
     const age = life.mul(h0.mul(0.9).add(1));
     const hot = mix(vec3(1.0, 0.3, 0.05), vec3(1.0, 0.75, 0.35), smoothstep(0.5, 0.0, age));
     em.colorNode = vec4(hot.mul(float(3.2).mul(float(1).sub(min(age, 1)))), smoothstep(1, 0.55, age).mul(smoothstep(0, 0.05, life)).mul(disc));
@@ -555,24 +582,94 @@ export class Fire {
     this.group.add(embers);
     this.detail.push(embers);
 
-    // stone ring
-    const stone = new THREE.MeshStandardNodeMaterial({ color: '#4a4440', roughness: 0.9, flatShading: true });
+    // sculpted boulder ring (11 smoothly shaded river cobbles, soot-darkened on their fire-facing side)
     const stones: THREE.BufferGeometry[] = [];
-    for (let i = 0; i < 9; i++) {
-      const a = (i / 9) * Math.PI * 2;
-      stones.push(at(new THREE.DodecahedronGeometry(0.22 * scale, 0), Math.cos(a) * 0.65 * scale, 0.08, Math.sin(a) * 0.65 * scale, a, a * 2));
+    for (let i = 0; i < 11; i++) {
+      const a = (i / 11) * Math.PI * 2 + Math.sin(i * 3.1) * 0.11;
+      const rad = (0.16 + ((i * 37) % 10) * 0.008) * scale;
+      const g = mergeVertices(new THREE.IcosahedronGeometry(rad, 2), 1e-4);
+      const pos = g.attributes.position as THREE.BufferAttribute;
+      const sx = 0.9 + ((i * 19) % 7) * 0.07, sz = 0.85 + ((i * 29) % 9) * 0.05;
+      for (let v = 0; v < pos.count; v++) {
+        let px = pos.getX(v), py = pos.getY(v), pz = pos.getZ(v);
+        const n = 0.84 + 0.32 * Math.sin(px * 19 + i * 2.1) * Math.cos(pz * 17 - i);
+        px *= n * sx;
+        pz *= n * sz;
+        py *= py < 0 ? 0.48 * n : 0.74 * n;
+        pos.setXYZ(v, px, py, pz);
+      }
+      g.computeVertexNormals();
+      const ringR = (0.62 + Math.cos(i * 2.7) * 0.04) * scale;
+      at(g, Math.cos(a) * ringR, 0.045 * scale, Math.sin(a) * ringR, (i % 3 - 1) * 0.12, a * 1.9, ((i * 7) % 5 - 2) * 0.08);
+      const sg = g.toNonIndexed();
+      const sp = sg.attributes.position as THREE.BufferAttribute;
+      const col = new Float32Array(sp.count * 3);
+      for (let v = 0; v < sp.count; v++) {
+        const dIn = Math.hypot(sp.getX(v), sp.getZ(v)) / (ringR + 0.15 * scale);
+        const soot = Math.min(1, Math.max(0.28, (dIn - 0.55) * 1.45));
+        col[v * 3] = 0.36 * soot; col[v * 3 + 1] = 0.31 * soot; col[v * 3 + 2] = 0.27 * soot;
+      }
+      sg.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
+      stones.push(sg);
     }
-    const ring = new THREE.Mesh(mergeGeometries(stones, false)!, stone);
+    const ring = new THREE.Mesh(mergeGeometries(stones, false)!, fireStoneMat());
     ring.castShadow = true;
+    ring.receiveShadow = true;
     this.group.add(ring);
     this.detail.push(ring);
-    const logMat = new THREE.MeshStandardNodeMaterial({ color: '#1a120c', roughness: 1 });
-    logMat.emissiveNode = color('#ff4a10').mul(noise(positionWorld.xz.mul(0.8).add(time.mul(0.1))).r.sub(0.5).mul(2).mul(0.5).add(0.5).mul(1.5));
+
+    // mounded ash and glowing coal bed inside the ring
+    const bed = new THREE.CylinderGeometry(0.55 * scale, 0.61 * scale, 0.08 * scale, 18, 3).toNonIndexed();
+    const bPos = bed.attributes.position as THREE.BufferAttribute;
+    const bCol = new Float32Array(bPos.count * 3);
+    for (let v = 0; v < bPos.count; v++) {
+      const bx = bPos.getX(v), by = bPos.getY(v), bz = bPos.getZ(v);
+      const rNorm = Math.min(1, Math.hypot(bx, bz) / (0.58 * scale));
+      const lump = (0.5 + 0.5 * Math.sin(bx * 18 + bz * 13)) * 0.03 * scale;
+      const dome = (1 - rNorm * rNorm) * 0.045 * scale;
+      bPos.setY(v, (by > 0 ? by * 0.6 + dome + lump : 0) - 0.01 * scale);
+      const ash = 0.09 + 0.16 * rNorm * rNorm; // dark hot char in core, dusty grey ash around edges
+      bCol[v * 3] = ash * 1.05; bCol[v * 3 + 1] = ash; bCol[v * 3 + 2] = ash * 0.95;
+    }
+    bed.computeVertexNormals();
+    bed.setAttribute('color', new THREE.Float32BufferAttribute(bCol, 3));
+    const coalMesh = new THREE.Mesh(bed, fireCoalMat());
+    coalMesh.receiveShadow = true;
+    this.group.add(coalMesh);
+    this.detail.push(coalMesh);
+
+    // 6 irregular split charred logs arranged in a natural crib/teepee (inner tips glow hot)
+    const logMat = fireLogMat();
     const logs: THREE.BufferGeometry[] = [];
-    for (let i = 0; i < 4; i++) {
-      logs.push(at(new THREE.CylinderGeometry(0.07 * scale, 0.08 * scale, 0.9 * scale, 6).toNonIndexed(), 0, 0.15, 0, Math.PI / 2 - 0.3, (i / 4) * Math.PI * 2));
+    for (let i = 0; i < 6; i++) {
+      const rLog = (0.055 + (i % 3) * 0.014) * scale;
+      const lLog = (0.82 + (i % 2) * 0.18) * scale;
+      const lg = new THREE.CylinderGeometry(rLog * 0.85, rLog, lLog, 7, 4).toNonIndexed();
+      const lp = lg.attributes.position as THREE.BufferAttribute;
+      for (let v = 0; v < lp.count; v++) {
+        let px = lp.getX(v), py = lp.getY(v), pz = lp.getZ(v);
+        if (pz > rLog * 0.35) pz = rLog * 0.35; // split-firewood flat face
+        const kink = Math.sin(py * 7 + i * 2) * 0.015 * scale;
+        lp.setXYZ(v, px + kink, py, pz);
+      }
+      lg.computeVertexNormals();
+      const a = (i / 6) * Math.PI * 2 + (i % 2 ? 0.14 : -0.1);
+      const tilt = Math.PI / 2 - (0.24 + (i % 3) * 0.09);
+      const offR = 0.06 * scale;
+      const placed = at(lg, Math.cos(a) * offR, (0.11 + (i % 2) * 0.03) * scale, Math.sin(a) * offR, tilt, a, (i % 3 - 1) * 0.1);
+      const pp = placed.attributes.position as THREE.BufferAttribute;
+      const lCol = new Float32Array(pp.count * 3);
+      for (let v = 0; v < pp.count; v++) {
+        const innerR = Math.hypot(pp.getX(v), pp.getZ(v)) / Math.max(0.05, scale);
+        const u = Math.max(0, Math.min(1, (0.46 - innerR) / 0.38));
+        const tipHot = u * u * (3 - 2 * u);
+        lCol[v * 3] = tipHot;
+      }
+      placed.setAttribute('color', new THREE.Float32BufferAttribute(lCol, 3));
+      logs.push(placed);
     }
     const logMesh = new THREE.Mesh(mergeGeometries(logs, false)!, logMat);
+    logMesh.castShadow = true;
     this.group.add(logMesh);
     this.detail.push(logMesh);
 

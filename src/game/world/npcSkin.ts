@@ -84,7 +84,7 @@ const SEAT_SLIDE = 0.06, SEAT_REACH = 0.97;
  */
 const BACKLESS_LEAN = (3 * Math.PI) / 180;
 /** Share of a hand's roll about the forearm that the forearm takes, and what the hand may keep (°). */
-const TWIST = { k: 0.55, twist: 50, swing: 70 };
+const TWIST = { k: 0.45, twist: 55, swing: 70 };
 
 interface Track { bone: string; rot?: THREE.Interpolant; pos?: THREE.Interpolant }
 interface Clip {
@@ -178,7 +178,13 @@ export class NpcModels {
         pg.scene.traverse((o) => {
           const m = o as THREE.Mesh;
           if (!m.isMesh) return;
-          mat ??= new THREE.MeshStandardNodeMaterial({ map: (m.material as THREE.MeshStandardMaterial).map, roughness: 0.7, metalness: 0 });
+          const old = m.material as THREE.MeshStandardMaterial;
+          mat ??= new THREE.MeshStandardNodeMaterial({
+            map: old.map,
+            normalMap: isMobile ? null : old.normalMap, normalScale: old.normalScale?.clone(),
+            roughnessMap: old.roughnessMap, roughness: old.roughnessMap ? 1 : 0.7,
+            metalnessMap: isMobile ? null : old.metalnessMap, metalness: !isMobile && old.metalnessMap ? 0.35 : 0,
+          });
           m.material = mat;
           m.castShadow = false;
           m.frustumCulled = true; // rigid on the Head bone: its own bounds follow it
@@ -219,7 +225,8 @@ function template(id: string, scene: THREE.Object3D, anims: THREE.AnimationClip[
     // model's own map where it has one. Metalness stays 0: with no environment map metal reads black.
     mat ??= new THREE.MeshStandardNodeMaterial({
       map: old.map, normalMap: isMobile ? null : old.normalMap, normalScale: old.normalScale?.clone(), // (phones: memory)
-      roughnessMap: old.roughnessMap, roughness: old.roughnessMap ? 1 : 0.88, metalness: 0,
+      roughnessMap: old.roughnessMap, roughness: old.roughnessMap ? 1 : 0.88,
+      metalnessMap: isMobile ? null : old.metalnessMap, metalness: !isMobile && old.metalnessMap ? 0.35 : 0,
     });
     m.material = mat;
     m.castShadow = true;
@@ -279,9 +286,10 @@ function template(id: string, scene: THREE.Object3D, anims: THREE.AnimationClip[
   let body: THREE.SkinnedMesh | null = null;
   scene.traverse((o) => { if ((o as THREE.SkinnedMesh).isSkinnedMesh) body ??= o as THREE.SkinnedMesh; });
   const palm: Template['palm'] = {};
+  const palmHint = id === 'helper' ? new THREE.Vector3(0, -1, 0) : new THREE.Vector3(0, 1, 0.3);
   for (const sd of ['Left', 'Right'] as const) {
-    // (Meshy's A-pose holds the palms up and a little forward: checked on each standing rig)
-    const m = body && bones[sd + 'Hand'] ? mittFrame(body, bones[sd + 'Hand'], new THREE.Vector3(0, 1, 0.3)) : null;
+    // (Meshy's A-pose holds the palms up and a little forward except Helper whose arms hang palm-inward)
+    const m = body && bones[sd + 'Hand'] ? mittFrame(body, bones[sd + 'Hand'], palmHint) : null;
     if (m) palm[sd] = m.palm;
   }
   const sole: Template['sole'] = {};
@@ -667,9 +675,9 @@ export class NpcActor {
 
   /**
    * One frame. `near`: the player is within talking range. `look`/`nod`: head turn toward them
-   * (radians, already clamped and smoothed by the crowd).
+   * (radians, already clamped and smoothed by the crowd). `speaking`: live voice RMS envelope (0..1).
    */
-  update(dt: number, near: boolean, look: number, nod: number) {
+  update(dt: number, near: boolean, look: number, nod: number, speaking = 0) {
     this.time += dt;
     if (this.scripted === 'once' && this.clock[this.cur.i] >= this.cur.dur - 0.05 && this.fade >= 1) { this.scripted = null; this.queue(this.base, 0); }
     if (!this.pinned && !this.scripted) this.decide(dt, near);
@@ -730,11 +738,13 @@ export class NpcActor {
       const w = this.prev && f < 1 ? isIdle(this.cur) * f + isIdle(this.prev) * (1 - f) : isIdle(this.cur);
       if (w > 0.01) this.relaxArms(w, _q2);
     }
+    const spk = THREE.MathUtils.clamp(speaking, 0, 1);
     if (!this.pinned) {
-      // breathing: the chest rises and falls; the neck takes it back so the head stays level
-      const br = Math.sin(this.time * this.breath.w + this.breath.ph) * this.breath.a;
+      // breathing + subtle vocal chest inflection when actively speaking
+      const br = Math.sin(this.time * this.breath.w + this.breath.ph) * this.breath.a
+        + (spk > 0.02 ? Math.sin(this.time * 13.5 + this.breath.ph) * 0.016 * spk : 0);
       if (B.Spine02) this.turn(B.Spine02, lat, br * 0.5);
-      if (B.Spine01) this.turn(B.Spine01, lat, br * 0.5);
+      if (B.Spine01) this.turn(B.Spine01, lat, br * 0.5 + spk * 0.012);
       if (B.neck) this.turn(B.neck, lat, -br * 0.5);
       // standing: the weight drifts from foot to foot (the pelvis tips, the legs and chest stay)
       const sh = this.shift;
@@ -750,12 +760,14 @@ export class NpcActor {
     // the head turns toward the player; a bigger turn takes more neck, and then the chest
     const H = B.Head, N = B.neck;
     if (H || N) {
-      const big = THREE.MathUtils.smoothstep(Math.abs(look), 0.35, 1.0);
-      const chest = B.Spine ? 0.14 * THREE.MathUtils.smoothstep(Math.abs(look), 0.55, 1.05) : 0;
+      const lookE = look + (spk > 0.02 ? Math.sin(this.time * 4.7 + this.breath.ph * 2) * 0.032 * spk : 0);
+      const nodE = nod + (spk > 0.02 ? Math.sin(this.time * 9.5 + this.breath.ph) * 0.045 * spk - 0.018 * spk : 0);
+      const big = THREE.MathUtils.smoothstep(Math.abs(lookE), 0.35, 1.0);
+      const chest = B.Spine ? 0.14 * THREE.MathUtils.smoothstep(Math.abs(lookE), 0.55, 1.05) : 0;
       const neck = N ? 0.3 + 0.2 * big : 0;
-      if (chest) this.turn(B.Spine, UP, look * chest);
-      if (N) { this.turn(N, UP, look * neck); this.turn(N, lat, -nod * 0.4); }
-      if (H) { this.turn(H, UP, look * (1 - neck - chest)); this.turn(H, lat, -nod * (N ? 0.6 : 1)); }
+      if (chest) this.turn(B.Spine, UP, lookE * chest);
+      if (N) { this.turn(N, UP, lookE * neck); this.turn(N, lat, -nodE * 0.4); }
+      if (H) { this.turn(H, UP, lookE * (1 - neck - chest)); this.turn(H, lat, -nodE * (N ? 0.6 : 1)); }
     }
     // a sphere round the hips holds the pose (seated or standing), so both passes can cull it
     const hips = this.B.Hips;
@@ -782,20 +794,29 @@ export class NpcActor {
     const fwd = _sf.set(0, 0, 1).applyQuaternion(this.root.getWorldQuaternion(_sq));
     fwd.y = 0;
     fwd.normalize();
-    // no back to lean on: the trunk sits up (tipped forward about the hips; the thighs stay where they were)
+    // no back to lean on: distribute the upright posture across pelvis, lumbar and mid-back (keeping thighs planted)
     const top = B.neck ?? B.Spine;
     if (this.backless && top && B.LeftUpLeg && B.RightUpLeg) {
       hips.getWorldPosition(_sh);
       const trunk = top.getWorldPosition(_sN).sub(_sh);
       const back = Math.atan2(-trunk.dot(fwd), trunk.y);
       if (back > BACKLESS_LEAN) {
+        const corr = back - BACKLESS_LEAN;
         B.LeftUpLeg.getWorldQuaternion(_sL[0]);
         B.RightUpLeg.getWorldQuaternion(_sL[1]);
         _sX.set(0, 1, 0).cross(fwd).normalize(); // turning about up × forward tips the top forward
-        hips.getWorldQuaternion(_sQ).premultiply(_jp.setFromAxisAngle(_sX, back - BACKLESS_LEAN));
+        hips.getWorldQuaternion(_sQ).premultiply(_jp.setFromAxisAngle(_sX, corr * 0.36));
         setWorldQuat(hips, _sQ);
         setWorldQuat(B.LeftUpLeg, _sL[0]);
         setWorldQuat(B.RightUpLeg, _sL[1]);
+        if (B.Spine02) {
+          B.Spine02.getWorldQuaternion(_sQ).premultiply(_jp.setFromAxisAngle(_sX, corr * 0.34));
+          setWorldQuat(B.Spine02, _sQ);
+        }
+        if (B.Spine01) {
+          B.Spine01.getWorldQuaternion(_sQ).premultiply(_jp.setFromAxisAngle(_sX, corr * 0.30));
+          setWorldQuat(B.Spine01, _sQ);
+        }
       }
     }
     const drop = this.lift + this.model.position.y; // the clip's floor over the ground
@@ -819,7 +840,7 @@ export class NpcActor {
       return _sA.distanceTo(_lt.copy(_sT[i]).addScaledVector(fwd, s)) <= len * SEAT_REACH;
     };
     let slide = 0;
-    for (const s of [0, 0.05, 0.1, SEAT_SLIDE]) {
+    for (const s of [0, 0.02, 0.04, SEAT_SLIDE]) {
       slide = s;
       if ((up[0] || reach(0, s)) && (up[1] || reach(1, s))) break;
     }

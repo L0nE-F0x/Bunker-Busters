@@ -234,6 +234,7 @@ export class Game {
   private hbPhase = 0;
   private venomHint = false;
   mode: Mode = 'loading';
+  private hudHidden = false;
   private interactables: Interactable[] = [];
   private focus: Interactable | null = null;
   private grenades: Grenade[] = [];
@@ -809,7 +810,7 @@ export class Game {
       }
       if (this.player) this.player.interactPose = 0;
       this.hands?.setBase('idle');
-      this.ui.setHudVisible(true);
+      this.ui.setHudVisible(!this.hudHidden);
       this.input.requestLock();
     }
   }
@@ -1296,6 +1297,7 @@ export class Game {
   // ------------------------------------------------------------------ modes
   toTitle() {
     this.mode = 'title';
+    this.hudHidden = false;
     this.titleT = 0;
     this.atmo.hour = this.director.startTitle();
     this.envTimer = 0;
@@ -1377,6 +1379,7 @@ export class Game {
   private startGame(state: GameState) {
     this.state = state;
     this.mode = 'playing';
+    this.hudHidden = false;
     this.takenAway = false;
     this.input.resetLatches();
     // this tab's run owns the save from now on; a run in any other tab stops writing it (see CHANNEL)
@@ -2429,6 +2432,11 @@ export class Game {
     (this.post.godrayColor.value as THREE.Color).copy(this.atmo.sunColor).multiplyScalar(this.atmo.isNight ? 0.25 : 1);
     // eye adaptation follows the sun; a storm's murk opens the eye a little and adds grit
     const st = this.weather.intensity;
+    const elev = this.atmo.sunElevation;
+    const glareRaw = elev <= 0.01 ? 0 : Math.min(1, elev / 0.14) * (1 - 0.45 * Math.max(0, (elev - 0.35) / 0.65));
+    const glareTarget = (comfort.calm || this.atmo.isNight || this.zero?.underground || (this.mode === 'playing' && this.bunkerInside))
+      ? 0 : glareRaw * (1 - Math.min(0.8, st * 0.8));
+    this.post.sunGlare.value = damp(this.post.sunGlare.value as number, glareTarget, 5, dt);
     // ...and under the ground (Bunker Zero) the eye opens up as if it were night
     this.post.exposure.value = this.atmo.exposure * (1 + st * 0.25) * (1 + this.atmo.cover * Math.max(0, 1.6 / this.atmo.exposure - 1));
     this.post.grain.value = 0.045 + st * 0.025;
@@ -2459,8 +2467,9 @@ export class Game {
     if (this.camHook) { this.camHook(this.camera); this.camera.updateMatrixWorld(); }
     viewCull.update(this.camera, this.atmo.sun.shadow.camera); // what characters need posing this frame
     this.atmo.follow(this.camera);
-    this.landmarks.update(dt, this.t, this.camera.position);
-    this.settlement?.update(dt, this.camera.position);
+    const speech = this.audio.speechState();
+    this.landmarks.update(dt, this.t, this.camera.position, speech);
+    this.settlement?.update(dt, this.camera.position, speech);
     if (this.player && this.mode === 'playing') this.scavenge?.update(dt, this.player.position);
     for (const site of this.sites) site.update(dt, this.camera.position);
     this.errands?.update(dt, this.camera.position);
@@ -2635,6 +2644,9 @@ export class Game {
         this.openWorldMap();
       } else if (input.pressed('Escape')) {
         this.input.exitLock();
+      } else if (input.pressed('F9')) {
+        this.hudHidden = !this.hudHidden;
+        this.ui.setHudVisible(!this.hudHidden);
       }
       HOTBAR_ITEMS.forEach((id, i) => {
         if (input.actPressed(`hotbar${i + 1}` as 'hotbar1')) this.useItem(hotbarItem(i, s).id || id);

@@ -1,6 +1,6 @@
 import * as THREE from 'three/webgpu';
 import { concrete, corrugated, fabric, leather, plainStandard, rustyMetal, wood } from '@/game/world/materials';
-import { norm } from '@/game/world/kit';
+import { norm, place, hewnLog } from '@/game/world/kit';
 import { buildCar, type CarOpts } from '@/game/world/vehicles';
 import { type Pen, type Site, V, HALO } from './townKit';
 
@@ -395,11 +395,14 @@ export function drift(P: Pen, x: number, z: number, len: number, ry: number, h =
   P.put(M.sand(), g, x, 0, z, 0, ry, 0, 1, h, depth);
 }
 
-/** Sitting log. */
+/** Sitting log (bark-ridged and flattened slightly into the dirt). */
 export function log(P: Pen, x: number, z: number, len: number, ry: number, r = 0.22, col = true) {
   const bark = wood('#4a3424');
-  P.cyl(bark, r, r * 1.05, len, x, r, z, 9, 0, ry, Math.PI / 2);
-  P.cyl(wood('#9a7a52'), r * 0.92, r * 0.92, 0.02, x + Math.cos(ry) * len / 2, r, z - Math.sin(ry) * len / 2, 9, 0, ry, Math.PI / 2);
+  const seed = Math.round(x * 7 + z * 13);
+  P.geo(bark, place(hewnLog(r, len, seed), x, r, z, 0, ry, 0));
+  const c = Math.cos(ry) * (len * 0.5), s = Math.sin(ry) * (len * 0.5);
+  P.cyl(M.woodPale(), r * 0.88, r * 0.88, 0.018, x + c, r, z - s, 10, 0, ry, Math.PI / 2);
+  P.cyl(M.woodPale(), r * 0.88, r * 0.88, 0.018, x - c, r, z + s, 10, 0, ry, Math.PI / 2);
   if (col) P.col(x, r, z, len / 2, r, r, ry);
 }
 

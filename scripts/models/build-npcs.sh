@@ -32,7 +32,7 @@ TI=${A}Town_Idles_Animations.glb
 # Normals smoothed across Meshy's splits (it shades every patch of triangles on its own, like a cut gem)
 # and the normal map kept (the folds, seams and the shape of the face): owner, 2026-11-01, "all the
 # models look terrible … weird and blocky".
-build() { local id=$1; shift; node scripts/models/build-glb.mjs "public/models/$id.glb" "$@" --size 1024 --maps normal --nsize 1024 --smooth 89; }
+build() { local id=$1; shift; node scripts/models/build-glb.mjs "public/models/$id.glb" "$@" --size 1024 --maps all --nsize 1024 --mrsize 512 --smooth 89 --curl-hands relax; }
 
 # Everyone's idling, talking and gestures are Mixamo motion capture (owner, 2026-11-01: "all the models
 # look terrible … the way they move isn't organic and natural"; then "yes for all the people in the game").
@@ -88,8 +88,8 @@ on pip && build pip ${CP}Pip_Rigged.glb \
 on hollis && build hollis ${CP}Hollis_Rigged.glb \
   --clips ${MX}:sit_still=idle,sit_thighs=idle2,look_around=idle3,talk_b=near,disapproval=ins_finger \
   --mirror ${MX}:sit_still=idle_m
-# (Dez rests his palms down, unlike the others: --palm; a mitt can't give a thumbs-up, so no Sitting Thumbs Up)
-on dez && build dez ${CP}Dez_Rigged.glb --palm 0,-1,0 \
+# (Dez's rest palms face up+forward [0,1,0] just like the others; no --palm 0,-1,0 flip)
+on dez && build dez ${CP}Dez_Rigged.glb \
   --clips ${MX}:waiting=idle,look_around=idle2,sit_breathe=idle3,talk_a=near,laugh=ins_laugh,rub_arm=ins_rub \
   --mirror ${MX}:waiting=idle_m
 
@@ -142,7 +142,7 @@ on gil && build gil ${DM}Gil_Rigged.glb \
   --clips ${MS}:sd_type=idle,sd_talk=near \
   --clips ${DM}Gil_Animations.glb:Sit_and_Doze_Off=idle2 \
   --clips ${PN}Ada_Animations.glb:Sit_to_Stand_Transition_F=stand
-on helper && build helper ${DM}Helper_Rigged.glb \
+on helper && build helper ${DM}Helper_Rigged.glb --palm 0,-1,0 \
   --clips ${MS}:st_idle_a=idle \
   --clips ${DM}Helper_Walking_Basic.glb:walking_man=walk \
   --clips ${DM}Helper_Animations.glb:falling_down=fall

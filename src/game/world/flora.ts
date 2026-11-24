@@ -318,39 +318,40 @@ export function shrub(kind: Shrub, seed: number, lod: Lod): Plant {
     case 'creosote': {
       // a fountain of thin dark stems with small olive leaf clumps toward their tips
       const leaf = jit([0.36, 0.42, 0.2], r, 0.12), leaf2: RGB = [0.48, 0.5, 0.26];
-      const stems = hi ? 12 + Math.floor(r() * 6) : 0;
+      const stems = hi ? 12 + Math.floor(r() * 6) : 5;
+      const steps = hi ? 3 : 2;
+      const leavesPerSeg = hi ? 6 : 2;
       for (let k = 0; k < stems; k++) {
         const base = V((r() - 0.5) * 0.25, -0.05, (r() - 0.5) * 0.25);
-        const { pts } = wander(r, base, cone(r, V(0, 1, 0), 0.25 + r() * 0.45), 0.7 + r() * 0.7, 3, 0.25);
+        const { pts } = wander(r, base, cone(r, V(0, 1, 0), 0.25 + r() * 0.45), 0.7 + r() * 0.7, steps, 0.25);
         P.tube(pts, taper(pts.length, 0.014, 0.004), 3, () => STEM, DEAD);
-        for (let i = 1; i < pts.length; i++) for (let j = 0; j < 6; j++) {
+        for (let i = 1; i < pts.length; i++) for (let j = 0; j < leavesPerSeg; j++) {
           const at = pts[i - 1].clone().lerp(pts[i], r()).add(V((r() - 0.5) * 0.09, 0, (r() - 0.5) * 0.09));
-          P.leaf(at, 0.028 + r() * 0.02, mixC(leaf, leaf2, r()), r, 0.25);
+          P.leaf(at, (hi ? 0.028 : 0.055) + r() * 0.022, mixC(leaf, leaf2, r()), r, 0.25);
         }
       }
-      if (!hi) for (let k = 0; k < 4; k++) P.blob(V((r() - 0.5) * 0.4, 0.45 + r() * 0.35, (r() - 0.5) * 0.4), V(0.3, 0.26, 0.3), 0, mixC(leaf, leaf2, r()), LEAF, r, 0.35);
       break;
     }
     case 'sage': {
       // a dense grey-green dome
       const c0 = jit([0.46, 0.5, 0.4], r, 0.08), c1: RGB = [0.58, 0.6, 0.5];
-      const n = hi ? 34 : 4;
+      const n = hi ? 34 : 16;
       if (hi) for (let k = 0; k < 6; k++) {
         const { pts } = wander(r, V((r() - 0.5) * 0.15, -0.05, (r() - 0.5) * 0.15), cone(r, V(0, 1, 0), 0.6), 0.4, 2, 0.4);
         P.tube(pts, taper(pts.length, 0.02, 0.008), 3, () => STEM, DEAD);
       }
-      // a dome of fine leaves (hi) or a few soft lumps (lo)
+      // a dome of fine leaves (hi) or coarser radiating needle tufts (lo)
       for (let k = 0; k < (hi ? 110 : n); k++) {
         const a = r() * Math.PI * 2, u = Math.sqrt(r()), rad = u * 0.46;
         const h = 0.06 + Math.sqrt(Math.max(0, 1 - u * u)) * 0.42 * (0.75 + r() * 0.35);
         const at = V(Math.cos(a) * rad, h, Math.sin(a) * rad);
+        const up = at.clone().setY(at.y + 0.25).normalize();
+        const c = mixC(c0, c1, r());
         if (hi) {
-          // silvery needle tufts
-          const up = at.clone().setY(at.y + 0.25).normalize();
-          const c = mixC(c0, c1, r());
           for (let j = 0; j < 3; j++) P.spike(at, cone(r, up, 0.9), 0.07 + r() * 0.05, 0.012, c, mixC(c, [0.7, 0.72, 0.62], 0.5), LEAF);
+        } else {
+          for (let j = 0; j < 2; j++) P.spike(at, cone(r, up, 1.05), 0.14 + r() * 0.08, 0.034, c, mixC(c, [0.68, 0.7, 0.6], 0.45), LEAF);
         }
-        else P.blob(at, V(0.28, 0.22, 0.28), 1, mixC(c0, c1, r()), LEAF, r, 0.45);
       }
       break;
     }
@@ -472,8 +473,9 @@ export function shrub(kind: Shrub, seed: number, lod: Lod): Plant {
           for (let k = 0; k < 2; k++) limb(pts[pts.length - 1], cone(r, end.clone().add(V(0, 0.2, 0)), 0.6), len * 0.7, rad * 0.65, depth - 1);
         } else {
           const tip = pts[pts.length - 1];
-          if (!hi) P.blob(tip, V(0.42, 0.24, 0.42), 0, mixC(leaf, leaf2, r()), LEAF, r, 0.4);
-          else for (let k = 0; k < 24; k++) P.leaf(tip.clone().add(V((r() - 0.5) * 0.6, (r() - 0.3) * 0.25, (r() - 0.5) * 0.6)), 0.05 + r() * 0.035, mixC(leaf, leaf2, r()), r, 0.3);
+          const count = hi ? 24 : 5;
+          const sz = hi ? 0.05 : 0.13;
+          for (let k = 0; k < count; k++) P.leaf(tip.clone().add(V((r() - 0.5) * 0.6, (r() - 0.3) * 0.25, (r() - 0.5) * 0.6)), sz + r() * (hi ? 0.035 : 0.05), mixC(leaf, leaf2, r()), r, 0.35);
         }
       };
       for (let k = 0; k < 3 + Math.floor(r() * 2); k++) limb(V((r() - 0.5) * 0.2, -0.1, (r() - 0.5) * 0.2), cone(r, V(0, 1, 0), 0.5 + r() * 0.35), 0.8 + r() * 0.5, 0.05, 2);

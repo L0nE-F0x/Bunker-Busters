@@ -3,6 +3,12 @@
 Each `## vX.Y.Z` section becomes the GitHub release notes and the "what's new" list in the in-app
 update notice (the first few bullets). `scripts/release.sh` refuses to release a version without one.
 
+## v1.2.0
+- **Natural character rigs, hands and materials.** Fixed the spine bone inversion and forearm over-twist across every character rig so shoulders sit level and elbows and wrists bend naturally without pinching. Added sculpted relaxed and weapon-grip finger poses, and enabled normal, roughness and metalness maps across townsfolk, bunker cast, Kade contractors, their gear and desert creatures
+- **Campfire, Last Chance and bunker overhaul.** Rebuilt campfires with smoothly shaded soot-darkened river cobbles, glowing coal beds and charred split logs. Upgraded Last Chance with organic hewn log benches, detailed vintage fuel pumps, slatted crates, parted tent flaps with tarps, and camp clutter (shortwave radio, lantern, firewood, kettle and mugs). Grounded the Garage beanbags, upgraded the ping-pong table with court stripes, mesh net and paddles, brightened the Cathedral's stained glass and dusk portals, and sharpened the Fortress's bastions and coolant shimmer
+- **Weapons, flora and desert optics.** Improved brushed steel, walnut and glove material contrast on first-person weapons, added an ivory front bead to the revolver, and added a weapon inspect animation (`Y`). Replaced distant low-LOD desert shrub blobs with thin stems and feathery leaf/needle clusters, and added subtle outdoor solar corona and anamorphic glare (disabled indoors, at night and under Reduce flashing)
+- **Voice presence, speech sync and UI.** Added presence EQ and compression to spoken lines and wired live speech amplitude to subtle NPC head/chest cadence and a 4-bar subtitle waveform indicator. Layered crisper hit, headshot and kill confirmation audio, added `F9` to toggle the HUD for clean screenshots, and fixed top-of-ladder turnarounds so holding forward no longer bounces you straight back onto the roof
+
 ## v1.1.5
 - **Loads faster.** The game now runs on a newer version of its 3D engine (three.js r187), and the "Compiling shaders" step of the loading screen takes about a third less time. In the desktop app here, the first start after an update went from 40 seconds to 28
 - **A little less work each frame**, about 5% in a firefight, so fights run slightly smoother

@@ -102,6 +102,7 @@ export class UI implements UIBridge {
   private xhairKey = '';
   private hitT = 0;
   private hitKind = '';
+  private lastVoiceLvl = -1;
   /** What a bug report says about the renderer and the preset (set by Game). */
   bugInfo: () => BugInfo = () => ({});
 
@@ -361,7 +362,7 @@ export class UI implements UIBridge {
       <div class="hitmark"><i></i><i></i><i></i><i></i></div>
       <div class="dmgarcs"></div>
       <div class="weapon" style="opacity:0"><div class="wname"></div><div class="ammo"><b class="mag"></b><span class="cap"></span><span class="res"></span></div><div class="rounds"></div></div>
-      <div class="subtitle" style="opacity:0"><span class="who"></span><span class="line"></span></div>
+      <div class="subtitle" style="opacity:0"><div class="sub-head"><span class="who"></span><span class="vwave"><i></i><i></i><i></i><i></i></span></div><span class="line"></span></div>
       <div class="prompt"></div>
       <div class="hotbar"></div>
       <div class="vitals">
@@ -593,10 +594,22 @@ export class UI implements UIBridge {
     this.minimapT -= dt;
     if (this.minimapT <= 0) { this.minimapT = 0.05; this.minimap?.draw(f.px, f.pz, f.heading, f.playerYaw, f.markers); }
     this.updateArms(dt, f.arms);
-    // subtitle fade
+    // subtitle fade + live speech equalizer
     if (this.subtitleTimer > 0) {
       this.subtitleTimer -= dt;
-      if (this.subtitleTimer <= 0) { this.els.subtitle.style.opacity = '0'; this.hud.classList.remove('speaking'); }
+      if (this.subtitleTimer <= 0) {
+        this.els.subtitle.style.opacity = '0';
+        this.els.subtitle.classList.remove('live');
+        this.lastVoiceLvl = -1;
+        this.hud.classList.remove('speaking');
+      } else {
+        const q = Math.round(this.audio.speechState().level * 25) / 25;
+        if (q !== this.lastVoiceLvl) {
+          this.lastVoiceLvl = q;
+          this.els.subtitle.style.setProperty('--vl', String(q));
+          this.els.subtitle.classList.toggle('live', q > 0.04);
+        }
+      }
     }
   }
 

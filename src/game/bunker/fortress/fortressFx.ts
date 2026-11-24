@@ -28,7 +28,7 @@ export function coolantMaterial() {
   m.emissiveNode = Fn(() => {
     const p = positionWorld.xz;
     const shimmer = noise(p.mul(0.3).add(vec2(time.mul(0.05), time.mul(0.03)))).r;
-    return vec4(0.12, 0.6, 0.8, 1).xyz.mul(shimmer.mul(0.3).add(0.12)).mul(uCoolGlow).mul(uCoolCold);
+    return vec4(0.14, 0.68, 0.88, 1).xyz.mul(shimmer.mul(0.42).add(0.16)).mul(uCoolGlow).mul(uCoolCold);
   })();
   return m;
 }

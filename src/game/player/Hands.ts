@@ -70,8 +70,8 @@ function gloveSetup(m: THREE.MeshStandardNodeMaterial, P: N, Nl: N, b: N, w: N, 
   const grain = noise(P.xy.sub(P.z).mul(60)).g; // pebble grain, bump only
   // scuffs on the back of the hand / tops of knuckles (local +Y faces up for palm-down segments)
   const back = smoothstep(0.3, 0.95, Nl.y);
-  let col: N = mix(b, w, back.mul(smoothstep(0.4, 0.8, g)).mul(0.3));
-  let rough: N = float(0.62).sub(back.mul(0.14));
+  let col: N = mix(b, w, back.mul(smoothstep(0.36, 0.78, g)).mul(0.4));
+  let rough: N = float(0.6).sub(back.mul(0.16));
   if (segLen) {
     // segment runs along local -Z from 0 to -segLen: creases at both ends
     const t = P.z.negate().div(segLen);
@@ -111,12 +111,14 @@ export function hardMat(c: string, rough = 0.45, metal = 0.1) {
 
 function hardSetup(m: THREE.MeshStandardNodeMaterial, P: N, base: N) {
   const n = noise(P.xy.mul(40)).r;
-  m.colorNode = base.mul(float(0.85).add(n.mul(0.25)));
-  m.emissiveNode = rim(0.08);
+  const grain = noise(P.yz.mul(65).add(P.x.mul(12))).g;
+  m.colorNode = base.mul(float(0.86).add(n.mul(0.24)).add(grain.mul(0.06)));
+  m.normalNode = bumpFromHeight(grain.mul(0.22).add(n.mul(0.12)), float(0.001));
+  m.emissiveNode = rim(0.09);
 }
 
 export function steelMat(c = '#b9bec4', rough = 0.25) {
-  const m = new THREE.MeshStandardNodeMaterial({ roughness: rough, metalness: 1 });
+  const m = new THREE.MeshStandardNodeMaterial({ roughness: rough, metalness: 0.68 });
   steelSetup(m, positionLocal, uniform(new THREE.Color(c)), float(rough));
   _handSpec.set(m, { kind: 'steel', a: [...rgb(c), rough], b: [0, 0, 0, 0] });
   return m;
@@ -124,8 +126,10 @@ export function steelMat(c = '#b9bec4', rough = 0.25) {
 
 function steelSetup(m: THREE.MeshStandardNodeMaterial, P: N, base: N, rough: N) {
   const scratches = noise(P.xy.mul(vec3(3, 80, 1).xy)).r;
-  m.colorNode = base.mul(float(0.85).add(scratches.mul(0.2)));
-  m.roughnessNode = rough.add(scratches.mul(0.2));
+  m.colorNode = base.mul(float(0.88).add(scratches.mul(0.24)));
+  m.roughnessNode = rough.add(scratches.mul(0.18));
+  m.normalNode = bumpFromHeight(scratches, float(0.0007));
+  m.emissiveNode = rim(0.11);
 }
 
 /** The attribute-driven twin of each hand material kind (one shared instance per kind). */
@@ -145,7 +149,7 @@ function mergedMaterial(kind: HandKind) {
     m.roughnessNode = mA().w;
     m.metalnessNode = mB().x;
   } else {
-    m.metalness = 1;
+    m.metalness = 0.68;
     steelSetup(m, mP(), mA().xyz, mA().w);
   }
   _merged.set(kind, m);

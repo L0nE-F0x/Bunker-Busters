@@ -619,12 +619,17 @@ export class CombatAudio {
     const t = this.b.ctx.currentTime + 0.01;
     const o = this.b.sfx;
     if (kind === 'kill') {
-      this.tone(o, t, 'triangle', 520, 0.08, 0.002, 0.08);
-      this.tone(o, t + 0.07, 'triangle', 390, 0.08, 0.002, 0.14);
+      this.tone(o, t, 'triangle', 540, 0.095, 0.002, 0.075, 360);
+      this.tone(o, t, 'sine', 1120, 0.04, 0.001, 0.045);
+      this.tone(o, t + 0.065, 'triangle', 360, 0.1, 0.002, 0.14, 210);
+      this.burst(o, t + 0.065, 'lowpass', 650, 0.9, 0.06, 0.002, 0.07);
     } else if (kind === 'head') {
-      this.ping(o, t, 1900, 0.06, 0.18);
+      this.ping(o, t, 2150, 0.065, 0.16);
+      this.ping(o, t + 0.006, 3220, 0.032, 0.12);
+      this.burst(o, t, 'bandpass', 3400, 2.0, 0.05, 0.001, 0.022);
     } else {
-      this.tone(o, t, 'triangle', 1400, 0.05, 0.001, 0.04);
+      this.tone(o, t, 'triangle', 1650, 0.055, 0.001, 0.036, 950);
+      this.burst(o, t, 'bandpass', 2600, 1.8, 0.045, 0.001, 0.025);
     }
   }
 

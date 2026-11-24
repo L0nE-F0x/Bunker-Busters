@@ -62,6 +62,7 @@ export class PostFX {
   readonly bloomStrength = uniform(0.55);
   readonly godrayColor = uniform(new THREE.Color(1.0, 0.62, 0.35));
   readonly godrayStrength = uniform(0.35);
+  readonly sunGlare = uniform(0);
   /** debug handle: `game.post.gradeU` */
   readonly gradeU = gradeU;
   /** debug handle: `game.post.displayGamma` (Settings → Brightness) */
@@ -177,13 +178,14 @@ export class PostFX {
 
   /** Lens + gameplay overlays in display space (plus the heat shimmer, folded into the CA taps). */
   private finish(ldr: N, depth: N, camW: N, projInv: N): N {
-    const { vignette, grain, aberration, damage, alert, emp, fade, menuShade, lowHp } = this;
+    const { vignette, grain, aberration, damage, alert, emp, fade, menuShade, lowHp, sunGlare, godrayColor, uLightDir } = this;
     const heat = gradeU.heat as N;
     return Fn(() => {
       // heat shimmer: distant ground (and the horizon line) wobbles over hot sand. Distance and ray
       // elevation come from the scene depth; the wobble is a vertically stretched, rising noise.
       const vp = getViewPosition(screenUV, depth.sample(screenUV).r, projInv);
-      const rdY = normalize(camW.mul(vec4(vp, 0)).xyz).y;
+      const rd = normalize(camW.mul(vec4(vp, 0)).xyz);
+      const rdY = rd.y;
       const hz = smoothstep(130, 450, length(vp)).mul(smoothstep(0.09, 0.0, abs(rdY.add(0.01))));
       const w = noise(vec2(screenUV.x.mul(26), screenUV.y.mul(64).sub(time.mul(0.9)))).r.sub(0.5);
       const w2 = noise(vec2(screenUV.x.mul(11).add(0.3), screenUV.y.mul(23).sub(time.mul(0.5)))).g.sub(0.5);
@@ -220,6 +222,19 @@ export class PostFX {
       // near death: the colour drains out and the edges darken and throb with the pulse
       col.assign(mix(col, vec3(dot(col, vec3(0.3, 0.59, 0.11))), lowHp.mul(0.6)));
       col.assign(mix(col, vec3(0.32, 0.0, 0.0), smoothstep(0.3, 0.85, r).mul(lowHp).mul(0.6)));
+
+      // delicate solar corona & anamorphic glint when facing the open outdoor sun (0 indoors/night/calm)
+      const camR = normalize(camW.mul(vec4(1, 0, 0, 0)).xyz);
+      const camU = normalize(camW.mul(vec4(0, 1, 0, 0)).xyz);
+      const sunDx = dot(rd, camR).sub(dot(uLightDir, camR));
+      const sunDy = dot(rd, camU).sub(dot(uLightDir, camU));
+      const sunMu = max(dot(rd, uLightDir), 0);
+      const openSky = smoothstep(50.0, 280.0, length(vp));
+      const halo = pow(sunMu, 16).mul(0.06).add(pow(sunMu, 110).mul(0.055));
+      const streakY = pow(float(1).add(abs(sunDy).mul(42.0)), float(-2.5));
+      const streakX = pow(float(1).add(abs(sunDx).mul(3.5)), float(-2.0));
+      const anamorphic = streakY.mul(streakX).mul(smoothstep(0.4, 0.95, sunMu)).mul(0.04);
+      col.addAssign(godrayColor.mul(halo.add(anamorphic)).mul(sunGlare).mul(openSky));
       // the player's brightness, before the grain (so the grain stays the same size in the darks)
       col.assign(pow(max(col, vec3(0)), vec3(displayGamma)));
 

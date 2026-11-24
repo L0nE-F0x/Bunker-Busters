@@ -561,7 +561,7 @@ export class NpcCrowd {
   private alarmAt = new THREE.Vector3();
   private alarmT = 0;
 
-  update(dt: number, cam: THREE.Vector3) {
+  update(dt: number, cam: THREE.Vector3, speech?: { speaker: string | null; level: number }) {
     this.t += dt;
     this.alarmT = Math.max(0, this.alarmT - dt);
     // routines: who is in which slot, twice a second (cheap; done even while the crowd is out of view)
@@ -639,7 +639,8 @@ export class NpcCrowd {
         // a model nobody can see (nor its shadow) isn't posed; it catches up on its clips when it is
         if (viewCull.sees(_npcC.setFromMatrixPosition(a.root.matrixWorld).setY(_npcC.y + 0.9), 1.4)) {
           a.root.visible = true;
-          a.update(dt + (f.owed ?? 0), f.near && f === closest, f.look, f.nod);
+          const spk = speech && speech.speaker && f.def.id === speech.speaker ? speech.level : 0;
+          a.update(dt + (f.owed ?? 0), f.near && f === closest, f.look, f.nod, spk);
           f.owed = 0;
         } else {
           a.root.visible = false;

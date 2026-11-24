@@ -193,6 +193,7 @@ export class PlayerArms {
     if (firePress) this.fireBuffer = 0.18;
     if (input.actPressed('melee')) this.melee();
     if (input.actPressed('reload')) this.startReload();
+    if (input.pressed('KeyY') && input.locked && w && !wantAds && !this.reload && !this.hands.arms.busy) this.hands.arms.inspect();
 
     if (w && this.fireBuffer > 0 && !interacting) {
       if (w.kind === 'melee') { if (!this.hands.arms.swinging && this.meleeCd <= 0) { this.fireBuffer = 0; this.melee(); } }

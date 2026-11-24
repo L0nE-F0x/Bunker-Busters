@@ -43,8 +43,14 @@ export function ridgeTent(tx: number, tz: number, ry: number, L = 2.7, W = 1.15,
   canvas.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
   canvas.setIndex(idx);
   canvas.computeVertexNormals();
-  // the door: a seam down the front, and its flap's edge
-  const parts: THREE.BufferGeometry[] = [canvas, box(0.025, H * 0.86, 0.025, 0.02, H * 0.45, L / 2 + 0.005, 0, 0, 0.03)];
+  // the door: a seam down the front, folded flap tie-backs, and a waterproof tarp groundsheet
+  const parts: THREE.BufferGeometry[] = [
+    canvas,
+    box(0.025, H * 0.86, 0.025, 0.02, H * 0.45, L / 2 + 0.005, 0, 0, 0.03),
+    box(0.11, H * 0.55, 0.03, -0.14, H * 0.3, L / 2 + 0.012, 0.14, 0, -0.22),
+    box(0.11, H * 0.55, 0.03, 0.14, H * 0.3, L / 2 + 0.012, -0.14, 0, 0.22),
+  ];
+  const ground = box(W * 1.96, 0.024, L * 0.96, 0, 0.012, 0);
   const V3 = (x: number, y: number, z: number) => new THREE.Vector3(x, y, z);
   // guy lines: off each pole tip along the ridge, and from mid-slope out the sides
   const ropes: THREE.BufferGeometry[] = [], woodParts: THREE.BufferGeometry[] = [];
@@ -79,5 +85,5 @@ export function ridgeTent(tx: number, tz: number, ry: number, L = 2.7, W = 1.15,
     band.computeVertexNormals();
     band = move(band);
   }
-  return { canvas: move(merge(parts)), ropes: ropes.map(move), wood: woodParts.map(move), band };
+  return { canvas: move(merge(parts)), ropes: ropes.map(move), wood: woodParts.map(move), band, ground: move(ground) };
 }

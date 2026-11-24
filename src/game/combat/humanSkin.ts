@@ -1,5 +1,6 @@
 import * as THREE from 'three/webgpu';
-import { texture, uniform, mix, smoothstep, max, min, vec3, float, attribute } from 'three/tsl';
+import { texture, uniform, mix, smoothstep, max, min, vec3, float, attribute, normalMap } from 'three/tsl';
+import { isMobile } from '@/engine/device';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { loadGLB } from '@/engine/models';
 import { clone as cloneSkinned } from 'three/addons/utils/SkeletonUtils.js';
@@ -75,6 +76,8 @@ const _u = new THREE.Vector3(), _f = new THREE.Vector3(), _n = new THREE.Vector3
 const _fq = new THREE.Quaternion(), _hq = new THREE.Quaternion(), _rel = new THREE.Quaternion(), _hdev = new THREE.Quaternion(), _h0 = new THREE.Quaternion();
 const _gq = new THREE.Quaternion(), _gq2 = new THREE.Quaternion(), _yq = new THREE.Quaternion(), _sole = new THREE.Vector3();
 const _legDy = [0, 0], _lift = [0, 0];
+const _shF = new THREE.Vector3(), _shU = new THREE.Vector3(), _shR = new THREE.Vector3(), _shH = new THREE.Vector3(), _shAx = new THREE.Vector3();
+const _shQ = new THREE.Quaternion(), _shQ2 = new THREE.Quaternion();
 const SIDES: Side[] = ['Left', 'Right'];
 const LEG_BONES = ['UpLeg', 'Leg', 'Foot', 'ToeBase'];
 
@@ -129,12 +132,20 @@ export class HumanSkins {
     // contractor is one draw and one depth draw, not three: one node material samples the body,
     // hat and mask maps by a per-vertex `gear` tag (0 body, 1 mask, 2 crew hat, 3 leader hat).
     // The hat's shell takes the crew/leader tint; the red KADE badge doesn't (saturation masks it).
-    const mapOf = (root: THREE.Object3D) => {
-      let map: THREE.Texture | null = null;
-      root.traverse((o) => { const m = o as THREE.Mesh; if (m.isMesh) map ??= (m.material as THREE.MeshStandardMaterial).map ?? null; });
-      return map as THREE.Texture | null;
+    const texOf = (root: THREE.Object3D) => {
+      let m0: THREE.MeshStandardMaterial | null = null;
+      root.traverse((o) => { const m = o as THREE.Mesh; if (m.isMesh && !m0) m0 = m.material as THREE.MeshStandardMaterial; });
+      const mat0 = m0 as THREE.MeshStandardMaterial | null;
+      return {
+        map: mat0?.map ?? null,
+        normalMap: mat0?.normalMap ?? null,
+        normalScale: mat0?.normalScale?.clone() ?? new THREE.Vector2(1, -1),
+        roughnessMap: mat0?.roughnessMap ?? null,
+        metalnessMap: mat0?.metalnessMap ?? null,
+      };
     };
-    const bodyMap = mapOf(src), hatMap = mapOf(hatSrc), maskMap = mapOf(maskSrc);
+    const bt = texOf(src), ht = texOf(hatSrc), mt = texOf(maskSrc);
+    const bodyMap = bt.map, hatMap = ht.map, maskMap = mt.map;
     const mat = new THREE.MeshStandardNodeMaterial({ roughness: 0.85, metalness: 0 });
     {
       const gear: N = attribute('gear', 'float');
@@ -147,8 +158,22 @@ export class HumanSkins {
       const sat: N = hi.sub(min(th.r, min(th.g, th.b))).div(hi.max(0.001));
       const hat: N = hatMap ? mix(th.mul(tint), th, smoothstep(0.3, 0.5, sat)) : tint;
       mat.colorNode = gear.lessThan(0.5).select(tb, gear.lessThan(1.5).select(tm, hat));
-      mat.roughnessNode = gear.lessThan(0.5).select(float(0.85), gear.lessThan(1.5).select(float(0.6), float(0.45)));
-      mat.metalnessNode = gear.greaterThan(0.5).and(gear.lessThan(1.5)).select(float(0.1), float(0));
+      const rb: N = bt.roughnessMap ? texture(bt.roughnessMap).g : float(0.85);
+      const rm: N = mt.roughnessMap ? texture(mt.roughnessMap).g : float(0.58);
+      const rh: N = ht.roughnessMap ? texture(ht.roughnessMap).g : float(0.42);
+      mat.roughnessNode = gear.lessThan(0.5).select(rb, gear.lessThan(1.5).select(rm, rh));
+      const mb: N = !isMobile && bt.metalnessMap ? texture(bt.metalnessMap).b.mul(0.35) : float(0);
+      const mm: N = !isMobile && mt.metalnessMap ? texture(mt.metalnessMap).b.mul(0.35) : float(0.1);
+      mat.metalnessNode = gear.lessThan(0.5).select(mb, gear.lessThan(1.5).select(mm, float(0.04)));
+      if (!isMobile && (bt.normalMap || ht.normalMap || mt.normalMap)) {
+        const flatN = vec3(0.5, 0.5, 1.0);
+        const nb: N = bt.normalMap ? texture(bt.normalMap).rgb : flatN;
+        const nm: N = mt.normalMap ? texture(mt.normalMap).rgb : flatN;
+        const nh: N = ht.normalMap ? texture(ht.normalMap).rgb : flatN;
+        const nTex: N = gear.lessThan(0.5).select(nb, gear.lessThan(1.5).select(nm, nh));
+        const nScale: N = gear.lessThan(0.5).select(uniform(bt.normalScale) as N, gear.lessThan(1.5).select(uniform(mt.normalScale) as N, uniform(ht.normalScale) as N));
+        mat.normalNode = normalMap(nTex, nScale);
+      }
     }
 
     // bind data, measured with the model at the origin
@@ -171,7 +196,7 @@ export class HumanSkins {
     src.traverse((o) => { if ((o as THREE.SkinnedMesh).isSkinnedMesh) body ??= o as THREE.SkinnedMesh; });
     for (const sd of ['Left', 'Right'] as Side[]) {
       const hand = bones[sd + 'Hand'], fa = bones[sd + 'ForeArm'];
-      const m = body && hand && fa ? mittFrame(body, hand, new THREE.Vector3(0, -1, 0)) : null;
+      const m = body && hand && fa ? mittFrame(body, hand, new THREE.Vector3(0, 1, 0.3)) : null;
       if (!m || !hand || !fa) continue;
       const q = this.bind[sd + 'Hand'].q;
       const rel = this.bind[sd + 'ForeArm'].q.clone().invert().multiply(q);
@@ -326,9 +351,30 @@ export class HumanSkins {
     for (const [n, t] of spine) if (B[n]) this.setWorld(B[n], _q.copy(_h0).slerp(_dq.chest, t).multiply(this.bind[n].q));
     if (B.neck) this.setWorld(B.neck, _q.copy(_dq.chest).slerp(_dq.head, 0.5).multiply(this.bind.neck.q));
     if (B.Head) this.setWorld(B.Head, _q.copy(_dq.head).multiply(this.bind.Head.q));
+    _shF.set(0, 0, 1).applyQuaternion(_dq.chest);
+    _shU.set(0, 1, 0).applyQuaternion(_dq.chest);
     for (const sd of ['Left', 'Right'] as Side[]) {
       const sh = B[`${sd}Shoulder`];
-      if (sh) this.setWorld(sh, _q.copy(_dq.chest).multiply(this.bind[`${sd}Shoulder`].q));
+      if (!sh) continue;
+      _q.copy(_dq.chest).multiply(this.bind[`${sd}Shoulder`].q);
+      // Clavicle follows reach subtly (protraction toward chest-front aim + slight elevation)
+      const hIdx = sd === 'Left' ? BONE.handL : BONE.handR;
+      const armBone = B[`${sd}Arm`];
+      if (armBone) {
+        this.setWorld(sh, _q);
+        _shH.setFromMatrixPosition(m[hIdx]).sub(_u.setFromMatrixPosition(armBone.matrixWorld));
+        if (_shH.lengthSq() > 1e-4) {
+          _shH.normalize();
+          _shR.set(sd === 'Left' ? 1 : -1, 0, 0).applyQuaternion(_dq.chest);
+          const prot = THREE.MathUtils.clamp(_shH.dot(_shF) * 0.18, -0.06, 0.22);
+          const elev = THREE.MathUtils.clamp(_shH.dot(_shU) * 0.20, -0.06, 0.18);
+          _shAx.crossVectors(_shR, _shF);
+          if (_shAx.lengthSq() > 1e-4) { _q.premultiply(_shQ.setFromAxisAngle(_shAx.normalize(), prot)); }
+          _shAx.crossVectors(_shR, _shU);
+          if (_shAx.lengthSq() > 1e-4) { _q.premultiply(_shQ2.setFromAxisAngle(_shAx.normalize(), elev)); }
+        }
+      }
+      this.setWorld(sh, _q);
     }
 
     // arms: reach the procedural wrists; the elbow bends the way the procedural one does

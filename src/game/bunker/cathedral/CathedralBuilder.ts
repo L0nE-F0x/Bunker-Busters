@@ -969,7 +969,13 @@ export class CathedralBuilder implements BunkerShell {
       b.add(m.post, cyl(0.07, 0.1, 7, x, 3.5, z, 6));
       b.add(m.black, box(0.6, 0.18, 0.3, x, 7, z));
       lot.add(b, box(0.5, 0.04, 0.22, x, 6.9, z));
-      this.halos.add(V(x, 6.85, z), '#ffe2b8', 2.2, CathedralBuilder.CH.NIGHT, 0.8);
+      this.halos.add(V(x, 6.85, z), '#ffe2b8', 2.8, CathedralBuilder.CH.NIGHT, 1.05);
+    }
+    // subtle warm architectural uplight accents flanking the front portal arch so dusk stonework reads cleanly
+    for (const sx of [-1, 1]) {
+      b.add(m.black, box(0.24, 0.12, 0.28, sx * 4.2, 0.08, CT.Z1 + 1.8));
+      lot.add(b, box(0.18, 0.03, 0.2, sx * 4.2, 0.145, CT.Z1 + 1.8));
+      this.halos.add(V(sx * 4.2, 0.24, CT.Z1 + 1.8), '#ffd8a2', 2.2, CathedralBuilder.CH.NIGHT, 0.75);
     }
     const sx = 8, sz = CT.Z1 + 32, sg = this.gy(sx, sz);
     b.add(m.post, box(0.1, 2.4, 0.1, sx - 0.9, sg + 1.2, sz), box(0.1, 2.4, 0.1, sx + 0.9, sg + 1.2, sz));
@@ -1015,7 +1021,7 @@ export class CathedralBuilder implements BunkerShell {
       altar: L('#ffe6c0', 10, 0, 4, -19, 2.2),
       office: L('#e0ecff', 7, 0, CT.MEZZ + 2.4, -30, 2.4),
       dock: L('#ffe2b8', 10, CT.AW + 2.5, 5.6, 14, 1.2),
-      lot: [L('#ffe2b8', 16, -14, 6.6, CT.Z1 + 10, 1), L('#ffe2b8', 16, 14, 6.6, CT.Z1 + 10, 1)],
+      lot: [L('#ffe2b8', 18, -10, 6.4, CT.Z1 + 7, 1.15), L('#ffe2b8', 18, 10, 6.4, CT.Z1 + 7, 1.15)],
       tower: L('#ffd29a', 12, -(CT.AW + 2.8), 24.5, CT.Z1 - 2.4, 1),
     };
   }

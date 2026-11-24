@@ -150,6 +150,8 @@ export class AudioEngine {
   combat: CombatAudio | null = null;
   private listenerPos = new THREE.Vector3();
   private voiceBus!: GainNode;
+  private voiceAna: AnalyserNode | null = null;
+  private voiceBuf: Uint8Array<ArrayBuffer> | null = null;
   private voice!: VoicePlayer;
   private voicesOn = true;
   /** The score's level under speech (VoicePlayer's duck). */
@@ -257,7 +259,25 @@ export class AudioEngine {
     });
     this.voiceBus = ctx.createGain();
     this.voiceBus.gain.value = this.volume.voice;
-    this.voiceBus.connect(this.master);
+    const voiceHp = ctx.createBiquadFilter();
+    voiceHp.type = 'highpass';
+    voiceHp.frequency.value = 90;
+    const voicePres = ctx.createBiquadFilter();
+    voicePres.type = 'peaking';
+    voicePres.frequency.value = 3200;
+    voicePres.Q.value = 1.1;
+    voicePres.gain.value = 2.5;
+    const voiceComp = ctx.createDynamicsCompressor();
+    voiceComp.threshold.value = -16;
+    voiceComp.knee.value = 18;
+    voiceComp.ratio.value = 3;
+    voiceComp.attack.value = 0.006;
+    voiceComp.release.value = 0.14;
+    this.voiceAna = ctx.createAnalyser();
+    this.voiceAna.fftSize = 256;
+    this.voiceAna.smoothingTimeConstant = 0.7;
+    this.voiceBuf = new Uint8Array(this.voiceAna.fftSize);
+    this.voiceBus.connect(voiceHp).connect(voicePres).connect(voiceComp).connect(this.voiceAna).connect(this.master);
     this.voice = new VoicePlayer(ctx, this.voiceBus, (pos) => this.panner(pos, 6, 1.1), (k) => {
       // talk sits on top of the score: duck it while someone speaks (a bark only a little)
       const down = k < this.musicDuck;
@@ -280,6 +300,21 @@ export class AudioEngine {
   /** Cut the conversation voice off (a card closed). */
   hush() {
     if (this.started) this.voice.hush();
+  }
+
+  /** Active conversation speaker id and normalised speech RMS envelope (0..1). */
+  speechState(): { speaker: string | null; level: number } {
+    if (!this.started || !this.voiceAna || !this.voiceBuf || !this.voice.activeSpeaker) {
+      return { speaker: null, level: 0 };
+    }
+    this.voiceAna.getByteTimeDomainData(this.voiceBuf);
+    let sumSq = 0;
+    for (let i = 0; i < this.voiceBuf.length; i++) {
+      const v = (this.voiceBuf[i] - 128) / 128;
+      sumSq += v * v;
+    }
+    const rms = Math.sqrt(sumSq / this.voiceBuf.length);
+    return { speaker: this.voice.activeSpeaker, level: Math.min(1, rms * 5.5) };
   }
 
   /** Voices on or off (Settings); off leaves subtitles only. */

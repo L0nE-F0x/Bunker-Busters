@@ -177,8 +177,8 @@ export class FortressBuilder implements BunkerShell {
 
   private mats() {
     return {
-      black: plainStandard('#1c1f23', 0.55, 0.35),
-      panel: plainStandard('#2a2e33', 0.45, 0.5),
+      black: plainStandard('#252a30', 0.34, 0.55),
+      panel: plainStandard('#343a42', 0.28, 0.62),
       dark: plainStandard('#121417', 0.5, 0.3),
       steel: plainStandard('#a9b1b7', 0.35, 0.85),
       grey: plainStandard('#5c6268', 0.6, 0.45),

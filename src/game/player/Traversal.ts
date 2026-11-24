@@ -98,6 +98,8 @@ export class Traversal {
   private cooldown = 0;
   /** Forward is still held from leaving a ladder at its foot: don't grab it again until it's let go. */
   private holdOff = false;
+  /** Forward is still held after turning onto a ladder from its top: don't immediately top out again until let go or reversed. */
+  private holdTopOut = false;
   // the scripted move
   private t = 0;
   private dur = 0;
@@ -167,6 +169,7 @@ export class Traversal {
     this.camOff.y = this.camOff.pitch = this.camOff.roll = 0;
     this.holds[0].on = this.holds[1].on = false;
     this.cooldown = 0.3;
+    this.holdTopOut = false;
     if (was) this.onLadder?.(false);
   }
 
@@ -378,6 +381,7 @@ export class Traversal {
     this.yaw0 = yaw;
     this.yaw1 = ladderYaw(l);
     this.ladder = l;
+    this.holdTopOut = false;
     this.h = THREE.MathUtils.clamp(h, 0, this.hMax(l));
     this.v = 0;
     this.t = 0;
@@ -395,6 +399,7 @@ export class Traversal {
     if (this.kind) return;
     this.kind = 'topIn';
     this.ladder = l;
+    this.holdTopOut = true;
     this.h = this.hMax(l);
     this.v = 0;
     this.t = 0;
@@ -547,6 +552,10 @@ export class Traversal {
     let dir = frozen ? 0 : input.fwd;
     // looking well down, forward goes down (and back goes up), as in most games
     if (pitch < -0.42) dir = -dir;
+    if (this.holdTopOut) {
+      if (dir <= 0.1) this.holdTopOut = false;
+      else dir = 0;
+    }
     let target = dir > 0 ? dir * UP_SPEED * (input.sprint ? 1.4 : 1) : dir * DOWN_SPEED * (input.sprint ? 1.3 : 1);
     const sliding = dir < -0.2 && input.crouch;
     if (sliding) target = -SLIDE_SPEED;

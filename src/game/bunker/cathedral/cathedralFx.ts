@@ -17,10 +17,10 @@ export const uCathAlarm = uniform(0);
 export function roseMaterial() {
   const tex = roseTexture();
   tex.colorSpace = THREE.SRGBColorSpace;
-  const m = new THREE.MeshStandardNodeMaterial({ roughness: 0.25, metalness: 0.1 });
+  const m = new THREE.MeshStandardNodeMaterial({ roughness: 0.22, metalness: 0.08 });
   const t: N = texture(tex);
-  m.colorNode = t.rgb.mul(0.55);
-  m.emissiveNode = t.rgb.mul(t.rgb).mul(uCathGlow.mul(2.6).add(0.15));
+  m.colorNode = t.rgb.mul(0.68);
+  m.emissiveNode = t.rgb.mul(t.rgb).mul(uCathGlow.mul(3.1).add(0.24));
   return m;
 }
 
@@ -29,13 +29,13 @@ export function roseMaterial() {
  * opaque (the hall is a sealed interior), so they read as lit glass from both sides.
  */
 export function paneMaterial() {
-  const m = new THREE.MeshStandardNodeMaterial({ color: '#8f8a80', roughness: 0.35, metalness: 0.05 });
-  const warm = vec4(1.0, 0.62, 0.28, 1).xyz;
+  const m = new THREE.MeshStandardNodeMaterial({ color: '#9a9488', roughness: 0.32, metalness: 0.05 });
+  const warm = vec4(1.0, 0.66, 0.32, 1).xyz;
   const red = vec4(1.0, 0.16, 0.08, 1).xyz;
   const pulse = sin(time.mul(5)).mul(0.5).add(0.5);
   // a soft vertical gradient (brighter low, where the floor lights are) and the alarm's pulse
-  const grad = smoothstep(0.0, 1.0, uv().y).mul(-0.35).add(1);
-  m.emissiveNode = (mix(warm, red, uCathAlarm.mul(pulse)) as N).mul(uCathGlow.mul(1.6).add(0.02)).mul(grad);
+  const grad = smoothstep(0.0, 1.0, uv().y).mul(-0.32).add(1.04);
+  m.emissiveNode = (mix(warm, red, uCathAlarm.mul(pulse)) as N).mul(uCathGlow.mul(1.85).add(0.05)).mul(grad);
   return m;
 }
 
